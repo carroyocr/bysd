@@ -64,8 +64,8 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Logo Image */}
-            <div className="flex items-center justify-center animate-scale-in">
+            {/* Logo Image - Hidden on mobile, visible on desktop */}
+            <div className="hidden lg:flex items-center justify-center animate-scale-in">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
                 <img
