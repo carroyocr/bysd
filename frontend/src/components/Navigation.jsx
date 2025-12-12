@@ -86,8 +86,12 @@ export default function Navigation() {
             <SheetContent side="right" className="w-[280px] sm:w-[320px]">
               <div className="flex flex-col gap-6 mt-8">
                 <div className="flex items-center gap-3 pb-4 border-b border-border">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                    <span className="font-display text-2xl text-primary-foreground">BU</span>
+                  <div className="w-12 h-12 rounded-full overflow-hidden">
+                    <img 
+                      src="/icon-bu.png" 
+                      alt="Backyard Ultra Icon" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <div className="font-display text-lg text-foreground leading-none">BACKYARD ULTRA</div>
