@@ -69,7 +69,7 @@ export default function Hero() {
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
                 <img
-                  src="https://customer-assets.emergentagent.com/job_dd43e283-dc29-4573-8f98-c3fea0942151/artifacts/iz5kte7j_Logo%20PNG%20alta.png"
+                  src="/logo-backyard-ultra.png"
                   alt="Backyard Ultra Santo Domingo Logo"
                   className="relative w-full max-w-md mx-auto drop-shadow-2xl hover:scale-105 transition-transform duration-500"
                 />
