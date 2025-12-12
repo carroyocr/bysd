@@ -14,6 +14,7 @@ export default function Logistics() {
         'Sierra Prieta, Santo Domingo',
         'Circuito cerrado y controlado',
       ],
+      link: 'https://maps.app.goo.gl/PswGprUy5nBqZ1di8',
     },
     {
       icon: <Car className="w-6 h-6" />,
