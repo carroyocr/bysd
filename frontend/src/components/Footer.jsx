@@ -72,13 +72,13 @@ export default function Footer() {
               <ul className="space-y-2">
                 {quickLinks.map((link) => (
                   <li key={link.href}>
-                    <a
-                      href={link.href}
-                      onClick={(e) => scrollToSection(e, link.href)}
+                    <Link
+                      to={link.href}
+                      onClick={handleLinkClick}
                       className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
