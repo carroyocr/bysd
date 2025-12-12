@@ -1,8 +1,9 @@
 import React from 'react';
-import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 export default function RunnersSection() {
