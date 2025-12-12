@@ -99,17 +99,20 @@ export default function Footer() {
                 <div className="flex items-start gap-3">
                   <Mail className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <a
-                    href="mailto:info@backyardultrasd.com"
+                    href="mailto:backyardultrasantodomingo@gmail.com"
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
-                    info@backyardultrasd.com
+                    backyardultrasantodomingo@gmail.com
                   </a>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
-                    [Número de contacto]
-                  </div>
+                  <a
+                    href="tel:+18096564040"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    +1 (809) 656-4040
+                  </a>
                 </div>
               </div>
             </div>
