@@ -42,9 +42,9 @@ export default function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <a
-            href="#hero"
-            onClick={(e) => scrollToSection(e, '#hero')}
+          <Link
+            to="/"
+            onClick={handleLinkClick}
             className="flex items-center gap-3 group"
           >
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-medium group-hover:shadow-glow transition-all duration-300">
@@ -54,19 +54,21 @@ export default function Navigation() {
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
               <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO 2026</div>
             </div>
-          </a>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
-                href={link.href}
-                onClick={(e) => scrollToSection(e, link.href)}
-                className="px-4 py-2 text-sm font-medium text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-colors"
+                to={link.href}
+                onClick={handleLinkClick}
+                className={`px-4 py-2 text-sm font-medium hover:text-primary hover:bg-secondary rounded-lg transition-colors ${
+                  location.pathname === link.href ? 'text-primary bg-secondary' : 'text-foreground'
+                }`}
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
