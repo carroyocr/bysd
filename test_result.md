@@ -101,3 +101,136 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test the Backyard Ultra Santo Domingo 2026 event website. Verify navigation, hero section, content sections, interactive elements, and visual design on desktop (1920x1080) viewport."
+
+frontend:
+  - task: "Navigation Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Navigation.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test all navigation links, smooth scrolling, mobile menu, and sticky behavior"
+
+  - task: "Hero Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Hero.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to verify logo display, event details, stats section, and registration badge"
+
+  - task: "Event Info Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/EventInfo.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test 4 info cards loading and display properly"
+
+  - task: "Runners Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/RunnersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test tabs (Equipo, Horario, Seguridad) functionality"
+
+  - task: "Volunteers Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/VolunteersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test tabs (Roles, Reglas, Emergencias) functionality"
+
+  - task: "Rules Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Rules.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to verify all rules and prohibitions display correctly"
+
+  - task: "Logistics Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/Logistics.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to verify all facilities information displays correctly"
+
+  - task: "FAQ Section Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/FAQ.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test accordion expand/collapse functionality"
+
+  - task: "Responsive Design Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "testing"
+        - comment: "Need to test responsiveness on different screen sizes"
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Navigation Testing"
+    - "Hero Section Testing"
+    - "Event Info Section Testing"
+    - "Runners Section Testing"
+    - "Volunteers Section Testing"
+    - "FAQ Section Testing"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+    - message: "Starting comprehensive testing of Backyard Ultra Santo Domingo 2026 event website. Will test all navigation, content sections, interactive elements, and visual design on desktop viewport."
