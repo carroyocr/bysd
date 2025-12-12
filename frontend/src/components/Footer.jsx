@@ -1,28 +1,22 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Mail, MapPin, Phone } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
-  const scrollToSection = (e, href) => {
-    e.preventDefault();
-    const element = document.querySelector(href);
-    if (element) {
-      const offset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-    }
+  const handleLinkClick = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const quickLinks = [
-    { href: '#evento', label: 'Evento' },
-    { href: '#corredores', label: 'Corredores' },
-    { href: '#voluntarios', label: 'Voluntarios' },
-    { href: '#reglas', label: 'Reglas' },
-    { href: '#logistica', label: 'Logística' },
-    { href: '#faq', label: 'FAQ' },
+    { href: '/evento', label: 'Evento' },
+    { href: '/corredores', label: 'Corredores' },
+    { href: '/voluntarios', label: 'Voluntarios' },
+    { href: '/reglas', label: 'Reglas' },
+    { href: '/logistica', label: 'Logística' },
+    { href: '/faq', label: 'FAQ' },
   ];
 
   return (
