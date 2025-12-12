@@ -22,6 +22,17 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
+# Startup event to create database indexes
+@app.on_event("startup")
+async def startup_db_indexes():
+    """Create database indexes on application startup for optimal query performance"""
+    try:
+        # Create descending index on timestamp for efficient sorting in queries
+        await db.status_checks.create_index([("timestamp", -1)])
+        logging.info("Database indexes created successfully")
+    except Exception as e:
+        logging.warning(f"Index creation warning (may already exist): {e}")
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
