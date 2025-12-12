@@ -88,14 +88,19 @@ export default function Footer() {
             <div className="space-y-4">
               <h3 className="font-bold text-foreground text-lg">Contacto</h3>
               <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
+                <a
+                  href="https://maps.app.goo.gl/PswGprUy5nBqZ1di8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 group"
+                >
+                  <MapPin className="w-5 h-5 text-primary flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                  <div className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
                     <div>Hotel Caribbean Adventure</div>
                     <div>Sierra Prieta, Santo Domingo</div>
                     <div>República Dominicana</div>
                   </div>
-                </div>
+                </a>
                 <div className="flex items-start gap-3">
                   <Mail className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                   <a
