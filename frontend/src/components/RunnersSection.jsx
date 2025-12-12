@@ -56,6 +56,35 @@ export default function RunnersSection() {
             </p>
           </div>
 
+          {/* Download Route GPX */}
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MapIcon className="w-7 h-7 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-display text-2xl text-foreground">Descarga la Ruta del Evento</h3>
+                    <p className="text-muted-foreground">
+                      Obtén el archivo GPX del circuito de 6.7 km para cargar en tu dispositivo GPS o aplicación de running
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/ruta-backyard-ultra.gpx"
+                  download="Backyard-Ultra-Santo-Domingo-Ruta.gpx"
+                  className="flex-shrink-0"
+                >
+                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300">
+                    <Download className="w-5 h-5 mr-2" />
+                    Descargar Ruta GPX
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Key Rules Highlights */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {keyRules.map((rule, index) => (
