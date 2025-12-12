@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
 const navLinks = [
-  { href: '#evento', label: 'Evento' },
-  { href: '#corredores', label: 'Corredores' },
-  { href: '#voluntarios', label: 'Voluntarios' },
-  { href: '#reglas', label: 'Reglas' },
-  { href: '#logistica', label: 'Logística' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/evento', label: 'Evento' },
+  { href: '/corredores', label: 'Corredores' },
+  { href: '/voluntarios', label: 'Voluntarios' },
+  { href: '/reglas', label: 'Reglas' },
+  { href: '/logistica', label: 'Logística' },
+  { href: '/faq', label: 'FAQ' },
 ];
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,16 +26,9 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (e, href) => {
-    e.preventDefault();
-    const element = document.querySelector(href);
-    if (element) {
-      const offset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-      window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-      setIsOpen(false);
-    }
+  const handleLinkClick = () => {
+    setIsOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
