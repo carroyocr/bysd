@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 
 export default function Hero() {
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/30 to-muted/50"></div>
       <div
