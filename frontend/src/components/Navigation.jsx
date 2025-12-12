@@ -92,14 +92,16 @@ export default function Navigation() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {navLinks.map((link) => (
-                    <a
+                    <Link
                       key={link.href}
-                      href={link.href}
-                      onClick={(e) => scrollToSection(e, link.href)}
-                      className="px-4 py-3 text-base font-medium text-foreground hover:text-primary hover:bg-secondary rounded-lg transition-colors"
+                      to={link.href}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium hover:text-primary hover:bg-secondary rounded-lg transition-colors ${
+                        location.pathname === link.href ? 'text-primary bg-secondary' : 'text-foreground'
+                      }`}
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
