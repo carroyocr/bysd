@@ -21,6 +21,7 @@ export default function EventInfo() {
         'Sierra Prieta, Santo Domingo',
         'República Dominicana',
       ],
+      link: 'https://maps.app.goo.gl/PswGprUy5nBqZ1di8',
     },
     {
       icon: <Clock className="w-8 h-8 text-primary" />,
