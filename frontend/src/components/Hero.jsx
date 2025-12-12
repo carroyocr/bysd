@@ -18,7 +18,7 @@ export default function Hero() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Content */}
-            <div className="text-center lg:text-left space-y-6 animate-slide-up">
+            <div className="text-center space-y-6 animate-slide-up lg:text-left">
               <Badge className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft">
                 <Clock className="w-4 h-4" />
                 Primera Edición
