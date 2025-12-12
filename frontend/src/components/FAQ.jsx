@@ -89,7 +89,7 @@ export default function FAQ() {
   ];
 
   return (
-    <section id="faq" className="py-20 bg-background">
+    <section className="py-20 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Header */}
