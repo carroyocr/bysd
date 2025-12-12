@@ -43,21 +43,16 @@ export default function Footer() {
               </p>
               <div className="flex items-center gap-4">
                 <a
-                  href="#"
-                  className="w-10 h-10 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group"
-                  aria-label="Facebook"
-                >
-                  <Facebook className="w-5 h-5 text-foreground group-hover:text-primary-foreground" />
-                </a>
-                <a
-                  href="#"
+                  href="https://www.instagram.com/backyardultrasantodomingo/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group"
                   aria-label="Instagram"
                 >
                   <Instagram className="w-5 h-5 text-foreground group-hover:text-primary-foreground" />
                 </a>
                 <a
-                  href="mailto:info@backyardultrasd.com"
+                  href="mailto:backyardultrasantodomingo@gmail.com"
                   className="w-10 h-10 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group"
                   aria-label="Email"
                 >
