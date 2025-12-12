@@ -52,6 +52,21 @@ export default function Footer() {
                   <Instagram className="w-5 h-5 text-foreground group-hover:text-primary-foreground" />
                 </a>
                 <a
+                  href="https://www.strava.com/clubs/1864664"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group"
+                  aria-label="Strava Club"
+                >
+                  <svg 
+                    className="w-5 h-5 text-foreground group-hover:text-primary-foreground transition-colors" 
+                    viewBox="0 0 24 24" 
+                    fill="currentColor"
+                  >
+                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                  </svg>
+                </a>
+                <a
                   href="mailto:backyardultrasantodomingo@gmail.com"
                   className="w-10 h-10 rounded-full bg-muted hover:bg-primary flex items-center justify-center transition-colors group"
                   aria-label="Email"
