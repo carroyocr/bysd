@@ -47,8 +47,12 @@ export default function Navigation() {
             onClick={handleLinkClick}
             className="flex items-center gap-3 group"
           >
-            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-medium group-hover:shadow-glow transition-all duration-300">
-              <span className="font-display text-2xl text-primary-foreground">BU</span>
+            <div className="w-12 h-12 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300">
+              <img 
+                src="/icon-bu.png" 
+                alt="Backyard Ultra Icon" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="hidden md:block">
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
