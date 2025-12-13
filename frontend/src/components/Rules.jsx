@@ -54,9 +54,6 @@ export default function Rules() {
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
           <div className="text-center space-y-4">
-            <Badge className="bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold">
-              Reglamento Oficial
-            </Badge>
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
               Reglas del Backyard Ultra
             </h2>
