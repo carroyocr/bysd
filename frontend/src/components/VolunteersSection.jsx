@@ -144,6 +144,35 @@ export default function VolunteersSection() {
             </p>
           </div>
 
+          {/* Download Manual */}
+          <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <Download className="w-7 h-7 text-accent" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-display text-2xl text-foreground">Descargar Manual Voluntarios</h3>
+                    <p className="text-muted-foreground">
+                      Obtén el manual completo con todas las instrucciones, roles y protocolos para voluntarios
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/manual-voluntarios.pdf"
+                  download="Manual-Operativo-Voluntarios-BYSD-2026.pdf"
+                  className="flex-shrink-0"
+                >
+                  <Button size="lg" className="bg-accent hover:bg-primary text-accent-foreground shadow-medium hover:shadow-strong transition-all duration-300">
+                    <Download className="w-5 h-5 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Core Values */}
           <div className="grid md:grid-cols-4 gap-4">
             {coreValues.map((value, index) => (
