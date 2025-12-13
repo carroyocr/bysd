@@ -1,7 +1,8 @@
 import React from 'react';
-import { Users, Heart, ClipboardCheck, AlertCircle, Phone, Shirt } from 'lucide-react';
+import { Users, Heart, ClipboardCheck, AlertCircle, Phone, Shirt, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 export default function VolunteersSection() {
