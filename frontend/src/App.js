@@ -26,6 +26,7 @@ export default function App() {
             <Route path="/voluntarios" element={<VoluntariosPage />} />
             <Route path="/reglas" element={<ReglasPage />} />
             <Route path="/logistica" element={<LogisticaPage />} />
+            <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
             <Route path="/faq" element={<FAQPage />} />
           </Routes>
         </main>
