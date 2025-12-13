@@ -21,7 +21,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-gradient-to-b from-background to-muted/30 border-t border-border">
+    <footer className="bg-background/95 backdrop-blur-md border-t border-border">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
