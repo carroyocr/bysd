@@ -154,9 +154,9 @@ export default function VolunteersSection() {
                     <Download className="w-7 h-7 text-accent" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">Descargar Manual Voluntarios</h3>
+                    <h3 className="font-display text-2xl text-foreground">Manual de Voluntarios</h3>
                     <p className="text-muted-foreground">
-                      Obtén el manual completo con todas las instrucciones, roles y protocolos para voluntarios
+                      Consulta el manual completo con todas las instrucciones, roles y protocolos para voluntarios
                     </p>
                   </div>
                 </div>
