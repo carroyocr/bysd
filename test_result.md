@@ -245,14 +245,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Navigation Testing"
-    - "Hero Section Testing"
-    - "Event Info Section Testing"
-    - "Runners Section Testing"
-    - "Volunteers Section Testing"
-    - "FAQ Section Testing"
+    - "Volunteers Page - Volunteer Application Section"
+    - "Logistics Page - Hotel Activities with Prices"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
