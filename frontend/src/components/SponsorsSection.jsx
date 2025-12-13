@@ -10,19 +10,19 @@ export default function SponsorsSection() {
       name: 'AFP Atlántico',
       description: 'Referente en administración de fondos de pensiones, destacándose por su enfoque en planificación financiera y bienestar a largo plazo.',
       instagram: 'https://www.instagram.com/afpatlantico/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/afp-atlantico.png',
     },
     {
       name: 'Águila Logistics',
       description: 'Especialistas en soluciones logísticas, reconocidos por su eficiencia y confiabilidad en operaciones de alta exigencia.',
       instagram: 'https://www.instagram.com/aguilalogisticsrd/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/aguila-logistics.png',
     },
     {
       name: 'Banco Atlántico',
       description: 'Institución financiera líder, con una trayectoria sólida apoyando el desarrollo económico, social y deportivo del país.',
       instagram: 'https://www.instagram.com/banco_atlantico/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/banco-atlantico.png',
     },
     {
       name: 'Ciclón',
@@ -46,13 +46,13 @@ export default function SponsorsSection() {
       name: 'General de Seguros',
       description: 'Aseguradora de referencia, enfocada en protección y prevención, clave para la seguridad de eventos deportivos.',
       instagram: 'https://www.instagram.com/generaldeseguros/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/general-seguros.png',
     },
     {
       name: 'Lupa Graph',
       description: 'Estudio creativo de alto nivel, reconocido por su capacidad para construir identidades visuales sólidas y comunicación efectiva.',
       instagram: 'https://www.instagram.com/lupa_graph/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/lupa-graph.png',
     },
     {
       name: 'Max Sport Uniforms',
