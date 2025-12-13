@@ -162,12 +162,13 @@ export default function VolunteersSection() {
                 </div>
                 <a
                   href="/manual-voluntarios.pdf"
-                  download="Manual-Operativo-Voluntarios-BYSD-2026.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-shrink-0"
                 >
                   <Button size="lg" className="bg-accent hover:bg-primary text-accent-foreground shadow-medium hover:shadow-strong transition-all duration-300">
                     <Download className="w-5 h-5 mr-2" />
-                    Descargar PDF
+                    Ver Manual PDF
                   </Button>
                 </a>
               </div>
