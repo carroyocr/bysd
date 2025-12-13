@@ -10,61 +10,73 @@ export default function SponsorsSection() {
       name: 'AFP Atlántico',
       description: 'Referente en administración de fondos de pensiones, destacándose por su enfoque en planificación financiera y bienestar a largo plazo.',
       instagram: 'https://www.instagram.com/afpatlantico/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Águila Logistics',
       description: 'Especialistas en soluciones logísticas, reconocidos por su eficiencia y confiabilidad en operaciones de alta exigencia.',
       instagram: 'https://www.instagram.com/aguilalogisticsrd/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Banco Atlántico',
       description: 'Institución financiera líder, con una trayectoria sólida apoyando el desarrollo económico, social y deportivo del país.',
       instagram: 'https://www.instagram.com/banco_atlantico/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Ciclón',
       description: 'Bebida energetizante reconocida por acompañar el rendimiento físico en contextos de alta demanda deportiva.',
       instagram: 'https://www.instagram.com/ciclonrd/',
+      logo: '/sponsors/ciclon.png',
     },
     {
       name: 'En Simpex',
       description: 'Empresa destacada por traer al mercado dominicano una variada gama de productos de la más alta calidad, ampliando el acceso del consumidor a marcas confiables.',
       instagram: 'https://www.instagram.com/simpexrd/',
+      logo: '/sponsors/en-simpex.png',
     },
     {
       name: 'Gatorade',
       description: 'Marca líder mundial en hidratación deportiva, ampliamente asociada al alto rendimiento y la resistencia.',
       instagram: 'https://www.instagram.com/gatoraderd/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'General de Seguros',
       description: 'Aseguradora de referencia, enfocada en protección y prevención, clave para la seguridad de eventos deportivos.',
       instagram: 'https://www.instagram.com/generaldeseguros/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Lupa Graph',
       description: 'Estudio creativo de alto nivel, reconocido por su capacidad para construir identidades visuales sólidas y comunicación efectiva.',
       instagram: 'https://www.instagram.com/lupa_graph/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Max Sport Uniforms',
       description: 'Especialistas en indumentaria deportiva, destacados por combinar rendimiento, comodidad e identidad de marca.',
       instagram: 'https://www.instagram.com/max_sportuniforms/',
+      logo: null, // Logo pendiente
     },
     {
       name: 'Molino del Sol',
       description: 'Marca referente en alimentos, alineada con nutrición, energía y bienestar para un estilo de vida activo.',
       instagram: 'https://www.instagram.com/molinodelsolrd/',
+      logo: '/sponsors/molino-del-sol.png',
     },
     {
       name: 'Senderitmo',
       description: 'Comunidad líder en trail running, reconocida por impulsar el crecimiento del deporte y la conexión con la naturaleza.',
       instagram: 'https://www.instagram.com/senderitmo/',
+      logo: '/sponsors/senderitmo.png',
     },
     {
       name: 'Vida Sana Vida Ultra Sports Club',
       description: 'Club referente en ultra resistencia, promotor del alto rendimiento y la vida saludable en la República Dominicana.',
       instagram: 'https://www.instagram.com/vidasanavidaultra/',
+      logo: '/sponsors/vida-sana-ultra.png',
     },
   ];
 
