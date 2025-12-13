@@ -10,6 +10,7 @@ import VoluntariosPage from './pages/VoluntariosPage';
 import ReglasPage from './pages/ReglasPage';
 import LogisticaPage from './pages/LogisticaPage';
 import FAQPage from './pages/FAQPage';
+import PatrocinadoresPage from './pages/PatrocinadoresPage';
 import './App.css';
 
 export default function App() {
