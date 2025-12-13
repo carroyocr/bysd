@@ -62,22 +62,18 @@ export default function RunnersSection() {
                     <Download className="w-7 h-7 text-primary" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">Descargar Manual del Corredor</h3>
+                    <h3 className="font-display text-2xl text-foreground">Manual del Corredor</h3>
                     <p className="text-muted-foreground">
-                      Obtén la guía completa con toda la información necesaria para participar en el evento
+                      La guía completa con toda la información necesaria para participar en el evento estará disponible próximamente
                     </p>
                   </div>
                 </div>
-                <a
-                  href="/manual-corredores.pdf"
-                  download="Manual-del-Corredor-BYSD-2026.pdf"
-                  className="flex-shrink-0"
-                >
-                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300">
+                <div className="flex-shrink-0">
+                  <Button size="lg" disabled className="bg-muted text-muted-foreground cursor-not-allowed">
                     <Download className="w-5 h-5 mr-2" />
-                    Descargar PDF
+                    Próximamente
                   </Button>
-                </a>
+                </div>
               </div>
             </CardContent>
           </Card>
