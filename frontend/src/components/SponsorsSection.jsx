@@ -40,7 +40,7 @@ export default function SponsorsSection() {
       name: 'Gatorade',
       description: 'Marca líder mundial en hidratación deportiva, ampliamente asociada al alto rendimiento y la resistencia.',
       instagram: 'https://www.instagram.com/gatoraderd/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/gatorade.png',
     },
     {
       name: 'General de Seguros',
@@ -58,7 +58,7 @@ export default function SponsorsSection() {
       name: 'Max Sport Uniforms',
       description: 'Especialistas en indumentaria deportiva, destacados por combinar rendimiento, comodidad e identidad de marca.',
       instagram: 'https://www.instagram.com/max_sportuniforms/',
-      logo: null, // Logo pendiente
+      logo: '/sponsors/max-sport.png',
     },
     {
       name: 'Molino del Sol',
