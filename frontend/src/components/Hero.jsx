@@ -35,7 +35,7 @@ export default function Hero() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
                 <a
-                  href="https://connect.garmin.com/modern/event/2/24810160?shareableEventUuid=d3879c0c-68f2-4c1c-990f-8313e7e9b44d&pageIndex=1"
+                  href="https://connect.garmin.com/modern/event/2/24810160?shareableEventUuid=backyard-dom-run&pageIndex=1"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
