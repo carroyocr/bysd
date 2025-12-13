@@ -136,9 +136,6 @@ export default function VolunteersSection() {
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
           <div className="text-center space-y-4">
-            <Badge className="bg-accent text-accent-foreground px-4 py-2 text-sm font-semibold">
-              Información para Voluntarios
-            </Badge>
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
               Manual de Voluntarios
             </h2>
