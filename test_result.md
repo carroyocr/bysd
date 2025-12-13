@@ -251,6 +251,70 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "Corredores Page - Title Change"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RunnersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - Title successfully changed from 'Guía del Corredor' to 'Sección del Corredor'. The new title is displayed correctly on the runners page with proper styling and positioning."
+
+  - task: "Corredores Page - Circuit Map Image"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RunnersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - New circuit map image section is perfectly implemented. Image loads correctly from '/circuito-backyard-ultra.png', positioned correctly between 'Manual del Corredor' and 'Descarga la Ruta del Evento' cards. Overlay text 'Ruta de la Carrera' and circuit info 'Circuito de 6.7 km - Sierra Prieta, Santo Domingo' are properly displayed. Image is fully responsive across desktop, tablet, and mobile viewports."
+
+  - task: "Voluntarios Page - Color Consistency"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/VolunteersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - Color consistency successfully implemented. Both '¿Quieres ser Voluntario?' and 'Manual de Voluntarios' cards now use identical accent colors (from-accent/5 to-primary/5 border-accent/20). Both buttons ('Postular Ahora' and 'Ver Manual PDF') have consistent bg-accent styling. The orange/cream accent color scheme is applied uniformly across both cards."
+
+  - task: "General Verification - Image Loading and Responsiveness"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RunnersSection.jsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - All general verifications successful. Circuit image loads without errors, responsive design works correctly across all viewports (desktop 1920x1080, tablet 768x1024, mobile 390x844). All 7 main pages (Home, Evento, Corredores, Voluntarios, Reglas, Logística, FAQ) load correctly without errors. No console errors or loading issues detected."
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 2
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Corredores Page - Title Change"
+    - "Corredores Page - Circuit Map Image"
+    - "Voluntarios Page - Color Consistency"
+    - "General Verification - Image Loading and Responsiveness"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
 agent_communication:
     - agent: "testing"
     - message: "Starting comprehensive testing of Backyard Ultra Santo Domingo 2026 event website. Will test all navigation, content sections, interactive elements, and visual design on desktop viewport."
@@ -260,3 +324,5 @@ agent_communication:
     - message: "TESTING SPECIFIC CHANGES REQUESTED BY USER ✅ Tested the following requested changes: 1) Manual del Corredor button now shows 'Próximamente' and is properly disabled with correct text 2) Open Graph and Twitter Card meta tags are properly implemented in index.html 3) Footer contact section shows only email and phone (no hotel location) 4) All navigation pages load correctly and GPX download still works. 3/4 tests passed successfully. Minor issue with meta tag detection in automated test but manual verification confirms they are present."
     - agent: "testing"
     - message: "TESTING NEW USER REQUESTED CHANGES ✅ Successfully tested all requested changes: 1) VOLUNTEERS PAGE: '¿Quieres ser Voluntario?' section is perfectly positioned between title and manual with Users icon, 'Postular Ahora' button links correctly to https://forms.gle/3drhJ6n77du4qZVu5 and opens in new tab. 2) LOGISTICS PAGE: 'Actividades Recreativas del Hotel' section displays ALL 9 activities with correct prices in badges on the right side - Four Wheel Parejas (RD$ 2,738.00), Go Karts Offroad (RD$ 890.00), Karting Inroad (RD$ 1,780.00), Mario Karts (RD$ 1,711.00), Kayak 1 Pax (RD$ 890.00), Paseo en Tren (RD$ 275.00), Zipline (RD$ 548.00), Tour Apiario (RD$ 821.00), Cabalgatas (RD$ 342.00). 3) NAVIGATION: All 7 pages load correctly and are fully responsive. Screenshots captured for verification. ALL CHANGES WORKING PERFECTLY!"
+    - agent: "testing"
+    - message: "TESTING LATEST USER REQUESTED CHANGES ✅ Successfully tested all 4 requested changes for Backyard Ultra Santo Domingo 2026: 1) CORREDORES PAGE TITLE: Title successfully changed from 'Guía del Corredor' to 'Sección del Corredor' ✅ 2) CIRCUIT MAP IMAGE: New image section perfectly positioned between Manual del Corredor and GPX download cards, with correct overlay text 'Ruta de la Carrera' and circuit info 'Circuito de 6.7 km - Sierra Prieta, Santo Domingo' ✅ 3) VOLUNTEERS PAGE COLORS: Both cards ('¿Quieres ser Voluntario?' and 'Manual de Voluntarios') now have consistent accent colors and button styling ✅ 4) GENERAL VERIFICATION: Image loads correctly, responsive design works across all viewports, all pages load without errors ✅ Screenshots captured for verification. ALL CHANGES IMPLEMENTED AND WORKING PERFECTLY!"
