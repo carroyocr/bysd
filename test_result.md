@@ -213,6 +213,30 @@ frontend:
         - agent: "testing"
         - comment: "✅ PASSED - Website is fully responsive. Tested on desktop (1920x1080), tablet (768x1024), and mobile (390x844) viewports. Mobile menu works correctly, layout adapts properly, and all content remains accessible across screen sizes."
 
+  - task: "Volunteers Page - Volunteer Application Section"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/VolunteersSection.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - New '¿Quieres ser Voluntario?' section is perfectly implemented between title and manual. Features Users icon, highlighted design, 'Postular Ahora' button with correct link (https://forms.gle/3drhJ6n77du4qZVu5), opens in new tab with proper security attributes (target='_blank', rel='noopener noreferrer'). Section positioning and styling are excellent."
+
+  - task: "Logistics Page - Hotel Activities with Prices"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/Logistics.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "✅ PASSED - 'Actividades Recreativas del Hotel' section displays ALL 9 activities with correct prices in badges positioned on the right side. All activity names are correct and updated: Four Wheel Parejas (RD$ 2,738.00), Go Karts Offroad (RD$ 890.00), Karting Inroad (RD$ 1,780.00), Mario Karts (RD$ 1,711.00), Kayak 1 Pax (RD$ 890.00), Paseo en Tren (RD$ 275.00), Zipline (RD$ 548.00), Tour Apiario (RD$ 821.00), Cabalgatas (RD$ 342.00). Design and layout are perfect."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"
