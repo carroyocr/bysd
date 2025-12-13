@@ -123,7 +123,21 @@ export default function SponsorsSection() {
                   key={index}
                   className="bg-card border-border shadow-soft hover-lift hover:shadow-medium transition-all duration-300 group"
                 >
-                  <CardHeader>
+                  <CardHeader className="space-y-4">
+                    {/* Logo */}
+                    {sponsor.logo ? (
+                      <div className="w-full h-32 flex items-center justify-center bg-muted/20 rounded-lg p-4">
+                        <img
+                          src={sponsor.logo}
+                          alt={`Logo de ${sponsor.name}`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-32 flex items-center justify-center bg-muted/20 rounded-lg">
+                        <span className="text-muted-foreground text-sm">Logo próximamente</span>
+                      </div>
+                    )}
                     <CardTitle className="text-xl font-bold text-foreground flex items-start justify-between gap-2">
                       <span>{sponsor.name}</span>
                       <a
