@@ -44,7 +44,7 @@ export default function EventInfo() {
   ];
 
   return (
-    <section className="py-20 bg-gradient-to-b from-background to-secondary/20">
+    <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
