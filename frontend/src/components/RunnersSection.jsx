@@ -46,7 +46,7 @@ export default function RunnersSection() {
           {/* Header */}
           <div className="text-center space-y-4">
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Sección del Corredor
+              Sección Corredores
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Todo lo que necesitas saber para prepararte para el desafío
@@ -81,17 +81,11 @@ export default function RunnersSection() {
           {/* Route Map Image */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium overflow-hidden">
             <CardContent className="p-0">
-              <div className="relative">
-                <img
-                  src="/circuito-backyard-ultra.png"
-                  alt="Mapa del Circuito Backyard Ultra Santo Domingo - Ruta de la Carrera"
-                  className="w-full h-auto object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent p-6">
-                  <h3 className="font-display text-2xl text-foreground">Ruta de la Carrera</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Circuito de 6.7 km - Sierra Prieta, Santo Domingo</p>
-                </div>
-              </div>
+              <img
+                src="/circuito-backyard-ultra.png"
+                alt="Mapa del Circuito Backyard Ultra Santo Domingo - Ruta de la Carrera"
+                className="w-full h-auto object-cover"
+              />
             </CardContent>
           </Card>
 

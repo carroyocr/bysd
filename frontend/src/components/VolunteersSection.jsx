@@ -138,7 +138,7 @@ export default function VolunteersSection() {
           {/* Header */}
           <div className="text-center space-y-4">
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Manual de Voluntarios
+              Sección Voluntarios
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Guía completa para el equipo de voluntarios del evento
