@@ -53,6 +53,35 @@ export default function RunnersSection() {
             </p>
           </div>
 
+          {/* Download Manual */}
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Download className="w-7 h-7 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-display text-2xl text-foreground">Descargar Manual del Corredor</h3>
+                    <p className="text-muted-foreground">
+                      Obtén la guía completa con toda la información necesaria para participar en el evento
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/manual-corredores.pdf"
+                  download="Manual-del-Corredor-BYSD-2026.pdf"
+                  className="flex-shrink-0"
+                >
+                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300">
+                    <Download className="w-5 h-5 mr-2" />
+                    Descargar PDF
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Download Route GPX */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
             <CardContent className="p-8">
