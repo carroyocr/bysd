@@ -16,6 +16,7 @@ export default function Footer() {
     { href: '/voluntarios', label: 'Voluntarios' },
     { href: '/reglas', label: 'Reglas' },
     { href: '/logistica', label: 'Logística' },
+    { href: '/patrocinadores', label: 'Patrocinadores' },
     { href: '/faq', label: 'FAQ' },
   ];
 
