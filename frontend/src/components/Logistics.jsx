@@ -76,13 +76,15 @@ export default function Logistics() {
   ];
 
   const activities = [
-    { name: 'Four Wheel Parejas', available: true },
-    { name: 'Go Karts', available: true },
-    { name: 'Karting', available: true },
-    { name: 'Kayak', available: true },
-    { name: 'Zipline (Tirolesa)', available: true },
-    { name: 'Tour de Apiario', available: true },
-    { name: 'Cabalgata', available: true },
+    { name: 'Four Wheel Parejas', price: 'RD$ 2,738.00' },
+    { name: 'Go Karts Offroad', price: 'RD$ 890.00' },
+    { name: 'Karting Inroad', price: 'RD$ 1,780.00' },
+    { name: 'Mario Karts', price: 'RD$ 1,711.00' },
+    { name: 'Kayak 1 Pax', price: 'RD$ 890.00' },
+    { name: 'Paseo en Tren', price: 'RD$ 275.00' },
+    { name: 'Zipline', price: 'RD$ 548.00' },
+    { name: 'Tour Apiario', price: 'RD$ 821.00' },
+    { name: 'Cabalgatas', price: 'RD$ 342.00' },
   ];
 
   const supportCrew = [
@@ -204,16 +206,21 @@ export default function Logistics() {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activities.map((activity, index) => (
                   <div
                     key={index}
-                    className="flex flex-col items-center gap-2 p-4 rounded-lg bg-card border border-border text-center"
+                    className="flex items-center justify-between gap-3 p-4 rounded-lg bg-card border border-border hover-lift"
                   >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <TreePine className="w-5 h-5 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <TreePine className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{activity.name}</span>
                     </div>
-                    <span className="text-sm font-medium text-foreground">{activity.name}</span>
+                    <Badge variant="outline" className="font-semibold text-primary">
+                      {activity.price}
+                    </Badge>
                   </div>
                 ))}
               </div>

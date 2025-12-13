@@ -145,6 +145,36 @@ export default function VolunteersSection() {
             </p>
           </div>
 
+          {/* Volunteer Application */}
+          <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/30 shadow-strong">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Users className="w-7 h-7 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-display text-2xl text-foreground">¿Quieres ser Voluntario?</h3>
+                    <p className="text-muted-foreground">
+                      Únete a nuestro equipo y forma parte de esta experiencia única. Completa el formulario de registro para postularte como voluntario del evento.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="https://forms.gle/3drhJ6n77du4qZVu5"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0"
+                >
+                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300">
+                    <Users className="w-5 h-5 mr-2" />
+                    Postular Ahora
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Download Manual */}
           <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
             <CardContent className="p-8">
