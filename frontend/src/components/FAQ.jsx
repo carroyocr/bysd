@@ -111,7 +111,7 @@ export default function FAQ() {
                     <AccordionTrigger className="text-left hover:text-primary transition-colors">
                       <span className="flex items-start gap-3">
                         <HelpCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <span className="font-semibold">{faq.question}</span>
+                        <span>{faq.question}</span>
                       </span>
                     </AccordionTrigger>
                     <AccordionContent className="text-muted-foreground pl-8 pr-4">
