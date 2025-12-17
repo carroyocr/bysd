@@ -73,6 +73,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/senderitmo.png',
     },
     {
+      name: 'Suzuki',
+      description: 'Suzuki es una marca reconocida por ofrecer al mercado dominicano vehículos confiables, versátiles y de alto desempeño, alineados con un estilo de vida activo y aventurero, respaldando iniciativas que promueven el deporte y la superación personal.',
+      instagram: 'https://www.instagram.com/suzukird/',
+      logo: '/sponsors/suzuki.png',
+    },
+    {
       name: 'Vida Sana Vida Ultra Sports Club',
       description: 'Club referente en ultra resistencia, promotor del alto rendimiento y la vida saludable en la República Dominicana.',
       instagram: 'https://www.instagram.com/vidasanavidaultra/',
