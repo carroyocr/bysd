@@ -7,6 +7,12 @@ import { Separator } from './ui/separator';
 export default function SponsorsSection() {
   const sponsors = [
     {
+      name: 'AGESS',
+      description: 'Empresa de logística en la República Dominicana especializada en servicios de envío, logística e importación, ofreciendo soluciones eficientes y confiables para el manejo de paquetes y carga.',
+      instagram: 'https://www.instagram.com/agessrd/',
+      logo: '/sponsors/agess.png',
+    },
+    {
       name: 'AFP Atlántico',
       description: 'Referente en administración de fondos de pensiones, destacándose por su enfoque en planificación financiera y bienestar a largo plazo.',
       instagram: 'https://www.instagram.com/afpatlantico/',
@@ -23,6 +29,12 @@ export default function SponsorsSection() {
       description: 'Institución financiera líder, con una trayectoria sólida apoyando el desarrollo económico, social y deportivo del país.',
       instagram: 'https://www.instagram.com/banco_atlantico/',
       logo: '/sponsors/banco-atlantico.png',
+    },
+    {
+      name: 'Banderas del Mundo, S.R.L.',
+      description: 'Empresa dedicada a la fabricación y comercialización de banderas, mástiles y artículos institucionales, reconocida por ofrecer productos de calidad en el mercado dominicano.',
+      instagram: 'https://www.instagram.com/banderasdelmundord/',
+      logo: '/sponsors/banderas.png',
     },
     {
       name: 'Ciclón',
