@@ -9,7 +9,7 @@ export default function SponsorsSection() {
     {
       name: 'AGESS',
       description: 'Empresa de logística en la República Dominicana especializada en servicios de envío, logística e importación, ofreciendo soluciones eficientes y confiables para el manejo de paquetes y carga.',
-      instagram: 'https://www.instagram.com/agessrd/',
+      instagram: 'https://www.instagram.com/agesscorp/',
       logo: '/sponsors/agess.png',
     },
     {
@@ -33,7 +33,7 @@ export default function SponsorsSection() {
     {
       name: 'Banderas del Mundo, S.R.L.',
       description: 'Empresa dedicada a la fabricación y comercialización de banderas, mástiles y artículos institucionales, reconocida por ofrecer productos de calidad en el mercado dominicano.',
-      instagram: 'https://www.instagram.com/banderasdelmundord/',
+      instagram: 'https://www.instagram.com/banderasdelmundosrl/',
       logo: '/sponsors/banderas.png',
     },
     {
