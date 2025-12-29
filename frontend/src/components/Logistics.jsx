@@ -185,36 +185,6 @@ export default function Logistics() {
             </CardContent>
           </Card>
 
-          {/* Hotel Activities */}
-          <Card className="bg-gradient-to-br from-secondary/30 to-muted/30 border-border shadow-medium">
-            <CardHeader>
-              <CardTitle className="text-2xl">Actividades Recreativas del Hotel</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Actividades disponibles con costo adicional en el hotel y cercanías
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activities.map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between gap-3 p-4 rounded-lg bg-card border border-border hover-lift"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <TreePine className="w-5 h-5 text-primary" />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{activity.name}</span>
-                    </div>
-                    <Badge variant="outline" className="font-semibold text-primary">
-                      {activity.price}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Important Notes */}
           <div className="grid md:grid-cols-2 gap-6">
             <Card className="border-primary/20 bg-primary/5 shadow-soft">
