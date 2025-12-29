@@ -75,18 +75,6 @@ export default function Logistics() {
     'Puntos de agua potable en áreas específicas',
   ];
 
-  const activities = [
-    { name: 'Four Wheel Parejas', price: 'RD$ 2,738.00' },
-    { name: 'Go Karts Offroad', price: 'RD$ 890.00' },
-    { name: 'Karting Inroad', price: 'RD$ 1,780.00' },
-    { name: 'Mario Karts', price: 'RD$ 1,711.00' },
-    { name: 'Kayak 1 Pax', price: 'RD$ 890.00' },
-    { name: 'Paseo en Tren', price: 'RD$ 275.00' },
-    { name: 'Zipline', price: 'RD$ 548.00' },
-    { name: 'Tour Apiario', price: 'RD$ 821.00' },
-    { name: 'Cabalgatas', price: 'RD$ 342.00' },
-  ];
-
   const supportCrew = [
     'Acompañantes y equipo de apoyo permitidos en áreas sociales',
     'Áreas designadas: zona de carpas o Rancho',
