@@ -372,6 +372,9 @@ export default function RunnersSection() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Participants List */}
+          <ParticipantsList />
         </div>
       </div>
     </section>
