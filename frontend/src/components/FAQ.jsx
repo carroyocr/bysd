@@ -34,7 +34,7 @@ export default function FAQ() {
     {
       question: '¿Dónde puedo descansar entre vueltas?',
       answer:
-        'Puedes descansar, hidratarte y comer en el área designada de meta/salida entre vueltas. Cada atleta tiene un espacio asignado de 4m x 4m para carpas personales, o puedes usar el área cubierta compartida (Rancho) de 600 m².',
+        'Puedes descansar, hidratarte y comer en el área designada de meta/salida entre vueltas. Cada atleta tiene un espacio asignado de 4m x 4m para carpas personales, o puedes usar el área cubierta compartida (Carpa) de 300 m².',
     },
     {
       question: '¿Hay puntos de hidratación en el circuito?',
@@ -79,12 +79,12 @@ export default function FAQ() {
     {
       question: '¿Hay comida disponible?',
       answer:
-        'Hay snacks y frutas disponibles en la línea de meta. El hotel ofrece almuerzo buffet por RD$550.00 por persona. Se recomienda llevar tus propios alimentos de fácil consumo para la carrera.',
+        'Hay snacks y frutas disponibles en la línea de meta para los atletas, también habrá un Foodtruck para comprar según disponibilidad del menú. Se recomienda llevar tus propios alimentos de fácil consumo para la carrera.',
     },
     {
       question: '¿Qué actividades hay para acompañantes?',
       answer:
-        'El hotel ofrece piscina, áreas verdes y diversas actividades recreativas con costo adicional: Four Wheel, Go Karts, Kayak, Zipline, tours de apiario y cabalgatas.',
+        'El hotel ofrece piscina, áreas verdes y diversas actividades recreativas con costo adicional: Four Wheel, Go Karts, Kayak, Zipline, tours de apiario y cabalgatas. Requiere compra del daypass.',
     },
   ];
 

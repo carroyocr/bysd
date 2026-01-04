@@ -17,11 +17,11 @@ export default function EventInfo() {
       icon: <MapPin className="w-8 h-8 text-primary" />,
       title: 'Ubicación',
       details: [
-        'Hotel Caribbean Adventure',
+        'Pista de Aeromodelismo, Hobbyland',
         'Sierra Prieta, Santo Domingo',
         'República Dominicana',
       ],
-      link: 'https://maps.app.goo.gl/PswGprUy5nBqZ1di8',
+      link: 'https://maps.app.goo.gl/5iryzkXeZhdXfYwa9',
     },
     {
       icon: <Clock className="w-8 h-8 text-primary" />,

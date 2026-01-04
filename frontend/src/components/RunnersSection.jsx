@@ -23,7 +23,7 @@ export default function RunnersSection() {
   ];
 
   const schedule = [
-    { time: '06:00 - 07:30', event: 'Apertura del Hotel y Acceso al Área', detail: 'Llegada de atletas. Montaje de carpas y zona personal' },
+    { time: '06:00 - 07:30', event: 'Apertura Acceso al Área', detail: 'Llegada de atletas. Montaje de carpas y zona personal' },
     { time: '06:00 - 07:30', event: 'Check-in de la Carrera Abierto', detail: 'Registro de participantes' },
     { time: '07:30', event: 'Apertura del Corral de Salida', detail: 'Los corredores pueden ingresar al corral' },
     { time: '07:57', event: 'Primera Señal (un pitido)', detail: '3 minutos para el inicio' },
@@ -366,13 +366,6 @@ export default function RunnersSection() {
                   <p>
                     Estacionamiento seguro y gratuito disponible en la propiedad. Zona de camping disponible.
                     Cada atleta tiene asignado un espacio de 4m x 4m para carpas personales.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-bold text-foreground">Instalaciones del Hotel</h4>
-                  <p>
-                    El hotel ofrece piscina, áreas verdes y alojamiento para acompañantes (reserva previa requerida).
-                    Almuerzo buffet disponible por RD$550.00 por persona.
                   </p>
                 </div>
               </div>

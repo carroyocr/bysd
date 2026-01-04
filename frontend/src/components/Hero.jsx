@@ -48,7 +48,7 @@ export default function Hero() {
                 </a>
                 
                 <a 
-                  href="https://maps.app.goo.gl/PswGprUy5nBqZ1di8"
+                  href="https://maps.app.goo.gl/f5Qnu2iBu3PRogNv9"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
@@ -56,7 +56,7 @@ export default function Hero() {
                   <MapPin className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                   <div className="text-left">
                     <div className="text-xs text-muted-foreground font-medium">Lugar</div>
-                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Hotel Caribbean Adventure</div>
+                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Hobbyland</div>
                   </div>
                 </a>
               </div>

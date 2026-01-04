@@ -9,12 +9,12 @@ export default function Logistics() {
       icon: <MapPin className="w-6 h-6" />,
       title: 'Ubicación',
       items: [
-        'Hotel Caribbean Adventure',
+        'Hobby Land',
         'Finca del Grupo Alonso',
         'Sierra Prieta, Santo Domingo',
         'Circuito cerrado y controlado',
       ],
-      link: 'https://maps.app.goo.gl/PswGprUy5nBqZ1di8',
+      link: 'https://maps.app.goo.gl/f5Qnu2iBu3PRogNv9',
     },
     {
       icon: <Car className="w-6 h-6" />,
@@ -33,7 +33,7 @@ export default function Logistics() {
         'Espacio asignado de 4m x 4m por atleta',
         'Carpas solo en áreas marcadas',
         'No bloquear pasillos',
-        'Área cubierta compartida (Rancho) de 600 m²',
+        
       ],
     },
     {
@@ -50,8 +50,7 @@ export default function Logistics() {
       icon: <Utensils className="w-6 h-6" />,
       title: 'Alimentación',
       items: [
-        'Almuerzo buffet disponible',
-        'Costo: RD$550.00 por persona',
+        'Foodtruck Disponible',
         'Snacks y frutas en línea de meta',
         'Se recomienda llevar alimentos propios',
       ],
@@ -69,7 +68,6 @@ export default function Logistics() {
   ];
 
   const bathrooms = [
-    '4 baños en el Rancho (zona cubierta)',
     '4 baños portátiles distribuidos en el sitio',
     'Mantenimiento regular durante el evento',
     'Puntos de agua potable en áreas específicas',
@@ -209,7 +207,7 @@ export default function Logistics() {
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   Este evento es sin fines de lucro. La preservación ambiental es una prioridad.
-                  El Hotel Caribbean Adventure ofrece un ambiente natural privilegiado para una
+                  La finca del Grupo Alonso ofrece un ambiente natural privilegiado para una
                   experiencia segura, desafiante y memorable.
                 </p>
               </CardContent>
