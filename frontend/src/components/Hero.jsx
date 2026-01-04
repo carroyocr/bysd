@@ -63,10 +63,13 @@ export default function Hero() {
               </div>
               
               <div className="pt-6">
-                <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted/50 rounded-full border border-border">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                  <span className="text-sm font-semibold text-foreground">Inscripciones cerradas</span>
-                </div>
+                <Link 
+                  to="/corredores#participantes"
+                  className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/30 hover:border-primary transition-all duration-300 group"
+                >
+                  <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-semibold text-foreground">Participantes 2026</span>
+                </Link>
               </div>
             </div>
 
