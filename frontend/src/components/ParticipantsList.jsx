@@ -122,7 +122,7 @@ export default function ParticipantsList() {
   }, [searchTerm, nationalityFilter, participants]);
 
   return (
-    <section className="py-12">
+    <section id="participantes" className="py-12">
       <Card className="border-border shadow-medium">
         <CardHeader>
           <div className="flex items-center gap-3 mb-4">
