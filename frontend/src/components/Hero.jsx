@@ -1,6 +1,7 @@
 import React from 'react';
-import { Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { Link } from 'react-router-dom';
 
 export default function Hero() {
   return (
