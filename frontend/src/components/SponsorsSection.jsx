@@ -43,6 +43,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/ciclon.png',
     },
     {
+      name: 'En la Montaña Podcast',
+      description: 'Podcast enfocado en la vida outdoor y las experiencias en la montaña, compartiendo historias, rutas y aventuras que inspiran a conectar con la naturaleza y el trail running.',
+      instagram: 'https://www.instagram.com/enlamontanapodcast/',
+      logo: '/sponsors/en-la-montana-podcast.png',
+    },
+    {
       name: 'En Simpex',
       description: 'Empresa destacada por traer al mercado dominicano una variada gama de productos de la más alta calidad, ampliando el acceso del consumidor a marcas confiables.',
       instagram: 'https://www.instagram.com/simpexrd/',
