@@ -45,7 +45,7 @@ export default function SponsorsSection() {
     {
       name: 'En la Montaña Podcast',
       description: 'Podcast enfocado en la vida outdoor y las experiencias en la montaña, compartiendo historias, rutas y aventuras que inspiran a conectar con la naturaleza y el trail running.',
-      instagram: 'https://www.instagram.com/enlamontanapodcast/',
+      instagram: 'https://www.instagram.com/enla.montanapodcast/',
       logo: '/sponsors/en-la-montana-podcast.png',
     },
     {
