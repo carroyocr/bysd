@@ -43,6 +43,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/ciclon.png',
     },
     {
+      name: 'Centro de Terapia Física y Rehabilitación Dra. Vilma Arias',
+      description: 'Centro especializado en terapia física y rehabilitación, reconocido por ofrecer servicios profesionales orientados a la recuperación funcional, el manejo del dolor y la mejora del rendimiento físico, posicionándose como una referencia en su área en la República Dominicana.',
+      instagram: 'https://www.instagram.com/dravilmaarias/',
+      logo: '/sponsors/dra-vilma-arias.png',
+    },
+    {
       name: 'En la Montaña Podcast',
       description: 'Podcast enfocado en la vida outdoor y las experiencias en la montaña, compartiendo historias, rutas y aventuras que inspiran a conectar con la naturaleza y el trail running.',
       instagram: 'https://www.instagram.com/enla.montanapodcast/',
