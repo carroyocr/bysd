@@ -57,7 +57,7 @@ export default function Hero() {
                   <MapPin className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                   <div className="text-left">
                     <div className="text-xs text-muted-foreground font-medium">Lugar</div>
-                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Hobbyland</div>
+                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Hotel Caribbean Adventure</div>
                   </div>
                 </a>
               </div>

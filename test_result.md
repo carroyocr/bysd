@@ -127,7 +127,7 @@ frontend:
     status_history:
         - working: true
         - agent: "testing"
-        - comment: "✅ PASSED - Hero section displays perfectly. Logo image loads correctly, event details visible (Sábado 24 Enero, 2026 at Hobbyland), all 4 stats display correctly (6.7 KM, 60 minutes, 24h+, 1 winner), and 'Inscripciones cerradas' badge is visible."
+        - comment: "✅ PASSED - Hero section displays perfectly. Logo image loads correctly, event details visible (Sábado 24 Enero, 2026 at Hotel Caribbean Adventure), all 4 stats display correctly (6.7 KM, 60 minutes, 24h+, 1 winner), and 'Inscripciones cerradas' badge is visible."
 
   - task: "Event Info Section Testing"
     implemented: true

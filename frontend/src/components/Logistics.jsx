@@ -9,12 +9,11 @@ export default function Logistics() {
       icon: <MapPin className="w-6 h-6" />,
       title: 'Ubicación',
       items: [
-        'Hobby Land',
-        'Finca del Grupo Alonso',
+        'Hotel Caribbean Adventure',
         'Sierra Prieta, Santo Domingo',
         'Circuito cerrado y controlado',
       ],
-      link: 'https://maps.app.goo.gl/f5Qnu2iBu3PRogNv9',
+      link: 'https://maps.app.goo.gl/BrntZd7xFPcrmDTe7',
     },
     {
       icon: <Car className="w-6 h-6" />,
