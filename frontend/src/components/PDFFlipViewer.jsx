@@ -79,8 +79,8 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
               <Page
                 pageNumber={pageNumber}
                 width={450}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
                 className="pdf-page"
               />
             </Document>
