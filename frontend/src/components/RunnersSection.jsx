@@ -1,13 +1,15 @@
-import React from 'react';
-import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon, BookOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import ParticipantsList from './ParticipantsList';
+import PDFFlipViewer from './PDFFlipViewer';
 
 export default function RunnersSection() {
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const mandatoryEquipment = [
     'Linterna frontal con batería suficiente para al menos 8 horas',
     'Luz trasera roja visible y fija',
