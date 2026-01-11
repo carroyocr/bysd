@@ -100,7 +100,7 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex items-center justify-center gap-4 mt-6">
+        <div className={`flex items-center justify-center gap-4 mt-6 transition-opacity duration-200 ${isTransitioning ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <Button
             onClick={previousPage}
             disabled={pageNumber <= 1}
