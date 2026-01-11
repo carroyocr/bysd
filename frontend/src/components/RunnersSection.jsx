@@ -62,24 +62,48 @@ export default function RunnersSection() {
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-start gap-4">
                   <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Download className="w-7 h-7 text-primary" />
+                    <BookOpen className="w-7 h-7 text-primary" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">Manual del Corredor</h3>
+                    <h3 className="font-display text-2xl text-foreground">Guía del Corredor</h3>
                     <p className="text-muted-foreground">
-                      La guía completa con toda la información necesaria para participar en el evento estará disponible próximamente
+                      Consulta la guía completa con toda la información necesaria para participar en el evento
                     </p>
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <Button size="lg" disabled className="bg-muted text-muted-foreground cursor-not-allowed">
-                    <Download className="w-5 h-5 mr-2" />
-                    Próximamente
+                <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+                  <Button 
+                    size="lg" 
+                    onClick={() => setIsPdfViewerOpen(true)}
+                    className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300"
+                  >
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    Ver Guía
                   </Button>
+                  <a
+                    href="/manual-corredores.pdf"
+                    download="Guia-del-Corredor-BYSD-2026.pdf"
+                  >
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      className="w-full sm:w-auto border-primary/30 hover:bg-primary/10"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Descargar
+                    </Button>
+                  </a>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* PDF Viewer Modal */}
+          <PDFFlipViewer
+            isOpen={isPdfViewerOpen}
+            onClose={() => setIsPdfViewerOpen(false)}
+            pdfUrl="/manual-corredores.pdf"
+          />
 
           {/* Route Map Image */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium overflow-hidden">
