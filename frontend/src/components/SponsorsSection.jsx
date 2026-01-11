@@ -45,7 +45,7 @@ export default function SponsorsSection() {
     {
       name: 'Centro de Terapia Física y Rehabilitación Dra. Vilma Arias',
       description: 'Centro especializado en terapia física y rehabilitación, reconocido por ofrecer servicios profesionales orientados a la recuperación funcional, el manejo del dolor y la mejora del rendimiento físico, posicionándose como una referencia en su área en la República Dominicana.',
-      instagram: 'https://www.instagram.com/dravilmaarias/',
+      instagram: 'https://www.instagram.com/rehabilitaciondrarias/',
       logo: '/sponsors/dra-vilma-arias.png',
     },
     {
