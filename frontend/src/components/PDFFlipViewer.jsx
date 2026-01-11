@@ -77,7 +77,7 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
       <div className="w-full h-full max-w-4xl flex flex-col items-center justify-center">
         {/* PDF Viewer with Flip Animation */}
         <div className="relative bg-card border border-border rounded-lg shadow-strong overflow-hidden">
-          <div className={`pdf-page-wrapper ${isFlipping ? 'flipping' : ''}`}>
+          <div className={`pdf-page-wrapper ${isTransitioning ? 'transitioning' : ''}`}>
             <Document
               file={pdfUrl}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -88,11 +88,12 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
               }
             >
               <Page
-                pageNumber={pageNumber}
+                pageNumber={displayPage}
                 width={450}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
                 className="pdf-page"
+                loading=""
               />
             </Document>
           </div>
