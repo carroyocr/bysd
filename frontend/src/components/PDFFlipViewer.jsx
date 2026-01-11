@@ -9,28 +9,39 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [isFlipping, setIsFlipping] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [displayPage, setDisplayPage] = useState(1);
 
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
   }
 
   const changePage = (offset) => {
-    if (isFlipping) return;
+    if (isTransitioning) return;
     
-    setIsFlipping(true);
+    const newPage = pageNumber + offset;
+    if (newPage < 1 || newPage > numPages) return;
+    
+    setIsTransitioning(true);
+    
+    // Start slide out animation
     setTimeout(() => {
-      setPageNumber(prevPageNumber => prevPageNumber + offset);
-      setIsFlipping(false);
-    }, 300);
+      setDisplayPage(newPage);
+      setPageNumber(newPage);
+    }, 250);
+    
+    // End transition
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 500);
   };
 
   const previousPage = () => {
-    if (pageNumber > 1) changePage(-1);
+    changePage(-1);
   };
 
   const nextPage = () => {
-    if (pageNumber < numPages) changePage(1);
+    changePage(1);
   };
 
   if (!isOpen) return null;
