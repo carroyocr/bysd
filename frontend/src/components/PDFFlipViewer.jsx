@@ -120,24 +120,25 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
       {/* CSS for flip animation */}
       <style jsx>{`
         .pdf-page-wrapper {
-          transition: transform 0.3s ease-in-out;
+          transition: all 0.4s ease-in-out;
         }
         
         .pdf-page-wrapper.flipping {
-          transform: rotateY(10deg);
-          animation: pageFlip 0.6s ease-in-out;
+          animation: pageSlide 0.5s ease-in-out;
         }
         
-        @keyframes pageFlip {
+        @keyframes pageSlide {
           0% {
-            transform: rotateY(0deg);
+            transform: translateX(0) scale(1);
+            opacity: 1;
           }
           50% {
-            transform: rotateY(90deg);
-            opacity: 0.5;
+            transform: translateX(30px) scale(0.95);
+            opacity: 0.3;
           }
           100% {
-            transform: rotateY(0deg);
+            transform: translateX(0) scale(1);
+            opacity: 1;
           }
         }
 
