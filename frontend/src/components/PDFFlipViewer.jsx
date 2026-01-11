@@ -24,16 +24,16 @@ export default function PDFFlipViewer({ isOpen, onClose, pdfUrl }) {
     
     setIsTransitioning(true);
     
-    // Start slide out animation
+    // Start transition
     setTimeout(() => {
       setDisplayPage(newPage);
       setPageNumber(newPage);
-    }, 250);
+    }, 200);
     
     // End transition
     setTimeout(() => {
       setIsTransitioning(false);
-    }, 500);
+    }, 400);
   };
 
   const previousPage = () => {
