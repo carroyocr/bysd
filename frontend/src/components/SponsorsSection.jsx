@@ -91,6 +91,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/molino-del-sol.png',
     },
     {
+      name: 'Pico Diego de Ocampo Trail',
+      description: 'Evento Deportivo de Trail Running. 🎖️5K- 9K - 21k y 5K Kids 🇩🇴 ⛰️Montaña más alta de la Cordillera Septentrional.',
+      instagram: 'https://www.instagram.com/picodiegodeocampotrail/',
+      logo: '/sponsors/pico-diego-ocampo.png',
+    },
+    {
       name: 'Senderitmo',
       description: 'Comunidad líder en trail running, reconocida por impulsar el crecimiento del deporte y la conexión con la naturaleza.',
       instagram: 'https://www.instagram.com/senderitmo/',
