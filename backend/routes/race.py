@@ -182,6 +182,12 @@ async def reactivate_participant(
     if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
     
+    if participant.get("status") == "active":
+        raise HTTPException(status_code=400, detail="El participante ya está activo")
+    
+    # WARNING: Reactivating a participant during an active race
+    # This should only be used for correcting mistakes
+    
     # Reactivate participant
     await database.participants.update_one(
         {"bib": bib},
@@ -194,7 +200,7 @@ async def reactivate_participant(
         }
     )
     
-    return {"message": f"Participante {bib} reactivado"}
+    return {"message": f"Participante {bib} reactivado. ATENCIÓN: Puede que necesite ajustar sus vueltas manualmente."}
 
 @router.post("/complete-lap")
 async def complete_lap(
