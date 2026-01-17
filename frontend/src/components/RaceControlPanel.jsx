@@ -258,11 +258,13 @@ export default function RaceControlPanel() {
 
   const filteredParticipants = participants.filter(p => {
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       p.bib.toLowerCase().includes(search) ||
       p.nombre.toLowerCase().includes(search) ||
       p.apellidos.toLowerCase().includes(search)
     );
+    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+    return matchesSearch && matchesStatus;
   });
 
   if (loading) {
