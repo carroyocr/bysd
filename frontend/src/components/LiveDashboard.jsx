@@ -64,10 +64,37 @@ export default function LiveDashboard() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeMessage, setSubscribeMessage] = useState(null);
 
-  // Save followed athletes to localStorage whenever it changes
+  // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
     localStorage.setItem(FOLLOWED_ATHLETES_KEY, JSON.stringify(followedAthletes));
+    
+    // Auto-update subscription if user is already subscribed
+    const savedEmail = localStorage.getItem(SUBSCRIPTION_EMAIL_KEY);
+    if (savedEmail && followedAthletes.length > 0) {
+      updateSubscriptionSilently(savedEmail, followedAthletes);
+    }
   }, [followedAthletes]);
+
+  // Silent subscription update (no UI feedback)
+  const updateSubscriptionSilently = async (email, athletes) => {
+    const savedSettings = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
+    const settings = savedSettings ? JSON.parse(savedSettings) : { notifyEveryLap: false, notifyOnFinish: true };
+    
+    try {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          athletes_bibs: athletes,
+          notify_every_lap: settings.notifyEveryLap,
+          notify_on_finish: settings.notifyOnFinish
+        })
+      });
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+    }
+  };
 
   // Toggle follow/unfollow athlete
   const toggleFollowAthlete = (bib) => {
