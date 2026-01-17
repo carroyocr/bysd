@@ -406,18 +406,71 @@ export default function RaceControlPanel() {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Vuelta en Curso
-                </label>
-                <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20">
-                  <p className="text-5xl font-bold text-primary">{currentLap}</p>
+            <div className="flex flex-col gap-6">
+              {/* Lap Number and Time Display */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Vuelta en Curso
+                  </label>
+                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20">
+                    <p className="text-5xl font-bold text-primary">{currentLap}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Horario de la Vuelta {currentLap}
+                  </label>
+                  <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <p className="text-xs text-blue-600 font-medium">INICIO</p>
+                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).start}</p>
+                      </div>
+                      <div className="text-2xl text-blue-400">→</div>
+                      <div className="text-center">
+                        <p className="text-xs text-blue-600 font-medium">FIN</p>
+                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).end}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-500 mt-2">
+                      La carrera inicia a las 9:00 AM • Cada vuelta dura 1 hora
+                    </p>
+                  </div>
                 </div>
               </div>
-              <Button
-                onClick={handleSaveCurrentLap}
-                disabled={saving}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={handleRevertLap}
+                  disabled={reverting || currentLap <= 1}
+                  variant="outline"
+                  className="border-amber-400 text-amber-700 hover:bg-amber-50 flex-1 sm:flex-none"
+                >
+                  <ChevronLeft className="w-5 h-5 mr-2" />
+                  {reverting ? 'Retrocediendo...' : 'Retroceder Vuelta'}
+                </Button>
+                <Button
+                  onClick={handleSaveCurrentLap}
+                  disabled={saving}
+                  className="bg-primary hover:bg-accent text-primary-foreground h-12 px-8 flex-1"
+                >
+                  <Save className="w-5 h-5 mr-2" />
+                  {saving ? 'Guardando...' : 'Registrar Vuelta Completada para Atletas Activos'}
+                </Button>
+              </div>
+
+              {/* Next Lap Preview */}
+              {currentLap < 24 && (
+                <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Próxima vuelta ({currentLap + 1}):</span>{' '}
+                    {getLapTimeRange(currentLap + 1).start} - {getLapTimeRange(currentLap + 1).end}
+                  </p>
+                </div>
+              )}
                 className="bg-primary hover:bg-accent text-primary-foreground h-12 px-8"
               >
                 <Save className="w-5 h-5 mr-2" />
