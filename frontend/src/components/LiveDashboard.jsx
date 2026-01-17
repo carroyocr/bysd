@@ -207,6 +207,49 @@ export default function LiveDashboard() {
           </a>
         </div>
 
+        {/* Countdown Timer - Only show if not expired */}
+        {!countdown.expired && (
+          <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <Clock className="w-6 h-6 text-primary" />
+                  <h2 className="text-xl font-bold text-foreground">La carrera comienza en</h2>
+                </div>
+                <div className="flex justify-center gap-3 sm:gap-6">
+                  <div className="text-center">
+                    <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 sm:px-6 sm:py-4 min-w-[70px] sm:min-w-[90px]">
+                      <p className="text-3xl sm:text-5xl font-bold">{countdown.days}</p>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 font-medium">DÍAS</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 sm:px-6 sm:py-4 min-w-[70px] sm:min-w-[90px]">
+                      <p className="text-3xl sm:text-5xl font-bold">{String(countdown.hours).padStart(2, '0')}</p>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 font-medium">HORAS</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 sm:px-6 sm:py-4 min-w-[70px] sm:min-w-[90px]">
+                      <p className="text-3xl sm:text-5xl font-bold">{String(countdown.minutes).padStart(2, '0')}</p>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 font-medium">MINUTOS</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 sm:px-6 sm:py-4 min-w-[70px] sm:min-w-[90px]">
+                      <p className="text-3xl sm:text-5xl font-bold">{String(countdown.seconds).padStart(2, '0')}</p>
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2 font-medium">SEGUNDOS</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-4">
+                  24 de enero de 2026 • 9:00 AM
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Winner Section */}
         {stats.winner && (
           <Card className="mb-8 border-4 border-yellow-400 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 shadow-strong animate-pulse-slow">
