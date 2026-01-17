@@ -1,0 +1,62 @@
+from pydantic import BaseModel, Field
+from typing import Optional, Literal
+from datetime import datetime
+
+class AdminUser(BaseModel):
+    username: str
+    password: str
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+class RaceConfig(BaseModel):
+    current_lap: int = 1
+    race_status: Literal["active", "paused", "finished"] = "active"
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Participant(BaseModel):
+    bib: str
+    nombre: str
+    apellidos: str
+    nacionalidad: str
+    status: Literal["active", "retired"] = "active"
+    laps_completed: int = 0
+    total_km: float = 0.0
+    retired_at_lap: Optional[int] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class LapLog(BaseModel):
+    participant_bib: str
+    lap_number: int
+    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    recorded_by: str = "admin"
+
+class SetCurrentLapRequest(BaseModel):
+    current_lap: int
+
+class MarkRetiredRequest(BaseModel):
+    bib: str
+    retired_at_lap: int
+
+class CompleteLapRequest(BaseModel):
+    bib: str
+    lap_number: int
+
+class RaceStats(BaseModel):
+    current_lap: int
+    total_laps_completed: int
+    athletes_retired: int
+    athletes_active: int
+    total_km: float
+
+class ParticipantWithStats(BaseModel):
+    bib: str
+    nombre: str
+    apellidos: str
+    nacionalidad: str
+    status: str
+    laps_completed: int
+    total_km: float
+    retired_at_lap: Optional[int] = None

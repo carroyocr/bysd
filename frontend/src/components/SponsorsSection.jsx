@@ -93,7 +93,7 @@ export default function SponsorsSection() {
     {
       name: 'Pico Diego de Ocampo Trail',
       description: 'Evento Deportivo de Trail Running. 🎖️5K- 9K - 21k y 5K Kids 🇩🇴 ⛰️Montaña más alta de la Cordillera Septentrional.',
-      instagram: 'https://www.instagram.com/picodiegodeocampotrail/',
+      instagram: 'https://www.instagram.com/picodiegodeocampotrail1/',
       logo: '/sponsors/pico-diego-ocampo.png',
     },
     {
