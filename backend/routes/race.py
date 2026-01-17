@@ -443,9 +443,9 @@ async def revert_lap(
         raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
     
     new_lap = current_lap - 1
-    # The lap that was just completed (and we're reverting) is current_lap - 1
-    # Athletes marked DNF during that lap would have retired_at_lap = current_lap - 1
-    reverted_lap = current_lap - 1
+    # Athletes marked DNF during the current lap (before we revert) should be reactivated
+    # If current_lap is 2 and we're going back to 1, we reactivate athletes with retired_at_lap = 2
+    lap_to_revert = current_lap
     
     updated_count = 0
     reactivated_count = 0
@@ -472,15 +472,14 @@ async def revert_lap(
         )
         updated_count += 1
     
-    # 2. Reactivate DNF athletes who were marked as retired in the lap we're reverting
-    # If current_lap is 3 and we're going back to 2, we reactivate athletes with retired_at_lap = 2
-    # (they were marked DNF when they completed lap 2 but decided not to continue)
-    dnf_in_reverted_lap = await database.participants.find(
-        {"status": "retired", "retired_at_lap": reverted_lap},
+    # 2. Reactivate DNF athletes who were marked as retired in the current lap
+    # If current_lap is 2 and we're going back to 1, we reactivate athletes with retired_at_lap = 2
+    dnf_in_current_lap = await database.participants.find(
+        {"status": "retired", "retired_at_lap": lap_to_revert},
         {"_id": 0}
     ).to_list(1000)
     
-    for participant in dnf_in_reverted_lap:
+    for participant in dnf_in_current_lap:
         # They had their lap incremented when marked DNF, so reduce it back
         new_laps = max(0, participant.get("laps_completed", 1) - 1)
         new_km = round(new_laps * KM_PER_LAP, 1)
