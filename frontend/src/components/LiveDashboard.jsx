@@ -467,64 +467,134 @@ export default function LiveDashboard() {
           </Card>
         </div>
 
-        {/* Participants Table */}
+        {/* Participants Section */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col gap-4">
               <div>
-                <CardTitle className="text-2xl">Clasificación de Participantes</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">Clasificación de Participantes</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {filteredParticipants.length} participantes
+                  {followedAthletes.length > 0 && ` • ${followedAthletes.length} seguidos`}
                 </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="flex flex-col gap-2 w-full">
                 <Input
                   type="text"
                   placeholder="Buscar por BIB o nombre..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="md:w-64"
+                  className="w-full"
                 />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">Todos</option>
-                  <option value="active">Activos</option>
-                  <option value="retired">DNF</option>
-                  <option value="dns">DNS</option>
-                </select>
-                <select
-                  value={filterFollowed}
-                  onChange={(e) => setFilterFollowed(e.target.value)}
-                  className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">Todos los atletas</option>
-                  <option value="followed">Solo seguidos</option>
-                </select>
-                <Button
-                  onClick={exportToCSV}
-                  variant="outline"
-                  className="border-primary/30 hover:bg-primary/10"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="flex-1 min-w-[100px] px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="active">Activos</option>
+                    <option value="retired">DNF</option>
+                    <option value="dns">DNS</option>
+                  </select>
+                  <select
+                    value={filterFollowed}
+                    onChange={(e) => setFilterFollowed(e.target.value)}
+                    className="flex-1 min-w-[120px] px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="followed">Seguidos ❤️</option>
+                  </select>
+                  <Button
+                    onClick={exportToCSV}
+                    variant="outline"
+                    size="sm"
+                    className="border-primary/30 hover:bg-primary/10"
+                  >
+                    <Download className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">CSV</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile View - Cards */}
+            <div className="lg:hidden space-y-3">
+              {filteredParticipants.map((participant) => (
+                <div
+                  key={participant.bib}
+                  className={`p-4 rounded-lg border ${
+                    isFollowed(participant.bib) 
+                      ? 'border-red-300 bg-red-50' 
+                      : 'border-border bg-muted/20'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-lg">
+                        {participant.bib}
+                      </Badge>
+                      <Badge
+                        className={
+                          participant.status === 'active' 
+                            ? 'bg-green-500' 
+                            : participant.status === 'dns'
+                            ? 'bg-gray-500'
+                            : 'bg-red-500'
+                        }
+                      >
+                        {participant.status === 'active' 
+                          ? 'Activo' 
+                          : participant.status === 'dns'
+                          ? 'DNS'
+                          : 'DNF'}
+                      </Badge>
+                    </div>
+                    <Button
+                      onClick={() => toggleFollowAthlete(participant.bib)}
+                      variant="ghost"
+                      size="sm"
+                      className={`p-2 ${isFollowed(participant.bib) ? 'text-red-500' : 'text-gray-400'}`}
+                    >
+                      <Heart className={`w-5 h-5 ${isFollowed(participant.bib) ? 'fill-current' : ''}`} />
+                    </Button>
+                  </div>
+                  <div className="mb-3">
+                    <p className="font-semibold text-foreground">{participant.nombre} {participant.apellidos}</p>
+                    <Badge variant="secondary" className="text-xs mt-1">
+                      {participant.nacionalidad}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-background rounded p-2">
+                      <p className="text-xs text-muted-foreground">Vueltas</p>
+                      <p className="font-bold text-lg">{participant.laps_completed}</p>
+                    </div>
+                    <div className="bg-background rounded p-2">
+                      <p className="text-xs text-muted-foreground">Km</p>
+                      <p className="font-bold text-lg">{participant.total_km}</p>
+                    </div>
+                    <div className="bg-background rounded p-2">
+                      <p className="text-xs text-muted-foreground">DNF en</p>
+                      <p className="font-bold text-lg">{participant.retired_at_lap || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop View - Table */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-3 px-4 font-semibold text-sm">BIB</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Nombre</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Nacionalidad</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm">País</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Estado</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Vueltas</th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm">Kilómetros</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm">Km</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">DNF en</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Seguir</th>
                   </tr>
@@ -533,7 +603,9 @@ export default function LiveDashboard() {
                   {filteredParticipants.map((participant) => (
                     <tr
                       key={participant.bib}
-                      className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      className={`border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${
+                        isFollowed(participant.bib) ? 'bg-red-50' : ''
+                      }`}
                     >
                       <td className="py-3 px-4">
                         <Badge variant="outline" className="font-mono">
@@ -589,7 +661,7 @@ export default function LiveDashboard() {
                           className={`p-2 ${isFollowed(participant.bib) ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500'}`}
                         >
                           <Heart 
-                            className={`w-4 h-4 ${isFollowed(participant.bib) ? 'fill-current' : ''}`}
+                            className={`w-5 h-5 ${isFollowed(participant.bib) ? 'fill-current' : ''}`}
                           />
                         </Button>
                       </td>
