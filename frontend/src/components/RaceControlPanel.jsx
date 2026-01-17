@@ -410,32 +410,64 @@ export default function RaceControlPanel() {
                       <td className="py-3 px-4">
                         <Badge
                           variant={participant.status === 'active' ? 'default' : 'secondary'}
-                          className={participant.status === 'active' ? 'bg-green-500' : 'bg-red-500'}
+                          className={
+                            participant.status === 'active' 
+                              ? 'bg-green-500' 
+                              : participant.status === 'dns'
+                              ? 'bg-gray-500'
+                              : 'bg-red-500'
+                          }
                         >
-                          {participant.status === 'active' ? 'Activo' : 'Retirado'}
+                          {participant.status === 'active' 
+                            ? 'Activo' 
+                            : participant.status === 'dns'
+                            ? 'DNS'
+                            : 'Retirado'}
                         </Badge>
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-2 flex-wrap">
                           {participant.status === 'active' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleCompleteLap(participant)}
+                                disabled={saving}
+                                className="bg-primary hover:bg-accent"
+                              >
+                                Registrar Vuelta
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleRetired(participant)}
+                                disabled={saving}
+                                className="border-red-500 text-red-600"
+                              >
+                                Marcar Retirado
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkDNS(participant)}
+                                disabled={saving}
+                                className="border-gray-500 text-gray-600"
+                              >
+                                Marcar DNS
+                              </Button>
+                            </>
+                          )}
+                          {(participant.status === 'retired' || participant.status === 'dns') && (
                             <Button
                               size="sm"
-                              onClick={() => handleCompleteLap(participant)}
+                              variant="outline"
+                              onClick={() => handleToggleRetired(participant)}
                               disabled={saving}
-                              className="bg-primary hover:bg-accent"
+                              className="border-green-500 text-green-600"
                             >
-                              Registrar Vuelta
+                              Reactivar
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleToggleRetired(participant)}
-                            disabled={saving}
-                            className={participant.status === 'retired' ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'}
-                          >
-                            {participant.status === 'active' ? 'Marcar Retirado' : 'Reactivar'}
-                          </Button>
                         </div>
                       </td>
                     </tr>
