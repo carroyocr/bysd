@@ -222,28 +222,28 @@ export default function RaceControlPanel() {
         {/* Current Lap Control */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Vuelta en Curso</CardTitle>
+            <CardTitle>Control de Vuelta</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Al guardar, se registrará la vuelta actual para todos los atletas activos y se incrementará a la siguiente vuelta
+            </p>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row gap-4 items-end">
               <div className="flex-1">
                 <label className="text-sm font-medium text-foreground mb-2 block">
-                  Número de Vuelta Actual
+                  Vuelta en Curso
                 </label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={currentLap}
-                  onChange={(e) => setCurrentLap(parseInt(e.target.value) || 1)}
-                  className="text-2xl font-bold text-center"
-                />
+                <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20">
+                  <p className="text-5xl font-bold text-primary">{currentLap}</p>
+                </div>
               </div>
               <Button
                 onClick={handleSaveCurrentLap}
-                className="bg-primary hover:bg-accent text-primary-foreground"
+                disabled={saving}
+                className="bg-primary hover:bg-accent text-primary-foreground h-12 px-8"
               >
-                <Save className="w-4 h-4 mr-2" />
-                Guardar Vuelta
+                <Save className="w-5 h-5 mr-2" />
+                {saving ? 'Guardando...' : 'Completar Vuelta y Avanzar'}
               </Button>
             </div>
           </CardContent>
