@@ -119,7 +119,7 @@ export default function LiveDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -168,14 +168,38 @@ export default function LiveDashboard() {
             </CardContent>
           </Card>
 
+          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">DNS</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{stats.athletes_dns}</p>
+                </div>
+                <UserX className="w-10 h-10 text-gray-600" />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-purple-700">Kilómetros Totales</p>
+                  <p className="text-sm text-purple-700">Km del Evento</p>
                   <p className="text-3xl font-bold text-purple-900 mt-1">{stats.total_km}</p>
                 </div>
                 <MapPin className="w-10 h-10 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-orange-700">Km Totales</p>
+                  <p className="text-3xl font-bold text-orange-900 mt-1">{stats.total_km_all_athletes}</p>
+                </div>
+                <TrendingUp className="w-10 h-10 text-orange-600" />
               </div>
             </CardContent>
           </Card>
