@@ -383,7 +383,7 @@ export default function RaceControlPanel() {
                 >
                   <option value="all">Todos ({participants.length})</option>
                   <option value="active">Activos ({participants.filter(p => p.status === 'active').length})</option>
-                  <option value="retired">Retirados ({participants.filter(p => p.status === 'retired').length})</option>
+                  <option value="retired">DNF ({participants.filter(p => p.status === 'retired').length})</option>
                   <option value="dns">DNS ({participants.filter(p => p.status === 'dns').length})</option>
                 </select>
               </div>
