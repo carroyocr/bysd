@@ -160,6 +160,9 @@ async def mark_retired(
     if participant.get("status") == "retired":
         raise HTTPException(status_code=400, detail="El participante ya está marcado como retirado")
     
+    if participant.get("status") == "dns":
+        raise HTTPException(status_code=400, detail="El participante está marcado como DNS")
+    
     # Update participant status
     await database.participants.update_one(
         {"bib": request.bib},
@@ -173,6 +176,48 @@ async def mark_retired(
     )
     
     return {"message": f"Participante {request.bib} marcado como retirado"}
+
+@router.post("/mark-dns")
+async def mark_dns(
+    request: dict,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    from server import db as database
+    
+    bib = request.get("bib")
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    if participant.get("status") == "dns":
+        raise HTTPException(status_code=400, detail="El participante ya está marcado como DNS")
+    
+    if participant.get("status") == "retired":
+        raise HTTPException(status_code=400, detail="El participante ya está retirado")
+    
+    if participant.get("laps_completed", 0) > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="No se puede marcar como DNS a un participante que ya completó vueltas. Use 'Marcar Retirado' en su lugar."
+        )
+    
+    # Update participant status - keep laps and km at 0
+    await database.participants.update_one(
+        {"bib": bib},
+        {
+            "$set": {
+                "status": "dns",
+                "laps_completed": 0,
+                "total_km": 0.0,
+                "retired_at_lap": None,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {"message": f"Participante {bib} marcado como DNS (No se presentó)"}
 
 @router.post("/reactivate")
 async def reactivate_participant(
