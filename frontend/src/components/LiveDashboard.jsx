@@ -163,8 +163,8 @@ export default function LiveDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-red-700">Atletas Retirados</p>
-                  <p className="text-3xl font-bold text-red-900 mt-1">{stats.athletes_retired}</p>
+                  <p className="text-sm text-red-700">DNF</p>
+                  <p className="text-3xl font-bold text-red-900 mt-1">{stats.athletes_dnf}</p>
                 </div>
                 <UserX className="w-10 h-10 text-red-600" />
               </div>
