@@ -62,17 +62,23 @@ async def get_race_stats(db=Depends(lambda: None)):
     if not config:
         config = {"current_lap": 1}
     
+    current_lap = config.get("current_lap", 1)
+    
     # Get participants stats
     participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
     
-    total_laps = sum(p.get("laps_completed", 0) for p in participants)
+    # Total laps completed is current_lap - 1 (not the sum of all athletes)
+    total_laps_completed = max(0, current_lap - 1)
+    
     athletes_retired = sum(1 for p in participants if p.get("status") == "retired")
     athletes_active = len(participants) - athletes_retired
-    total_km = total_laps * KM_PER_LAP
+    
+    # Total km is based on completed laps (not current lap)
+    total_km = total_laps_completed * KM_PER_LAP
     
     return RaceStats(
-        current_lap=config.get("current_lap", 1),
-        total_laps_completed=total_laps,
+        current_lap=current_lap,
+        total_laps_completed=total_laps_completed,
         athletes_retired=athletes_retired,
         athletes_active=athletes_active,
         total_km=round(total_km, 1)
