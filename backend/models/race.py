@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from pydantic import BaseModel, Field, EmailStr
+from typing import Optional, Literal, List
 from datetime import datetime
 
 class AdminUser(BaseModel):
@@ -63,3 +63,17 @@ class ParticipantWithStats(BaseModel):
     laps_completed: int
     total_km: float
     retired_at_lap: Optional[int] = None
+
+class EmailSubscription(BaseModel):
+    email: str
+    athletes_bibs: List[str]
+    notify_every_lap: bool = False
+    notify_on_finish: bool = True
+    active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SubscribeRequest(BaseModel):
+    email: str
+    athletes_bibs: List[str]
+    notify_every_lap: bool = False
+    notify_on_finish: bool = True
