@@ -47,7 +47,7 @@ class CompleteLapRequest(BaseModel):
 class RaceStats(BaseModel):
     current_lap: int
     total_laps_completed: int
-    athletes_retired: int
+    athletes_dnf: int
     athletes_active: int
     athletes_dns: int
     total_km: float
