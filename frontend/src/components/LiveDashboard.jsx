@@ -234,6 +234,7 @@ export default function LiveDashboard() {
                   <option value="all">Todos</option>
                   <option value="active">Activos</option>
                   <option value="retired">Retirados</option>
+                  <option value="dns">DNS</option>
                 </select>
                 <Button
                   onClick={exportToCSV}
