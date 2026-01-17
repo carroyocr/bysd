@@ -661,3 +661,117 @@ async def reset_database(
         "current_lap": 1,
         "laps_log_cleared": True
     }
+
+
+# Email Subscription Endpoints
+@router.post("/subscribe")
+async def subscribe_to_notifications(
+    request: SubscribeRequest,
+    db=Depends(lambda: None)
+):
+    """Subscribe to email notifications for followed athletes"""
+    from server import db as database
+    
+    if not request.athletes_bibs:
+        raise HTTPException(status_code=400, detail="Debe seleccionar al menos un atleta para seguir")
+    
+    # Check if subscription already exists for this email
+    existing = await database.email_subscriptions.find_one({"email": request.email})
+    
+    if existing:
+        # Update existing subscription
+        await database.email_subscriptions.update_one(
+            {"email": request.email},
+            {
+                "$set": {
+                    "athletes_bibs": request.athletes_bibs,
+                    "notify_every_lap": request.notify_every_lap,
+                    "notify_on_finish": request.notify_on_finish,
+                    "active": True,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        subscription_id = str(existing.get("_id"))
+        message = "Suscripción actualizada exitosamente"
+    else:
+        # Create new subscription
+        subscription = EmailSubscription(
+            email=request.email,
+            athletes_bibs=request.athletes_bibs,
+            notify_every_lap=request.notify_every_lap,
+            notify_on_finish=request.notify_on_finish
+        )
+        result = await database.email_subscriptions.insert_one(subscription.dict())
+        subscription_id = str(result.inserted_id)
+        message = "Suscripción creada exitosamente"
+    
+    # Get athlete names for confirmation
+    athletes = await database.participants.find(
+        {"bib": {"$in": request.athletes_bibs}},
+        {"_id": 0, "nombre": 1, "apellidos": 1, "bib": 1}
+    ).to_list(100)
+    
+    # Send confirmation email
+    await send_notification_email(
+        to_email=request.email,
+        subject="Confirmación de Suscripción",
+        content=f"Te has suscrito exitosamente para recibir notificaciones de {len(athletes)} atleta(s). "
+                f"Recibirás actualizaciones {'cada vuelta completada' if request.notify_every_lap else ''}"
+                f"{' y ' if request.notify_every_lap and request.notify_on_finish else ''}"
+                f"{'cuando finalicen' if request.notify_on_finish else ''}.",
+        athletes_data=athletes,
+        subscription_id=subscription_id
+    )
+    
+    return {
+        "message": message,
+        "subscription_id": subscription_id,
+        "athletes_count": len(request.athletes_bibs),
+        "notify_every_lap": request.notify_every_lap,
+        "notify_on_finish": request.notify_on_finish
+    }
+
+
+@router.get("/unsubscribe/{subscription_id}")
+async def unsubscribe(
+    subscription_id: str,
+    db=Depends(lambda: None)
+):
+    """Unsubscribe from email notifications"""
+    from server import db as database
+    
+    try:
+        result = await database.email_subscriptions.update_one(
+            {"_id": ObjectId(subscription_id)},
+            {"$set": {"active": False, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.modified_count == 0:
+            return {"message": "Suscripción no encontrada o ya cancelada"}
+        
+        return {"message": "Te has dado de baja exitosamente. Ya no recibirás más notificaciones."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="ID de suscripción inválido")
+
+
+@router.get("/subscription/{email}")
+async def get_subscription(
+    email: str,
+    db=Depends(lambda: None)
+):
+    """Get subscription details for an email"""
+    from server import db as database
+    
+    subscription = await database.email_subscriptions.find_one(
+        {"email": email, "active": True},
+        {"_id": 0, "email": 1, "athletes_bibs": 1, "notify_every_lap": 1, "notify_on_finish": 1}
+    )
+    
+    if not subscription:
+        return {"subscribed": False}
+    
+    return {
+        "subscribed": True,
+        **subscription
+    }
