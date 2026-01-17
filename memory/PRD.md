@@ -12,6 +12,7 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - Panel de administración seguro
 - Dashboard público con estadísticas en vivo
 - Sistema de detección automática del ganador
+- Botones para compartir en redes sociales
 
 ## Stack Tecnológico
 - **Frontend**: React, Tailwind CSS, Shadcn/UI
@@ -58,6 +59,10 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Aparece solo cuando hay un ganador determinado
   - Muestra: BIB, Nombre, País, Vueltas, Kilómetros
   - Diseño destacado con animación pulse
+- **Botones de Compartir** (17 Enero 2026) ✅
+  - Twitter/X
+  - WhatsApp
+  - Copiar texto al portapapeles
 
 ### 3. Lógica del Ganador (Completado - 17 Enero 2026)
 **Condiciones para declarar ganador:**
@@ -113,7 +118,7 @@ Esto significa que el último atleta debe completar una vuelta final solo despu�
 ## Archivos de Referencia Clave
 - `backend/routes/race.py` - Toda la lógica de API
 - `backend/models/race.py` - Modelos Pydantic
-- `frontend/src/components/LiveDashboard.jsx` - Dashboard público
+- `frontend/src/components/LiveDashboard.jsx` - Dashboard público con sección ganador y botones compartir
 - `frontend/src/components/RaceControlPanel.jsx` - Panel admin
 
 ---
@@ -129,6 +134,7 @@ Esto significa que el último atleta debe completar una vuelta final solo despu�
 - [ ] Historial detallado de vueltas (laps_log ya existe pero no tiene UI)
 - [ ] Notificaciones push cuando hay cambios
 - [ ] Modo oscuro para el dashboard
+- [ ] Agregar Facebook como opción de compartir
 
 ---
 
