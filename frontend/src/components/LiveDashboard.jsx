@@ -24,15 +24,43 @@ const customStyles = `
 // Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
 const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
 
+// LocalStorage key for followed athletes
+const FOLLOWED_ATHLETES_KEY = 'backyard_ultra_followed_athletes';
+
 export default function LiveDashboard() {
   const [stats, setStats] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterFollowed, setFilterFollowed] = useState('all'); // 'all' or 'followed'
+  const [followedAthletes, setFollowedAthletes] = useState(() => {
+    // Initialize from localStorage
+    const saved = localStorage.getItem(FOLLOWED_ATHLETES_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+
+  // Save followed athletes to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(FOLLOWED_ATHLETES_KEY, JSON.stringify(followedAthletes));
+  }, [followedAthletes]);
+
+  // Toggle follow/unfollow athlete
+  const toggleFollowAthlete = (bib) => {
+    setFollowedAthletes(prev => {
+      if (prev.includes(bib)) {
+        return prev.filter(b => b !== bib);
+      } else {
+        return [...prev, bib];
+      }
+    });
+  };
+
+  // Check if athlete is followed
+  const isFollowed = (bib) => followedAthletes.includes(bib);
 
   // Countdown timer effect
   useEffect(() => {
@@ -41,7 +69,7 @@ export default function LiveDashboard() {
       const difference = RACE_START_DATE - now;
 
       if (difference <= 0) {
-        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
         return;
       }
 
