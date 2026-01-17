@@ -232,6 +232,10 @@ async def get_status_checks(skip: int = 0, limit: int = 50):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Include race routes
+from routes.race import router as race_router
+app.include_router(race_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
