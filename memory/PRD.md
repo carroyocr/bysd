@@ -100,6 +100,7 @@ Esto significa que el √∫ltimo atleta debe completar una vuelta final solo despu√
 | `/api/race/mark-retired` | POST | Marcar DNF |
 | `/api/race/mark-dns` | POST | Marcar DNS |
 | `/api/race/set-current-lap` | POST | Establecer vuelta actual |
+| `/api/race/revert-lap` | POST | Retroceder a vuelta anterior |
 | `/api/race/reset-database` | POST | Reiniciar base de datos |
 | `/api/race/reactivate` | POST | Reactivar atleta |
 
