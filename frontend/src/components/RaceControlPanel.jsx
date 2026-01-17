@@ -107,7 +107,8 @@ export default function RaceControlPanel() {
         });
 
         if (!response.ok) throw new Error('Error al marcar como retirado');
-        showMessage(`${participant.bib} marcado como retirado en vuelta ${currentLap}`, 'success');
+        const data = await response.json();
+        showMessage(data.message, 'success');
       } else {
         // Reactivating - show warning
         const confirmReactivate = window.confirm(
