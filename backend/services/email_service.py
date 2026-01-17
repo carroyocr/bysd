@@ -16,16 +16,19 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
     for athlete in athletes_data:
         status = athlete.get("status", "active")
         
-        # Only show status badge for DNF or DNS, not for active athletes
-        status_badge = ""
-        if status == "retired":
+        # Show appropriate status badge based on actual status
+        if status == "active":
+            status_badge = '<span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">Activo</span>'
+        elif status == "retired":
             status_badge = '<span style="background-color: #ef4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNF</span>'
         elif status == "dns":
             status_badge = '<span style="background-color: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNS</span>'
+        else:
+            status_badge = '<span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">Activo</span>'
         
         athletes_cards += f"""
         <div style="background-color: #fafaf9; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
-            <!-- Header: BIB + Status (only if DNF/DNS) -->
+            <!-- Header: BIB + Status -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div>
                     <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{athlete.get('bib', '-')}</span>
