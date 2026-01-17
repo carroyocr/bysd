@@ -114,8 +114,8 @@ export default function RaceControlPanel() {
         // Reactivating - show warning
         const confirmReactivate = window.confirm(
           `⚠️ ADVERTENCIA: ¿Está seguro de reactivar al participante ${participant.bib}?\n\n` +
-          `Esto es SOLO para corregir errores. El atleta fue marcado como ${participant.status === 'dns' ? 'DNS' : `retirado en la vuelta ${participant.retired_at_lap}`}.\n\n` +
-          `Los atletas retirados/DNS NO deben volver a competir según las reglas del Backyard Ultra.`
+          `Esto es SOLO para corregir errores. El atleta fue marcado como ${participant.status === 'dns' ? 'DNS' : `DNF en la vuelta ${participant.retired_at_lap}`}.\n\n` +
+          `Los atletas DNF/DNS NO deben volver a competir según las reglas del Backyard Ultra.`
         );
 
         if (!confirmReactivate) {
