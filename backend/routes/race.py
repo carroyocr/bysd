@@ -469,20 +469,25 @@ async def revert_lap(
     
     # 2. Reactivate DNF athletes who were marked as retired in the current lap
     # If current_lap is 2 and we're going back to 1, we reactivate athletes with retired_at_lap = 2
-    # Since DNF no longer increments laps, we just change status back to active
+    # Since DNF added a lap when marked, we need to subtract it back
     dnf_in_current_lap = await database.participants.find(
         {"status": "retired", "retired_at_lap": lap_to_revert},
         {"_id": 0}
     ).to_list(1000)
     
     for participant in dnf_in_current_lap:
-        # DNF doesn't increment laps anymore, so just reactivate without changing laps
+        # DNF incremented laps when marked, so reduce it back
+        new_laps = max(0, participant.get("laps_completed", 1) - 1)
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
         await database.participants.update_one(
             {"bib": participant["bib"]},
             {
                 "$set": {
                     "status": "active",
                     "retired_at_lap": None,
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
                     "updated_at": datetime.utcnow()
                 }
             }
