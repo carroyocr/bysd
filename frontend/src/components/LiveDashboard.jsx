@@ -80,6 +80,9 @@ export default function LiveDashboard() {
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
     
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    // Sort by BIB number
+    return a.bib.localeCompare(b.bib);
   });
 
   if (loading || !stats) {
