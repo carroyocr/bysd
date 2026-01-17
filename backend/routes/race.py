@@ -71,17 +71,23 @@ async def get_race_stats(db=Depends(lambda: None)):
     total_laps_completed = max(0, current_lap - 1)
     
     athletes_retired = sum(1 for p in participants if p.get("status") == "retired")
-    athletes_active = len(participants) - athletes_retired
+    athletes_dns = sum(1 for p in participants if p.get("status") == "dns")
+    athletes_active = len(participants) - athletes_retired - athletes_dns
     
     # Total km is based on completed laps (not current lap)
     total_km = total_laps_completed * KM_PER_LAP
+    
+    # Total km of all athletes (sum of individual km)
+    total_km_all_athletes = sum(p.get("total_km", 0) for p in participants)
     
     return RaceStats(
         current_lap=current_lap,
         total_laps_completed=total_laps_completed,
         athletes_retired=athletes_retired,
         athletes_active=athletes_active,
-        total_km=round(total_km, 1)
+        athletes_dns=athletes_dns,
+        total_km=round(total_km, 1),
+        total_km_all_athletes=round(total_km_all_athletes, 1)
     )
 
 @router.get("/participants")
