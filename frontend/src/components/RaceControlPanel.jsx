@@ -93,6 +93,7 @@ export default function RaceControlPanel() {
 
     try {
       if (participant.status === 'active') {
+        // Marking as retired
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-retired`, {
           method: 'POST',
           headers: {
@@ -106,8 +107,20 @@ export default function RaceControlPanel() {
         });
 
         if (!response.ok) throw new Error('Error al marcar como retirado');
-        showMessage(`${participant.bib} marcado como retirado`, 'success');
+        showMessage(`${participant.bib} marcado como retirado en vuelta ${currentLap}`, 'success');
       } else {
+        // Reactivating - show warning
+        const confirmReactivate = window.confirm(
+          `⚠️ ADVERTENCIA: ¿Está seguro de reactivar al participante ${participant.bib}?\n\n` +
+          `Esto es SOLO para corregir errores. El atleta fue marcado como retirado en la vuelta ${participant.retired_at_lap}.\n\n` +
+          `Los atletas retirados NO deben volver a competir según las reglas del Backyard Ultra.`
+        );
+
+        if (!confirmReactivate) {
+          setSaving(false);
+          return;
+        }
+
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reactivate`, {
           method: 'POST',
           headers: {
@@ -118,7 +131,8 @@ export default function RaceControlPanel() {
         });
 
         if (!response.ok) throw new Error('Error al reactivar');
-        showMessage(`${participant.bib} reactivado`, 'success');
+        const data = await response.json();
+        showMessage(data.message, 'success');
       }
 
       await loadData();
