@@ -405,6 +405,10 @@ async def complete_lap_all_active(
         }
     )
     
+    # Send lap notifications in background (don't wait for completion)
+    import asyncio
+    asyncio.create_task(send_lap_notifications(database, current_lap))
+    
     return {
         "message": f"Vuelta {current_lap} completada para {updated_count} atletas activos",
         "updated_count": updated_count,
