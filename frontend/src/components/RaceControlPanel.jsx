@@ -112,8 +112,8 @@ export default function RaceControlPanel() {
         // Reactivating - show warning
         const confirmReactivate = window.confirm(
           `⚠️ ADVERTENCIA: ¿Está seguro de reactivar al participante ${participant.bib}?\n\n` +
-          `Esto es SOLO para corregir errores. El atleta fue marcado como retirado en la vuelta ${participant.retired_at_lap}.\n\n` +
-          `Los atletas retirados NO deben volver a competir según las reglas del Backyard Ultra.`
+          `Esto es SOLO para corregir errores. El atleta fue marcado como ${participant.status === 'dns' ? 'DNS' : `retirado en la vuelta ${participant.retired_at_lap}`}.\n\n` +
+          `Los atletas retirados/DNS NO deben volver a competir según las reglas del Backyard Ultra.`
         );
 
         if (!confirmReactivate) {
@@ -135,6 +135,43 @@ export default function RaceControlPanel() {
         showMessage(data.message, 'success');
       }
 
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMarkDNS = async (participant) => {
+    const token = localStorage.getItem('admin_token');
+    
+    const confirmDNS = window.confirm(
+      `¿Está seguro de marcar al participante ${participant.bib} como DNS (No se presentó)?\n\n` +
+      `El atleta quedará con 0 vueltas y 0 kilómetros.`
+    );
+
+    if (!confirmDNS) return;
+
+    setSaving(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-dns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bib: participant.bib })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al marcar como DNS');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
       await loadData();
     } catch (err) {
       showMessage(err.message, 'error');
