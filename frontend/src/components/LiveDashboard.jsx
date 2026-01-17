@@ -258,7 +258,7 @@ export default function LiveDashboard() {
                     <th className="text-center py-3 px-4 font-semibold text-sm">Estado</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Vueltas</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Kilómetros</th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm">Retirado en</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm">DNF en</th>
                   </tr>
                 </thead>
                 <tbody>
