@@ -80,22 +80,25 @@ export default function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={handleLinkClick}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
-                  link.highlight
-                    ? 'bg-gradient-to-r from-primary to-accent text-white hover:shadow-medium animate-pulse'
-                    : location.pathname === link.href
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const shouldHighlight = link.highlightAfterRaceStart && raceStarted;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={handleLinkClick}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                    shouldHighlight
+                      ? 'bg-gradient-to-r from-primary to-accent text-white hover:shadow-medium animate-pulse'
+                      : location.pathname === link.href
+                      ? 'text-primary bg-secondary'
+                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Mobile Menu */}
