@@ -13,6 +13,9 @@ export default function RaceControlPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetting, setResetting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
