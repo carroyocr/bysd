@@ -185,24 +185,25 @@ export default function LiveDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pt-20 pb-12">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="font-display text-4xl sm:text-5xl text-foreground mb-2">
-            Seguimiento en Vivo
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Backyard Ultra Santo Domingo 2026
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
-          </p>
-        </div>
+    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-screen">
+      <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
+              Seguimiento en Vivo
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Backyard Ultra Santo Domingo 2026
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
+            </p>
+          </div>
 
-        {/* Countdown Timer - Only show if not expired */}
-        {!countdown.expired && (
-          <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
+          {/* Countdown Timer - Only show if not expired */}
+          {!countdown.expired && (
+            <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-accent/5">
             <CardContent className="p-6">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-4">
