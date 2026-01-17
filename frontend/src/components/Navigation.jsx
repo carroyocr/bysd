@@ -4,6 +4,9 @@ import { Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
+// Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time, GMT-4)
+const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
+
 const navLinks = [
   { href: '/evento', label: 'Evento' },
   { href: '/corredores', label: 'Corredores' },
@@ -12,13 +15,14 @@ const navLinks = [
   { href: '/logistica', label: 'Logística' },
   { href: '/patrocinadores', label: 'Patrocinadores' },
   { href: '/faq', label: 'FAQ' },
-  { href: '/en-vivo', label: 'En Vivo', highlight: true },
+  { href: '/en-vivo', label: 'En Vivo', highlightAfterRaceStart: true },
   { href: '/admin/login', label: 'Admin' },
 ];
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [raceStarted, setRaceStarted] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -27,6 +31,18 @@ export default function Navigation() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Check if race has started
+  useEffect(() => {
+    const checkRaceStart = () => {
+      setRaceStarted(new Date() >= RACE_START_DATE);
+    };
+    
+    checkRaceStart();
+    const timer = setInterval(checkRaceStart, 1000);
+    
+    return () => clearInterval(timer);
   }, []);
 
   const handleLinkClick = () => {
