@@ -42,6 +42,14 @@ export default function LiveDashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+  
+  // Subscription modal state
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [subscribeEmail, setSubscribeEmail] = useState('');
+  const [notifyEveryLap, setNotifyEveryLap] = useState(false);
+  const [notifyOnFinish, setNotifyOnFinish] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeMessage, setSubscribeMessage] = useState(null);
 
   // Save followed athletes to localStorage whenever it changes
   useEffect(() => {
@@ -61,6 +69,51 @@ export default function LiveDashboard() {
 
   // Check if athlete is followed
   const isFollowed = (bib) => followedAthletes.includes(bib);
+
+  // Handle subscription
+  const handleSubscribe = async () => {
+    if (!subscribeEmail || followedAthletes.length === 0) {
+      setSubscribeMessage({ type: 'error', text: 'Ingresa tu email y selecciona al menos un atleta para seguir' });
+      return;
+    }
+
+    if (!notifyEveryLap && !notifyOnFinish) {
+      setSubscribeMessage({ type: 'error', text: 'Selecciona al menos una opción de notificación' });
+      return;
+    }
+
+    setSubscribing(true);
+    setSubscribeMessage(null);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: subscribeEmail,
+          athletes_bibs: followedAthletes,
+          notify_every_lap: notifyEveryLap,
+          notify_on_finish: notifyOnFinish
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubscribeMessage({ type: 'success', text: `¡Listo! Recibirás notificaciones de ${data.athletes_count} atleta(s) en ${subscribeEmail}` });
+        setTimeout(() => {
+          setShowSubscribeModal(false);
+          setSubscribeMessage(null);
+        }, 3000);
+      } else {
+        setSubscribeMessage({ type: 'error', text: data.detail || 'Error al suscribirse' });
+      }
+    } catch (error) {
+      setSubscribeMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   // Countdown timer effect
   useEffect(() => {
