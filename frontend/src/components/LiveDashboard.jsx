@@ -495,6 +495,14 @@ export default function LiveDashboard() {
                   <option value="retired">DNF</option>
                   <option value="dns">DNS</option>
                 </select>
+                <select
+                  value={filterFollowed}
+                  onChange={(e) => setFilterFollowed(e.target.value)}
+                  className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">Todos los atletas</option>
+                  <option value="followed">Solo seguidos</option>
+                </select>
                 <Button
                   onClick={exportToCSV}
                   variant="outline"
