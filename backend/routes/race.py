@@ -83,7 +83,7 @@ async def get_race_stats(db=Depends(lambda: None)):
     return RaceStats(
         current_lap=current_lap,
         total_laps_completed=total_laps_completed,
-        athletes_retired=athletes_retired,
+        athletes_dnf=athletes_dnf,
         athletes_active=athletes_active,
         athletes_dns=athletes_dns,
         total_km=round(total_km, 1),
