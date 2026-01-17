@@ -24,8 +24,10 @@ const customStyles = `
 // Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
 const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
 
-// LocalStorage key for followed athletes
+// LocalStorage keys
 const FOLLOWED_ATHLETES_KEY = 'backyard_ultra_followed_athletes';
+const SUBSCRIPTION_EMAIL_KEY = 'backyard_ultra_subscription_email';
+const SUBSCRIPTION_SETTINGS_KEY = 'backyard_ultra_subscription_settings';
 
 export default function LiveDashboard() {
   const [stats, setStats] = useState(null);
@@ -45,9 +47,20 @@ export default function LiveDashboard() {
   
   // Subscription modal state
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
-  const [subscribeEmail, setSubscribeEmail] = useState('');
-  const [notifyEveryLap, setNotifyEveryLap] = useState(false);
-  const [notifyOnFinish, setNotifyOnFinish] = useState(true);
+  const [subscribeEmail, setSubscribeEmail] = useState(() => {
+    return localStorage.getItem(SUBSCRIPTION_EMAIL_KEY) || '';
+  });
+  const [notifyEveryLap, setNotifyEveryLap] = useState(() => {
+    const saved = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
+    return saved ? JSON.parse(saved).notifyEveryLap : false;
+  });
+  const [notifyOnFinish, setNotifyOnFinish] = useState(() => {
+    const saved = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
+    return saved ? JSON.parse(saved).notifyOnFinish : true;
+  });
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    return !!localStorage.getItem(SUBSCRIPTION_EMAIL_KEY);
+  });
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeMessage, setSubscribeMessage] = useState(null);
 
