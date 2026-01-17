@@ -140,7 +140,15 @@ export default function LiveDashboard() {
       const data = await response.json();
 
       if (response.ok) {
-        setSubscribeMessage({ type: 'success', text: `¡Listo! Recibirás notificaciones de ${data.athletes_count} atleta(s) en ${subscribeEmail}` });
+        // Save subscription info to localStorage for auto-updates
+        localStorage.setItem(SUBSCRIPTION_EMAIL_KEY, subscribeEmail);
+        localStorage.setItem(SUBSCRIPTION_SETTINGS_KEY, JSON.stringify({
+          notifyEveryLap,
+          notifyOnFinish
+        }));
+        setIsSubscribed(true);
+        
+        setSubscribeMessage({ type: 'success', text: `¡Listo! Recibirás notificaciones de ${data.athletes_count} atleta(s). Los nuevos atletas que sigas se agregarán automáticamente.` });
         setTimeout(() => {
           setShowSubscribeModal(false);
           setSubscribeMessage(null);
