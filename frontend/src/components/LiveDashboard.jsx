@@ -352,10 +352,10 @@ export default function LiveDashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-muted-foreground">Vuelta en Curso</p>
                   <p className="text-3xl font-bold text-foreground mt-1">{stats.current_lap}</p>
@@ -366,8 +366,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-green-700">Vueltas Completadas</p>
                   <p className="text-3xl font-bold text-green-900 mt-1">{stats.total_laps_completed}</p>
@@ -378,8 +378,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-blue-700">Atletas Activos</p>
                   <p className="text-3xl font-bold text-blue-900 mt-1">{stats.athletes_active}</p>
@@ -390,8 +390,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-red-700">DNF</p>
                   <p className="text-3xl font-bold text-red-900 mt-1">{stats.athletes_dnf}</p>
@@ -402,8 +402,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-gray-700">DNS</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">{stats.athletes_dns}</p>
@@ -414,8 +414,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-purple-700">Km del Evento</p>
                   <p className="text-3xl font-bold text-purple-900 mt-1">{stats.total_km}</p>
@@ -426,8 +426,8 @@ export default function LiveDashboard() {
           </Card>
 
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-orange-700">Km Totales</p>
                   <p className="text-3xl font-bold text-orange-900 mt-1">{stats.total_km_all_athletes}</p>
