@@ -107,7 +107,7 @@ export default function RaceControlPanel() {
           })
         });
 
-        if (!response.ok) throw new Error('Error al marcar como retirado');
+        if (!response.ok) throw new Error('Error al marcar como DNF');
         const data = await response.json();
         showMessage(data.message, 'success');
       } else {
