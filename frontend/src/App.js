@@ -12,6 +12,9 @@ import ReglasPage from './pages/ReglasPage';
 import LogisticaPage from './pages/LogisticaPage';
 import FAQPage from './pages/FAQPage';
 import PatrocinadoresPage from './pages/PatrocinadoresPage';
+import LiveDashboardPage from './pages/LiveDashboardPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import RaceControlPage from './pages/RaceControlPage';
 import './App.css';
 
 export default function App() {
@@ -19,20 +22,35 @@ export default function App() {
     <Router>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/evento" element={<EventoPage />} />
-            <Route path="/corredores" element={<CorredoresPage />} />
-            <Route path="/voluntarios" element={<VoluntariosPage />} />
-            <Route path="/reglas" element={<ReglasPage />} />
-            <Route path="/logistica" element={<LogisticaPage />} />
-            <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
-            <Route path="/faq" element={<FAQPage />} />
-          </Routes>
-        </main>
-        <Footer />
+        <Routes>
+          {/* Admin routes without Navigation/Footer */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/race-control" element={<RaceControlPage />} />
+          
+          {/* Public routes with Navigation/Footer */}
+          <Route
+            path="/*"
+            element={
+              <>
+                <Navigation />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/evento" element={<EventoPage />} />
+                    <Route path="/corredores" element={<CorredoresPage />} />
+                    <Route path="/voluntarios" element={<VoluntariosPage />} />
+                    <Route path="/reglas" element={<ReglasPage />} />
+                    <Route path="/logistica" element={<LogisticaPage />} />
+                    <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
+                    <Route path="/faq" element={<FAQPage />} />
+                    <Route path="/en-vivo" element={<LiveDashboardPage />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </>
+            }
+          />
+        </Routes>
         <Toaster />
       </div>
     </Router>
