@@ -408,21 +408,21 @@ export default function RaceControlPanel() {
           <CardContent>
             <div className="flex flex-col gap-6">
               {/* Lap Number and Time Display */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Vuelta en Curso
                   </label>
-                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20">
+                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20 flex-1 flex items-center justify-center">
                     <p className="text-5xl font-bold text-primary">{currentLap}</p>
                   </div>
                 </div>
-                <div>
+                <div className="flex flex-col">
                   <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Horario de la Vuelta {currentLap}
                   </label>
-                  <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
+                  <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200 flex-1 flex flex-col justify-center">
                     <div className="flex items-center justify-center gap-3">
                       <div className="text-center">
                         <p className="text-xs text-blue-600 font-medium">INICIO</p>
