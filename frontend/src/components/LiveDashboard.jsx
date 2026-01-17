@@ -285,9 +285,19 @@ export default function LiveDashboard() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge
-                          className={participant.status === 'active' ? 'bg-green-500' : 'bg-red-500'}
+                          className={
+                            participant.status === 'active' 
+                              ? 'bg-green-500' 
+                              : participant.status === 'dns'
+                              ? 'bg-gray-500'
+                              : 'bg-red-500'
+                          }
                         >
-                          {participant.status === 'active' ? 'Activo' : 'Retirado'}
+                          {participant.status === 'active' 
+                            ? 'Activo' 
+                            : participant.status === 'dns'
+                            ? 'DNS'
+                            : 'Retirado'}
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-center">
