@@ -471,11 +471,6 @@ export default function RaceControlPanel() {
                   </p>
                 </div>
               )}
-                className="bg-primary hover:bg-accent text-primary-foreground h-12 px-8"
-              >
-                <Save className="w-5 h-5 mr-2" />
-                {saving ? 'Guardando...' : 'Completar Vuelta y Avanzar'}
-              </Button>
             </div>
           </CardContent>
         </Card>
