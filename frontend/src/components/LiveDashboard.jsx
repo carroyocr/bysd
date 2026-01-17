@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, TrendingUp, UserX, Users, MapPin, Download, Lock, Share2, Copy, Check } from 'lucide-react';
+import { Activity, TrendingUp, UserX, Users, MapPin, Download, Lock, Share2, Copy, Check, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -21,6 +21,9 @@ const customStyles = `
   }
 `;
 
+// Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
+const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
+
 export default function LiveDashboard() {
   const [stats, setStats] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -29,6 +32,32 @@ export default function LiveDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [copied, setCopied] = useState(false);
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
+
+  // Countdown timer effect
+  useEffect(() => {
+    const calculateCountdown = () => {
+      const now = new Date();
+      const difference = RACE_START_DATE - now;
+
+      if (difference <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: true });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds, expired: false });
+    };
+
+    calculateCountdown();
+    const timer = setInterval(calculateCountdown, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Generate share text for winner
   const getWinnerShareText = () => {
