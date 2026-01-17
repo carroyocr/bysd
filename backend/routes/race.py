@@ -189,35 +189,28 @@ async def mark_retired(
     if participant.get("status") == "dns":
         raise HTTPException(status_code=400, detail="El participante está marcado como DNS")
     
-    # The athlete completed this lap before retiring
-    # So we need to increment their laps and km
-    new_laps = participant.get("laps_completed", 0) + 1
-    new_km = round(new_laps * KM_PER_LAP, 1)
+    # DNF means the athlete will NOT run the current lap
+    # Their laps_completed stays the same - they keep only the laps they already completed
+    current_laps = participant.get("laps_completed", 0)
+    current_km = participant.get("total_km", 0.0)
     
-    # Update participant status and stats
+    # Update participant status (laps stay the same)
     await database.participants.update_one(
         {"bib": request.bib},
         {
             "$set": {
                 "status": "retired",
                 "retired_at_lap": request.retired_at_lap,
-                "laps_completed": new_laps,
-                "total_km": new_km,
                 "updated_at": datetime.utcnow()
             }
         }
     )
     
-    # Log the completed lap before retirement
-    lap_log = LapLog(
-        participant_bib=request.bib,
-        lap_number=request.retired_at_lap,
-        recorded_by=user.get("username", "admin")
-    )
-    await database.laps_log.insert_one(lap_log.dict())
-    
     return {
-        "message": f"Participante {request.bib} completó vuelta {request.retired_at_lap} ({new_km} km) y DNF",
+        "message": f"Participante {request.bib} marcado como DNF en vuelta {request.retired_at_lap}. Vueltas completadas: {current_laps} ({current_km} km)",
+        "laps_completed": current_laps,
+        "total_km": current_km
+    }
         "laps_completed": new_laps,
         "total_km": new_km
     }
