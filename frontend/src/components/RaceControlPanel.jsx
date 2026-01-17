@@ -118,6 +118,48 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleRevertLap = async () => {
+    if (currentLap <= 1) {
+      showMessage('No se puede retroceder más. Ya está en la vuelta 1.', 'error');
+      return;
+    }
+
+    const confirmRevert = window.confirm(
+      `⚠️ ADVERTENCIA: ¿Está seguro de retroceder a la vuelta ${currentLap - 1}?\n\n` +
+      `Esto reducirá en 1 las vueltas completadas de todos los atletas activos.\n\n` +
+      `Use esto SOLO para corregir errores si avanzó la vuelta por equivocación.`
+    );
+
+    if (!confirmRevert) return;
+
+    const token = localStorage.getItem('admin_token');
+    setReverting(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/revert-lap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al retroceder vuelta');
+      }
+
+      const data = await response.json();
+      setCurrentLap(data.new_lap);
+      showMessage(data.message, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setReverting(false);
+    }
+  };
+
   const handleToggleRetired = async (participant) => {
     const token = localStorage.getItem('admin_token');
     setSaving(true);
