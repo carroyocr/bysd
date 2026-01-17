@@ -80,6 +80,24 @@ async def get_race_stats(db=Depends(lambda: None)):
     # Total km of all athletes (sum of individual km)
     total_km_all_athletes = sum(p.get("total_km", 0) for p in participants)
     
+    # Check for winner: Only 1 active athlete and they have completed at least 1 more lap than required
+    winner = None
+    active_participants = [p for p in participants if p.get("status") == "active"]
+    
+    if len(active_participants) == 1:
+        winner_participant = active_participants[0]
+        # Winner must have completed at least the current lap - 1
+        # This means they finished one more lap after being the last one standing
+        if winner_participant.get("laps_completed", 0) >= current_lap:
+            winner = {
+                "bib": winner_participant.get("bib"),
+                "nombre": winner_participant.get("nombre"),
+                "apellidos": winner_participant.get("apellidos"),
+                "nacionalidad": winner_participant.get("nacionalidad"),
+                "laps_completed": winner_participant.get("laps_completed", 0),
+                "total_km": winner_participant.get("total_km", 0)
+            }
+    
     return RaceStats(
         current_lap=current_lap,
         total_laps_completed=total_laps_completed,
@@ -87,7 +105,8 @@ async def get_race_stats(db=Depends(lambda: None)):
         athletes_active=athletes_active,
         athletes_dns=athletes_dns,
         total_km=round(total_km, 1),
-        total_km_all_athletes=round(total_km_all_athletes, 1)
+        total_km_all_athletes=round(total_km_all_athletes, 1),
+        winner=winner
     )
 
 @router.get("/participants")
