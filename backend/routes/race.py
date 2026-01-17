@@ -510,7 +510,7 @@ async def revert_lap(
     )
     
     # 4. Remove lap logs for the reverted lap
-    await database.laps_log.delete_many({"lap_number": reverted_lap})
+    await database.laps_log.delete_many({"lap_number": lap_to_revert - 1})
     
     message = f"Vuelta revertida. Ahora está en la vuelta {new_lap}."
     if reactivated_count > 0:
