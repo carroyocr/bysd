@@ -436,7 +436,7 @@ export default function RaceControlPanel() {
                             ? 'Activo' 
                             : participant.status === 'dns'
                             ? 'DNS'
-                            : 'Retirado'}
+                            : 'DNF'}
                         </Badge>
                       </td>
                       <td className="py-3 px-4">
