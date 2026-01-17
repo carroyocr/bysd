@@ -13,11 +13,41 @@ export default function RaceControlPanel() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reverting, setReverting] = useState(false);
   const [message, setMessage] = useState(null);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
   const navigate = useNavigate();
+
+  // Race starts at 9:00 AM, each lap is 1 hour
+  const RACE_START_HOUR = 9;
+
+  // Calculate the time range for a given lap
+  const getLapTimeRange = (lap) => {
+    const startHour = RACE_START_HOUR + (lap - 1);
+    const endHour = startHour;
+    
+    // Format hours
+    const formatHour = (hour) => {
+      const h = hour % 24;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      return `${displayHour}:00 ${period}`;
+    };
+
+    const formatEndHour = (hour) => {
+      const h = hour % 24;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      return `${displayHour}:59 ${period}`;
+    };
+    
+    return {
+      start: formatHour(startHour),
+      end: formatEndHour(endHour)
+    };
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
