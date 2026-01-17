@@ -26,13 +26,13 @@ export default function RunnersSection() {
   ];
 
   const schedule = [
-    { time: '06:00 - 07:30', event: 'Apertura Acceso al Área', detail: 'Llegada de atletas. Montaje de carpas y zona personal' },
-    { time: '06:00 - 07:30', event: 'Check-in de la Carrera Abierto', detail: 'Registro de participantes' },
-    { time: '07:30', event: 'Apertura del Corral de Salida', detail: 'Los corredores pueden ingresar al corral' },
-    { time: '07:57', event: 'Primera Señal (un pitido)', detail: '3 minutos para el inicio' },
-    { time: '07:58', event: 'Segunda Señal (dos pitidos)', detail: '2 minutos para el inicio' },
-    { time: '07:59', event: 'Tercera Señal (tres pitidos)', detail: '1 minuto para el inicio' },
-    { time: '08:00', event: 'Inicio Oficial - Vuelta #1', detail: 'Comienza la primera vuelta' },
+    { time: '06:00 - 08:30', event: 'Apertura Acceso al Área', detail: 'Llegada de atletas. Montaje de carpas y zona personal' },
+    { time: '06:00 - 08:30', event: 'Check-in de la Carrera Abierto', detail: 'Registro de participantes' },
+    { time: '08:30', event: 'Apertura del Corral de Salida', detail: 'Los corredores pueden ingresar al corral' },
+    { time: '08:57', event: 'Primera Señal (un pitido)', detail: '3 minutos para el inicio' },
+    { time: '08:58', event: 'Segunda Señal (dos pitidos)', detail: '2 minutos para el inicio' },
+    { time: '08:59', event: 'Tercera Señal (tres pitidos)', detail: '1 minuto para el inicio' },
+    { time: '09:00', event: 'Inicio Oficial - Vuelta #1', detail: 'Comienza la primera vuelta' },
   ];
 
   const keyRules = [

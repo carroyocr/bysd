@@ -49,7 +49,7 @@ export default function Hero() {
                 </a>
                 
                 <a 
-                  href="https://maps.app.goo.gl/f5Qnu2iBu3PRogNv9"
+                  href="https://maps.app.goo.gl/ZRMgpWA65jDLZgwcA"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
