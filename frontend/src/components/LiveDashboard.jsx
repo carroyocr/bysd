@@ -132,10 +132,10 @@ export default function LiveDashboard() {
     const headers = ['BIB', 'Nombre', 'Apellidos', 'Nacionalidad', 'Estado', 'Vueltas', 'Kilómetros', 'Retirado en Vuelta'];
     const rows = participants.map(p => [
       p.bib,
-      p.nombre,
-      p.apellidos,
+      `"${p.nombre}"`,
+      `"${p.apellidos}"`,
       p.nacionalidad,
-      p.status === 'active' ? 'Activo' : 'Retirado',
+      p.status === 'active' ? 'Activo' : (p.status === 'dns' ? 'DNS' : 'DNF'),
       p.laps_completed,
       p.total_km,
       p.retired_at_lap || '-'
@@ -146,7 +146,9 @@ export default function LiveDashboard() {
       ...rows.map(row => row.join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add UTF-8 BOM for Excel compatibility with special characters
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
