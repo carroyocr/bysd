@@ -28,6 +28,47 @@ export default function LiveDashboard() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [copied, setCopied] = useState(false);
+
+  // Generate share text for winner
+  const getWinnerShareText = () => {
+    if (!stats?.winner) return '';
+    const winner = stats.winner;
+    return `🏆 ¡${winner.nombre} ${winner.apellidos} es el campeón del Backyard Ultra Santo Domingo 2026!\n\n` +
+           `📍 ${winner.nacionalidad}\n` +
+           `🔄 ${winner.laps_completed} vueltas completadas\n` +
+           `📏 ${winner.total_km} km recorridos\n\n` +
+           `#BackyardUltra #SantoDomingo2026 #Ultrarunning`;
+  };
+
+  const shareOnTwitter = () => {
+    const text = getWinnerShareText();
+    const url = window.location.href;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      '_blank',
+      'width=550,height=420'
+    );
+  };
+
+  const shareOnWhatsApp = () => {
+    const text = getWinnerShareText() + `\n\n🔗 ${window.location.href}`;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(text)}`,
+      '_blank'
+    );
+  };
+
+  const copyToClipboard = async () => {
+    const text = getWinnerShareText() + `\n\n🔗 ${window.location.href}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Error copying to clipboard:', err);
+    }
+  };
 
   useEffect(() => {
     loadData();
