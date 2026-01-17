@@ -232,14 +232,24 @@ export default function RaceControlPanel() {
             <h1 className="text-3xl font-bold text-foreground">Panel de Control de Carrera</h1>
             <p className="text-muted-foreground mt-1">Backyard Ultra Santo Domingo 2026</p>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-red-300 text-red-600 hover:bg-red-50"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar Sesión
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowResetModal(true)}
+              variant="outline"
+              className="border-orange-300 text-orange-600 hover:bg-orange-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Reiniciar BD
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
 
         {/* Message */}
