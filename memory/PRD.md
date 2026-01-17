@@ -37,6 +37,16 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 #### Panel de Administración (`/admin/login`, `/admin/race-control`)
 - Login seguro con JWT (admin/Backyard2026!)
 - Control de vuelta actual
+- **Visor de horario de vuelta** (17 Enero 2026) ✅
+  - Muestra inicio y fin de cada vuelta
+  - La carrera inicia a las 9:00 AM
+  - Cada vuelta dura 1 hora (Vuelta 1: 9-9:59AM, Vuelta 2: 10-10:59AM, etc.)
+  - Muestra preview de la próxima vuelta
+- **Botón Retroceder Vuelta** (17 Enero 2026) ✅
+  - Permite corregir si se avanzó la vuelta por error
+  - Reduce las vueltas de todos los atletas activos
+  - Deshabilitado en vuelta 1
+  - Requiere confirmación antes de ejecutar
 - Botón para completar vuelta de todos los atletas activos
 - Marcar atletas como DNF (Did Not Finish)
 - Marcar atletas como DNS (Did Not Start)
