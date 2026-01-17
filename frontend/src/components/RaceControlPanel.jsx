@@ -51,20 +51,36 @@ export default function RaceControlPanel() {
 
   const handleSaveCurrentLap = async () => {
     const token = localStorage.getItem('admin_token');
+    setSaving(true);
+    
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/set-current-lap`, {
+      // First, complete the lap for all active participants
+      const completeLapRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap-all-active`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ current_lap: currentLap })
+        }
       });
 
-      if (!response.ok) throw new Error('Error al actualizar vuelta');
-      showMessage('Vuelta actual actualizada', 'success');
+      if (!completeLapRes.ok) throw new Error('Error al completar vuelta');
+      
+      const completeLapData = await completeLapRes.json();
+      
+      // Update current lap to the new value
+      setCurrentLap(completeLapData.new_lap);
+      
+      showMessage(
+        `Vuelta ${completeLapData.previous_lap} completada. ${completeLapData.updated_count} atletas activos registrados. Vuelta en curso: ${completeLapData.new_lap}`,
+        'success'
+      );
+      
+      // Reload data to show updated stats
+      await loadData();
     } catch (err) {
       showMessage(err.message, 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
