@@ -121,6 +121,66 @@ export default function LiveDashboard() {
           </a>
         </div>
 
+        {/* Winner Section */}
+        {stats.winner && (
+          <Card className="mb-8 border-4 border-yellow-400 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 shadow-strong animate-pulse-slow">
+            <CardContent className="p-8">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-strong">
+                    <span className="text-4xl">🏆</span>
+                  </div>
+                </div>
+                <div>
+                  <h2 className="font-display text-3xl sm:text-4xl text-amber-900 font-bold mb-2">
+                    ¡Tenemos un Ganador!
+                  </h2>
+                  <p className="text-lg text-amber-800">
+                    Último atleta en pie - Backyard Ultra Santo Domingo 2026
+                  </p>
+                </div>
+                <div className="max-w-2xl mx-auto bg-white/80 rounded-lg p-6 shadow-medium">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-amber-700 font-medium">BIB</p>
+                        <p className="text-3xl font-bold text-amber-900">#{stats.winner.bib}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-amber-700 font-medium">Nombre</p>
+                        <p className="text-2xl font-bold text-amber-900">
+                          {stats.winner.nombre} {stats.winner.apellidos}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-amber-700 font-medium">País</p>
+                        <Badge className="text-lg px-4 py-1 bg-amber-600">
+                          {stats.winner.nacionalidad}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-amber-700 font-medium">Vueltas Completadas</p>
+                        <p className="text-5xl font-bold text-amber-900">{stats.winner.laps_completed}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-amber-700 font-medium">Kilómetros Recorridos</p>
+                        <p className="text-4xl font-bold text-amber-900">{stats.winner.total_km} km</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <p className="text-lg text-amber-800 font-semibold">
+                    🎉 ¡Felicitaciones por completar el desafío! 🎉
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
           <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
