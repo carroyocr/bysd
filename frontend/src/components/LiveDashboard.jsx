@@ -194,8 +194,9 @@ export default function LiveDashboard() {
       p.apellidos.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+    const matchesFollowed = filterFollowed === 'all' || (filterFollowed === 'followed' && isFollowed(p.bib));
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesFollowed;
   }).sort((a, b) => {
     // Sort by BIB number
     return a.bib.localeCompare(b.bib);
