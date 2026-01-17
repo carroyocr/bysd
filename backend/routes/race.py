@@ -714,10 +714,10 @@ async def subscribe_to_notifications(
         subscription_id = str(result.inserted_id)
         message = "Suscripción creada exitosamente"
     
-    # Get athlete names for confirmation
+    # Get full athlete data for confirmation (including laps and km)
     athletes = await database.participants.find(
         {"bib": {"$in": request.athletes_bibs}},
-        {"_id": 0, "nombre": 1, "apellidos": 1, "bib": 1}
+        {"_id": 0}
     ).to_list(100)
     
     # Send confirmation email
