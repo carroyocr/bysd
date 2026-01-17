@@ -418,6 +418,76 @@ async def complete_lap_all_active(
         "previous_lap": current_lap
     }
 
+@router.post("/revert-lap")
+async def revert_lap(
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """
+    Revierte la vuelta actual a la anterior.
+    Esto es útil cuando se avanzó la vuelta por error.
+    ADVERTENCIA: Esto reduce las vueltas de todos los atletas activos en 1.
+    """
+    from server import db as database
+    
+    # Get current lap
+    config = await database.race_config.find_one({}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=400, detail="Configuración de carrera no encontrada")
+    
+    current_lap = config.get("current_lap", 1)
+    
+    if current_lap <= 1:
+        raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
+    
+    new_lap = current_lap - 1
+    
+    # Get all active participants who have at least 1 lap completed
+    active_participants = await database.participants.find(
+        {"status": "active", "laps_completed": {"$gt": 0}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    updated_count = 0
+    
+    # Reduce laps for all active participants with laps > 0
+    for participant in active_participants:
+        new_laps = max(0, participant.get("laps_completed", 1) - 1)
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
+        await database.participants.update_one(
+            {"bib": participant["bib"]},
+            {
+                "$set": {
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        updated_count += 1
+    
+    # Decrement current lap
+    await database.race_config.update_one(
+        {},
+        {
+            "$set": {
+                "current_lap": new_lap,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    # Remove lap logs for the reverted lap
+    await database.laps_log.delete_many({"lap_number": current_lap - 1})
+    
+    return {
+        "message": f"Vuelta revertida. Ahora está en la vuelta {new_lap}.",
+        "updated_count": updated_count,
+        "new_lap": new_lap,
+        "previous_lap": current_lap
+    }
+
 @router.post("/reset-database")
 async def reset_database(
     request: dict,
