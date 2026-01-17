@@ -569,6 +569,17 @@ export default function LiveDashboard() {
                   </Button>
                 </div>
               </div>
+              
+              {/* Subscribe Button */}
+              {followedAthletes.length > 0 && (
+                <Button
+                  onClick={() => setShowSubscribeModal(true)}
+                  className="w-full bg-gradient-to-r from-primary to-accent text-white"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Recibir notificaciones de {followedAthletes.length} atleta(s)
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
