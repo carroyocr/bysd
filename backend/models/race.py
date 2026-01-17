@@ -20,7 +20,7 @@ class Participant(BaseModel):
     nombre: str
     apellidos: str
     nacionalidad: str
-    status: Literal["active", "retired"] = "active"
+    status: Literal["active", "retired", "dns"] = "active"
     laps_completed: int = 0
     total_km: float = 0.0
     retired_at_lap: Optional[int] = None
