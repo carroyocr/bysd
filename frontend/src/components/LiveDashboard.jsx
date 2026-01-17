@@ -939,12 +939,27 @@ export default function LiveDashboard() {
                 className="w-full bg-gradient-to-r from-primary to-accent text-white"
               >
                 <Mail className="w-4 h-4 mr-2" />
-                {subscribing ? 'Suscribiendo...' : 'Suscribirme'}
+                {subscribing ? 'Guardando...' : isSubscribed ? 'Actualizar Suscripción' : 'Suscribirme'}
               </Button>
 
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Puedes cancelar la suscripción en cualquier momento desde el email
-              </p>
+              {/* Unsubscribe Button - Only show if already subscribed */}
+              {isSubscribed && (
+                <Button
+                  onClick={handleUnsubscribe}
+                  disabled={subscribing}
+                  variant="ghost"
+                  className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancelar suscripción
+                </Button>
+              )}
+
+              {!isSubscribed && (
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Puedes cancelar la suscripción en cualquier momento
+                </p>
+              )}
             </div>
           </div>
         </div>
