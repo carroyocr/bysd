@@ -5,6 +5,22 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 
+// Add custom CSS for slow pulse animation
+const customStyles = `
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.95;
+    }
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+`;
+
 export default function LiveDashboard() {
   const [stats, setStats] = useState(null);
   const [participants, setParticipants] = useState([]);
