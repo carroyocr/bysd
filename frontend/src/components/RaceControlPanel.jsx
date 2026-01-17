@@ -458,7 +458,7 @@ export default function RaceControlPanel() {
                                 disabled={saving}
                                 className="border-red-500 text-red-600"
                               >
-                                Marcar Retirado
+                                Marcar DNF
                               </Button>
                               <Button
                                 size="sm"
