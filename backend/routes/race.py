@@ -420,7 +420,7 @@ async def revert_lap(
     Esto es útil cuando se avanzó la vuelta por error.
     ADVERTENCIA: 
     - Reduce las vueltas de todos los atletas activos en 1
-    - Reactiva los atletas DNF que fueron marcados en la vuelta anterior (la que se completó por error)
+    - Reactiva los atletas DNF que tienen retired_at_lap >= new_lap (vueltas que "no ocurrieron")
     """
     from server import db as database
     
@@ -435,9 +435,6 @@ async def revert_lap(
         raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
     
     new_lap = current_lap - 1
-    # Athletes marked DNF during the current lap (before we revert) should be reactivated
-    # If current_lap is 2 and we're going back to 1, we reactivate athletes with retired_at_lap = 2
-    lap_to_revert = current_lap
     
     updated_count = 0
     reactivated_count = 0
@@ -464,15 +461,15 @@ async def revert_lap(
         )
         updated_count += 1
     
-    # 2. Reactivate DNF athletes who were marked as retired in the current lap
-    # If current_lap is 2 and we're going back to 1, we reactivate athletes with retired_at_lap = 2
-    # Since DNF added a lap when marked, we need to subtract it back
-    dnf_in_current_lap = await database.participants.find(
-        {"status": "retired", "retired_at_lap": lap_to_revert},
+    # 2. Reactivate DNF athletes with retired_at_lap >= new_lap
+    # When we go back to lap 2, anyone who retired at lap 2 or later should be reactivated
+    # Because those retirements "didn't happen yet" in the reverted state
+    dnf_to_reactivate = await database.participants.find(
+        {"status": "retired", "retired_at_lap": {"$gte": new_lap}},
         {"_id": 0}
     ).to_list(1000)
     
-    for participant in dnf_in_current_lap:
+    for participant in dnf_to_reactivate:
         # DNF incremented laps when marked, so reduce it back
         new_laps = max(0, participant.get("laps_completed", 1) - 1)
         new_km = round(new_laps * KM_PER_LAP, 1)
@@ -503,7 +500,7 @@ async def revert_lap(
     )
     
     # 4. Remove lap logs for the reverted lap
-    await database.laps_log.delete_many({"lap_number": lap_to_revert - 1})
+    await database.laps_log.delete_many({"lap_number": current_lap - 1})
     
     message = f"Vuelta revertida. Ahora está en la vuelta {new_lap}."
     if reactivated_count > 0:
