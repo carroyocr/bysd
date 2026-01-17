@@ -395,6 +395,83 @@ export default function RaceControlPanel() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reset Database Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-orange-300 shadow-strong">
+            <CardHeader className="border-b border-orange-200 bg-orange-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-orange-900">Reiniciar Base de Datos</CardTitle>
+                  <p className="text-sm text-orange-700 mt-1">Esta acción es irreversible</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-orange-900 mb-2">⚠️ Advertencia</h3>
+                  <ul className="text-sm text-orange-800 space-y-1">
+                    <li>• Se eliminarán todos los datos de participantes</li>
+                    <li>• Se borrará el historial de vueltas</li>
+                    <li>• La vuelta actual volverá a 1</li>
+                    <li>• Todos los atletas volverán a estado inicial (0 vueltas)</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Para confirmar, escriba <span className="font-bold text-orange-600">REINICIO</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={resetConfirmation}
+                    onChange={(e) => setResetConfirmation(e.target.value)}
+                    placeholder="Escriba REINICIO"
+                    className="text-center font-mono text-lg"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowResetModal(false);
+                      setResetConfirmation('');
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={resetting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleResetDatabase}
+                    disabled={resetConfirmation !== 'REINICIO' || resetting}
+                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    {resetting ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Reiniciando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Confirmar Reinicio
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
