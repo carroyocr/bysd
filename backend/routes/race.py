@@ -80,21 +80,28 @@ async def get_race_stats(db=Depends(lambda: None)):
     # Total km of all athletes (sum of individual km)
     total_km_all_athletes = sum(p.get("total_km", 0) for p in participants)
     
-    # Check for winner: Only 1 active athlete and they have completed at least 1 more lap than required
+    # Check for winner: Only 1 active athlete who has completed at least one lap alone
+    # Winner condition: Last athlete standing who completed the lap that all DNF athletes couldn't finish
     winner = None
     active_participants = [p for p in participants if p.get("status") == "active"]
+    retired_participants = [p for p in participants if p.get("status") == "retired"]
     
-    if len(active_participants) == 1:
+    if len(active_participants) == 1 and len(retired_participants) > 0:
         winner_participant = active_participants[0]
-        # Winner must have completed at least the current lap - 1
-        # This means they finished one more lap after being the last one standing
-        if winner_participant.get("laps_completed", 0) >= current_lap:
+        winner_laps = winner_participant.get("laps_completed", 0)
+        
+        # Find the maximum laps completed by any retired athlete
+        max_retired_laps = max((p.get("laps_completed", 0) for p in retired_participants), default=0)
+        
+        # Winner must have completed MORE laps than all retired athletes
+        # This means they finished one lap alone after the second-to-last person retired
+        if winner_laps > max_retired_laps:
             winner = {
                 "bib": winner_participant.get("bib"),
                 "nombre": winner_participant.get("nombre"),
                 "apellidos": winner_participant.get("apellidos"),
                 "nacionalidad": winner_participant.get("nacionalidad"),
-                "laps_completed": winner_participant.get("laps_completed", 0),
+                "laps_completed": winner_laps,
                 "total_km": winner_participant.get("total_km", 0)
             }
     
