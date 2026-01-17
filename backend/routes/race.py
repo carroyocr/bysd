@@ -191,7 +191,7 @@ async def mark_retired(
     await database.laps_log.insert_one(lap_log.dict())
     
     return {
-        "message": f"Participante {request.bib} completó vuelta {request.retired_at_lap} ({new_km} km) y se retiró",
+        "message": f"Participante {request.bib} completó vuelta {request.retired_at_lap} ({new_km} km) y DNF",
         "laps_completed": new_laps,
         "total_km": new_km
     }
