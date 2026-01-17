@@ -550,7 +550,8 @@ export default function LiveDashboard() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
