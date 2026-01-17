@@ -163,6 +163,46 @@ export default function LiveDashboard() {
     }
   };
 
+  // Handle unsubscribe
+  const handleUnsubscribe = async () => {
+    const savedEmail = localStorage.getItem(SUBSCRIPTION_EMAIL_KEY);
+    if (!savedEmail) return;
+
+    const confirmUnsubscribe = window.confirm(
+      '¿Estás seguro de que deseas cancelar tu suscripción? Ya no recibirás notificaciones de tus atletas seguidos.'
+    );
+
+    if (!confirmUnsubscribe) return;
+
+    setSubscribing(true);
+
+    try {
+      // Get subscription to find the ID
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscription/${encodeURIComponent(savedEmail)}`);
+      
+      if (response.ok) {
+        // Clear local storage
+        localStorage.removeItem(SUBSCRIPTION_EMAIL_KEY);
+        localStorage.removeItem(SUBSCRIPTION_SETTINGS_KEY);
+        setIsSubscribed(false);
+        setSubscribeEmail('');
+        setNotifyEveryLap(false);
+        setNotifyOnFinish(true);
+        
+        setSubscribeMessage({ type: 'success', text: 'Te has dado de baja exitosamente. Ya no recibirás más notificaciones.' });
+        
+        setTimeout(() => {
+          setShowSubscribeModal(false);
+          setSubscribeMessage(null);
+        }, 2000);
+      }
+    } catch (error) {
+      setSubscribeMessage({ type: 'error', text: 'Error al cancelar suscripción. Intenta de nuevo.' });
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   // Countdown timer effect
   useEffect(() => {
     const calculateCountdown = () => {
