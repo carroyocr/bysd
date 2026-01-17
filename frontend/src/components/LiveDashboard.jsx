@@ -804,11 +804,14 @@ export default function LiveDashboard() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-primary" />
-                    Notificaciones por Email
+                    {isSubscribed ? <Check className="w-5 h-5 text-green-600" /> : <Bell className="w-5 h-5 text-primary" />}
+                    {isSubscribed ? 'Suscripción Activa' : 'Notificaciones por Email'}
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Recibe actualizaciones de tus atletas favoritos
+                    {isSubscribed 
+                      ? 'Los nuevos atletas que sigas se agregarán automáticamente'
+                      : 'Recibe actualizaciones de tus atletas favoritos'
+                    }
                   </p>
                 </div>
                 <Button
