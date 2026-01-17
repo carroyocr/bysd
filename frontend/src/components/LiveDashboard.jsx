@@ -581,6 +581,18 @@ export default function LiveDashboard() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
+                      <td className="py-3 px-4 text-center">
+                        <Button
+                          onClick={() => toggleFollowAthlete(participant.bib)}
+                          variant="ghost"
+                          size="sm"
+                          className={`p-2 ${isFollowed(participant.bib) ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500'}`}
+                        >
+                          <Heart 
+                            className={`w-4 h-4 ${isFollowed(participant.bib) ? 'fill-current' : ''}`}
+                          />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
