@@ -234,3 +234,78 @@ async def complete_lap(
         "laps_completed": new_laps,
         "total_km": new_km
     }
+
+@router.post("/complete-lap-all-active")
+async def complete_lap_all_active(
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    from server import db as database
+    
+    # Get current lap
+    config = await database.race_config.find_one({}, {"_id": 0})
+    if not config:
+        raise HTTPException(status_code=400, detail="Configuración de carrera no encontrada")
+    
+    current_lap = config.get("current_lap", 1)
+    
+    # Get all active participants
+    active_participants = await database.participants.find(
+        {"status": "active"},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    if not active_participants:
+        return {
+            "message": "No hay participantes activos",
+            "updated_count": 0,
+            "new_lap": current_lap + 1
+        }
+    
+    updated_count = 0
+    
+    # Update all active participants
+    for participant in active_participants:
+        new_laps = participant.get("laps_completed", 0) + 1
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
+        # Update participant
+        await database.participants.update_one(
+            {"bib": participant["bib"]},
+            {
+                "$set": {
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        # Log the lap
+        lap_log = LapLog(
+            participant_bib=participant["bib"],
+            lap_number=current_lap,
+            recorded_by=user.get("username", "admin")
+        )
+        await database.laps_log.insert_one(lap_log.dict())
+        
+        updated_count += 1
+    
+    # Increment current lap
+    new_lap = current_lap + 1
+    await database.race_config.update_one(
+        {},
+        {
+            "$set": {
+                "current_lap": new_lap,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": f"Vuelta {current_lap} completada para {updated_count} atletas activos",
+        "updated_count": updated_count,
+        "new_lap": new_lap,
+        "previous_lap": current_lap
+    }
