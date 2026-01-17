@@ -188,7 +188,7 @@ export default function LiveDashboard() {
     <div className="min-h-screen bg-background pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-8 relative">
+        <div className="text-center mb-8">
           <h1 className="font-display text-4xl sm:text-5xl text-foreground mb-2">
             Seguimiento en Vivo
           </h1>
@@ -198,15 +198,6 @@ export default function LiveDashboard() {
           <p className="text-sm text-muted-foreground mt-2">
             Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
           </p>
-          
-          {/* Admin Access Button */}
-          <a
-            href="/admin/login"
-            className="absolute top-0 right-0 inline-flex items-center gap-2 px-4 py-2 bg-muted hover:bg-primary/10 border border-border rounded-lg text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Lock className="w-4 h-4" />
-            Panel Admin
-          </a>
         </div>
 
         {/* Countdown Timer - Only show if not expired */}
