@@ -136,7 +136,12 @@ async def send_notification_email(
 
 
 async def send_lap_notifications(db, current_lap: int):
-    """Send notifications to all subscribers who want lap updates"""
+    """Send notifications to all subscribers who want lap updates.
+    
+    Only sends if at least one followed athlete:
+    - Is still active, OR
+    - Made DNF in the current lap (their last lap)
+    """
     
     # Get all subscriptions that want lap notifications
     subscriptions = await db.email_subscriptions.find(
@@ -150,7 +155,19 @@ async def send_lap_notifications(db, current_lap: int):
             {"_id": 0}
         ).to_list(100)
         
-        if athletes:
+        if not athletes:
+            continue
+        
+        # Check if we should send notification:
+        # - At least one athlete is active, OR
+        # - At least one athlete made DNF in this lap (retired_at_lap == current_lap)
+        has_active_athlete = any(a.get("status") == "active" for a in athletes)
+        has_dnf_this_lap = any(
+            a.get("status") == "retired" and a.get("retired_at_lap") == current_lap 
+            for a in athletes
+        )
+        
+        if has_active_athlete or has_dnf_this_lap:
             await send_notification_email(
                 to_email=sub.get("email"),
                 subject=f"Vuelta {current_lap} Completada",
@@ -158,6 +175,9 @@ async def send_lap_notifications(db, current_lap: int):
                 athletes_data=athletes,
                 subscription_id=str(sub.get("_id", ""))
             )
+        else:
+            # All followed athletes are DNF/DNS from previous laps - skip notification
+            print(f"Skipping lap notification for {sub.get('email')} - all followed athletes are DNF/DNS")
 
 
 async def send_finish_notifications(db, athlete_bib: str, is_winner: bool = False):
