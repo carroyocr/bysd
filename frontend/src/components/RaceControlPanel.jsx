@@ -165,6 +165,44 @@ export default function RaceControlPanel() {
     setTimeout(() => setMessage(null), 3000);
   };
 
+  const handleResetDatabase = async () => {
+    if (resetConfirmation !== 'REINICIO') {
+      showMessage('Debe escribir REINICIO para confirmar', 'error');
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    setResetting(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-database`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ confirmation: resetConfirmation })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al reiniciar base de datos');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setShowResetModal(false);
+      setResetConfirmation('');
+      
+      // Reload data
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const filteredParticipants = participants.filter(p => {
     const search = searchTerm.toLowerCase();
     return (
