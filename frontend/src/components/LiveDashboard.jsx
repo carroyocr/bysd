@@ -127,15 +127,6 @@ export default function LiveDashboard() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(() => {
-      loadData();
-    }, 30000); // Auto-refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
   const loadData = async () => {
     try {
       const [statsRes, participantsRes] = await Promise.all([
@@ -155,6 +146,15 @@ export default function LiveDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000); // Auto-refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const exportToCSV = () => {
     const headers = ['BIB', 'Nombre', 'Apellidos', 'Nacionalidad', 'Estado', 'Vueltas', 'Kilómetros', 'Retirado en Vuelta'];
