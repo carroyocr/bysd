@@ -109,8 +109,12 @@ export default function Navigation() {
                       key={link.href}
                       to={link.href}
                       onClick={handleLinkClick}
-                      className={`px-4 py-3 text-base font-medium hover:text-primary hover:bg-secondary rounded-lg transition-colors ${
-                        location.pathname === link.href ? 'text-primary bg-secondary' : 'text-foreground'
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        link.highlight
+                          ? 'bg-gradient-to-r from-primary to-accent text-white font-semibold'
+                          : location.pathname === link.href
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
                       }`}
                     >
                       {link.label}
