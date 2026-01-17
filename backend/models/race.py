@@ -52,6 +52,7 @@ class RaceStats(BaseModel):
     athletes_dns: int
     total_km: float
     total_km_all_athletes: float
+    winner: Optional[dict] = None
 
 class ParticipantWithStats(BaseModel):
     bib: str
