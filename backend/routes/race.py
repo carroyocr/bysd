@@ -4,11 +4,13 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import os
+from bson import ObjectId
 from models.race import (
     AdminLogin, RaceConfig, Participant, LapLog,
     SetCurrentLapRequest, MarkRetiredRequest, CompleteLapRequest,
-    RaceStats, ParticipantWithStats
+    RaceStats, ParticipantWithStats, EmailSubscription, SubscribeRequest
 )
+from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
