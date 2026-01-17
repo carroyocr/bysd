@@ -251,7 +251,6 @@ export default function LiveDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Pos</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">BIB</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Nombre</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Nacionalidad</th>
@@ -262,14 +261,11 @@ export default function LiveDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredParticipants.map((participant, index) => (
+                  {filteredParticipants.map((participant) => (
                     <tr
                       key={participant.bib}
                       className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                     >
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-muted-foreground">#{index + 1}</span>
-                      </td>
                       <td className="py-3 px-4">
                         <Badge variant="outline" className="font-mono">
                           {participant.bib}
