@@ -14,17 +14,23 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
     # Generate athlete cards (mobile-friendly vertical layout)
     athletes_cards = ""
     for athlete in athletes_data:
-        status_color = "#22c55e" if athlete.get("status") == "active" else "#ef4444" if athlete.get("status") == "retired" else "#6b7280"
-        status_text = "Activo" if athlete.get("status") == "active" else "DNF" if athlete.get("status") == "retired" else "DNS"
+        status = athlete.get("status", "active")
+        
+        # Only show status badge for DNF or DNS, not for active athletes
+        status_badge = ""
+        if status == "retired":
+            status_badge = '<span style="background-color: #ef4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNF</span>'
+        elif status == "dns":
+            status_badge = '<span style="background-color: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNS</span>'
         
         athletes_cards += f"""
         <div style="background-color: #fafaf9; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
-            <!-- Header: BIB + Name + Status -->
+            <!-- Header: BIB + Status (only if DNF/DNS) -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div>
                     <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{athlete.get('bib', '-')}</span>
                 </div>
-                <span style="background-color: {status_color}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">{status_text}</span>
+                {status_badge}
             </div>
             
             <!-- Name -->
