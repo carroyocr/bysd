@@ -49,7 +49,9 @@ class RaceStats(BaseModel):
     total_laps_completed: int
     athletes_retired: int
     athletes_active: int
+    athletes_dns: int
     total_km: float
+    total_km_all_athletes: float
 
 class ParticipantWithStats(BaseModel):
     bib: str
