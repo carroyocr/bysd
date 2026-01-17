@@ -9,23 +9,43 @@ GMAIL_USER = os.environ.get("GMAIL_USER")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
-    """Generate HTML email template with race branding"""
+    """Generate HTML email template with race branding - Mobile optimized with cards"""
     
-    athletes_rows = ""
+    # Generate athlete cards (mobile-friendly vertical layout)
+    athletes_cards = ""
     for athlete in athletes_data:
         status_color = "#22c55e" if athlete.get("status") == "active" else "#ef4444" if athlete.get("status") == "retired" else "#6b7280"
         status_text = "Activo" if athlete.get("status") == "active" else "DNF" if athlete.get("status") == "retired" else "DNS"
         
-        athletes_rows += f"""
-        <tr>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: bold;">{athlete.get('bib', '-')}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">{athlete.get('nombre', '')} {athlete.get('apellidos', '')}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-                <span style="background-color: {status_color}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">{status_text}</span>
-            </td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center; font-weight: bold; font-size: 18px;">{athlete.get('laps_completed', 0)}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">{athlete.get('total_km', 0)} km</td>
-        </tr>
+        athletes_cards += f"""
+        <div style="background-color: #fafaf9; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
+            <!-- Header: BIB + Name + Status -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div>
+                    <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{athlete.get('bib', '-')}</span>
+                </div>
+                <span style="background-color: {status_color}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">{status_text}</span>
+            </div>
+            
+            <!-- Name -->
+            <div style="margin-bottom: 12px;">
+                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1f2937;">{athlete.get('nombre', '')} {athlete.get('apellidos', '')}</p>
+            </div>
+            
+            <!-- Stats Row -->
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 8px 0 0 8px; border: 1px solid #e5e7eb; border-right: none;">
+                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Vueltas</p>
+                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #ea580c;">{athlete.get('laps_completed', 0)}</p>
+                    </td>
+                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e5e7eb;">
+                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Kilómetros</p>
+                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #1f2937;">{athlete.get('total_km', 0)}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
         """
     
     html = f"""
@@ -35,53 +55,38 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f4;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff;">
             <!-- Header -->
-            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center;">
-                <img src="https://racetracking.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;">
-                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
+            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 24px 16px; text-align: center;">
+                <img src="https://racetracking.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
+                <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">BACKYARD ULTRA</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
             </div>
             
             <!-- Content -->
-            <div style="padding: 30px;">
-                <h2 style="color: #1f2937; margin: 0 0 10px 0; font-size: 20px;">{subject}</h2>
-                <p style="color: #6b7280; margin: 0 0 25px 0; font-size: 14px;">{content}</p>
+            <div style="padding: 20px 16px;">
+                <h2 style="color: #1f2937; margin: 0 0 8px 0; font-size: 18px;">{subject}</h2>
+                <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 14px; line-height: 1.5;">{content}</p>
                 
-                <!-- Athletes Table -->
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; background-color: #fafaf9; border-radius: 8px; overflow: hidden;">
-                        <thead>
-                            <tr style="background-color: #f5f5f4;">
-                                <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; text-transform: uppercase;">BIB</th>
-                                <th style="padding: 12px; text-align: left; font-size: 12px; color: #6b7280; text-transform: uppercase;">Nombre</th>
-                                <th style="padding: 12px; text-align: center; font-size: 12px; color: #6b7280; text-transform: uppercase;">Estado</th>
-                                <th style="padding: 12px; text-align: center; font-size: 12px; color: #6b7280; text-transform: uppercase;">Vueltas</th>
-                                <th style="padding: 12px; text-align: center; font-size: 12px; color: #6b7280; text-transform: uppercase;">Km</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {athletes_rows}
-                        </tbody>
-                    </table>
-                </div>
+                <!-- Athletes Cards -->
+                {athletes_cards}
                 
                 <!-- Footer Info -->
-                <div style="margin-top: 25px; padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e; font-size: 14px;">
-                        <strong>📍 Seguimiento en vivo:</strong><br>
-                        <a href="https://racetracking.preview.emergentagent.com/en-vivo" style="color: #ea580c;">https://racetracking.preview.emergentagent.com/en-vivo</a>
+                <div style="margin-top: 20px; padding: 16px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">
+                        <strong>Seguimiento en vivo:</strong><br>
+                        <a href="https://racetracking.preview.emergentagent.com/en-vivo" style="color: #ea580c; word-break: break-all;">racetracking.preview.emergentagent.com/en-vivo</a>
                     </p>
                 </div>
             </div>
             
             <!-- Footer -->
-            <div style="background-color: #1f2937; padding: 20px; text-align: center;">
-                <p style="color: #9ca3af; margin: 0 0 10px 0; font-size: 12px;">
+            <div style="background-color: #1f2937; padding: 16px; text-align: center;">
+                <p style="color: #9ca3af; margin: 0 0 8px 0; font-size: 11px;">
                     Backyard Ultra Santo Domingo 2026
                 </p>
-                <p style="color: #6b7280; margin: 0; font-size: 11px;">
+                <p style="color: #6b7280; margin: 0; font-size: 10px;">
                     <a href="{unsubscribe_link}" style="color: #9ca3af;">Cancelar suscripción</a>
                 </p>
             </div>
