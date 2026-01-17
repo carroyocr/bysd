@@ -210,6 +210,10 @@ async def mark_retired(
         }
     )
     
+    # Send DNF notifications in background
+    import asyncio
+    asyncio.create_task(send_finish_notifications(database, request.bib, is_winner=False))
+    
     return {
         "message": f"Participante {request.bib} completó vuelta {request.retired_at_lap} ({new_km} km) y DNF",
         "laps_completed": new_laps,
