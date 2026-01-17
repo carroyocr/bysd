@@ -213,9 +213,6 @@ async def mark_retired(
         "laps_completed": new_laps,
         "total_km": new_km
     }
-        "laps_completed": new_laps,
-        "total_km": new_km
-    }
 
 @router.post("/mark-dns")
 async def mark_dns(
