@@ -365,8 +365,8 @@ export default function RaceControlPanel() {
                   {filteredParticipants.length} participantes
                 </p>
               </div>
-              <div className="w-full md:w-96">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-80">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="text"
@@ -376,6 +376,16 @@ export default function RaceControlPanel() {
                     className="pl-10"
                   />
                 </div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">Todos ({participants.length})</option>
+                  <option value="active">Activos ({participants.filter(p => p.status === 'active').length})</option>
+                  <option value="retired">Retirados ({participants.filter(p => p.status === 'retired').length})</option>
+                  <option value="dns">DNS ({participants.filter(p => p.status === 'dns').length})</option>
+                </select>
               </div>
             </div>
           </CardHeader>
