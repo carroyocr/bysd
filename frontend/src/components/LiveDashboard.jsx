@@ -738,6 +738,117 @@ export default function LiveDashboard() {
         </Card>
         </div>
       </div>
+
+      {/* Subscribe Modal */}
+      {showSubscribeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-primary" />
+                    Notificaciones por Email
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Recibe actualizaciones de tus atletas favoritos
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSubscribeModal(false)}
+                  className="p-1"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Followed Athletes Summary */}
+              <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                <p className="text-sm font-medium mb-2">Atletas seleccionados ({followedAthletes.length}):</p>
+                <div className="flex flex-wrap gap-2">
+                  {participants
+                    .filter(p => followedAthletes.includes(p.bib))
+                    .map(p => (
+                      <Badge key={p.bib} variant="secondary" className="text-xs">
+                        #{p.bib} {p.nombre}
+                      </Badge>
+                    ))}
+                </div>
+              </div>
+
+              {/* Email Input */}
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Tu correo electrónico</label>
+                <Input
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Notification Options */}
+              <div className="space-y-3 mb-6">
+                <label className="text-sm font-medium block">¿Cuándo quieres recibir notificaciones?</label>
+                
+                <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={notifyEveryLap}
+                    onChange={(e) => setNotifyEveryLap(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <p className="font-medium text-sm">Cada vuelta completada</p>
+                    <p className="text-xs text-muted-foreground">Recibe un email cada vez que se complete una vuelta</p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/30 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnFinish}
+                    onChange={(e) => setNotifyOnFinish(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <p className="font-medium text-sm">Solo al finalizar (DNF/Ganador)</p>
+                    <p className="text-xs text-muted-foreground">Recibe un email cuando el atleta termine o gane</p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Message */}
+              {subscribeMessage && (
+                <div className={`p-3 rounded-lg mb-4 ${
+                  subscribeMessage.type === 'success' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  <p className="text-sm">{subscribeMessage.text}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                className="w-full bg-gradient-to-r from-primary to-accent text-white"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                {subscribing ? 'Suscribiendo...' : 'Suscribirme'}
+              </Button>
+
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Puedes cancelar la suscripción en cualquier momento desde el email
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
