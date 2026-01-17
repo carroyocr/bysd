@@ -163,19 +163,38 @@ async def mark_retired(
     if participant.get("status") == "dns":
         raise HTTPException(status_code=400, detail="El participante está marcado como DNS")
     
-    # Update participant status
+    # The athlete completed this lap before retiring
+    # So we need to increment their laps and km
+    new_laps = participant.get("laps_completed", 0) + 1
+    new_km = round(new_laps * KM_PER_LAP, 1)
+    
+    # Update participant status and stats
     await database.participants.update_one(
         {"bib": request.bib},
         {
             "$set": {
                 "status": "retired",
                 "retired_at_lap": request.retired_at_lap,
+                "laps_completed": new_laps,
+                "total_km": new_km,
                 "updated_at": datetime.utcnow()
             }
         }
     )
     
-    return {"message": f"Participante {request.bib} marcado como retirado"}
+    # Log the completed lap before retirement
+    lap_log = LapLog(
+        participant_bib=request.bib,
+        lap_number=request.retired_at_lap,
+        recorded_by=user.get("username", "admin")
+    )
+    await database.laps_log.insert_one(lap_log.dict())
+    
+    return {
+        "message": f"Participante {request.bib} completó vuelta {request.retired_at_lap} ({new_km} km) y se retiró",
+        "laps_completed": new_laps,
+        "total_km": new_km
+    }
 
 @router.post("/mark-dns")
 async def mark_dns(
