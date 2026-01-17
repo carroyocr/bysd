@@ -426,7 +426,9 @@ async def revert_lap(
     """
     Revierte la vuelta actual a la anterior.
     Esto es útil cuando se avanzó la vuelta por error.
-    ADVERTENCIA: Esto reduce las vueltas de todos los atletas activos en 1.
+    ADVERTENCIA: 
+    - Reduce las vueltas de todos los atletas activos en 1
+    - Reactiva los atletas DNF que fueron marcados en la vuelta revertida
     """
     from server import db as database
     
@@ -441,16 +443,17 @@ async def revert_lap(
         raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
     
     new_lap = current_lap - 1
+    reverted_lap = current_lap - 1  # The lap we completed and are now reverting
     
-    # Get all active participants who have at least 1 lap completed
+    updated_count = 0
+    reactivated_count = 0
+    
+    # 1. Reduce laps for all active participants who have at least 1 lap completed
     active_participants = await database.participants.find(
         {"status": "active", "laps_completed": {"$gt": 0}},
         {"_id": 0}
     ).to_list(1000)
     
-    updated_count = 0
-    
-    # Reduce laps for all active participants with laps > 0
     for participant in active_participants:
         new_laps = max(0, participant.get("laps_completed", 1) - 1)
         new_km = round(new_laps * KM_PER_LAP, 1)
@@ -467,7 +470,33 @@ async def revert_lap(
         )
         updated_count += 1
     
-    # Decrement current lap
+    # 2. Reactivate DNF athletes who were marked as retired in the reverted lap
+    # These athletes were marked DNF during the lap we're reverting, so they should go back to active
+    dnf_in_reverted_lap = await database.participants.find(
+        {"status": "retired", "retired_at_lap": current_lap},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for participant in dnf_in_reverted_lap:
+        # They had their lap incremented when marked DNF, so reduce it back
+        new_laps = max(0, participant.get("laps_completed", 1) - 1)
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
+        await database.participants.update_one(
+            {"bib": participant["bib"]},
+            {
+                "$set": {
+                    "status": "active",
+                    "retired_at_lap": None,
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        reactivated_count += 1
+    
+    # 3. Decrement current lap
     await database.race_config.update_one(
         {},
         {
@@ -478,12 +507,17 @@ async def revert_lap(
         }
     )
     
-    # Remove lap logs for the reverted lap
-    await database.laps_log.delete_many({"lap_number": current_lap - 1})
+    # 4. Remove lap logs for the reverted lap
+    await database.laps_log.delete_many({"lap_number": reverted_lap})
+    
+    message = f"Vuelta revertida. Ahora está en la vuelta {new_lap}."
+    if reactivated_count > 0:
+        message += f" {reactivated_count} atleta(s) DNF reactivado(s)."
     
     return {
-        "message": f"Vuelta revertida. Ahora está en la vuelta {new_lap}.",
+        "message": message,
         "updated_count": updated_count,
+        "reactivated_count": reactivated_count,
         "new_lap": new_lap,
         "previous_lap": current_lap
     }
