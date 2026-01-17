@@ -185,7 +185,7 @@ export default function LiveDashboard() {
   }
 
   return (
-    <section className="bg-gradient-to-b from-muted/20 to-background min-h-screen">
+    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-screen">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
