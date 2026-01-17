@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/patrocinadores', label: 'Patrocinadores' },
   { href: '/faq', label: 'FAQ' },
   { href: '/en-vivo', label: 'En Vivo', highlight: true },
+  { href: '/admin/login', label: 'Admin' },
 ];
 
 export default function Navigation() {
