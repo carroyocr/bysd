@@ -428,7 +428,7 @@ async def revert_lap(
     Esto es útil cuando se avanzó la vuelta por error.
     ADVERTENCIA: 
     - Reduce las vueltas de todos los atletas activos en 1
-    - Reactiva los atletas DNF que fueron marcados en la vuelta revertida
+    - Reactiva los atletas DNF que fueron marcados en la vuelta anterior (la que se completó por error)
     """
     from server import db as database
     
@@ -443,7 +443,9 @@ async def revert_lap(
         raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
     
     new_lap = current_lap - 1
-    reverted_lap = current_lap - 1  # The lap we completed and are now reverting
+    # The lap that was just completed (and we're reverting) is current_lap - 1
+    # Athletes marked DNF during that lap would have retired_at_lap = current_lap - 1
+    reverted_lap = current_lap - 1
     
     updated_count = 0
     reactivated_count = 0
@@ -470,10 +472,11 @@ async def revert_lap(
         )
         updated_count += 1
     
-    # 2. Reactivate DNF athletes who were marked as retired in the reverted lap
-    # These athletes were marked DNF during the lap we're reverting, so they should go back to active
+    # 2. Reactivate DNF athletes who were marked as retired in the lap we're reverting
+    # If current_lap is 3 and we're going back to 2, we reactivate athletes with retired_at_lap = 2
+    # (they were marked DNF when they completed lap 2 but decided not to continue)
     dnf_in_reverted_lap = await database.participants.find(
-        {"status": "retired", "retired_at_lap": current_lap},
+        {"status": "retired", "retired_at_lap": reverted_lap},
         {"_id": 0}
     ).to_list(1000)
     
