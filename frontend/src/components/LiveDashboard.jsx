@@ -1106,6 +1106,166 @@ export default function LiveDashboard() {
           </div>
         </div>
       )}
+
+      {/* Cheer Message Modal */}
+      {showCheerModal && cheerAthlete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-purple-600" />
+                    Enviar mensaje de ánimo
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Para: <span className="font-medium">{cheerAthlete.nombre} {cheerAthlete.apellidos}</span> (#{cheerAthlete.bib})
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCheerModal(false)}
+                  className="p-1"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Fan Name Input */}
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Tu nombre</label>
+                <Input
+                  type="text"
+                  placeholder="Tu nombre (ej: Juan García)"
+                  value={cheerFanName}
+                  onChange={(e) => setCheerFanName(e.target.value)}
+                  maxLength={50}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Message Input */}
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Tu mensaje</label>
+                <textarea
+                  placeholder="¡Escribe tu mensaje de ánimo! (máx. 280 caracteres)"
+                  value={cheerMessage}
+                  onChange={(e) => setCheerMessage(e.target.value)}
+                  maxLength={280}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+                <p className="text-xs text-muted-foreground text-right mt-1">
+                  {cheerMessage.length}/280
+                </p>
+              </div>
+
+              {/* Result Message */}
+              {cheerResult && (
+                <div className={`p-3 rounded-lg mb-4 ${
+                  cheerResult.type === 'success' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  <p className="text-sm">{cheerResult.text}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleSubmitCheer}
+                disabled={cheerSubmitting || !cheerMessage.trim() || !cheerFanName.trim()}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {cheerSubmitting ? 'Enviando...' : 'Enviar mensaje'}
+              </Button>
+
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Los mensajes podrán ser publicados en las redes sociales del evento
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cheer Feed Modal */}
+      {showCheerFeed && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-purple-600" />
+                    Mensajes de Ánimo
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {cheerMessages.length} mensaje{cheerMessages.length !== 1 ? 's' : ''} de los fans
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCheerFeed(false)}
+                  className="p-1"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingCheers ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-8 h-8 text-purple-400 animate-pulse mx-auto mb-2" />
+                  <p className="text-muted-foreground">Cargando mensajes...</p>
+                </div>
+              ) : cheerMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Aún no hay mensajes de ánimo</p>
+                  <p className="text-sm text-muted-foreground mt-1">¡Sé el primero en animar a un atleta!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cheerMessages.map((msg, index) => (
+                    <div key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-medium text-purple-900">{msg.fan_name}</p>
+                          <p className="text-xs text-purple-600">
+                            Para: #{msg.athlete_bib} {msg.athlete_name}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {msg.athlete_nacionalidad}
+                        </Badge>
+                      </div>
+                      <p className="text-gray-800 text-sm">{msg.message}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {new Date(msg.created_at).toLocaleString('es-DO')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t">
+              <Button
+                onClick={loadCheerMessages}
+                variant="outline"
+                className="w-full"
+                disabled={loadingCheers}
+              >
+                {loadingCheers ? 'Actualizando...' : 'Actualizar mensajes'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
