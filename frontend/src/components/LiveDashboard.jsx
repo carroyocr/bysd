@@ -394,6 +394,7 @@ export default function LiveDashboard() {
 
   useEffect(() => {
     loadData();
+    loadCheerCount();
     const interval = setInterval(() => {
       loadData();
     }, 30000); // Auto-refresh every 30 seconds
