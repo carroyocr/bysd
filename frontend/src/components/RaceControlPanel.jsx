@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, ShieldCheck, ShieldOff } from 'lucide-react';
+import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, ShieldCheck, ShieldOff, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,6 +21,9 @@ export default function RaceControlPanel() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [showResetSubsModal, setShowResetSubsModal] = useState(false);
+  const [resetSubsConfirmation, setResetSubsConfirmation] = useState('');
+  const [resettingSubs, setResettingSubs] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
