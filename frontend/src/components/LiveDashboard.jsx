@@ -1222,7 +1222,7 @@ export default function LiveDashboard() {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-3">
-                Los mensajes podrán ser publicados en las redes sociales del evento
+                Tu mensaje aparecerá en el feed de ánimos del evento
               </p>
             </div>
           </div>
