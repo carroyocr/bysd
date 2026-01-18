@@ -1352,25 +1352,33 @@ export default function LiveDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {cheerMessages.map((msg, index) => (
-                    <div key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-medium text-purple-900">{msg.fan_name}</p>
-                          <p className="text-xs text-purple-600">
-                            Para: #{msg.athlete_bib} {msg.athlete_name}
-                          </p>
+                  {cheerMessages.map((msg, index) => {
+                    // Determine badge based on message count (simplified - we show badge emoji in feed)
+                    const getBadgeEmoji = (name) => {
+                      const fan = fanLeaderboard.find(f => f.fan_name === name);
+                      return fan ? fan.badge.emoji : '🌱';
+                    };
+                    
+                    return (
+                      <div key={index} className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-100">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-purple-900">{msg.fan_name}</p>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {msg.athlete_nacionalidad}
+                          </Badge>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {msg.athlete_nacionalidad}
-                        </Badge>
+                        <p className="text-xs text-purple-600 mb-2">
+                          Para: #{msg.athlete_bib} {msg.athlete_name}
+                        </p>
+                        <p className="text-gray-800 text-sm">{msg.message}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(msg.created_at).toLocaleString('es-DO')}
+                        </p>
                       </div>
-                      <p className="text-gray-800 text-sm">{msg.message}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(msg.created_at).toLocaleString('es-DO')}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
