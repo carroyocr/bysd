@@ -684,6 +684,8 @@ async def subscribe_to_notifications(
     # Check if subscription already exists for this email
     existing = await database.email_subscriptions.find_one({"email": request.email})
     
+    is_new_subscription = existing is None
+    
     if existing:
         # Update existing subscription
         await database.email_subscriptions.update_one(
@@ -718,17 +720,18 @@ async def subscribe_to_notifications(
         {"_id": 0}
     ).to_list(100)
     
-    # Send confirmation email
-    await send_notification_email(
-        to_email=request.email,
-        subject="Confirmación de Suscripción",
-        content=f"Te has suscrito exitosamente para recibir notificaciones de {len(athletes)} atleta(s). "
-                f"Recibirás actualizaciones {'cada vuelta completada' if request.notify_every_lap else ''}"
-                f"{' y ' if request.notify_every_lap and request.notify_on_finish else ''}"
-                f"{'cuando finalicen' if request.notify_on_finish else ''}.",
-        athletes_data=athletes,
-        subscription_id=subscription_id
-    )
+    # Only send confirmation email for NEW subscriptions
+    if is_new_subscription:
+        await send_notification_email(
+            to_email=request.email,
+            subject="Confirmación de Suscripción",
+            content=f"Te has suscrito exitosamente para recibir notificaciones de {len(athletes)} atleta(s). "
+                    f"Recibirás actualizaciones {'cada vuelta completada' if request.notify_every_lap else ''}"
+                    f"{' y ' if request.notify_every_lap and request.notify_on_finish else ''}"
+                    f"{'cuando finalicen' if request.notify_on_finish else ''}.",
+            athletes_data=athletes,
+            subscription_id=subscription_id
+        )
     
     return {
         "message": message,
@@ -736,6 +739,43 @@ async def subscribe_to_notifications(
         "athletes_count": len(request.athletes_bibs),
         "notify_every_lap": request.notify_every_lap,
         "notify_on_finish": request.notify_on_finish
+    }
+
+
+@router.post("/subscribe-update")
+async def update_subscription_silent(
+    request: SubscribeRequest,
+    db=Depends(lambda: None)
+):
+    """Update subscription silently without sending email (for auto-updates when following athletes)"""
+    from server import db as database
+    
+    if not request.athletes_bibs:
+        return {"message": "No athletes to follow", "updated": False}
+    
+    # Check if subscription exists for this email
+    existing = await database.email_subscriptions.find_one({"email": request.email})
+    
+    if not existing:
+        return {"message": "No subscription found", "updated": False}
+    
+    # Update existing subscription silently
+    await database.email_subscriptions.update_one(
+        {"email": request.email},
+        {
+            "$set": {
+                "athletes_bibs": request.athletes_bibs,
+                "notify_every_lap": request.notify_every_lap,
+                "notify_on_finish": request.notify_on_finish,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": "Subscription updated",
+        "updated": True,
+        "athletes_count": len(request.athletes_bibs)
     }
 
 
