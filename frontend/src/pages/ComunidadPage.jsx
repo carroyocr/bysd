@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Trophy, Award, Send, X, Users, Heart, TrendingUp } from 'lucide-react';
+import { MessageCircle, Trophy, Award, Send, X, Users, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 
 export default function ComunidadPage() {
+  // Active tab: 'messages', 'athletes', 'fans'
+  const [activeTab, setActiveTab] = useState('messages');
+  
   // Stats
   const [stats, setStats] = useState({ totalMessages: 0, totalFans: 0, totalAthletes: 0 });
   
@@ -16,6 +19,8 @@ export default function ComunidadPage() {
   // Leaderboards
   const [athleteLeaderboard, setAthleteLeaderboard] = useState([]);
   const [fanLeaderboard, setFanLeaderboard] = useState([]);
+  const [loadingAthletes, setLoadingAthletes] = useState(false);
+  const [loadingFans, setLoadingFans] = useState(false);
   
   // Send message modal
   const [showSendModal, setShowSendModal] = useState(false);
@@ -28,21 +33,22 @@ export default function ComunidadPage() {
   const [fanBadge, setFanBadge] = useState(null);
   const [searchAthlete, setSearchAthlete] = useState('');
 
-  // Load all data
+  // Load messages on mount
   useEffect(() => {
-    loadAllData();
-    const interval = setInterval(loadAllData, 30000);
+    loadMessages();
+    loadAthletes();
+    const interval = setInterval(loadMessages, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const loadAllData = async () => {
-    await Promise.all([
-      loadMessages(),
-      loadAthleteLeaderboard(),
-      loadFanLeaderboard(),
-      loadAthletes()
-    ]);
-  };
+  // Load leaderboard when tab changes
+  useEffect(() => {
+    if (activeTab === 'athletes' && athleteLeaderboard.length === 0) {
+      loadAthleteLeaderboard();
+    } else if (activeTab === 'fans' && fanLeaderboard.length === 0) {
+      loadFanLeaderboard();
+    }
+  }, [activeTab]);
 
   const loadMessages = async () => {
     setLoadingMessages(true);
@@ -52,7 +58,6 @@ export default function ComunidadPage() {
         const data = await response.json();
         setMessages(data);
         
-        // Calculate stats
         const uniqueFans = new Set(data.map(m => m.fan_name));
         const uniqueAthletes = new Set(data.map(m => m.athlete_bib));
         setStats({
@@ -69,26 +74,32 @@ export default function ComunidadPage() {
   };
 
   const loadAthleteLeaderboard = async () => {
+    setLoadingAthletes(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=10`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=20`);
       if (response.ok) {
         const data = await response.json();
         setAthleteLeaderboard(data);
       }
     } catch (error) {
       console.error('Error loading athlete leaderboard:', error);
+    } finally {
+      setLoadingAthletes(false);
     }
   };
 
   const loadFanLeaderboard = async () => {
+    setLoadingFans(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=10`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=20`);
       if (response.ok) {
         const data = await response.json();
         setFanLeaderboard(data);
       }
     } catch (error) {
       console.error('Error loading fan leaderboard:', error);
+    } finally {
+      setLoadingFans(false);
     }
   };
 
@@ -151,7 +162,10 @@ export default function ComunidadPage() {
         setMessage('');
         setSelectedAthlete(null);
         setSearchAthlete('');
-        loadAllData();
+        loadMessages();
+        // Reset leaderboards to reload on next view
+        setAthleteLeaderboard([]);
+        setFanLeaderboard([]);
         setTimeout(() => {
           setShowSendModal(false);
           setSendResult(null);
@@ -175,42 +189,51 @@ export default function ComunidadPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-12">
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
             🎉 Comunidad
           </h1>
-          <p className="text-center text-purple-100 text-lg mb-8">
+          <p className="text-center text-purple-100 mb-6">
             Backyard Ultra Santo Domingo 2026
           </p>
           
-          {/* Stats Cards */}
-          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
-            <div className="bg-white/20 backdrop-blur rounded-xl p-4 text-center">
-              <MessageCircle className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-3xl font-bold">{stats.totalMessages}</p>
-              <p className="text-sm text-purple-100">Mensajes</p>
-            </div>
-            <div className="bg-white/20 backdrop-blur rounded-xl p-4 text-center">
-              <Users className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-3xl font-bold">{stats.totalFans}</p>
-              <p className="text-sm text-purple-100">Fans</p>
-            </div>
-            <div className="bg-white/20 backdrop-blur rounded-xl p-4 text-center">
-              <Heart className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-3xl font-bold">{stats.totalAthletes}</p>
-              <p className="text-sm text-purple-100">Atletas Apoyados</p>
-            </div>
+          {/* Tab Buttons */}
+          <div className="flex justify-center gap-2 flex-wrap">
+            <Button
+              onClick={() => setActiveTab('messages')}
+              variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
+              className={`${activeTab === 'messages' ? 'bg-white text-purple-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Mensajes ({stats.totalMessages})
+            </Button>
+            <Button
+              onClick={() => setActiveTab('athletes')}
+              variant={activeTab === 'athletes' ? 'secondary' : 'ghost'}
+              className={`${activeTab === 'athletes' ? 'bg-white text-amber-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              Top Atletas ({stats.totalAthletes})
+            </Button>
+            <Button
+              onClick={() => setActiveTab('fans')}
+              variant={activeTab === 'fans' ? 'secondary' : 'ghost'}
+              className={`${activeTab === 'fans' ? 'bg-white text-green-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+            >
+              <Award className="w-4 h-4 mr-2" />
+              Top Fans ({stats.totalFans})
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="max-w-3xl mx-auto">
           
-          {/* Feed de Mensajes - Principal */}
-          <div className="lg:col-span-2">
+          {/* Messages Tab */}
+          {activeTab === 'messages' && (
             <Card className="shadow-lg">
               <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
                 <CardTitle className="flex items-center gap-2">
@@ -235,11 +258,11 @@ export default function ComunidadPage() {
                     {messages.map((msg, index) => (
                       <div key={index} className="p-4 hover:bg-purple-50/50 transition-colors">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                             {msg.fan_name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
                               <span className="font-semibold text-foreground">{msg.fan_name}</span>
                               <span className="text-muted-foreground">→</span>
                               <Badge variant="outline" className="text-xs">
@@ -261,29 +284,37 @@ export default function ComunidadPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* Sidebars - Leaderboards */}
-          <div className="space-y-6">
-            
-            {/* Top Atletas */}
+          {/* Athletes Tab */}
+          {activeTab === 'athletes' && (
             <Card className="shadow-lg">
               <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-yellow-50">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Trophy className="w-5 h-5 text-amber-500" />
-                  Top Atletas Apoyados
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-6 h-6 text-amber-500" />
+                  Top Atletas Más Apoyados
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {athleteLeaderboard.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Sin datos aún
+                {loadingAthletes ? (
+                  <div className="text-center py-12">
+                    <Trophy className="w-12 h-12 text-amber-300 animate-pulse mx-auto mb-4" />
+                    <p className="text-muted-foreground">Cargando ranking...</p>
+                  </div>
+                ) : athleteLeaderboard.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Trophy className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-muted-foreground">Aún no hay datos</p>
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {athleteLeaderboard.slice(0, 5).map((athlete, index) => (
-                      <div key={athlete.bib} className="p-3 flex items-center gap-3 hover:bg-amber-50/50">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                    {athleteLeaderboard.map((athlete, index) => (
+                      <div key={athlete.bib} className={`p-4 flex items-center gap-4 ${
+                        index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50' :
+                        index === 1 ? 'bg-gradient-to-r from-gray-50 to-slate-50' :
+                        index === 2 ? 'bg-gradient-to-r from-orange-50 to-amber-50' : ''
+                      }`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
                           index === 0 ? 'bg-yellow-400 text-yellow-900' :
                           index === 1 ? 'bg-gray-300 text-gray-700' :
                           index === 2 ? 'bg-orange-400 text-orange-900' :
@@ -291,17 +322,17 @@ export default function ComunidadPage() {
                         }`}>
                           {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">
                             {athlete.nombre} {athlete.apellidos}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            #{athlete.bib} • {athlete.nacionalidad}
+                          <p className="text-sm text-muted-foreground">
+                            #{athlete.bib} • {athlete.nacionalidad} • {athlete.laps_completed} vueltas
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-purple-600">{athlete.cheer_count}</p>
-                          <p className="text-xs text-muted-foreground">msgs</p>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-purple-600">{athlete.cheer_count}</p>
+                          <p className="text-xs text-muted-foreground">mensajes</p>
                         </div>
                       </div>
                     ))}
@@ -309,31 +340,43 @@ export default function ComunidadPage() {
                 )}
               </CardContent>
             </Card>
+          )}
 
-            {/* Top Fans */}
+          {/* Fans Tab */}
+          {activeTab === 'fans' && (
             <Card className="shadow-lg">
               <CardHeader className="border-b bg-gradient-to-r from-green-50 to-emerald-50">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Award className="w-5 h-5 text-green-500" />
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="w-6 h-6 text-green-500" />
                   Top Fans
                 </CardTitle>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  <span className="text-xs px-2 py-0.5 bg-white rounded-full border">🌱 1+</span>
-                  <span className="text-xs px-2 py-0.5 bg-white rounded-full border">📣 3+</span>
-                  <span className="text-xs px-2 py-0.5 bg-white rounded-full border">⭐ 5+</span>
-                  <span className="text-xs px-2 py-0.5 bg-white rounded-full border">🏆 10+</span>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-xs px-2 py-1 bg-white rounded-full border">🌱 Novato (1+)</span>
+                  <span className="text-xs px-2 py-1 bg-white rounded-full border">📣 Animador (3+)</span>
+                  <span className="text-xs px-2 py-1 bg-white rounded-full border">⭐ Súper Fan (5+)</span>
+                  <span className="text-xs px-2 py-1 bg-white rounded-full border">🏆 Leyenda (10+)</span>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {fanLeaderboard.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Sin datos aún
+                {loadingFans ? (
+                  <div className="text-center py-12">
+                    <Award className="w-12 h-12 text-green-300 animate-pulse mx-auto mb-4" />
+                    <p className="text-muted-foreground">Cargando ranking...</p>
+                  </div>
+                ) : fanLeaderboard.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Award className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-muted-foreground">Aún no hay datos</p>
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {fanLeaderboard.slice(0, 5).map((fan, index) => (
-                      <div key={fan.fan_name} className="p-3 flex items-center gap-3 hover:bg-green-50/50">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                    {fanLeaderboard.map((fan, index) => (
+                      <div key={fan.fan_name} className={`p-4 flex items-center gap-4 ${
+                        index === 0 ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
+                        index === 1 ? 'bg-gradient-to-r from-teal-50 to-cyan-50' :
+                        index === 2 ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : ''
+                      }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                           index === 0 ? 'bg-green-500 text-white' :
                           index === 1 ? 'bg-teal-400 text-white' :
                           index === 2 ? 'bg-blue-400 text-white' :
@@ -341,16 +384,16 @@ export default function ComunidadPage() {
                         }`}>
                           {index + 1}
                         </div>
-                        <span className="text-xl">{fan.badge.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{fan.fan_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {fan.badge.name} • {fan.athletes_cheered} atletas
+                        <span className="text-2xl">{fan.badge.emoji}</span>
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{fan.fan_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {fan.badge.name} • {fan.athletes_cheered} atleta{fan.athletes_cheered !== 1 ? 's' : ''} apoyado{fan.athletes_cheered !== 1 ? 's' : ''}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-green-600">{fan.cheer_count}</p>
-                          <p className="text-xs text-muted-foreground">msgs</p>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-green-600">{fan.cheer_count}</p>
+                          <p className="text-xs text-muted-foreground">mensajes</p>
                         </div>
                       </div>
                     ))}
@@ -358,7 +401,7 @@ export default function ComunidadPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
+          )}
         </div>
       </div>
 
