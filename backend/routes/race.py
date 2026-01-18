@@ -954,6 +954,97 @@ async def get_cheer_leaderboard(
     return leaderboard
 
 
+def get_fan_badge(cheer_count: int) -> dict:
+    """Get badge info based on number of cheers sent"""
+    if cheer_count >= 10:
+        return {"level": "legend", "name": "Leyenda", "emoji": "🏆", "color": "gold"}
+    elif cheer_count >= 5:
+        return {"level": "super_fan", "name": "Súper Fan", "emoji": "⭐", "color": "purple"}
+    elif cheer_count >= 3:
+        return {"level": "cheerleader", "name": "Animador", "emoji": "📣", "color": "blue"}
+    else:
+        return {"level": "rookie", "name": "Novato", "emoji": "🌱", "color": "green"}
+
+
+@router.get("/fans/leaderboard")
+async def get_fans_leaderboard(
+    limit: int = 10,
+    db=Depends(lambda: None)
+):
+    """Get leaderboard of fans with most cheer messages sent"""
+    from server import db as database
+    
+    pipeline = [
+        {"$group": {
+            "_id": "$fan_name",
+            "cheer_count": {"$sum": 1},
+            "athletes_cheered": {"$addToSet": "$athlete_bib"}
+        }},
+        {"$sort": {"cheer_count": -1}},
+        {"$limit": limit}
+    ]
+    
+    results = await database.cheer_messages.aggregate(pipeline).to_list(limit)
+    
+    leaderboard = []
+    for i, item in enumerate(results):
+        badge = get_fan_badge(item["cheer_count"])
+        leaderboard.append({
+            "rank": i + 1,
+            "fan_name": item["_id"],
+            "cheer_count": item["cheer_count"],
+            "athletes_cheered": len(item["athletes_cheered"]),
+            "badge": badge
+        })
+    
+    return leaderboard
+
+
+@router.get("/fans/badge/{fan_name}")
+async def get_fan_badge_info(
+    fan_name: str,
+    db=Depends(lambda: None)
+):
+    """Get badge info for a specific fan"""
+    from server import db as database
+    
+    # Count messages by this fan
+    count = await database.cheer_messages.count_documents({"fan_name": fan_name})
+    
+    # Get unique athletes cheered
+    pipeline = [
+        {"$match": {"fan_name": fan_name}},
+        {"$group": {"_id": "$athlete_bib"}}
+    ]
+    athletes = await database.cheer_messages.aggregate(pipeline).to_list(100)
+    
+    badge = get_fan_badge(count)
+    
+    # Calculate progress to next badge
+    next_badge = None
+    progress = 0
+    if count < 3:
+        next_badge = {"name": "Animador", "emoji": "📣", "required": 3}
+        progress = (count / 3) * 100
+    elif count < 5:
+        next_badge = {"name": "Súper Fan", "emoji": "⭐", "required": 5}
+        progress = (count / 5) * 100
+    elif count < 10:
+        next_badge = {"name": "Leyenda", "emoji": "🏆", "required": 10}
+        progress = (count / 10) * 100
+    else:
+        progress = 100
+    
+    return {
+        "fan_name": fan_name,
+        "cheer_count": count,
+        "athletes_cheered": len(athletes),
+        "badge": badge,
+        "next_badge": next_badge,
+        "progress": round(progress, 1)
+    }
+
+
 @router.get("/twitter/status")
 async def get_twitter_status():
     """Check Twitter integration status"""
