@@ -32,6 +32,9 @@ export default function ComunidadPage() {
   const [sendResult, setSendResult] = useState(null);
   const [fanBadge, setFanBadge] = useState(null);
   const [searchAthlete, setSearchAthlete] = useState('');
+  
+  // Filter for messages
+  const [messageFilter, setMessageFilter] = useState('');
 
   // Load messages on mount
   useEffect(() => {
