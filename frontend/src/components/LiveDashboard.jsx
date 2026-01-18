@@ -294,74 +294,20 @@ export default function LiveDashboard() {
     }
   };
 
-  // Open cheer feed
-  const openCheerFeed = () => {
-    setShowCheerFeed(true);
-    loadCheerMessages();
-  };
-
-  // Load leaderboard
-  const loadLeaderboard = async () => {
-    setLoadingLeaderboard(true);
+  // Load followers count
+  const loadFollowersCount = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=10`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=100`);
       if (response.ok) {
         const data = await response.json();
-        setLeaderboard(data);
+        const counts = {};
+        data.forEach(item => {
+          counts[item.bib] = item.cheer_count;
+        });
+        setFollowersCount(counts);
       }
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
-    } finally {
-      setLoadingLeaderboard(false);
-    }
-  };
-
-  // Open leaderboard modal
-  const openLeaderboard = () => {
-    setShowLeaderboard(true);
-    loadLeaderboard();
-  };
-
-  // Load fan leaderboard
-  const loadFanLeaderboard = async () => {
-    setLoadingFanLeaderboard(true);
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=10`);
-      if (response.ok) {
-        const data = await response.json();
-        setFanLeaderboard(data);
-      }
-    } catch (error) {
-      console.error('Error loading fan leaderboard:', error);
-    } finally {
-      setLoadingFanLeaderboard(false);
-    }
-  };
-
-  // Open fan leaderboard
-  const openFanLeaderboard = () => {
-    setShowFanLeaderboard(true);
-    loadFanLeaderboard();
-  };
-
-  // Load fan badge when name changes
-  const loadFanBadge = async (name) => {
-    if (!name.trim()) {
-      setFanBadge(null);
-      return;
-    }
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/badge/${encodeURIComponent(name)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.cheer_count > 0) {
-          setFanBadge(data);
-        } else {
-          setFanBadge(null);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading fan badge:', error);
+      console.error('Error loading followers count:', error);
     }
   };
 
