@@ -4,6 +4,7 @@ Twitter/X integration service for posting cheer messages
 import os
 import logging
 import tweepy
+from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,8 @@ CONSUMER_KEY = os.getenv("TWITTER_CONSUMER_KEY")
 CONSUMER_SECRET = os.getenv("TWITTER_CONSUMER_SECRET")
 ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
 ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
-BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN")
+# Decode Bearer Token if URL encoded
+BEARER_TOKEN = unquote(os.getenv("TWITTER_BEARER_TOKEN", ""))
 
 def get_twitter_client():
     """
@@ -24,11 +26,13 @@ def get_twitter_client():
         return None
     
     try:
+        # Use OAuth 1.0a User Context for posting tweets
         client = tweepy.Client(
             consumer_key=CONSUMER_KEY,
             consumer_secret=CONSUMER_SECRET,
             access_token=ACCESS_TOKEN,
-            access_token_secret=ACCESS_TOKEN_SECRET
+            access_token_secret=ACCESS_TOKEN_SECRET,
+            wait_on_rate_limit=True
         )
         return client
     except Exception as e:
