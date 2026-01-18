@@ -1,0 +1,116 @@
+{
+  "summary": "Completed comprehensive testing of new features for Backyard Ultra Santo Domingo 2026: DNF logic (no lap increment), revert lap with DNF reactivation, followers count API, and cheer messages system. All 15 backend tests passed. Frontend UI tests verified cheer modal, cheer feed, and admin panel followers column.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/test_new_features.py",
+    "/app/test_reports/pytest/pytest_results_new_features.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DNF logic correctly implemented: mark_retired does NOT increment laps_completed - athlete keeps their current lap count",
+    "Revert lap correctly reactivates DNF athletes with same lap count (not decremented) when retired_at_lap >= new_lap",
+    "Followers count API correctly aggregates active subscriptions per athlete using MongoDB aggregation pipeline",
+    "Cheer messages have proper validation: max 280 chars for message, max 50 chars for fan name",
+    "Cheer feed enriches messages with athlete names and nationality for display"
+  ],
+  "updated_files": [
+    "/app/tests/test_new_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!"
+  },
+  "seed_data_creation": "Created test subscriptions and cheer messages during testing. Current state: 89 active athletes, 1 DNF (Cristian Minaya - reactivated), current lap 1",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New features tested: 1) DNF does NOT increment laps - verified via API and UI, 2) Revert lap reactivates DNF athletes with same lap count, 3) Followers count API requires auth and returns {bib: count} dict, 4) Cheer messages: POST /api/race/cheer (no auth), GET /api/race/cheers (no auth), GET /api/race/cheers/count (no auth). Frontend has cheer buttons in athlete table, cheer feed modal, and admin panel shows Seguidores column with follower counts.",
+  "tests_executed": {
+    "backend_api_tests": [
+      "DNF Logic: mark-retired does NOT increment laps ✓",
+      "Revert Lap: reactivates DNF athletes with same lap count ✓",
+      "Followers Count: requires auth (401 without token) ✓",
+      "Followers Count: returns dict of bib -> count ✓",
+      "Followers Count: updates after subscription ✓",
+      "Cheer Submit: POST /api/race/cheer works ✓",
+      "Cheer Submit: 404 for invalid athlete ✓",
+      "Cheer Submit: 400 for message > 280 chars ✓",
+      "Cheer Submit: 400 for fan_name > 50 chars ✓",
+      "Cheer Feed: GET /api/race/cheers returns list ✓",
+      "Cheer Feed: limit parameter works ✓",
+      "Cheer Feed: filter by athlete_bib works ✓",
+      "Cheer Count: GET /api/race/cheers/count returns count ✓",
+      "Cheer Flow: complete submit -> verify in feed -> count incremented ✓",
+      "Admin Followers: authenticated admin can access followers count ✓"
+    ],
+    "frontend_ui_tests": [
+      "Cheer button visible in athlete table (data-testid='cheer-btn-desktop-{bib}') ✓",
+      "Cheer modal opens with athlete name and form fields ✓",
+      "Cheer modal shows character counter (0/280) ✓",
+      "Cheer feed button visible when messages exist ✓",
+      "Cheer feed modal shows messages with fan name, athlete info, timestamp ✓",
+      "Admin panel: Seguidores column visible in table ✓",
+      "Admin panel: Followers count badges (pink) displayed for athletes with followers ✓",
+      "Admin panel: DNF button marks athlete as DNF without incrementing laps ✓",
+      "Admin panel: Reactivate button shows warning dialog ✓"
+    ]
+  },
+  "features_verified": {
+    "dnf_logic": {
+      "description": "When marking athlete as DNF, laps_completed should NOT increment",
+      "status": "PASSED",
+      "evidence": "Cristian Minaya had 0 laps before DNF, still 0 laps after DNF"
+    },
+    "dnf_revert": {
+      "description": "When reverting lap with DNF athletes, they should be reactivated with same lap count",
+      "status": "PASSED",
+      "evidence": "Backend test verified reactivation preserves lap count"
+    },
+    "followers_count_api": {
+      "description": "GET /api/race/followers-count returns count of subscribers per athlete (requires auth)",
+      "status": "PASSED",
+      "evidence": "API returns {bib: count} dict, requires Bearer token"
+    },
+    "cheer_message_submit": {
+      "description": "POST /api/race/cheer accepts athlete_bib, fan_name, message (max 280 chars)",
+      "status": "PASSED",
+      "evidence": "Successfully submitted messages, validation works for length limits"
+    },
+    "cheer_messages_feed": {
+      "description": "GET /api/race/cheers returns messages sorted by most recent",
+      "status": "PASSED",
+      "evidence": "Feed returns messages with athlete enrichment, supports limit and athlete_bib filters"
+    },
+    "cheer_count": {
+      "description": "GET /api/race/cheers/count returns total count of messages",
+      "status": "PASSED",
+      "evidence": "Returns {count: N} and increments after new message"
+    },
+    "frontend_cheer_button": {
+      "description": "Cheer button visible in athlete table opens modal",
+      "status": "PASSED",
+      "evidence": "Button with data-testid='cheer-btn-desktop-{bib}' opens modal"
+    },
+    "frontend_cheer_feed": {
+      "description": "Cheer feed button shows when messages exist",
+      "status": "PASSED",
+      "evidence": "Button shows '5 mensajes de ánimo' and opens feed modal"
+    },
+    "frontend_admin_followers": {
+      "description": "Admin panel shows Seguidores column with count badges",
+      "status": "PASSED",
+      "evidence": "Pink badges with user icon show follower counts (e.g., '2' for Lucas Gaitán)"
+    }
+  }
+}
