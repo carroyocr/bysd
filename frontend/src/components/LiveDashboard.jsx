@@ -1305,6 +1305,118 @@ export default function LiveDashboard() {
           </div>
         </div>
       )}
+
+      {/* Leaderboard Modal */}
+      {showLeaderboard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col">
+            <div className="p-6 border-b bg-gradient-to-r from-amber-50 to-yellow-50">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-amber-900 flex items-center gap-2">
+                    <Trophy className="w-6 h-6 text-amber-500" />
+                    Top Atletas Más Apoyados
+                  </h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Ranking por mensajes de ánimo recibidos
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLeaderboard(false)}
+                  className="p-1"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingLeaderboard ? (
+                <div className="text-center py-8">
+                  <Trophy className="w-8 h-8 text-amber-400 animate-pulse mx-auto mb-2" />
+                  <p className="text-muted-foreground">Cargando ranking...</p>
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <div className="text-center py-8">
+                  <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Aún no hay mensajes de ánimo</p>
+                  <p className="text-sm text-muted-foreground mt-1">¡Sé el primero en animar a un atleta!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {leaderboard.map((athlete, index) => (
+                    <div 
+                      key={athlete.bib} 
+                      className={`rounded-lg p-4 border-2 ${
+                        index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-400' :
+                        index === 1 ? 'bg-gradient-to-r from-gray-50 to-slate-50 border-gray-300' :
+                        index === 2 ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-300' :
+                        'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Rank Medal */}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl ${
+                          index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          index === 1 ? 'bg-gray-300 text-gray-700' :
+                          index === 2 ? 'bg-orange-400 text-orange-900' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : athlete.rank}
+                        </div>
+                        
+                        {/* Athlete Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-sm">
+                              #{athlete.bib}
+                            </Badge>
+                            <Badge className={
+                              athlete.status === 'active' ? 'bg-green-500' :
+                              athlete.status === 'dns' ? 'bg-gray-500' : 'bg-red-500'
+                            }>
+                              {athlete.status === 'active' ? 'Activo' : 
+                               athlete.status === 'dns' ? 'DNS' : 'DNF'}
+                            </Badge>
+                          </div>
+                          <p className="font-semibold text-foreground mt-1">
+                            {athlete.nombre} {athlete.apellidos}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {athlete.nacionalidad} • {athlete.laps_completed} vueltas
+                          </p>
+                        </div>
+                        
+                        {/* Cheer Count */}
+                        <div className="text-center">
+                          <div className="flex items-center gap-1 text-purple-600">
+                            <MessageCircle className="w-5 h-5" />
+                            <span className="text-2xl font-bold">{athlete.cheer_count}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">mensaje{athlete.cheer_count !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t">
+              <Button
+                onClick={loadLeaderboard}
+                variant="outline"
+                className="w-full"
+                disabled={loadingLeaderboard}
+              >
+                {loadingLeaderboard ? 'Actualizando...' : 'Actualizar ranking'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
