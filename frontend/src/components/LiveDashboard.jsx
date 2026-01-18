@@ -217,6 +217,96 @@ export default function LiveDashboard() {
     }
   };
 
+  // Open cheer modal for an athlete
+  const openCheerModal = (athlete) => {
+    setCheerAthlete(athlete);
+    setCheerMessage('');
+    setCheerResult(null);
+    setShowCheerModal(true);
+  };
+
+  // Submit cheer message
+  const handleSubmitCheer = async () => {
+    if (!cheerMessage.trim() || !cheerFanName.trim()) {
+      setCheerResult({ type: 'error', text: 'Por favor ingresa tu nombre y un mensaje' });
+      return;
+    }
+
+    if (cheerMessage.length > 280) {
+      setCheerResult({ type: 'error', text: 'El mensaje no puede exceder 280 caracteres' });
+      return;
+    }
+
+    setCheerSubmitting(true);
+    setCheerResult(null);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          athlete_bib: cheerAthlete.bib,
+          fan_name: cheerFanName,
+          message: cheerMessage
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCheerResult({ type: 'success', text: data.message });
+        setCheerMessage('');
+        // Refresh cheer count
+        loadCheerCount();
+        setTimeout(() => {
+          setShowCheerModal(false);
+          setCheerResult(null);
+        }, 2000);
+      } else {
+        setCheerResult({ type: 'error', text: data.detail || 'Error al enviar mensaje' });
+      }
+    } catch (error) {
+      setCheerResult({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
+    } finally {
+      setCheerSubmitting(false);
+    }
+  };
+
+  // Load cheer messages feed
+  const loadCheerMessages = async () => {
+    setLoadingCheers(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=50`);
+      if (response.ok) {
+        const data = await response.json();
+        setCheerMessages(data);
+      }
+    } catch (error) {
+      console.error('Error loading cheer messages:', error);
+    } finally {
+      setLoadingCheers(false);
+    }
+  };
+
+  // Load cheer count
+  const loadCheerCount = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/count`);
+      if (response.ok) {
+        const data = await response.json();
+        setCheerCount(data.count);
+      }
+    } catch (error) {
+      console.error('Error loading cheer count:', error);
+    }
+  };
+
+  // Open cheer feed
+  const openCheerFeed = () => {
+    setShowCheerFeed(true);
+    loadCheerMessages();
+  };
+
   // Countdown timer effect
   useEffect(() => {
     const calculateCountdown = () => {
