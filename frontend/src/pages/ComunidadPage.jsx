@@ -497,22 +497,28 @@ export default function ComunidadPage() {
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                ) : (
+                ) : searchAthlete.length > 0 ? (
                   <div className="max-h-40 overflow-y-auto border rounded-lg">
-                    {filteredAthletes.slice(0, 10).map(athlete => (
-                      <button
-                        key={athlete.bib}
-                        onClick={() => {
-                          setSelectedAthlete(athlete);
-                          setSearchAthlete('');
-                        }}
-                        className="w-full p-2 text-left hover:bg-purple-50 border-b last:border-b-0 text-sm"
-                      >
-                        <span className="font-mono text-purple-600">#{athlete.bib}</span> {athlete.nombre} {athlete.apellidos}
-                        <span className="text-muted-foreground ml-2">{athlete.nacionalidad}</span>
-                      </button>
-                    ))}
+                    {filteredAthletes.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground text-center">No se encontraron corredores</p>
+                    ) : (
+                      filteredAthletes.slice(0, 10).map(athlete => (
+                        <button
+                          key={athlete.bib}
+                          onClick={() => {
+                            setSelectedAthlete(athlete);
+                            setSearchAthlete('');
+                          }}
+                          className="w-full p-2 text-left hover:bg-purple-50 border-b last:border-b-0 text-sm"
+                        >
+                          <span className="font-mono text-purple-600">#{athlete.bib}</span> {athlete.nombre} {athlete.apellidos}
+                          <span className="text-muted-foreground ml-2">{athlete.nacionalidad}</span>
+                        </button>
+                      ))
+                    )}
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Escribe para buscar un corredor</p>
                 )}
               </div>
 
