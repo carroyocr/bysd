@@ -14,6 +14,7 @@ import FAQPage from './pages/FAQPage';
 import PatrocinadoresPage from './pages/PatrocinadoresPage';
 import LiveDashboardPage from './pages/LiveDashboardPage';
 import ComunidadPage from './pages/ComunidadPage';
+import EnviarAnimoPage from './pages/EnviarAnimoPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
 import './App.css';
@@ -46,6 +47,7 @@ export default function App() {
                     <Route path="/faq" element={<FAQPage />} />
                     <Route path="/en-vivo" element={<LiveDashboardPage />} />
                     <Route path="/comunidad" element={<ComunidadPage />} />
+                    <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
                   </Routes>
                 </main>
                 <Footer />
