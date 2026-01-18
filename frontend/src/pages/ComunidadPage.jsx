@@ -483,7 +483,7 @@ export default function ComunidadPage() {
                 <div>
                   <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                     <MessageCircle className="w-5 h-5 text-purple-600" />
-                    Enviar Mensaje de Ánimo
+                    Mensaje de Ánimo
                   </h3>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => setShowSendModal(false)} className="p-1">

@@ -129,7 +129,7 @@ export default function EnviarAnimoPage() {
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-center mb-2">
-            💬 Enviar Mensaje de Ánimo
+            Mensaje de Ánimo
           </h1>
           <p className="text-center text-purple-100">
             Backyard Ultra Santo Domingo 2026

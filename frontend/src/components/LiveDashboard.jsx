@@ -1144,7 +1144,7 @@ export default function LiveDashboard() {
                 <div>
                   <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
                     <MessageCircle className="w-5 h-5 text-purple-600" />
-                    Enviar mensaje de ánimo
+                    Mensaje de ánimo
                   </h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Para: <span className="font-medium">#{cheerAthlete.bib} {cheerAthlete.nombre} {cheerAthlete.apellidos}</span>
