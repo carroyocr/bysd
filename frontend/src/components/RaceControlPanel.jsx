@@ -392,6 +392,44 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleResetSubscriptions = async () => {
+    if (resetSubsConfirmation !== 'SUSCRIPCIONES') {
+      showMessage('Debe escribir SUSCRIPCIONES para confirmar', 'error');
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    setResettingSubs(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-subscriptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ confirmation: resetSubsConfirmation })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al reiniciar suscripciones');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setShowResetSubsModal(false);
+      setResetSubsConfirmation('');
+      
+      // Reload data to update followers count
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setResettingSubs(false);
+    }
+  };
+
   const filteredParticipants = participants.filter(p => {
     const search = searchTerm.toLowerCase();
     const matchesSearch = (
