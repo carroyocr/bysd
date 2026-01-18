@@ -90,13 +90,13 @@ export default function LiveDashboard() {
     }
   }, [followedAthletes]);
 
-  // Silent subscription update (no UI feedback)
+  // Silent subscription update (no UI feedback, no email)
   const updateSubscriptionSilently = async (email, athletes) => {
     const savedSettings = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
     const settings = savedSettings ? JSON.parse(savedSettings) : { notifyEveryLap: false, notifyOnFinish: true };
     
     try {
-      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribe`, {
+      await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribe-update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
