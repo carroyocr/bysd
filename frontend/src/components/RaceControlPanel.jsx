@@ -883,6 +883,83 @@ export default function RaceControlPanel() {
           </Card>
         </div>
       )}
+
+      {/* Reset Subscriptions Modal */}
+      {showResetSubsModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-pink-300 shadow-strong">
+            <CardHeader className="border-b border-pink-200 bg-pink-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-pink-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-pink-900">Reiniciar Suscripciones</CardTitle>
+                  <p className="text-sm text-pink-700 mt-1">Esta acción es irreversible</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-pink-900 mb-2">⚠️ Advertencia</h3>
+                  <ul className="text-sm text-pink-800 space-y-1">
+                    <li>• Se eliminarán todas las suscripciones de correo</li>
+                    <li>• Los usuarios deberán volver a suscribirse</li>
+                    <li>• Se perderán los datos de seguidores de atletas</li>
+                    <li>• No se enviarán más notificaciones hasta nueva suscripción</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Para confirmar, escriba <span className="font-bold text-pink-600">SUSCRIPCIONES</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={resetSubsConfirmation}
+                    onChange={(e) => setResetSubsConfirmation(e.target.value)}
+                    placeholder="Escriba SUSCRIPCIONES"
+                    className="text-center font-mono text-lg"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowResetSubsModal(false);
+                      setResetSubsConfirmation('');
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={resettingSubs}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleResetSubscriptions}
+                    disabled={resetSubsConfirmation !== 'SUSCRIPCIONES' || resettingSubs}
+                    className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
+                  >
+                    {resettingSubs ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Reiniciando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Confirmar Reinicio
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
