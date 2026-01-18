@@ -176,13 +176,22 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - GET `/api/race/cheers/count` - Total de mensajes
   - GET `/api/race/cheers/leaderboard` - Top atletas más apoyados
 - ✅ Panel admin: Nueva columna "Seguidores" con contador
-- ✅ Dashboard público: Botón de enviar ánimo + feed de mensajes + **Leaderboard Top Apoyados**
 - ✅ **Sistema de Insignias para Fans**:
   - GET `/api/race/fans/leaderboard` - Top fans con badges
   - GET `/api/race/fans/badge/{fan_name}` - Badge y progreso de un fan
   - Niveles: 🌱 Novato (1+), 📣 Animador (3+), ⭐ Súper Fan (5+), 🏆 Leyenda (10+)
-  - Modal "Top Fans" en dashboard público
-  - Muestra badge y progreso al siguiente nivel en modal de envío
+- ✅ **Nueva página `/comunidad`** con:
+  - Header con estadísticas (mensajes, fans, atletas apoyados)
+  - Feed de mensajes de ánimo
+  - Top Atletas Apoyados (sidebar)
+  - Top Fans con badges (sidebar)
+  - Botón flotante para enviar mensaje
+  - Buscador de atletas al enviar mensaje
+- ✅ Dashboard `/en-vivo` actualizado:
+  - Nueva columna "Ánimos" mostrando contador de mensajes por atleta
+  - Link a página de Comunidad
+  - Removidos modales de ánimo (movidos a /comunidad)
+- ✅ Navegación actualizada: "Comunidad" entre "En Vivo" y "Admin"
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
 ### 17 Enero 2026
