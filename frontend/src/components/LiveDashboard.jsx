@@ -471,9 +471,23 @@ export default function LiveDashboard() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Backyard Ultra Santo Domingo 2026
             </p>
-            <p className="text-sm text-muted-foreground">
-              Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
-            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <p className="text-sm text-muted-foreground">
+                Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
+              </p>
+              {cheerCount > 0 && (
+                <Button
+                  onClick={openCheerFeed}
+                  variant="outline"
+                  size="sm"
+                  className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                  data-testid="view-cheers-btn"
+                >
+                  <MessageCircle className="w-4 h-4 mr-1" />
+                  {cheerCount} mensaje{cheerCount !== 1 ? 's' : ''} de ánimo
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Countdown Timer - Only show if not expired */}
