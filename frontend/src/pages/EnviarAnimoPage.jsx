@@ -272,7 +272,7 @@ export default function EnviarAnimoPage() {
                   <Link to="/en-vivo" className="flex-1">
                     <Button variant="outline" className="w-full" size="sm">
                       <ArrowLeft className="w-4 h-4 mr-1" />
-                      En Vivo
+                      Seguimiento
                     </Button>
                   </Link>
                   <Link to="/comunidad" className="flex-1">
