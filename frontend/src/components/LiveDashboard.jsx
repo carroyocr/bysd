@@ -193,9 +193,23 @@ export default function LiveDashboard() {
 
     try {
       // Get subscription to find the ID
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscription/${encodeURIComponent(savedEmail)}`);
+      const subResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscription/${encodeURIComponent(savedEmail)}`);
       
-      if (response.ok) {
+      if (subResponse.ok) {
+        const subData = await subResponse.json();
+        
+        if (subData.subscribed) {
+          // Call unsubscribe endpoint to deactivate in backend
+          // We need to get the subscription ID first
+          const emailSubResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/unsubscribe-by-email/${encodeURIComponent(savedEmail)}`, {
+            method: 'POST'
+          });
+          
+          if (!emailSubResponse.ok) {
+            throw new Error('Error al cancelar suscripción en el servidor');
+          }
+        }
+        
         // Clear local storage
         localStorage.removeItem(SUBSCRIPTION_EMAIL_KEY);
         localStorage.removeItem(SUBSCRIPTION_SETTINGS_KEY);
@@ -205,6 +219,9 @@ export default function LiveDashboard() {
         setNotifyOnFinish(true);
         
         setSubscribeMessage({ type: 'success', text: 'Te has dado de baja exitosamente. Ya no recibirás más notificaciones.' });
+        
+        // Reload followers count to reflect the change
+        loadFollowersCount();
         
         setTimeout(() => {
           setShowSubscribeModal(false);
