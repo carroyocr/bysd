@@ -294,17 +294,13 @@ export default function LiveDashboard() {
     }
   };
 
-  // Load followers count
+  // Load followers count (email subscribers)
   const loadFollowersCount = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=100`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribers-count`);
       if (response.ok) {
         const data = await response.json();
-        const counts = {};
-        data.forEach(item => {
-          counts[item.bib] = item.cheer_count;
-        });
-        setFollowersCount(counts);
+        setFollowersCount(data);
       }
     } catch (error) {
       console.error('Error loading followers count:', error);
