@@ -315,6 +315,55 @@ export default function LiveDashboard() {
     }
   };
 
+  // Open cheer modal
+  const openCheerModal = (athlete) => {
+    setCheerAthlete(athlete);
+    setCheerMessage('');
+    setCheerResult(null);
+    setShowCheerModal(true);
+  };
+
+  // Send cheer message
+  const handleSendCheer = async () => {
+    if (!cheerMessage.trim() || !cheerFanName.trim()) {
+      setCheerResult({ type: 'error', text: 'Por favor ingresa tu nombre y un mensaje' });
+      return;
+    }
+
+    setCheerSending(true);
+    setCheerResult(null);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          athlete_bib: cheerAthlete.bib,
+          fan_name: cheerFanName,
+          message: cheerMessage
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCheerResult({ type: 'success', text: '¡Mensaje enviado!' });
+        setCheerMessage('');
+        loadCheerCount();
+        setTimeout(() => {
+          setShowCheerModal(false);
+          setCheerResult(null);
+        }, 1500);
+      } else {
+        setCheerResult({ type: 'error', text: data.detail || 'Error al enviar' });
+      }
+    } catch (error) {
+      setCheerResult({ type: 'error', text: 'Error de conexión' });
+    } finally {
+      setCheerSending(false);
+    }
+  };
+
   // Countdown timer effect
   useEffect(() => {
     const calculateCountdown = () => {
