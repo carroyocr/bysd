@@ -193,7 +193,7 @@ export default function EnviarAnimoPage() {
                   <Link to="/en-vivo" className="block">
                     <Button variant="ghost" className="w-full">
                       <ArrowLeft className="w-4 h-4 mr-2" />
-                      Volver a En Vivo
+                      Volver a Seguimiento
                     </Button>
                   </Link>
                 </div>
