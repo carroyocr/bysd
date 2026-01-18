@@ -77,3 +77,17 @@ class SubscribeRequest(BaseModel):
     athletes_bibs: List[str]
     notify_every_lap: bool = False
     notify_on_finish: bool = True
+
+
+class CheerMessage(BaseModel):
+    athlete_bib: str
+    fan_name: str
+    message: str
+    approved: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class CheerMessageRequest(BaseModel):
+    athlete_bib: str
+    fan_name: str
+    message: str
