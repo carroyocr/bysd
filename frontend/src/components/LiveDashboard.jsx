@@ -1508,6 +1508,117 @@ export default function LiveDashboard() {
           </div>
         </div>
       )}
+
+      {/* Fan Leaderboard Modal */}
+      {showFanLeaderboard && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col">
+            <div className="p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold text-green-900 flex items-center gap-2">
+                    <Award className="w-6 h-6 text-green-500" />
+                    Top Fans - Tabla de Insignias
+                  </h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    Los fans más activos del evento
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFanLeaderboard(false)}
+                  className="p-1"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              {/* Badge Legend */}
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="px-2 py-1 bg-white rounded-full border">🌱 Novato (1+)</span>
+                <span className="px-2 py-1 bg-white rounded-full border">📣 Animador (3+)</span>
+                <span className="px-2 py-1 bg-white rounded-full border">⭐ Súper Fan (5+)</span>
+                <span className="px-2 py-1 bg-white rounded-full border">🏆 Leyenda (10+)</span>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingFanLeaderboard ? (
+                <div className="text-center py-8">
+                  <Award className="w-8 h-8 text-green-400 animate-pulse mx-auto mb-2" />
+                  <p className="text-muted-foreground">Cargando ranking de fans...</p>
+                </div>
+              ) : fanLeaderboard.length === 0 ? (
+                <div className="text-center py-8">
+                  <Award className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-muted-foreground">Aún no hay fans registrados</p>
+                  <p className="text-sm text-muted-foreground mt-1">¡Envía un mensaje de ánimo para aparecer aquí!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {fanLeaderboard.map((fan, index) => (
+                    <div 
+                      key={fan.fan_name} 
+                      className={`rounded-lg p-4 border-2 ${
+                        index === 0 ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400' :
+                        index === 1 ? 'bg-gradient-to-r from-teal-50 to-cyan-50 border-teal-300' :
+                        index === 2 ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300' :
+                        'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Rank */}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                          index === 0 ? 'bg-green-500 text-white' :
+                          index === 1 ? 'bg-teal-400 text-white' :
+                          index === 2 ? 'bg-blue-400 text-white' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {fan.rank}
+                        </div>
+                        
+                        {/* Badge & Name */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">{fan.badge.emoji}</span>
+                            <div>
+                              <p className="font-semibold text-foreground">{fan.fan_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {fan.badge.name} • {fan.athletes_cheered} atleta{fan.athletes_cheered !== 1 ? 's' : ''} apoyado{fan.athletes_cheered !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Cheer Count */}
+                        <div className="text-center">
+                          <div className="flex items-center gap-1 text-green-600">
+                            <MessageCircle className="w-4 h-4" />
+                            <span className="text-xl font-bold">{fan.cheer_count}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">mensaje{fan.cheer_count !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t">
+              <Button
+                onClick={loadFanLeaderboard}
+                variant="outline"
+                className="w-full"
+                disabled={loadingFanLeaderboard}
+              >
+                {loadingFanLeaderboard ? 'Actualizando...' : 'Actualizar ranking'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
