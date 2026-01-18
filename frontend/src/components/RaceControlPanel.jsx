@@ -60,14 +60,23 @@ export default function RaceControlPanel() {
   }, [navigate]);
 
   const loadData = async () => {
+    const token = localStorage.getItem('admin_token');
     try {
-      const [statsRes, participantsRes] = await Promise.all([
+      const [statsRes, participantsRes, followersRes] = await Promise.all([
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`)
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/followers-count`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
       ]);
 
       const stats = await statsRes.json();
       const participantsData = await participantsRes.json();
+      
+      if (followersRes.ok) {
+        const followersData = await followersRes.json();
+        setFollowersCount(followersData);
+      }
 
       setCurrentLap(stats.current_lap);
       setParticipants(participantsData);
