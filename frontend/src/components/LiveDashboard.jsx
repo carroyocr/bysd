@@ -897,14 +897,24 @@ export default function LiveDashboard() {
                         </Badge>
                       )}
                     </div>
-                    <Button
-                      onClick={() => toggleFollowAthlete(participant.bib)}
-                      variant="ghost"
-                      size="sm"
-                      className={`p-2 ${isFollowed(participant.bib) ? 'text-red-500' : 'text-gray-400'}`}
-                    >
-                      <Heart className={`w-5 h-5 ${isFollowed(participant.bib) ? 'fill-current' : ''}`} />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        onClick={() => openCheerModal(participant)}
+                        variant="ghost"
+                        size="sm"
+                        className="p-2 text-purple-500 hover:text-purple-600"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </Button>
+                      <Button
+                        onClick={() => toggleFollowAthlete(participant.bib)}
+                        variant="ghost"
+                        size="sm"
+                        className={`p-2 ${isFollowed(participant.bib) ? 'text-red-500' : 'text-gray-400'}`}
+                      >
+                        <Heart className={`w-5 h-5 ${isFollowed(participant.bib) ? 'fill-current' : ''}`} />
+                      </Button>
+                    </div>
                   </div>
                   <div className="mb-3">
                     <p className="font-semibold text-foreground">{participant.nombre} {participant.apellidos}</p>
