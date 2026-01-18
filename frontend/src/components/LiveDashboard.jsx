@@ -469,36 +469,39 @@ export default function LiveDashboard() {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-screen">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-12">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Seguimiento en Vivo
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Backyard Ultra Santo Domingo 2026
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
+            📡 Seguimiento en Vivo
+          </h1>
+          <p className="text-center text-purple-100 mb-4">
+            Backyard Ultra Santo Domingo 2026
+          </p>
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-purple-200">
+              Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
             </p>
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-sm text-muted-foreground">
-                Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
-              </p>
-              {cheerCount > 0 && (
-                <Link to="/comunidad">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-purple-300 text-purple-600 hover:bg-purple-50"
-                    data-testid="view-comunidad-btn"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-1" />
-                    {cheerCount} mensajes de ánimo · Ver Comunidad →
-                  </Button>
-                </Link>
-              )}
-            </div>
+            {cheerCount > 0 && (
+              <Link to="/comunidad">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                  data-testid="view-comunidad-btn"
+                >
+                  <MessageCircle className="w-4 h-4 mr-1" />
+                  {cheerCount} mensajes de ánimo · Ver Comunidad →
+                </Button>
+              </Link>
+            )}
           </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto space-y-8">
 
           {/* Countdown Timer - Only show if not expired */}
           {!countdown.expired && (
