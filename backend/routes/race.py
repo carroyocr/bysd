@@ -809,6 +809,32 @@ async def get_followers_count(
     return followers_count
 
 
+@router.post("/reset-subscriptions")
+async def reset_subscriptions(
+    request: dict,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Reset all email subscriptions (admin only)"""
+    from server import db as database
+    
+    # Verify confirmation
+    confirmation = request.get("confirmation", "")
+    if confirmation != "SUSCRIPCIONES":
+        raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir SUSCRIPCIONES")
+    
+    # Count before deletion
+    subs_count = await database.email_subscriptions.count_documents({})
+    
+    # Drop email subscriptions collection
+    await database.email_subscriptions.drop()
+    
+    return {
+        "message": f"Se han eliminado {subs_count} suscripciones de correo exitosamente",
+        "deleted_count": subs_count
+    }
+
+
 @router.get("/subscribers-count")
 async def get_subscribers_count_public(
     db=Depends(lambda: None)
