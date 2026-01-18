@@ -13,6 +13,7 @@ import LogisticaPage from './pages/LogisticaPage';
 import FAQPage from './pages/FAQPage';
 import PatrocinadoresPage from './pages/PatrocinadoresPage';
 import LiveDashboardPage from './pages/LiveDashboardPage';
+import ComunidadPage from './pages/ComunidadPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
 import './App.css';
@@ -44,6 +45,7 @@ export default function App() {
                     <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
                     <Route path="/faq" element={<FAQPage />} />
                     <Route path="/en-vivo" element={<LiveDashboardPage />} />
+                    <Route path="/comunidad" element={<ComunidadPage />} />
                   </Routes>
                 </main>
                 <Footer />
