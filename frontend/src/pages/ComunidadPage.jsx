@@ -202,24 +202,33 @@ export default function ComunidadPage() {
           <div className="flex justify-center gap-2 flex-wrap">
             <Button
               onClick={() => setActiveTab('messages')}
-              variant={activeTab === 'messages' ? 'secondary' : 'ghost'}
-              className={`${activeTab === 'messages' ? 'bg-white text-purple-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              variant="outline"
+              size="sm"
+              className={`${activeTab === 'messages' 
+                ? 'bg-white text-purple-600 border-purple-300' 
+                : 'border-purple-300 text-purple-100 hover:bg-purple-500/20 hover:text-white'}`}
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Mensajes ({stats.totalMessages})
             </Button>
             <Button
               onClick={() => setActiveTab('athletes')}
-              variant={activeTab === 'athletes' ? 'secondary' : 'ghost'}
-              className={`${activeTab === 'athletes' ? 'bg-white text-amber-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              variant="outline"
+              size="sm"
+              className={`${activeTab === 'athletes' 
+                ? 'bg-white text-amber-600 border-amber-300' 
+                : 'border-amber-300 text-amber-100 hover:bg-amber-500/20 hover:text-white'}`}
             >
               <Trophy className="w-4 h-4 mr-2" />
               Top Atletas ({stats.totalAthletes})
             </Button>
             <Button
               onClick={() => setActiveTab('fans')}
-              variant={activeTab === 'fans' ? 'secondary' : 'ghost'}
-              className={`${activeTab === 'fans' ? 'bg-white text-green-600' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              variant="outline"
+              size="sm"
+              className={`${activeTab === 'fans' 
+                ? 'bg-white text-green-600 border-green-300' 
+                : 'border-green-300 text-green-100 hover:bg-green-500/20 hover:text-white'}`}
             >
               <Award className="w-4 h-4 mr-2" />
               Top Fans ({stats.totalFans})
