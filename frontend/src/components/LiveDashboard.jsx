@@ -70,6 +70,14 @@ export default function LiveDashboard() {
   
   // Cheer count for link
   const [cheerCount, setCheerCount] = useState(0);
+  
+  // Cheer message modal
+  const [showCheerModal, setShowCheerModal] = useState(false);
+  const [cheerAthlete, setCheerAthlete] = useState(null);
+  const [cheerFanName, setCheerFanName] = useState('');
+  const [cheerMessage, setCheerMessage] = useState('');
+  const [cheerSending, setCheerSending] = useState(false);
+  const [cheerResult, setCheerResult] = useState(null);
 
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
