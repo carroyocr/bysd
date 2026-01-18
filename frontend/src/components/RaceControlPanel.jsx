@@ -18,6 +18,7 @@ export default function RaceControlPanel() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
+  const [followersCount, setFollowersCount] = useState({});
   const navigate = useNavigate();
 
   // Race starts at 9:00 AM, each lap is 1 hour
