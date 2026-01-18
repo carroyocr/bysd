@@ -60,6 +60,7 @@ s5cmd==0.2.0
 shellingham==1.5.4
 six==1.17.0
 starlette==0.37.2
+tweepy==4.16.0
 typer==0.20.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
