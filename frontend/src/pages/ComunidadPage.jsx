@@ -205,7 +205,7 @@ export default function ComunidadPage() {
 
       {/* Stats Cards - Tab Selector */}
       <div className="container mx-auto px-4 -mt-6">
-        <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
+        <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto">
           <Card 
             onClick={() => setActiveTab('messages')}
             className={`cursor-pointer transition-all hover:scale-105 ${
@@ -214,10 +214,10 @@ export default function ComunidadPage() {
                 : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:border-purple-300'
             }`}
           >
-            <CardContent className="p-4 sm:p-6 text-center">
-              <MessageCircle className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'messages' ? 'text-purple-600' : 'text-purple-400'}`} />
-              <p className="text-2xl sm:text-3xl font-bold text-purple-900">{stats.totalMessages}</p>
-              <p className="text-xs sm:text-sm text-purple-700">Mensajes</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <MessageCircle className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'messages' ? 'text-purple-600' : 'text-purple-400'}`} />
+              <p className="text-xl sm:text-2xl font-bold text-purple-900">{stats.totalMessages}</p>
+              <p className="text-xs text-purple-700">Mensajes</p>
             </CardContent>
           </Card>
 
@@ -229,10 +229,10 @@ export default function ComunidadPage() {
                 : 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:border-amber-300'
             }`}
           >
-            <CardContent className="p-4 sm:p-6 text-center">
-              <Trophy className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'athletes' ? 'text-amber-600' : 'text-amber-400'}`} />
-              <p className="text-2xl sm:text-3xl font-bold text-amber-900">{stats.totalAthletes}</p>
-              <p className="text-xs sm:text-sm text-amber-700">Top Atletas</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <Trophy className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'athletes' ? 'text-amber-600' : 'text-amber-400'}`} />
+              <p className="text-xl sm:text-2xl font-bold text-amber-900">{stats.totalAthletes}</p>
+              <p className="text-xs text-amber-700">Top Atletas</p>
             </CardContent>
           </Card>
 
@@ -244,10 +244,10 @@ export default function ComunidadPage() {
                 : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:border-green-300'
             }`}
           >
-            <CardContent className="p-4 sm:p-6 text-center">
-              <Award className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'fans' ? 'text-green-600' : 'text-green-400'}`} />
-              <p className="text-2xl sm:text-3xl font-bold text-green-900">{stats.totalFans}</p>
-              <p className="text-xs sm:text-sm text-green-700">Top Fans</p>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <Award className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'fans' ? 'text-green-600' : 'text-green-400'}`} />
+              <p className="text-xl sm:text-2xl font-bold text-green-900">{stats.totalFans}</p>
+              <p className="text-xs text-green-700">Top Fans</p>
             </CardContent>
           </Card>
         </div>
