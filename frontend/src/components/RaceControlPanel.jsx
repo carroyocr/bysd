@@ -527,6 +527,7 @@ export default function RaceControlPanel() {
                     <th className="text-left py-3 px-4 font-semibold text-sm">BIB</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Nombre</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Vueltas</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm">Seguidores</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Estado</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
                   </tr>
