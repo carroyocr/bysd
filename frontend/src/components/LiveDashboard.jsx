@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, TrendingUp, UserX, Users, MapPin, Download, Share2, Copy, Check, Clock, Heart, Mail, Bell, X, MessageCircle } from 'lucide-react';
+import { Activity, TrendingUp, UserX, Users, MapPin, Download, Share2, Copy, Check, Clock, Heart, Mail, Bell, X, MessageCircle, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
