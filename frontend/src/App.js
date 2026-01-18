@@ -29,6 +29,7 @@ export default function App() {
           {/* Admin routes without Navigation/Footer */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/race-control" element={<RaceControlPage />} />
+          <Route path="/mensajes/presentacion" element={<MensajesPresentacionPage />} />
           
           {/* Public routes with Navigation/Footer */}
           <Route
