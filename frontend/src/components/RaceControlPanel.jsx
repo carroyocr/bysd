@@ -553,6 +553,16 @@ export default function RaceControlPanel() {
                         <span className="font-semibold text-lg">{participant.laps_completed}</span>
                       </td>
                       <td className="py-3 px-4">
+                        {followersCount[participant.bib] ? (
+                          <Badge variant="secondary" className="bg-pink-100 text-pink-700 flex items-center gap-1 w-fit">
+                            <Users className="w-3 h-3" />
+                            {followersCount[participant.bib]}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">0</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <Badge
                           variant={participant.status === 'active' ? 'default' : 'secondary'}
                           className={
