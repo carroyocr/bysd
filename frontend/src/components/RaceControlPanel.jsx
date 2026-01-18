@@ -461,7 +461,15 @@ export default function RaceControlPanel() {
             <h1 className="text-3xl font-bold text-foreground">Panel de Control de Carrera</h1>
             <p className="text-muted-foreground mt-1">Backyard Ultra Santo Domingo 2026</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => setShowResetSubsModal(true)}
+              variant="outline"
+              className="border-pink-300 text-pink-600 hover:bg-pink-50"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Reiniciar Suscripciones
+            </Button>
             <Button
               onClick={() => setShowResetModal(true)}
               variant="outline"
