@@ -1239,10 +1239,32 @@ export default function LiveDashboard() {
                   type="text"
                   placeholder="Tu nombre (ej: Juan García)"
                   value={cheerFanName}
-                  onChange={(e) => setCheerFanName(e.target.value)}
+                  onChange={(e) => {
+                    setCheerFanName(e.target.value);
+                    // Load badge after 500ms of no typing
+                    clearTimeout(window.badgeTimeout);
+                    window.badgeTimeout = setTimeout(() => loadFanBadge(e.target.value), 500);
+                  }}
                   maxLength={50}
                   className="w-full"
                 />
+                {fanBadge && (
+                  <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{fanBadge.badge.emoji}</span>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          ¡Hola {fanBadge.badge.name}! Ya has enviado {fanBadge.cheer_count} mensaje{fanBadge.cheer_count !== 1 ? 's' : ''}
+                        </p>
+                        {fanBadge.next_badge && (
+                          <p className="text-xs text-green-600">
+                            {fanBadge.next_badge.required - fanBadge.cheer_count} más para ser {fanBadge.next_badge.emoji} {fanBadge.next_badge.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Message Input */}
