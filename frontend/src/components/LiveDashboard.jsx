@@ -1199,6 +1199,6 @@ export default function LiveDashboard() {
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 }
