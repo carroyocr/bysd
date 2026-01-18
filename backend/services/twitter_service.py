@@ -76,10 +76,18 @@ async def post_cheer_to_twitter(fan_name: str, athlete_name: str, athlete_bib: s
             "tweet_url": f"https://twitter.com/i/web/status/{tweet_id}"
         }
     except tweepy.TweepyException as e:
-        logger.error(f"Failed to post tweet: {e}")
+        error_msg = str(e)
+        logger.error(f"Failed to post tweet: {error_msg}")
+        
+        # Check for common errors
+        if "401" in error_msg:
+            logger.error("401 Unauthorized - Check if: 1) App has Read and Write permissions, 2) Access Token was generated AFTER enabling write permissions, 3) Credentials are correct")
+        elif "403" in error_msg:
+            logger.error("403 Forbidden - The app may be in read-only mode or the account is suspended")
+        
         return {
             "success": False,
-            "error": str(e)
+            "error": error_msg
         }
 
 
