@@ -943,6 +943,7 @@ export default function LiveDashboard() {
                     <th className="text-center py-3 px-4 font-semibold text-sm">Km</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">DNF en</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Seguidores</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm">Ánimo</th>
                     <th className="text-center py-3 px-4 font-semibold text-sm">Seguir</th>
                   </tr>
                 </thead>
