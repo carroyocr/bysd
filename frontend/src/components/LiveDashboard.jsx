@@ -453,8 +453,10 @@ export default function LiveDashboard() {
   useEffect(() => {
     loadData();
     loadCheerCount();
+    loadFollowersCount();
     const interval = setInterval(() => {
       loadData();
+      loadFollowersCount();
     }, 30000); // Auto-refresh every 30 seconds
 
     return () => clearInterval(interval);
