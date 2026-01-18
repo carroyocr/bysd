@@ -818,6 +818,7 @@ async def submit_cheer_message(
 ):
     """Submit a cheer message for an athlete"""
     from server import db as database
+    from services.twitter_service import post_cheer_to_twitter
     
     # Validate athlete exists
     athlete = await database.participants.find_one({"bib": request.athlete_bib}, {"_id": 0})
@@ -840,11 +841,32 @@ async def submit_cheer_message(
     
     await database.cheer_messages.insert_one(cheer.dict())
     
-    return {
+    # Try to post to Twitter (non-blocking, don't fail if Twitter fails)
+    athlete_name = f"{athlete['nombre']} {athlete['apellidos']}"
+    nacionalidad = athlete.get('nacionalidad', '')
+    
+    twitter_result = await post_cheer_to_twitter(
+        fan_name=request.fan_name,
+        athlete_name=athlete_name,
+        athlete_bib=request.athlete_bib,
+        message=request.message,
+        nacionalidad=nacionalidad
+    )
+    
+    response = {
         "message": "¡Mensaje de ánimo enviado! Gracias por apoyar a los atletas.",
         "athlete_bib": request.athlete_bib,
-        "athlete_name": f"{athlete['nombre']} {athlete['apellidos']}"
+        "athlete_name": athlete_name
     }
+    
+    if twitter_result.get("success"):
+        response["twitter_posted"] = True
+        response["tweet_url"] = twitter_result.get("tweet_url")
+    else:
+        response["twitter_posted"] = False
+        # Don't expose internal error to user
+    
+    return response
 
 
 @router.get("/cheers")
@@ -888,3 +910,52 @@ async def get_cheer_count(
     
     count = await database.cheer_messages.count_documents({})
     return {"count": count}
+
+
+@router.get("/cheers/leaderboard")
+async def get_cheer_leaderboard(
+    limit: int = 10,
+    db=Depends(lambda: None)
+):
+    """Get leaderboard of athletes with most cheer messages"""
+    from server import db as database
+    
+    # Aggregate cheer messages by athlete
+    pipeline = [
+        {"$group": {
+            "_id": "$athlete_bib",
+            "cheer_count": {"$sum": 1}
+        }},
+        {"$sort": {"cheer_count": -1}},
+        {"$limit": limit}
+    ]
+    
+    results = await database.cheer_messages.aggregate(pipeline).to_list(limit)
+    
+    # Enrich with athlete data
+    leaderboard = []
+    for i, item in enumerate(results):
+        athlete = await database.participants.find_one(
+            {"bib": item["_id"]},
+            {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "nacionalidad": 1, "status": 1, "laps_completed": 1}
+        )
+        if athlete:
+            leaderboard.append({
+                "rank": i + 1,
+                "bib": athlete["bib"],
+                "nombre": athlete["nombre"],
+                "apellidos": athlete["apellidos"],
+                "nacionalidad": athlete.get("nacionalidad", ""),
+                "status": athlete.get("status", "active"),
+                "laps_completed": athlete.get("laps_completed", 0),
+                "cheer_count": item["cheer_count"]
+            })
+    
+    return leaderboard
+
+
+@router.get("/twitter/status")
+async def get_twitter_status():
+    """Check Twitter integration status"""
+    from services.twitter_service import check_twitter_config
+    return check_twitter_config()
