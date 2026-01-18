@@ -11,10 +11,14 @@ GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
     """Generate HTML email template with race branding - Mobile optimized with cards"""
     
+    # Base URL for community page
+    base_url = "https://run-track-ultra.preview.emergentagent.com"
+    
     # Generate athlete cards (mobile-friendly vertical layout)
     athletes_cards = ""
     for athlete in athletes_data:
         status = athlete.get("status", "active")
+        bib = athlete.get('bib', '-')
         
         # Show appropriate status badge based on actual status
         if status == "active":
@@ -31,7 +35,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
             <!-- Header: BIB + Status -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div>
-                    <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{athlete.get('bib', '-')}</span>
+                    <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{bib}</span>
                 </div>
                 {status_badge}
             </div>
@@ -48,6 +52,21 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
                         <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Vueltas</p>
                         <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #ea580c;">{athlete.get('laps_completed', 0)}</p>
                     </td>
+                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e5e7eb;">
+                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Kilómetros</p>
+                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #1f2937;">{athlete.get('total_km', 0)}</p>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Cheer Button -->
+            <div style="margin-top: 12px; text-align: center;">
+                <a href="{base_url}/comunidad" style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                    💬 Enviar mensaje de ánimo
+                </a>
+            </div>
+        </div>
+        """
                     <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e5e7eb;">
                         <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Kilómetros</p>
                         <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #1f2937;">{athlete.get('total_km', 0)}</p>
