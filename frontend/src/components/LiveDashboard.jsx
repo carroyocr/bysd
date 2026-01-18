@@ -945,8 +945,8 @@ export default function LiveDashboard() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         {followersCount[participant.bib] ? (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                            <MessageCircle className="w-3 h-3 mr-1" />
+                          <Badge variant="secondary" className="bg-pink-100 text-pink-700">
+                            <UserCheck className="w-3 h-3 mr-1" />
                             {followersCount[participant.bib]}
                           </Badge>
                         ) : (
