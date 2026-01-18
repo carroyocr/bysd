@@ -473,7 +473,7 @@ export default function LiveDashboard() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Backyard Ultra Santo Domingo 2026
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
               </p>
