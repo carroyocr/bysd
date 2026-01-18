@@ -780,3 +780,29 @@ async def get_subscription(
         "subscribed": True,
         **subscription
     }
+
+
+@router.get("/followers-count")
+async def get_followers_count(
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Get the count of followers for each athlete (admin only)"""
+    from server import db as database
+    
+    # Aggregate to count how many active subscriptions include each athlete
+    pipeline = [
+        {"$match": {"active": True}},
+        {"$unwind": "$athletes_bibs"},
+        {"$group": {
+            "_id": "$athletes_bibs",
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    results = await database.email_subscriptions.aggregate(pipeline).to_list(1000)
+    
+    # Convert to dict {bib: count}
+    followers_count = {item["_id"]: item["count"] for item in results}
+    
+    return followers_count
