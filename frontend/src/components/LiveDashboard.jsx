@@ -953,15 +953,14 @@ export default function LiveDashboard() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Button
-                          onClick={() => openCheerModal(participant)}
-                          variant="ghost"
-                          size="sm"
-                          className="p-2 text-purple-500 hover:text-purple-600 hover:bg-purple-50"
-                          data-testid={`cheer-btn-desktop-${participant.bib}`}
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                        </Button>
+                        {followersCount[participant.bib] ? (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                            <MessageCircle className="w-3 h-3 mr-1" />
+                            {followersCount[participant.bib]}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">0</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Button
