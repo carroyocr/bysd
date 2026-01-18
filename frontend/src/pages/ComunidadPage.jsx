@@ -198,9 +198,17 @@ export default function ComunidadPage() {
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
             🎉 Comunidad
           </h1>
-          <p className="text-center text-purple-100 mb-6">
+          <p className="text-center text-purple-100 mb-4">
             Backyard Ultra Santo Domingo 2026
           </p>
+          <div className="text-center">
+            <Link to="/en-vivo">
+              <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver a En Vivo
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
