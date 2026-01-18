@@ -265,22 +265,43 @@ export default function ComunidadPage() {
                   <MessageCircle className="w-6 h-6 text-purple-600" />
                   Mensajes de Ánimo
                 </CardTitle>
+                <Input
+                  type="text"
+                  placeholder="Filtrar por número o nombre de corredor..."
+                  value={messageFilter}
+                  onChange={(e) => setMessageFilter(e.target.value)}
+                  className="mt-3"
+                />
               </CardHeader>
-              <CardContent className="p-0 max-h-[600px] overflow-y-auto">
+              <CardContent className="p-0 max-h-[500px] overflow-y-auto">
                 {loadingMessages ? (
                   <div className="text-center py-12">
                     <MessageCircle className="w-12 h-12 text-purple-300 animate-pulse mx-auto mb-4" />
                     <p className="text-muted-foreground">Cargando mensajes...</p>
                   </div>
-                ) : messages.length === 0 ? (
+                ) : messages.filter(msg => 
+                    messageFilter === '' ||
+                    msg.athlete_bib.includes(messageFilter) ||
+                    msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
+                  ).length === 0 ? (
                   <div className="text-center py-12">
                     <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-muted-foreground text-lg">Aún no hay mensajes</p>
-                    <p className="text-sm text-muted-foreground">¡Sé el primero en animar a un atleta!</p>
+                    <p className="text-muted-foreground text-lg">
+                      {messageFilter ? 'No hay mensajes para este corredor' : 'Aún no hay mensajes'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {messageFilter ? 'Intenta con otro nombre o número' : '¡Sé el primero en animar a un atleta!'}
+                    </p>
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {messages.map((msg, index) => (
+                    {messages
+                      .filter(msg => 
+                        messageFilter === '' ||
+                        msg.athlete_bib.includes(messageFilter) ||
+                        msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
+                      )
+                      .map((msg, index) => (
                       <div key={index} className="p-4 hover:bg-purple-50/50 transition-colors">
                         <div className="flex items-start gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
