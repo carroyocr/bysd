@@ -474,7 +474,7 @@ export default function LiveDashboard() {
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
-            📡 Seguimiento en Vivo
+            Seguimiento
           </h1>
           <p className="text-center text-purple-100 mb-4">
             Backyard Ultra Santo Domingo 2026
