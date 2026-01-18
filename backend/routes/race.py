@@ -807,3 +807,84 @@ async def get_followers_count(
     followers_count = {item["_id"]: item["count"] for item in results}
     
     return followers_count
+
+
+
+# Cheer Messages Endpoints
+@router.post("/cheer")
+async def submit_cheer_message(
+    request: CheerMessageRequest,
+    db=Depends(lambda: None)
+):
+    """Submit a cheer message for an athlete"""
+    from server import db as database
+    
+    # Validate athlete exists
+    athlete = await database.participants.find_one({"bib": request.athlete_bib}, {"_id": 0})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+    
+    # Validate message length
+    if len(request.message) > 280:
+        raise HTTPException(status_code=400, detail="El mensaje no puede exceder 280 caracteres")
+    
+    if len(request.fan_name) > 50:
+        raise HTTPException(status_code=400, detail="El nombre no puede exceder 50 caracteres")
+    
+    # Create cheer message
+    cheer = CheerMessage(
+        athlete_bib=request.athlete_bib,
+        fan_name=request.fan_name,
+        message=request.message
+    )
+    
+    await database.cheer_messages.insert_one(cheer.dict())
+    
+    return {
+        "message": "¡Mensaje de ánimo enviado! Gracias por apoyar a los atletas.",
+        "athlete_bib": request.athlete_bib,
+        "athlete_name": f"{athlete['nombre']} {athlete['apellidos']}"
+    }
+
+
+@router.get("/cheers")
+async def get_cheer_messages(
+    limit: int = 50,
+    athlete_bib: Optional[str] = None,
+    db=Depends(lambda: None)
+):
+    """Get cheer messages (most recent first)"""
+    from server import db as database
+    
+    query = {}
+    if athlete_bib:
+        query["athlete_bib"] = athlete_bib
+    
+    # Get messages sorted by created_at descending
+    messages = await database.cheer_messages.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with athlete names
+    for msg in messages:
+        athlete = await database.participants.find_one(
+            {"bib": msg["athlete_bib"]},
+            {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
+        )
+        if athlete:
+            msg["athlete_name"] = f"{athlete['nombre']} {athlete['apellidos']}"
+            msg["athlete_nacionalidad"] = athlete.get("nacionalidad", "")
+    
+    return messages
+
+
+@router.get("/cheers/count")
+async def get_cheer_count(
+    db=Depends(lambda: None)
+):
+    """Get total count of cheer messages"""
+    from server import db as database
+    
+    count = await database.cheer_messages.count_documents({})
+    return {"count": count}
