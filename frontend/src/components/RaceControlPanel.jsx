@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users } from 'lucide-react';
+import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, ShieldCheck, ShieldOff } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+
+// Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
+const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
 
 export default function RaceControlPanel() {
   const [currentLap, setCurrentLap] = useState(1);
@@ -19,6 +22,11 @@ export default function RaceControlPanel() {
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
+    const saved = localStorage.getItem('race_time_validation');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const navigate = useNavigate();
 
   // Race starts at 9:00 AM, each lap is 1 hour
