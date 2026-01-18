@@ -67,15 +67,8 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
             </div>
         </div>
         """
-                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e5e7eb;">
-                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Kilómetros</p>
-                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #1f2937;">{athlete.get('total_km', 0)}</p>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        """
     
+    # Define base_url for use in html template
     html = f"""
     <!DOCTYPE html>
     <html>
