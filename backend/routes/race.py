@@ -8,7 +8,8 @@ from bson import ObjectId
 from models.race import (
     AdminLogin, RaceConfig, Participant, LapLog,
     SetCurrentLapRequest, MarkRetiredRequest, CompleteLapRequest,
-    RaceStats, ParticipantWithStats, EmailSubscription, SubscribeRequest
+    RaceStats, ParticipantWithStats, EmailSubscription, SubscribeRequest,
+    CheerMessage, CheerMessageRequest
 )
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 
