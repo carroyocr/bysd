@@ -15,6 +15,7 @@ import PatrocinadoresPage from './pages/PatrocinadoresPage';
 import LiveDashboardPage from './pages/LiveDashboardPage';
 import ComunidadPage from './pages/ComunidadPage';
 import EnviarAnimoPage from './pages/EnviarAnimoPage';
+import MensajesPresentacionPage from './pages/MensajesPresentacionPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
 import './App.css';
