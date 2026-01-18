@@ -482,38 +482,17 @@ export default function LiveDashboard() {
                 Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
               </p>
               {cheerCount > 0 && (
-                <>
+                <Link to="/comunidad">
                   <Button
-                    onClick={openCheerFeed}
                     variant="outline"
                     size="sm"
                     className="border-purple-300 text-purple-600 hover:bg-purple-50"
-                    data-testid="view-cheers-btn"
+                    data-testid="view-comunidad-btn"
                   >
                     <MessageCircle className="w-4 h-4 mr-1" />
-                    {cheerCount} mensaje{cheerCount !== 1 ? 's' : ''} de ánimo
+                    {cheerCount} mensajes de ánimo · Ver Comunidad →
                   </Button>
-                  <Button
-                    onClick={openLeaderboard}
-                    variant="outline"
-                    size="sm"
-                    className="border-amber-400 text-amber-600 hover:bg-amber-50"
-                    data-testid="view-leaderboard-btn"
-                  >
-                    <Trophy className="w-4 h-4 mr-1" />
-                    Top Apoyados
-                  </Button>
-                  <Button
-                    onClick={openFanLeaderboard}
-                    variant="outline"
-                    size="sm"
-                    className="border-green-400 text-green-600 hover:bg-green-50"
-                    data-testid="view-fan-leaderboard-btn"
-                  >
-                    <Award className="w-4 h-4 mr-1" />
-                    Top Fans
-                  </Button>
-                </>
+                </Link>
               )}
             </div>
           </div>
