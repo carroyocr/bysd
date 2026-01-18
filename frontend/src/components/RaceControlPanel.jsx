@@ -461,13 +461,79 @@ export default function RaceControlPanel() {
         {/* Current Lap Control */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Control de Vuelta</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Al guardar, se registrará la vuelta actual para todos los atletas activos y se incrementará a la siguiente vuelta
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <CardTitle>Control de Vuelta</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Al guardar, se registrará la vuelta actual para todos los atletas activos y se incrementará a la siguiente vuelta
+                </p>
+              </div>
+              {/* Time Validation Toggle */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setTimeValidationEnabled(!timeValidationEnabled)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                    timeValidationEnabled
+                      ? 'bg-green-50 border-green-300 text-green-700'
+                      : 'bg-gray-50 border-gray-300 text-gray-600'
+                  }`}
+                >
+                  {timeValidationEnabled ? (
+                    <ShieldCheck className="w-4 h-4" />
+                  ) : (
+                    <ShieldOff className="w-4 h-4" />
+                  )}
+                  <span className="text-sm font-medium">
+                    {timeValidationEnabled ? 'Validación Activa' : 'Validación Inactiva'}
+                  </span>
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-6">
+              {/* Time Validation Warning/Info */}
+              {timeValidationEnabled && !canCompleteLap(currentLap) && (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-800">Vuelta aún en curso</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        No puedes registrar la vuelta {currentLap} hasta que finalice.
+                      </p>
+                      <p className="text-lg font-bold text-amber-800 mt-2">
+                        Tiempo restante: {getTimeUntilLapComplete(currentLap)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {timeValidationEnabled && canCompleteLap(currentLap) && (
+                <div className="bg-green-50 border border-green-300 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="font-semibold text-green-800">Vuelta {currentLap} finalizada</p>
+                      <p className="text-sm text-green-700">Puedes registrar la vuelta completada.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!timeValidationEnabled && (
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <ShieldOff className="w-5 h-5 text-gray-500" />
+                    <div>
+                      <p className="font-semibold text-gray-700">Validación de tiempo desactivada</p>
+                      <p className="text-sm text-gray-600">Puedes registrar vueltas sin restricción de horario.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Lap Number and Time Display */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
@@ -498,6 +564,9 @@ export default function RaceControlPanel() {
                     <p className="text-xs text-blue-500 mt-2">
                       La carrera inicia a las 9:00 AM • Cada vuelta dura 1 hora
                     </p>
+                    <p className="text-xs text-blue-600 mt-1 font-medium">
+                      Hora actual: {currentTime.toLocaleTimeString('es-DO')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -515,8 +584,12 @@ export default function RaceControlPanel() {
                 </Button>
                 <Button
                   onClick={handleSaveCurrentLap}
-                  disabled={saving}
-                  className="bg-primary hover:bg-accent text-primary-foreground h-12 px-8 flex-1"
+                  disabled={saving || (timeValidationEnabled && !canCompleteLap(currentLap))}
+                  className={`h-12 px-8 flex-1 ${
+                    timeValidationEnabled && !canCompleteLap(currentLap)
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-primary hover:bg-accent'
+                  } text-primary-foreground`}
                 >
                   <Save className="w-5 h-5 mr-2" />
                   {saving ? 'Guardando...' : 'Registrar Vuelta Completada para Atletas Activos'}
