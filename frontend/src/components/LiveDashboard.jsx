@@ -63,6 +63,20 @@ export default function LiveDashboard() {
   });
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeMessage, setSubscribeMessage] = useState(null);
+  
+  // Cheer message modal state
+  const [showCheerModal, setShowCheerModal] = useState(false);
+  const [cheerAthlete, setCheerAthlete] = useState(null);
+  const [cheerFanName, setCheerFanName] = useState('');
+  const [cheerMessage, setCheerMessage] = useState('');
+  const [cheerSubmitting, setCheerSubmitting] = useState(false);
+  const [cheerResult, setCheerResult] = useState(null);
+  
+  // Cheer feed modal state
+  const [showCheerFeed, setShowCheerFeed] = useState(false);
+  const [cheerMessages, setCheerMessages] = useState([]);
+  const [cheerCount, setCheerCount] = useState(0);
+  const [loadingCheers, setLoadingCheers] = useState(false);
 
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
