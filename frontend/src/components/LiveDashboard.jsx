@@ -227,7 +227,7 @@ export default function LiveDashboard() {
   };
 
   // Submit cheer message
-  const handleSubmitCheer = async () => {
+  const handleSendCheer = async () => {
     if (!cheerMessage.trim() || !cheerFanName.trim()) {
       setCheerResult({ type: 'error', text: 'Por favor ingresa tu nombre y un mensaje' });
       return;
@@ -238,7 +238,7 @@ export default function LiveDashboard() {
       return;
     }
 
-    setCheerSubmitting(true);
+    setCheerSending(true);
     setCheerResult(null);
 
     try {
@@ -255,21 +255,20 @@ export default function LiveDashboard() {
       const data = await response.json();
 
       if (response.ok) {
-        setCheerResult({ type: 'success', text: data.message });
+        setCheerResult({ type: 'success', text: '¡Mensaje enviado!' });
         setCheerMessage('');
-        // Refresh cheer count
         loadCheerCount();
         setTimeout(() => {
           setShowCheerModal(false);
           setCheerResult(null);
-        }, 2000);
+        }, 1500);
       } else {
         setCheerResult({ type: 'error', text: data.detail || 'Error al enviar mensaje' });
       }
     } catch (error) {
       setCheerResult({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
     } finally {
-      setCheerSubmitting(false);
+      setCheerSending(false);
     }
   };
 
