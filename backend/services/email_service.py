@@ -68,7 +68,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
         <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff;">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 24px 16px; text-align: center;">
-                <img src="https://racetracking.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
+                <img src="https://run-track-ultra.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
                 <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
             </div>
@@ -85,7 +85,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
                 <div style="margin-top: 20px; padding: 16px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
                     <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">
                         <strong>Seguimiento en vivo:</strong><br>
-                        <a href="https://racetracking.preview.emergentagent.com/en-vivo" style="color: #ea580c; word-break: break-all;">racetracking.preview.emergentagent.com/en-vivo</a>
+                        <a href="https://run-track-ultra.preview.emergentagent.com/en-vivo" style="color: #ea580c; word-break: break-all;">racetracking.preview.emergentagent.com/en-vivo</a>
                     </p>
                 </div>
             </div>
@@ -120,7 +120,7 @@ async def send_notification_email(
         return False
     
     try:
-        unsubscribe_link = f"https://racetracking.preview.emergentagent.com/api/race/unsubscribe/{subscription_id}"
+        unsubscribe_link = f"https://run-track-ultra.preview.emergentagent.com/api/race/unsubscribe/{subscription_id}"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"🏃 {subject} - Backyard Ultra SD 2026"

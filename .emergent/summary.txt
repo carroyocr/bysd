@@ -1,76 +1,78 @@
 <analysis>**original_problem_statement:**
-The user initially requested a simple informational web application for an event called Backyard Ultra Santo Domingo 2026. The project started as a static React site built from content provided in PDF documents. Over time, the requirements evolved significantly, culminating in a request to build a full-stack, real-time race tracking system. This system needed a secure admin panel to manage the race (laps, athlete status) and a public-facing dashboard to display live statistics and participant progress. The list of participants was provided in a text file and used to populate the initial database.
+The user initially requested a simple informational web application for an event called Backyard Ultra Santo Domingo 2026. The project evolved into a full-stack, real-time race tracking system with a React frontend, FastAPI backend, and MongoDB database.
 
 PRODUCT REQUIREMENTS:
 1.  **Informational Website:** A multi-page React application with pages for Event Info, Runner's Guide, Rules, Logistics, FAQ, and Sponsors.
 2.  **Live Race Tracking System:**
-    *   **Secure Admin Panel:**
-        *   Login with a username and password.
-        *   Control the current lap number.
-        *   Mark athletes as DNF (Did Not Finish) or DNS (Did Not Start).
-        *   A button to complete the current lap for all active runners simultaneously.
-        *   A secure feature to reset the entire race database for testing, requiring a typed confirmation (REINICIO).
-        *   Filters to view athletes by status (Active, DNF, DNS).
-    *   **Public Dashboard:**
-        *   Accessible via an En Vivo link in the main navigation.
-        *   Display real-time statistics: Current Lap, Completed Laps, Active Athletes, DNF Athletes, DNS Athletes, and Total Kilometers for all athletes combined.
-        *   A filterable, auto-refreshing table of all participants showing their BIB, Name, Status (Active, DNF, DNS), Completed Laps, and Kilometers.
-        *   An Export to CSV button.
-        *   A special Winner Section that appears only when one athlete is left and they complete one final lap.
-3.  **PDF Viewer:** A flipbook style PDF viewer for the Runner's Guide, accessible via a modal.
-4.  **Sponsors Management:** Ability to add new sponsors with their logo and description, maintaining alphabetical order.
+    *   **Secure Admin Panel:** Login, control lap numbers, mark athletes as DNF/DNS, revert to a previous lap, and reset the race database. It also includes a viewer for the lap's corresponding time of day.
+    *   **Public Dashboard:** Displays real-time statistics, a filterable participant list with CSV export, a countdown timer to the race start, and a special Winner Section.
+3.  **PDF Viewer:** A flipbook style PDF viewer for the Runner's Guide.
+4.  **UI/UX:** A mobile-responsive design for the live dashboard, consistent styling across pages, and conditional animations.
+5.  **Athlete Following & Notifications:**
+    *   Users can follow athletes via a checkbox on the public dashboard.
+    *   Users can subscribe with their email to receive notifications for followed athletes.
+    *   Notifications are sent via Gmail when a lap is completed or an athlete is marked DNF.
+    - An unsubscribe option is available.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-A full-stack application featuring a React frontend and a FastAPI backend connected to a MongoDB database. The initial static informational site is complete and functional. The complex live race tracking system is also largely complete, featuring a secure admin panel ( and ) and a public dashboard (). The backend handles authentication, race state management, and provides statistics. The frontend displays this information in real-time. The database is initialized with 90 participants on startup.
+A functional full-stack application with a React frontend, FastAPI backend, and MongoDB database. All originally requested features are implemented and have been tested through multiple iterations. This includes the informational site, the admin panel with race controls (lap completion, DNF/DNS marking, lap reversal), and the public live dashboard with real-time stats and a countdown. The mobile-responsive design and a complete email notification system using the user's Gmail account are also in place.
 
 **Last working item**:
-- **Last item agent was working:** The agent was implementing the Winner Section on the public live dashboard. This section is designed to conditionally appear only when a single winner is determined (one athlete completes a final lap alone). The backend logic and frontend component structure were being modified to support this.
+- **Last item agent was working:** The agent began implementing a new batch of features requested by the user. The first and most critical change is to alter the core logic of how Did Not Finish (DNF) is handled.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Both. The backend testing agent should verify the winner detection logic in the  endpoint. The frontend testing agent should simulate the winning condition and verify that the Winner Section appears correctly on the  page.
+- **Which testing method agent to use?** Both. The backend testing agent needs to verify the new DNF logic across all affected endpoints (, , ). The frontend testing agent should simulate the DNF flow to verify that the athlete's lap count does not increase and that the UI reflects this change correctly.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-None. The current focus is on completing the in-progress task.
+None.
 
 **In progress Task List**:
-- **Task 1: (P0 - HIGHEST PRIORITY)** Complete and test the Winner Section implementation.
-  - **Where to resume:**
-    1.  Add the  animation to the global stylesheet () as intended in the last step. The agent was editing  and likely intended to define this animation next.
-    2.  Review and finalize the winner detection logic in  within the  function. Ensure the  object is correctly calculated and returned.
-    3.  Thoroughly test the full flow:
-        - Log in to the admin panel.
-        - Mark 89 out of 90 athletes as DNF.
-        - Use the Registrar Vuelta Completada para Atletas Activos button to complete one more lap for the last remaining athlete.
-        - Verify on the public  dashboard that the winner section appears with the correct athlete data.
-  - **What will be achieved with this?** This will complete the final core feature request for the live tracking system, making it ready for the event.
+The user has requested a new set of features. The agent has started working on the first one.
+
+- **Task 1: (P0 - HIGHEST PRIORITY)** Modify DNF Logic.
+  - **Description:** The user has requested a fundamental change: when an admin marks a runner as DNF, the runner **should not** be credited with an additional lap. Their  should remain what it was before being marked as DNF.
+  - **Where to resume:** The agent was about to modify the  function in . The update operation that increments  and  needs to be removed from this function.
+  - **What will be achieved with this?** The application's race logic will align with the user's new requirement. This change will also require verifying and potentially adjusting the revert lap and winner detection logic.
   - **Status:** IN PROGRESS
   - **Should Test frontend/backend/both after fix?** Both.
   - **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
-- None. All user-requested features have been implemented or are currently in progress.
+
+- **Upcoming Tasks:**
+  - **(P1) Follower Counter:** In the admin panel, display a count next to each athlete showing how many users are subscribed to their notifications. This requires modifying the backend to aggregate this count from the  collection and updating the  frontend component to display it.
+  - **(P2) Cheer Message Submission Form:** On the public dashboard, add a button to each runner's card/row. This button should open a form where a fan can write a message of encouragement, which will eventually be posted to Twitter/X. This involves creating a new MongoDB collection (), a backend endpoint to save the messages, and a frontend modal/form.
+  - **(P3) Cheer Message Feed:** Create a new UI component (e.g., a modal or a section on the page) to display the submitted cheer messages, ordered from most recent to oldest.
+
+- **Future Tasks:**
+  - **(BLOCKED) Twitter/X Integration:** Automatically post the cheer messages to the event's Twitter/X account.
+    - **Blocker:** This is blocked pending user-provided API credentials for Twitter/X (API Key, API Secret, Access Token, Access Token Secret). The user has only provided login credentials, which are insufficient for API access.
 
 **Completed work in this session**
-- **Live Race Tracking System (Full Implementation):**
-  - **Backend (FastAPI):** Created database models, API endpoints for admin login (), race statistics (), and race management (completing laps, marking DNF/DNS). Implemented JWT authentication for secure endpoints.
-  - **Database (MongoDB):** Set up collections for  and . Implemented a startup script to auto-populate the database with 90 runners.
-  - **Admin Panel (React):** Built a secure section () for race management, including a feature to complete laps for all active runners with one click, and a secure database reset function.
-  - **Public Dashboard (React):** Created a live dashboard () with auto-refreshing statistics and a filterable participant table. Added an Export to CSV feature.
-- **PDF Flipbook Viewer:** Implemented a modal-based PDF viewer using  for the Runner's Guide, including custom page-turn animations and fixes to rendering issues.
-- **Sponsor Management:** Added 7 new sponsors (Suzuki, AGESS, Banderas, Dra. Vilma Arias, En la Montaña, Pico Diego, Centro de Terapia) to the sponsors page, maintaining alphabetical order.
-- **UI/UX Enhancements:**
-  - Added a volunteer application form link.
-  - Updated logistics page with activity costs and later removed them per user request.
-  - Changed terminology from Retirado to DNF across the entire application.
-  - Refined page titles and UI component colors for consistency.
-- **File Management:** Replaced the race route GPX file and map image multiple times as requested by the user.
-- **Logic Corrections:** Adjusted race logic to correctly calculate Completed Laps and to ensure a DNF athlete's final lap is counted.
+- **DNF Revert Logic Fix:** Resolved a complex bug where reverting a lap did not correctly reactivate athletes who were marked DNF during a multi-step sequence of events. The final logic correctly handles this edge case.
+- **CSV Export Encoding:** Fixed an issue with special characters (e.g., Gaitán) in the CSV export by adding a UTF-8 BOM () and quoting fields.
+- **UI/Layout Standardization:**
+  - Moved the Admin link from a floating button on the dashboard to the main navigation menu.
+  - Standardized the background and header layout of the En Vivo page to match the rest of the site, fixing alignment and spacing issues.
+  - Aligned all statistic counter cards on the live dashboard to have a uniform height.
+- **Conditional Animation:** The En Vivo link in the navigation now only blinks after the official race start date and time.
+- **Mobile Responsiveness (Live Dashboard):**
+  - The main statistics cards were condensed into a compact grid for small screens.
+  - The participant list was transformed from a wide table into a vertical list of cards for easier mobile viewing.
+- **Athlete Following & Email Notifications:**
+  - **Following System:** Implemented a follow feature using a heart icon next to each athlete, with state saved to .
+  - **Email Subscription:** Developed a full email notification system using the user's Gmail account and an App Password. This includes a frontend modal for users to subscribe, select notification frequency, and a backend service () to handle sending emails.
+  - **Responsive Email Template:** Designed an HTML email template that uses vertical cards to display athlete data correctly on mobile devices.
+  - **Subscription Management:** Implemented logic to automatically update a user's subscription when they follow/unfollow new athletes and added an Unsubscribe button with a confirmation dialog.
+  - **Smart Notifications:** Implemented logic to stop sending lap complete notifications to a user once all the athletes they follow are marked as DNF or DNS.
+  - **Bug Fix:** Corrected a bug where the subscription confirmation email incorrectly showed active athletes with a DNS status.
 
 **Earlier issues found/mentioned but not fixed**
-None.
+- **Hardcoded Data:** Sponsor information in  and the initial participant list in  are hardcoded. This was identified as an area for future refactoring to improve maintainability.
+- **Large PDF File:** The  file (27MB) could be optimized to improve load times for the PDF viewer.
 
 **Known issue recurrence from previous fork**
 None.
@@ -82,74 +84,75 @@ None.
 - **Frontend:** React, , Tailwind CSS, , .
 - **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver).
 - **Database:** MongoDB.
-- **Authentication:** JWT (JSON Web Tokens) with  for password hashing.
-- **Architecture:** Full-stack with a clear separation between frontend and backend.
+- **Authentication:** JWT (JSON Web Tokens) with .
+- **Email:** Python  for sending emails via Gmail SMTP.
 
 **key DB schema**
-- **race_config:**  - Stores the global state of the race.
-- **participants:**  - Stores data for each of the 90 participants.
-- **admin_users:**  - Stores admin credentials.
+- **race_config:** 
+- **participants:** 
+- **admin_users:** 
+- **email_subscriptions:** 
 
 **changes in tech stack**
-- The project evolved from a frontend-only static application to a full-stack application by adding a **FastAPI backend** and a **MongoDB database**.
+- The project evolved from a frontend-only app to a full-stack application with a FastAPI backend and MongoDB.
+- Integrated Python's  for sending emails.
 
 **All files of reference**
-- : Contains all API logic. Key file for completing the winner feature.
-- : Pydantic models. Was updated for the winner feature.
-- : Frontend for the public dashboard. Needs the winner section UI finalized.
-- : Frontend for the admin panel.
-- : Contains all frontend routes.
-- : Contains the navigation links, including the one to /en-vivo.
-- : The runner's guide PDF. It is 27MB, which is large.
+- : Core file for all backend logic. **This is the primary file for the next task.**
+- : Contains all email sending logic and HTML templates.
+- : Core file for the public-facing dashboard, including mobile views and the subscription system.
+- : Core file for the admin interface.
+- : Stores credentials, including the user's Gmail App Password.
 
 **Areas that need refactoring**:
-- **Hardcoded Sponsor Data:** Sponsor information in  is still hardcoded in a large array. This could be moved to a JSON file for better maintainability.
-- **Hardcoded Participant Data:** The initial list of 90 participants is hardcoded within a startup function in . This should be extracted into a separate JSON or CSV file and loaded by a seeding script.
-- **Large PDF File:** The  in  is 27MB. This could impact initial load times for the PDF viewer and should ideally be optimized/compressed.
+- Extract hardcoded sponsor data from  into a separate JSON file.
+- Extract hardcoded participant data from  into a seeding script that reads from a JSON or CSV file.
 
 **key api endpoints**
-- : Authenticates the admin user and returns a JWT.
-- : (Public) Returns live statistics for the public dashboard.
-- : (Public) Returns the filterable list of participants.
-- : (Protected) Advances the lap for all active runners.
-- : (Protected) Marks an athlete as DNF.
-- : (Protected) Marks an athlete as DNS.
-- : (Protected) Resets the race data.
+- 
+- 
+- 
+- 
+-  (New)
+-  (New)
+-  (New)
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
 - **Admin Credentials:**  / 
-- **Database Name:** The application uses a MongoDB database named . Do not confuse it with .
-- **Core Race Logic:** A Backyard Ultra has specific rules the system now follows:
-  - All active runners complete a lap at the same time. The Registrar Vuelta button handles this.
-  - Marking a runner as DNF means they **completed** the current lap but will not start the next one. The system correctly credits them for that last lap.
-- **Winner Condition:** The winner is the last remaining athlete who completes one final lap alone.
+- **New DNF Logic:** Your immediate task is to change the core DNF logic as per the user's latest request (do not add a lap on DNF). This is a P0 task.
+- **Gmail Integration:** The application sends emails using the user's Gmail account: . The necessary App Password is stored in . Do not expose this key.
+- **Twitter/X API Blocker:** The user wants to integrate Twitter/X posts but has only provided login credentials. You need **API Keys** (API Key, Secret, Access Token, Secret). Proceed with building the UI and database parts of the feature, but reiterate that the final integration is blocked until the correct keys are provided.
 
 **documents and test reports created in this job**
-- Multiple  files were generated throughout the session, confirming features like the volunteer form, logistics costs, and UI corrections.
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests a button in the admin panel to reset the database for testing, with a confirmation step. (Implemented)
-2.  **User:** Reports two logic errors: Vueltas Completadas was summing all laps instead of showing the last completed lap number, and retired athletes could be reactivated. (Fixed)
-3.  **User:** Requests functionality to mark athletes as DNS (Did Not Start) and a new stat for total KMs across all runners. (Implemented)
-4.  **User:** Requests to remove the Position column from the live dashboard table. (Implemented)
-5.  **User:** Clarifies that when an athlete is marked as retired (DNF), they should be credited for completing that final lap. (Fixed)
-6.  **User:** Points out that the DNS option is missing from the status filter on the public dashboard. (Fixed)
-7.  **User:** Requests status filters (Active, DNF, DNS) be added to the admin panel as well. (Implemented)
-8.  **User:** Requests that all instances of Atletas Retirados be changed to the standard term DNF. (Implemented)
-9.  **PENDING User:** Asks for a Winner Section to be added to the dashboard, which should only appear when a single athlete completes a final lap. (In Progress)
+1.  **User:** Requests to include total KM in the subscription email.
+2.  **User:** Reports that if a new runner is followed after subscribing, notifications for them don't work. (Fixed)
+3.  **User:** Reports the email template is not responsive on mobile. (Fixed with a new card-based template)
+4.  **User:** Asks for an Unsubscribe button. (Implemented)
+5.  **User:** Requests that notifications stop if all followed runners are DNF. (Implemented)
+6.  **User:** Asks to show lap/km in the confirmation email and fix a bug showing active runners as DNS. (Implemented)
+7.  **User:** Clarifies that the Active status badge should also be visible. (Implemented)
+8.  **User:** Makes a new set of major requests: change DNF logic, add follower counter, add cheer messages for Twitter, and add a feed for those messages.
+9.  **Agent:** Confirms understanding and asks for Twitter API credentials.
+10. **User:** Agrees for the agent to proceed with the other tasks while they look for the Twitter credentials.
 
 **Project Health Check:**
-- **Broken:** None.
-- **Mocked:** None.
+- **Broken:** None. The app is functional but the DNF logic is pending an update based on the latest user request.
+- **Mocked:** The Twitter/X integration is planned but will be mocked (UI/DB only) until API credentials are provided.
 
 **3rd Party Integrations**
-- : Used for rendering the Runner's Guide PDF in a flipbook-style viewer.
-- : Used for JWT generation and validation in the backend.
-- : Used for hashing admin passwords.
+- : For PDF viewer.
+- : For JWTs.
+- : For password hashing.
+- **Gmail SMTP:** Using Python's built-in  library, configured with user-provided credentials.
+- **Twitter/X API (Planned):** Requires user to provide API keys.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, multiple times for frontend changes.
+- **Testing agent used after significant changes:** YES, for the winner section feature.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
 - **Known regressions:** None.
@@ -160,4 +163,4 @@ None.
 - **Password:** 
 
 **What agent forgot to execute**
-- The initial development plan for the backend included a  collection to store a history of every completed lap for audit purposes. This was not implemented. The current system functions correctly without it, but it could be a future enhancement for more detailed data analysis.</analysis>
+The agent was in the middle of executing the plan to change the DNF logic and had just viewed the relevant file () before the session ended. The next step is to edit this file.</analysis>
