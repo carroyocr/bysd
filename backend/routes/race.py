@@ -801,6 +801,25 @@ async def unsubscribe(
         raise HTTPException(status_code=400, detail="ID de suscripción inválido")
 
 
+@router.post("/unsubscribe-by-email/{email}")
+async def unsubscribe_by_email(
+    email: str,
+    db=Depends(lambda: None)
+):
+    """Unsubscribe from email notifications using email address"""
+    from server import db as database
+    
+    result = await database.email_subscriptions.update_one(
+        {"email": email},
+        {"$set": {"active": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        return {"message": "Suscripción no encontrada o ya cancelada", "success": False}
+    
+    return {"message": "Te has dado de baja exitosamente.", "success": True}
+
+
 @router.get("/subscription/{email}")
 async def get_subscription(
     email: str,
