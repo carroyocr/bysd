@@ -469,7 +469,7 @@ export default function LiveDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
