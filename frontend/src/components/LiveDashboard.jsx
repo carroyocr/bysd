@@ -82,6 +82,14 @@ export default function LiveDashboard() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  
+  // Fan leaderboard state
+  const [showFanLeaderboard, setShowFanLeaderboard] = useState(false);
+  const [fanLeaderboard, setFanLeaderboard] = useState([]);
+  const [loadingFanLeaderboard, setLoadingFanLeaderboard] = useState(false);
+  
+  // Fan badge state
+  const [fanBadge, setFanBadge] = useState(null);
 
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
