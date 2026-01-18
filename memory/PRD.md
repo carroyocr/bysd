@@ -137,11 +137,6 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 
 ## Backlog / Tareas Pendientes
 
-### 🔴 P0 - Bloqueado
-- [ ] **Integración Twitter/X** - Publicar mensajes de ánimo automáticamente
-  - **BLOQUEADO**: Necesita credenciales de API de Twitter (API Key, API Secret, Access Token, Access Token Secret)
-  - El usuario solo tiene credenciales de login, no de desarrollador
-
 ### 🟠 P1 - Mejoras Sugeridas
 - [ ] Mover datos de patrocinadores a archivo JSON externo
 - [ ] Extraer lista de participantes a archivo CSV/JSON separado
@@ -152,6 +147,9 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - [ ] Notificaciones push cuando hay cambios
 - [ ] Modo oscuro para el dashboard
 - [ ] Agregar Facebook como opción de compartir
+
+### ❌ Descartado
+- Twitter/X Integration - Requiere plan pagado ($100/mes)
 
 ---
 
