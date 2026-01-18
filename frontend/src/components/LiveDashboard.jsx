@@ -312,6 +312,28 @@ export default function LiveDashboard() {
     loadCheerMessages();
   };
 
+  // Load leaderboard
+  const loadLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=10`);
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data);
+      }
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  // Open leaderboard modal
+  const openLeaderboard = () => {
+    setShowLeaderboard(true);
+    loadLeaderboard();
+  };
+
   // Countdown timer effect
   useEffect(() => {
     const calculateCountdown = () => {
