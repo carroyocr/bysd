@@ -104,7 +104,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
                 <div style="margin-top: 20px; padding: 16px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
                     <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">
                         <strong>Seguimiento en vivo:</strong><br>
-                        <a href="https://run-track-ultra.preview.emergentagent.com/en-vivo" style="color: #ea580c; word-break: break-all;">racetracking.preview.emergentagent.com/en-vivo</a>
+                        <a href="{base_url}/en-vivo" style="color: #ea580c;">Ver clasificación en vivo</a>
                     </p>
                 </div>
             </div>
