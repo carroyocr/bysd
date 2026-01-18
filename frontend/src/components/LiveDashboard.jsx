@@ -503,16 +503,28 @@ export default function LiveDashboard() {
                 Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
               </p>
               {cheerCount > 0 && (
-                <Button
-                  onClick={openCheerFeed}
-                  variant="outline"
-                  size="sm"
-                  className="border-purple-300 text-purple-600 hover:bg-purple-50"
-                  data-testid="view-cheers-btn"
-                >
-                  <MessageCircle className="w-4 h-4 mr-1" />
-                  {cheerCount} mensaje{cheerCount !== 1 ? 's' : ''} de ánimo
-                </Button>
+                <>
+                  <Button
+                    onClick={openCheerFeed}
+                    variant="outline"
+                    size="sm"
+                    className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                    data-testid="view-cheers-btn"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    {cheerCount} mensaje{cheerCount !== 1 ? 's' : ''} de ánimo
+                  </Button>
+                  <Button
+                    onClick={openLeaderboard}
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-400 text-amber-600 hover:bg-amber-50"
+                    data-testid="view-leaderboard-btn"
+                  >
+                    <Trophy className="w-4 h-4 mr-1" />
+                    Top Apoyados
+                  </Button>
+                </>
               )}
             </div>
           </div>
