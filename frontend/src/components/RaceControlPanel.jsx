@@ -58,6 +58,49 @@ export default function RaceControlPanel() {
     };
   };
 
+  // Check if lap can be completed based on time
+  const canCompleteLap = (lap) => {
+    if (!timeValidationEnabled) return true;
+    
+    // Calculate when lap N ends: race start + N hours
+    const lapEndTime = new Date(RACE_START_DATE.getTime() + lap * 60 * 60 * 1000);
+    return currentTime >= lapEndTime;
+  };
+
+  // Get time remaining until lap can be completed
+  const getTimeUntilLapComplete = (lap) => {
+    const lapEndTime = new Date(RACE_START_DATE.getTime() + lap * 60 * 60 * 1000);
+    const diff = lapEndTime - currentTime;
+    
+    if (diff <= 0) return null;
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else {
+      return `${minutes}m ${seconds}s`;
+    }
+  };
+
+  // Update current time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Save time validation preference
+  useEffect(() => {
+    localStorage.setItem('race_time_validation', JSON.stringify(timeValidationEnabled));
+  }, [timeValidationEnabled]);
+
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
