@@ -197,43 +197,56 @@ export default function ComunidadPage() {
           <p className="text-center text-purple-100 mb-6">
             Backyard Ultra Santo Domingo 2026
           </p>
-          
-          {/* Tab Buttons */}
-          <div className="flex justify-center gap-2 flex-wrap">
-            <Button
-              onClick={() => setActiveTab('messages')}
-              variant="outline"
-              size="sm"
-              className={`${activeTab === 'messages' 
-                ? 'bg-white text-purple-600 border-purple-300' 
-                : 'border-purple-300 text-purple-100 hover:bg-purple-500/20 hover:text-white'}`}
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Mensajes ({stats.totalMessages})
-            </Button>
-            <Button
-              onClick={() => setActiveTab('athletes')}
-              variant="outline"
-              size="sm"
-              className={`${activeTab === 'athletes' 
-                ? 'bg-white text-amber-600 border-amber-300' 
-                : 'border-amber-300 text-amber-100 hover:bg-amber-500/20 hover:text-white'}`}
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              Top Atletas ({stats.totalAthletes})
-            </Button>
-            <Button
-              onClick={() => setActiveTab('fans')}
-              variant="outline"
-              size="sm"
-              className={`${activeTab === 'fans' 
-                ? 'bg-white text-green-600 border-green-300' 
-                : 'border-green-300 text-green-100 hover:bg-green-500/20 hover:text-white'}`}
-            >
-              <Award className="w-4 h-4 mr-2" />
-              Top Fans ({stats.totalFans})
-            </Button>
-          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards - Tab Selector */}
+      <div className="container mx-auto px-4 -mt-6">
+        <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
+          <Card 
+            onClick={() => setActiveTab('messages')}
+            className={`cursor-pointer transition-all hover:scale-105 ${
+              activeTab === 'messages' 
+                ? 'bg-gradient-to-br from-purple-100 to-purple-200 border-purple-400 ring-2 ring-purple-400' 
+                : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:border-purple-300'
+            }`}
+          >
+            <CardContent className="p-4 sm:p-6 text-center">
+              <MessageCircle className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'messages' ? 'text-purple-600' : 'text-purple-400'}`} />
+              <p className="text-2xl sm:text-3xl font-bold text-purple-900">{stats.totalMessages}</p>
+              <p className="text-xs sm:text-sm text-purple-700">Mensajes</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            onClick={() => setActiveTab('athletes')}
+            className={`cursor-pointer transition-all hover:scale-105 ${
+              activeTab === 'athletes' 
+                ? 'bg-gradient-to-br from-amber-100 to-amber-200 border-amber-400 ring-2 ring-amber-400' 
+                : 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:border-amber-300'
+            }`}
+          >
+            <CardContent className="p-4 sm:p-6 text-center">
+              <Trophy className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'athletes' ? 'text-amber-600' : 'text-amber-400'}`} />
+              <p className="text-2xl sm:text-3xl font-bold text-amber-900">{stats.totalAthletes}</p>
+              <p className="text-xs sm:text-sm text-amber-700">Top Atletas</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            onClick={() => setActiveTab('fans')}
+            className={`cursor-pointer transition-all hover:scale-105 ${
+              activeTab === 'fans' 
+                ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-400 ring-2 ring-green-400' 
+                : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:border-green-300'
+            }`}
+          >
+            <CardContent className="p-4 sm:p-6 text-center">
+              <Award className={`w-8 h-8 mx-auto mb-2 ${activeTab === 'fans' ? 'text-green-600' : 'text-green-400'}`} />
+              <p className="text-2xl sm:text-3xl font-bold text-green-900">{stats.totalFans}</p>
+              <p className="text-xs sm:text-sm text-green-700">Top Fans</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
