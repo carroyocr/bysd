@@ -259,77 +259,82 @@ export default function ComunidadPage() {
           
           {/* Messages Tab */}
           {activeTab === 'messages' && (
-            <Card className="shadow-lg">
-              <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="w-6 h-6 text-purple-600" />
-                  Mensajes de Ánimo
-                </CardTitle>
-                <Input
-                  type="text"
-                  placeholder="Filtrar por número o nombre de corredor..."
-                  value={messageFilter}
-                  onChange={(e) => setMessageFilter(e.target.value)}
-                  className="mt-3"
-                />
-              </CardHeader>
-              <CardContent className="p-0 max-h-[500px] overflow-y-auto">
-                {loadingMessages ? (
-                  <div className="text-center py-12">
-                    <MessageCircle className="w-12 h-12 text-purple-300 animate-pulse mx-auto mb-4" />
-                    <p className="text-muted-foreground">Cargando mensajes...</p>
-                  </div>
-                ) : messages.filter(msg => 
-                    messageFilter === '' ||
-                    msg.athlete_bib.includes(messageFilter) ||
-                    msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
-                  ).length === 0 ? (
-                  <div className="text-center py-12">
-                    <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-muted-foreground text-lg">
-                      {messageFilter ? 'No hay mensajes para este corredor' : 'Aún no hay mensajes'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {messageFilter ? 'Intenta con otro nombre o número' : '¡Sé el primero en animar a un atleta!'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {messages
-                      .filter(msg => 
-                        messageFilter === '' ||
-                        msg.athlete_bib.includes(messageFilter) ||
-                        msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
-                      )
-                      .map((msg, index) => (
-                      <div key={index} className="p-4 hover:bg-purple-50/50 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {msg.fan_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <span className="font-semibold text-foreground">{msg.fan_name}</span>
-                              <span className="text-muted-foreground">→</span>
-                              <Badge variant="outline" className="text-xs">
-                                #{msg.athlete_bib} {msg.athlete_name}
-                              </Badge>
-                              {msg.athlete_nacionalidad && (
-                                <span className="text-sm">{getFlag(msg.athlete_nacionalidad)}</span>
-                              )}
+            <div className="space-y-4">
+              {/* Filter */}
+              <Input
+                type="text"
+                placeholder="Filtrar por número o nombre de corredor..."
+                value={messageFilter}
+                onChange={(e) => setMessageFilter(e.target.value)}
+                className="w-full"
+              />
+              
+              {/* Messages List */}
+              <Card className="shadow-lg">
+                <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50 py-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MessageCircle className="w-5 h-5 text-purple-600" />
+                    Mensajes de Ánimo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 max-h-[500px] overflow-y-auto">
+                  {loadingMessages ? (
+                    <div className="text-center py-12">
+                      <MessageCircle className="w-12 h-12 text-purple-300 animate-pulse mx-auto mb-4" />
+                      <p className="text-muted-foreground">Cargando mensajes...</p>
+                    </div>
+                  ) : messages.filter(msg => 
+                      messageFilter === '' ||
+                      msg.athlete_bib.includes(messageFilter) ||
+                      msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
+                    ).length === 0 ? (
+                    <div className="text-center py-12">
+                      <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                      <p className="text-muted-foreground text-lg">
+                        {messageFilter ? 'No hay mensajes para este corredor' : 'Aún no hay mensajes'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {messageFilter ? 'Intenta con otro nombre o número' : '¡Sé el primero en animar a un atleta!'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {messages
+                        .filter(msg => 
+                          messageFilter === '' ||
+                          msg.athlete_bib.includes(messageFilter) ||
+                          msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
+                        )
+                        .map((msg, index) => (
+                        <div key={index} className="p-4 hover:bg-purple-50/50 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                              {msg.fan_name.charAt(0).toUpperCase()}
                             </div>
-                            <p className="text-foreground">{msg.message}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(msg.created_at).toLocaleString('es-DO')}
-                            </p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className="font-semibold text-foreground">{msg.fan_name}</span>
+                                <span className="text-muted-foreground">→</span>
+                                <Badge variant="outline" className="text-xs">
+                                  #{msg.athlete_bib} {msg.athlete_name}
+                                </Badge>
+                                {msg.athlete_nacionalidad && (
+                                  <span className="text-sm">{getFlag(msg.athlete_nacionalidad)}</span>
+                                )}
+                              </div>
+                              <p className="text-foreground">{msg.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(msg.created_at).toLocaleString('es-DO')}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Athletes Tab */}
