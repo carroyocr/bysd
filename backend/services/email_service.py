@@ -61,7 +61,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
             
             <!-- Cheer Button -->
             <div style="margin-top: 12px; text-align: center;">
-                <a href="{base_url}/comunidad" style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
+                <a href="{base_url}/enviar-animo/{bib}" style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
                     💬 Enviar mensaje de ánimo
                 </a>
             </div>
