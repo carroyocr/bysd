@@ -174,8 +174,10 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - POST `/api/race/cheer` - Enviar mensaje
   - GET `/api/race/cheers` - Feed de mensajes
   - GET `/api/race/cheers/count` - Total de mensajes
+  - GET `/api/race/cheers/leaderboard` - Top atletas más apoyados
 - ✅ Panel admin: Nueva columna "Seguidores" con contador
-- ✅ Dashboard público: Botón de enviar ánimo por atleta + feed de mensajes
+- ✅ Dashboard público: Botón de enviar ánimo + feed de mensajes + **Leaderboard Top Apoyados**
+- ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
 ### 17 Enero 2026
 - Sistema de notificaciones por email implementado
