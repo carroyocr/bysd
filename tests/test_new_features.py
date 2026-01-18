@@ -13,7 +13,7 @@ import os
 import time
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://run-track-ultra.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ultra-track-sd.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 ADMIN_USERNAME = "admin"
