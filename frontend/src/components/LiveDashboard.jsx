@@ -575,6 +575,16 @@ export default function LiveDashboard() {
                     <Trophy className="w-4 h-4 mr-1" />
                     Top Apoyados
                   </Button>
+                  <Button
+                    onClick={openFanLeaderboard}
+                    variant="outline"
+                    size="sm"
+                    className="border-green-400 text-green-600 hover:bg-green-50"
+                    data-testid="view-fan-leaderboard-btn"
+                  >
+                    <Award className="w-4 h-4 mr-1" />
+                    Top Fans
+                  </Button>
                 </>
               )}
             </div>
