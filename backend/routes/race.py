@@ -809,6 +809,31 @@ async def get_followers_count(
     return followers_count
 
 
+@router.get("/subscribers-count")
+async def get_subscribers_count_public(
+    db=Depends(lambda: None)
+):
+    """Get the count of email subscribers for each athlete (public endpoint)"""
+    from server import db as database
+    
+    # Aggregate to count how many active subscriptions include each athlete
+    pipeline = [
+        {"$match": {"active": True}},
+        {"$unwind": "$athletes_bibs"},
+        {"$group": {
+            "_id": "$athletes_bibs",
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    results = await database.email_subscriptions.aggregate(pipeline).to_list(1000)
+    
+    # Convert to dict {bib: count}
+    subscribers_count = {item["_id"]: item["count"] for item in results}
+    
+    return subscribers_count
+
+
 
 # Cheer Messages Endpoints
 @router.post("/cheer")
