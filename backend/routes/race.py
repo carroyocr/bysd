@@ -477,9 +477,9 @@ async def revert_lap(
     ).to_list(1000)
     
     for participant in dnf_to_reactivate:
-        # DNF incremented laps when marked, so reduce it back
-        new_laps = max(0, participant.get("laps_completed", 1) - 1)
-        new_km = round(new_laps * KM_PER_LAP, 1)
+        # DNF does NOT increment laps, so we keep current laps when reactivating
+        current_laps = participant.get("laps_completed", 0)
+        current_km = participant.get("total_km", 0.0)
         
         await database.participants.update_one(
             {"bib": participant["bib"]},
@@ -487,8 +487,8 @@ async def revert_lap(
                 "$set": {
                     "status": "active",
                     "retired_at_lap": None,
-                    "laps_completed": new_laps,
-                    "total_km": new_km,
+                    "laps_completed": current_laps,
+                    "total_km": current_km,
                     "updated_at": datetime.utcnow()
                 }
             }
