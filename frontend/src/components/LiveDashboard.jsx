@@ -77,6 +77,11 @@ export default function LiveDashboard() {
   const [cheerMessages, setCheerMessages] = useState([]);
   const [cheerCount, setCheerCount] = useState(0);
   const [loadingCheers, setLoadingCheers] = useState(false);
+  
+  // Cheer leaderboard state
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
