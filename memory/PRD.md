@@ -4,7 +4,7 @@
 - **Proyecto**: Sistema de tracking en vivo para carrera Backyard Ultra
 - **Evento**: Santo Domingo 2026
 - **Fecha de Creación**: Enero 2026
-- **Última Actualización**: 17 Enero 2026
+- **Última Actualización**: 18 Enero 2026
 
 ## Descripción del Producto
 Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso de una carrera Backyard Ultra. Incluye:
@@ -13,12 +13,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - Dashboard público con estadísticas en vivo
 - Sistema de detección automática del ganador
 - Botones para compartir en redes sociales
+- Sistema de notificaciones por email
+- Sistema de mensajes de ánimo (cheer messages)
 
 ## Stack Tecnológico
 - **Frontend**: React, Tailwind CSS, Shadcn/UI
 - **Backend**: FastAPI (Python)
 - **Base de Datos**: MongoDB
 - **Autenticación**: JWT con bcrypt
+- **Email**: smtplib (Gmail SMTP)
 - **Dependencias adicionales**: react-pdf (visor de PDF)
 
 ---
@@ -37,50 +40,40 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 #### Panel de Administración (`/admin/login`, `/admin/race-control`)
 - Login seguro con JWT (admin/Backyard2026!)
 - Control de vuelta actual
-- **Visor de horario de vuelta** (17 Enero 2026) ✅
-  - Muestra inicio y fin de cada vuelta
-  - La carrera inicia a las 9:00 AM
-  - Cada vuelta dura 1 hora (Vuelta 1: 9-9:59AM, Vuelta 2: 10-10:59AM, etc.)
-  - Muestra preview de la próxima vuelta
-- **Botón Retroceder Vuelta** (17 Enero 2026) ✅
-  - Permite corregir si se avanzó la vuelta por error
-  - Reduce las vueltas de todos los atletas activos
-  - Deshabilitado en vuelta 1
-  - Requiere confirmación antes de ejecutar
+- Visor de horario de vuelta
+- Botón Retroceder Vuelta
 - Botón para completar vuelta de todos los atletas activos
-- Marcar atletas como DNF (Did Not Finish)
+- Marcar atletas como DNF (Did Not Finish) - **NO incrementa vueltas** (18 Enero 2026) ✅
 - Marcar atletas como DNS (Did Not Start)
+- **Contador de Seguidores por atleta** (18 Enero 2026) ✅
 - Filtros por estado (Activo, DNF, DNS)
 - Reset de base de datos con confirmación ("REINICIO")
 
 #### Dashboard Público (`/en-vivo`)
-- **Estadísticas en tiempo real**:
-  - Vuelta en Curso
-  - Vueltas Completadas
-  - Atletas Activos
-  - Atletas DNF
-  - Atletas DNS
-  - Km del Evento
-  - Km Totales (suma de todos los atletas)
+- **Estadísticas en tiempo real**
 - **Tabla de participantes filtrable**
 - **Exportar a CSV**
 - **Auto-refresh cada 30 segundos**
-- **Sección de Ganador** (17 Enero 2026) ✅
-  - Aparece solo cuando hay un ganador determinado
-  - Muestra: BIB, Nombre, País, Vueltas, Kilómetros
-  - Diseño destacado con animación pulse
-- **Botones de Compartir** (17 Enero 2026) ✅
-  - Twitter/X
-  - WhatsApp
-  - Copiar texto al portapapeles
+- **Sección de Ganador**
+- **Botones de Compartir** (Twitter/X, WhatsApp, Copiar)
+- **Sistema de Seguir Atletas** (corazón)
+- **Notificaciones por Email** (suscripción)
+- **Mensajes de Ánimo** (18 Enero 2026) ✅
+  - Botón de enviar ánimo a cada atleta
+  - Feed de mensajes de ánimo públicos
+  - Contador de mensajes totales
 
-### 3. Lógica del Ganador (Completado - 17 Enero 2026)
+### 3. Sistema de Notificaciones por Email (Completado)
+- Suscripción con email
+- Notificaciones cada vuelta o solo al finalizar (DNF/Ganador)
+- Botón de dar de baja (unsubscribe)
+- Template HTML responsive para emails
+
+### 4. Lógica del Ganador (Completado)
 **Condiciones para declarar ganador:**
 1. Solo 1 atleta activo restante
 2. Al menos 1 atleta retirado (DNF)
 3. El atleta activo tiene MÁS vueltas que todos los retirados
-
-Esto significa que el último atleta debe completar una vuelta final solo después de que el penúltimo se retire.
 
 ---
 
@@ -91,28 +84,35 @@ Esto significa que el último atleta debe completar una vuelta final solo despu�
 |----------|--------|-------------|
 | `/api/race/stats` | GET | Estadísticas de la carrera |
 | `/api/race/participants` | GET | Lista de participantes |
+| `/api/race/cheers` | GET | Feed de mensajes de ánimo |
+| `/api/race/cheers/count` | GET | Total de mensajes de ánimo |
+| `/api/race/cheer` | POST | Enviar mensaje de ánimo |
+| `/api/race/subscribe` | POST | Suscribirse a notificaciones |
+| `/api/race/unsubscribe/{id}` | GET | Cancelar suscripción |
 
 ### Protegidos (requieren JWT)
 | Endpoint | Método | Descripción |
 |----------|--------|-------------|
 | `/api/race/auth/admin-login` | POST | Autenticación admin |
 | `/api/race/complete-lap-all-active` | POST | Completar vuelta todos activos |
-| `/api/race/mark-retired` | POST | Marcar DNF |
+| `/api/race/mark-retired` | POST | Marcar DNF (NO incrementa vueltas) |
 | `/api/race/mark-dns` | POST | Marcar DNS |
-| `/api/race/set-current-lap` | POST | Establecer vuelta actual |
 | `/api/race/revert-lap` | POST | Retroceder a vuelta anterior |
 | `/api/race/reset-database` | POST | Reiniciar base de datos |
 | `/api/race/reactivate` | POST | Reactivar atleta |
+| `/api/race/followers-count` | GET | Conteo de seguidores por atleta |
 
 ---
 
 ## Base de Datos (MongoDB)
 
 ### Colecciones
-- **race_config**: `{ current_lap, race_status, winner }`
+- **race_config**: `{ current_lap, race_status }`
 - **participants**: `{ bib, nombre, apellidos, nacionalidad, status, laps_completed, total_km, retired_at_lap }`
 - **admin_users**: `{ username, password (hashed) }`
 - **laps_log**: `{ participant_bib, lap_number, completed_at, recorded_by }`
+- **email_subscriptions**: `{ email, athletes_bibs[], notify_every_lap, notify_on_finish, active }`
+- **cheer_messages**: `{ athlete_bib, fan_name, message, approved, created_at }`
 
 ### Datos Iniciales
 - 90 participantes pre-cargados al iniciar
@@ -129,19 +129,25 @@ Esto significa que el último atleta debe completar una vuelta final solo despu�
 ## Archivos de Referencia Clave
 - `backend/routes/race.py` - Toda la lógica de API
 - `backend/models/race.py` - Modelos Pydantic
-- `frontend/src/components/LiveDashboard.jsx` - Dashboard público con sección ganador y botones compartir
+- `backend/services/email_service.py` - Servicio de emails
+- `frontend/src/components/LiveDashboard.jsx` - Dashboard público
 - `frontend/src/components/RaceControlPanel.jsx` - Panel admin
 
 ---
 
-## Backlog / Tareas Futuras
+## Backlog / Tareas Pendientes
 
-### P1 - Mejoras Sugeridas
+### 🔴 P0 - Bloqueado
+- [ ] **Integración Twitter/X** - Publicar mensajes de ánimo automáticamente
+  - **BLOQUEADO**: Necesita credenciales de API de Twitter (API Key, API Secret, Access Token, Access Token Secret)
+  - El usuario solo tiene credenciales de login, no de desarrollador
+
+### 🟠 P1 - Mejoras Sugeridas
 - [ ] Mover datos de patrocinadores a archivo JSON externo
 - [ ] Extraer lista de participantes a archivo CSV/JSON separado
 - [ ] Optimizar PDF del manual (actualmente 27MB)
 
-### P2 - Mejoras Opcionales
+### 🟡 P2 - Mejoras Opcionales
 - [ ] Historial detallado de vueltas (laps_log ya existe pero no tiene UI)
 - [ ] Notificaciones push cuando hay cambios
 - [ ] Modo oscuro para el dashboard
@@ -150,6 +156,31 @@ Esto significa que el último atleta debe completar una vuelta final solo despu�
 ---
 
 ## Testing
-- **Archivo de tests**: `/app/tests/test_race_winner.py`
-- **Reporte**: `/app/test_reports/iteration_1.json`
-- **Cobertura**: 13/13 tests backend, UI tests completos
+- **Archivos de tests**: 
+  - `/app/tests/test_race_winner.py`
+  - `/app/tests/test_new_features.py`
+- **Reportes**: 
+  - `/app/test_reports/iteration_1.json`
+  - `/app/test_reports/iteration_2.json`
+- **Cobertura**: 28/28 tests backend (100%), UI tests completos (100%)
+
+---
+
+## Changelog
+
+### 18 Enero 2026
+- ✅ Modificada lógica de DNF: Marcar como DNF ya NO incrementa vueltas
+- ✅ Corregida función `revert_lap`: Al revertir, atletas DNF se reactivan con sus vueltas originales
+- ✅ Nuevo endpoint: `/api/race/followers-count` (admin only)
+- ✅ Nueva funcionalidad: Sistema de mensajes de ánimo (cheer messages)
+  - POST `/api/race/cheer` - Enviar mensaje
+  - GET `/api/race/cheers` - Feed de mensajes
+  - GET `/api/race/cheers/count` - Total de mensajes
+- ✅ Panel admin: Nueva columna "Seguidores" con contador
+- ✅ Dashboard público: Botón de enviar ánimo por atleta + feed de mensajes
+
+### 17 Enero 2026
+- Sistema de notificaciones por email implementado
+- Sistema de seguir atletas (localStorage)
+- Responsive design para móviles
+- CSV export con UTF-8 BOM
