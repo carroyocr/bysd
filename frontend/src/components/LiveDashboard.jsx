@@ -65,32 +65,11 @@ export default function LiveDashboard() {
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeMessage, setSubscribeMessage] = useState(null);
   
-  // Cheer message modal state
-  const [showCheerModal, setShowCheerModal] = useState(false);
-  const [cheerAthlete, setCheerAthlete] = useState(null);
-  const [cheerFanName, setCheerFanName] = useState('');
-  const [cheerMessage, setCheerMessage] = useState('');
-  const [cheerSubmitting, setCheerSubmitting] = useState(false);
-  const [cheerResult, setCheerResult] = useState(null);
+  // Followers count (like admin panel)
+  const [followersCount, setFollowersCount] = useState({});
   
-  // Cheer feed modal state
-  const [showCheerFeed, setShowCheerFeed] = useState(false);
-  const [cheerMessages, setCheerMessages] = useState([]);
+  // Cheer count for link
   const [cheerCount, setCheerCount] = useState(0);
-  const [loadingCheers, setLoadingCheers] = useState(false);
-  
-  // Cheer leaderboard state
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-  
-  // Fan leaderboard state
-  const [showFanLeaderboard, setShowFanLeaderboard] = useState(false);
-  const [fanLeaderboard, setFanLeaderboard] = useState([]);
-  const [loadingFanLeaderboard, setLoadingFanLeaderboard] = useState(false);
-  
-  // Fan badge state
-  const [fanBadge, setFanBadge] = useState(null);
 
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
