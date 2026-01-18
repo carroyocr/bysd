@@ -342,6 +342,49 @@ export default function LiveDashboard() {
     loadLeaderboard();
   };
 
+  // Load fan leaderboard
+  const loadFanLeaderboard = async () => {
+    setLoadingFanLeaderboard(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=10`);
+      if (response.ok) {
+        const data = await response.json();
+        setFanLeaderboard(data);
+      }
+    } catch (error) {
+      console.error('Error loading fan leaderboard:', error);
+    } finally {
+      setLoadingFanLeaderboard(false);
+    }
+  };
+
+  // Open fan leaderboard
+  const openFanLeaderboard = () => {
+    setShowFanLeaderboard(true);
+    loadFanLeaderboard();
+  };
+
+  // Load fan badge when name changes
+  const loadFanBadge = async (name) => {
+    if (!name.trim()) {
+      setFanBadge(null);
+      return;
+    }
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/badge/${encodeURIComponent(name)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.cheer_count > 0) {
+          setFanBadge(data);
+        } else {
+          setFanBadge(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading fan badge:', error);
+    }
+  };
+
   // Countdown timer effect
   useEffect(() => {
     const calculateCountdown = () => {
