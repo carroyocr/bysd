@@ -39,6 +39,7 @@ export default function MensajesPresentacionPage() {
   const [displayMode, setDisplayMode] = useState('message'); // 'message' or 'sponsor'
   const [messagesShownInCycle, setMessagesShownInCycle] = useState(0);
   const [currentSponsorIndex, setCurrentSponsorIndex] = useState(0);
+  const [cornerSponsorIndex, setCornerSponsorIndex] = useState(() => Math.floor(Math.random() * sponsors.length));
   
   const timerRef = useRef(null);
 
