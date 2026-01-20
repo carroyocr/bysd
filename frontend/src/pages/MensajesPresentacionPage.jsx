@@ -391,13 +391,6 @@ export default function MensajesPresentacionPage() {
         .animate-fadeIn {
           animation: fadeIn 0.6s ease-out forwards;
         }
-        @keyframes cornerFade {
-          from { opacity: 0; transform: translateX(20px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        .animate-cornerFade {
-          animation: cornerFade 0.4s ease-out forwards;
-        }
       `}</style>
     </div>
   );
