@@ -154,7 +154,6 @@ export default function MensajesPresentacionPage() {
 
   const currentMessage = messages[currentMessageIndex];
   const currentSponsor = sponsors[currentSponsorIndex];
-  const cornerSponsor = sponsors[cornerSponsorIndex];
 
   if (loading) {
     return (
