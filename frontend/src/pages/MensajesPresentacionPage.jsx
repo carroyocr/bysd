@@ -374,25 +374,6 @@ export default function MensajesPresentacionPage() {
         </div>
       </div>
 
-      {/* Sponsor Corner Logo */}
-      {cornerSponsor && (
-        <div key={cornerSponsorIndex} className="absolute bottom-6 right-6 z-40 animate-cornerFade">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg max-w-[180px]">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider text-center mb-2">
-              Patrocinado por
-            </p>
-            <div className="h-16 flex items-center justify-center">
-              <img
-                src={cornerSponsor.logo}
-                alt={cornerSponsor.name}
-                className="max-h-full max-w-full object-contain"
-                onError={(e) => { e.target.parentElement.parentElement.style.display = 'none'; }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Settings Modal */}
       {showSettings && <SettingsModal 
         duration={duration} 
