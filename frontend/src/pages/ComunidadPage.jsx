@@ -377,7 +377,7 @@ export default function ComunidadPage() {
               <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-yellow-50">
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="w-6 h-6 text-amber-500" />
-                  Top Atletas Más Apoyados
+                  Top Atletas Más Seguidos
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -389,12 +389,12 @@ export default function ComunidadPage() {
                 ) : athleteLeaderboard.length === 0 ? (
                   <div className="text-center py-12">
                     <Trophy className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-muted-foreground">Aún no hay datos</p>
+                    <p className="text-muted-foreground">Aún no hay seguidores registrados</p>
                   </div>
                 ) : (
                   <div className="divide-y">
                     {athleteLeaderboard.map((athlete, index) => (
-                      <div key={athlete.bib} className={`p-4 flex items-center gap-4 ${
+                      <div key={athlete.athlete_bib} className={`p-4 flex items-center gap-4 ${
                         index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50' :
                         index === 1 ? 'bg-gradient-to-r from-gray-50 to-slate-50' :
                         index === 2 ? 'bg-gradient-to-r from-orange-50 to-amber-50' : ''
@@ -409,15 +409,15 @@ export default function ComunidadPage() {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-foreground">
-                            {athlete.nombre} {athlete.apellidos}
+                            {athlete.athlete_name}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            #{athlete.bib} • {athlete.nacionalidad} • {athlete.laps_completed} vueltas
+                            #{athlete.athlete_bib} • {athlete.nacionalidad}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-purple-600">{athlete.cheer_count}</p>
-                          <p className="text-xs text-muted-foreground">mensajes</p>
+                          <p className="text-2xl font-bold text-purple-600">{athlete.subscriber_count}</p>
+                          <p className="text-xs text-muted-foreground">seguidores</p>
                         </div>
                       </div>
                     ))}
