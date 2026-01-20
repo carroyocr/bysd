@@ -779,6 +779,57 @@ async def update_subscription_silent(
     }
 
 
+@router.post("/reset-cheers")
+async def reset_cheers(
+    request: dict,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Reset all cheer messages (admin only)"""
+    from server import db as database
+    
+    # Verify confirmation
+    confirmation = request.get("confirmation", "")
+    if confirmation != "MENSAJES":
+        raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir MENSAJES")
+    
+    # Count before deletion
+    cheers_count = await database.cheer_messages.count_documents({})
+    
+    # Drop cheer messages collection
+    await database.cheer_messages.drop()
+    
+    return {
+        "message": f"Se han eliminado {cheers_count} mensajes de ánimo exitosamente",
+        "deleted_count": cheers_count
+    }
+
+
+@router.get("/subscribers-count-public")
+async def get_subscribers_count_public(
+    db=Depends(lambda: None)
+):
+    """Get the count of subscribers for each athlete (public endpoint for ranking)"""
+    from server import db as database
+    
+    # Aggregate to count how many active subscriptions include each athlete
+    pipeline = [
+        {"$match": {"active": True}},
+        {"$unwind": "$athletes_bibs"},
+        {"$group": {
+            "_id": "$athletes_bibs",
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    results = await database.email_subscriptions.aggregate(pipeline).to_list(1000)
+    
+    # Convert to dict {bib: count}
+    subscribers_count = {item["_id"]: item["count"] for item in results}
+    
+    return subscribers_count
+
+
 @router.get("/unsubscribe/{subscription_id}")
 async def unsubscribe(
     subscription_id: str,
