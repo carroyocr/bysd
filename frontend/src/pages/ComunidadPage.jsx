@@ -80,10 +80,29 @@ export default function ComunidadPage() {
   const loadAthleteLeaderboard = async () => {
     setLoadingAthletes(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers/leaderboard?limit=20`);
-      if (response.ok) {
-        const data = await response.json();
-        setAthleteLeaderboard(data);
+      // Get subscribers count and participants
+      const [subsResponse, participantsResponse] = await Promise.all([
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribers-count-public`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`)
+      ]);
+      
+      if (subsResponse.ok && participantsResponse.ok) {
+        const subsData = await subsResponse.json();
+        const participants = await participantsResponse.json();
+        
+        // Build leaderboard based on subscribers
+        const leaderboard = participants
+          .map(p => ({
+            athlete_bib: p.bib,
+            athlete_name: `${p.nombre} ${p.apellidos}`,
+            nacionalidad: p.nacionalidad,
+            subscriber_count: subsData[p.bib] || 0
+          }))
+          .filter(a => a.subscriber_count > 0)
+          .sort((a, b) => b.subscriber_count - a.subscriber_count)
+          .slice(0, 20);
+        
+        setAthleteLeaderboard(leaderboard);
       }
     } catch (error) {
       console.error('Error loading athlete leaderboard:', error);
