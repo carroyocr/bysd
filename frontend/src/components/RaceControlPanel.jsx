@@ -509,6 +509,14 @@ export default function RaceControlPanel() {
               Reiniciar Suscripciones
             </Button>
             <Button
+              onClick={() => setShowResetCheersModal(true)}
+              variant="outline"
+              className="border-purple-300 text-purple-600 hover:bg-purple-50"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Borrar Mensajes
+            </Button>
+            <Button
               onClick={() => setShowResetModal(true)}
               variant="outline"
               className="border-orange-300 text-orange-600 hover:bg-orange-50"
