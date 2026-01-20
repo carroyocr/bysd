@@ -1006,6 +1006,83 @@ export default function RaceControlPanel() {
           </Card>
         </div>
       )}
+
+      {/* Reset Cheers Modal */}
+      {showResetCheersModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-purple-300 shadow-strong">
+            <CardHeader className="border-b border-purple-200 bg-purple-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                  <MessageCircle className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-purple-900">Borrar Mensajes de Ánimo</CardTitle>
+                  <p className="text-sm text-purple-700 mt-1">Esta acción es irreversible</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-purple-900 mb-2">⚠️ Advertencia</h3>
+                  <ul className="text-sm text-purple-800 space-y-1">
+                    <li>• Se eliminarán todos los mensajes de ánimo enviados</li>
+                    <li>• Se reiniciará el ranking de fans</li>
+                    <li>• Se perderán los badges de los fans</li>
+                    <li>• El modo presentación no mostrará mensajes</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Para confirmar, escriba <span className="font-bold text-purple-600">MENSAJES</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={resetCheersConfirmation}
+                    onChange={(e) => setResetCheersConfirmation(e.target.value)}
+                    placeholder="Escriba MENSAJES"
+                    className="text-center font-mono text-lg"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowResetCheersModal(false);
+                      setResetCheersConfirmation('');
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={resettingCheers}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleResetCheers}
+                    disabled={resetCheersConfirmation !== 'MENSAJES' || resettingCheers}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {resettingCheers ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Borrando...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Confirmar Borrado
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
