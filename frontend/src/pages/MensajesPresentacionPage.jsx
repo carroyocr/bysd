@@ -75,9 +75,6 @@ export default function MensajesPresentacionPage() {
         // We just showed a message
         const newMessagesShown = messagesShownInCycle + 1;
         
-        // Change corner sponsor randomly on each message
-        setCornerSponsorIndex(Math.floor(Math.random() * sponsors.length));
-        
         if (newMessagesShown >= 3) {
           // After 3 messages, show sponsor
           setDisplayMode('sponsor');
