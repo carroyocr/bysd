@@ -433,6 +433,41 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleResetCheers = async () => {
+    if (resetCheersConfirmation !== 'MENSAJES') {
+      showMessage('Debe escribir MENSAJES para confirmar', 'error');
+      return;
+    }
+
+    const token = localStorage.getItem('admin_token');
+    setResettingCheers(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-cheers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ confirmation: resetCheersConfirmation })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al reiniciar mensajes');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setShowResetCheersModal(false);
+      setResetCheersConfirmation('');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setResettingCheers(false);
+    }
+  };
+
   const filteredParticipants = participants.filter(p => {
     const search = searchTerm.toLowerCase();
     const matchesSearch = (
