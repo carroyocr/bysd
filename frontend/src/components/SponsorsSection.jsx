@@ -37,6 +37,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/banderas.png',
     },
     {
+      name: 'Café Santo Domingo',
+      description: 'Marca emblemática de la República Dominicana, reconocida por la calidad de su café y su compromiso con la tradición cafetera, acompañando a generaciones con productos que reflejan identidad, sabor y orgullo nacional.',
+      instagram: 'https://www.instagram.com/cafesantodomingord/',
+      logo: '/sponsors/cafe-santo-domingo.png',
+    },
+    {
       name: 'Ciclón',
       description: 'Bebida energetizante reconocida por acompañar el rendimiento físico en contextos de alta demanda deportiva.',
       instagram: 'https://www.instagram.com/ciclonrd/',
@@ -49,6 +55,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/dra-vilma-arias.png',
     },
     {
+      name: 'El Catador',
+      description: 'Referente en vinos y destilados en la República Dominicana, reconocido por su curaduría especializada y su compromiso con la calidad, ofreciendo experiencias que combinan tradición, conocimiento y buen gusto.',
+      instagram: 'https://www.instagram.com/elcatador/',
+      logo: '/sponsors/el-catador.png',
+    },
+    {
       name: 'En la Montaña Podcast',
       description: 'Podcast enfocado en la vida outdoor y las experiencias en la montaña, compartiendo historias, rutas y aventuras que inspiran a conectar con la naturaleza y el trail running.',
       instagram: 'https://www.instagram.com/enla.montanapodcast/',
@@ -59,6 +71,12 @@ export default function SponsorsSection() {
       description: 'Empresa destacada por traer al mercado dominicano una variada gama de productos de la más alta calidad, ampliando el acceso del consumidor a marcas confiables.',
       instagram: 'https://www.instagram.com/simpexrd/',
       logo: '/sponsors/en-simpex.png',
+    },
+    {
+      name: 'Fiduciaria Reservas',
+      description: 'Entidad fiduciaria del Grupo Reservas, especializada en la administración de fideicomisos, ofreciendo soluciones transparentes y seguras para la gestión eficiente de recursos y el desarrollo de proyectos públicos y privados.',
+      instagram: 'https://www.instagram.com/fiduciariareservas/',
+      logo: '/sponsors/fiduciaria-reservas.png',
     },
     {
       name: 'Gatorade',
