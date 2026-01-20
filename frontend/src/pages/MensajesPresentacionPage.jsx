@@ -3,14 +3,46 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, Settings, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
+// Sponsors data
+const sponsors = [
+  { name: 'AGESS', logo: '/sponsors/agess.png' },
+  { name: 'AFP Atlántico', logo: '/sponsors/afp-atlantico.png' },
+  { name: 'Águila Logistics', logo: '/sponsors/aguila-logistics.png' },
+  { name: 'Banco Atlántico', logo: '/sponsors/banco-atlantico.png' },
+  { name: 'Banderas del Mundo', logo: '/sponsors/banderas.png' },
+  { name: 'Ciclón', logo: '/sponsors/ciclon.png' },
+  { name: 'Dra. Vilma Arias', logo: '/sponsors/dra-vilma-arias.png' },
+  { name: 'En la Montaña Podcast', logo: '/sponsors/en-la-montana-podcast.png' },
+  { name: 'En Simpex', logo: '/sponsors/en-simpex.png' },
+  { name: 'Gatorade', logo: '/sponsors/gatorade.png' },
+  { name: 'General de Seguros', logo: '/sponsors/general-seguros.png' },
+  { name: 'Lupa Graph', logo: '/sponsors/lupa-graph.png' },
+  { name: 'Max Sport Uniforms', logo: '/sponsors/max-sport.png' },
+  { name: 'Molino del Sol', logo: '/sponsors/molino-del-sol.png' },
+  { name: 'Pico Diego de Ocampo Trail', logo: '/sponsors/pico-diego-ocampo.png' },
+  { name: 'Senderitmo', logo: '/sponsors/senderitmo.png' },
+  { name: 'Suzuki', logo: '/sponsors/suzuki.png' },
+  { name: 'Vida Sana Vida Ultra', logo: '/sponsors/vida-sana-ultra.png' },
+];
+
 export default function MensajesPresentacionPage() {
   const [messages, setMessages] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
-  const [duration, setDuration] = useState(8); // seconds per message
+  const [duration, setDuration] = useState(8);
   const [showSettings, setShowSettings] = useState(false);
+  const [currentSponsor, setCurrentSponsor] = useState(null);
+  const [showSponsorScreen, setShowSponsorScreen] = useState(false);
+  const [sponsorScreenDuration, setSponsorScreenDuration] = useState(4);
+  const [messagesUntilSponsor, setMessagesUntilSponsor] = useState(4);
+  const [messageCounter, setMessageCounter] = useState(0);
+
+  // Get random sponsor
+  const getRandomSponsor = useCallback(() => {
+    return sponsors[Math.floor(Math.random() * sponsors.length)];
+  }, []);
 
   // Load messages
   const loadMessages = useCallback(async () => {
@@ -18,7 +50,6 @@ export default function MensajesPresentacionPage() {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=200`);
       if (response.ok) {
         const data = await response.json();
-        // Sort by oldest first
         const sorted = data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         setMessages(sorted);
       }
@@ -31,21 +62,40 @@ export default function MensajesPresentacionPage() {
 
   useEffect(() => {
     loadMessages();
-    // Refresh messages every 2 minutes to get new ones
+    setCurrentSponsor(getRandomSponsor());
     const refreshInterval = setInterval(loadMessages, 120000);
     return () => clearInterval(refreshInterval);
-  }, [loadMessages]);
+  }, [loadMessages, getRandomSponsor]);
 
   // Auto-advance slideshow
   useEffect(() => {
-    if (!isPlaying || messages.length === 0) return;
+    if (!isPlaying || messages.length === 0 || showSponsorScreen) return;
 
     const timer = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % messages.length);
+      setMessageCounter(prev => prev + 1);
+      
+      // Change corner sponsor randomly
+      if (Math.random() > 0.5) {
+        setCurrentSponsor(getRandomSponsor());
+      }
     }, duration * 1000);
 
     return () => clearInterval(timer);
-  }, [isPlaying, messages.length, duration]);
+  }, [isPlaying, messages.length, duration, showSponsorScreen, getRandomSponsor]);
+
+  // Check if we should show sponsor screen
+  useEffect(() => {
+    if (messageCounter > 0 && messageCounter % messagesUntilSponsor === 0 && !showSponsorScreen) {
+      setShowSponsorScreen(true);
+      setCurrentSponsor(getRandomSponsor());
+      
+      // Hide sponsor screen after duration
+      setTimeout(() => {
+        setShowSponsorScreen(false);
+      }, sponsorScreenDuration * 1000);
+    }
+  }, [messageCounter, messagesUntilSponsor, sponsorScreenDuration, showSponsorScreen, getRandomSponsor]);
 
   // Hide controls after inactivity
   useEffect(() => {
@@ -73,10 +123,12 @@ export default function MensajesPresentacionPage() {
         setIsPlaying(prev => !prev);
       } else if (e.key === 'ArrowRight') {
         setCurrentIndex(prev => (prev + 1) % messages.length);
+        setMessageCounter(prev => prev + 1);
       } else if (e.key === 'ArrowLeft') {
         setCurrentIndex(prev => (prev - 1 + messages.length) % messages.length);
       } else if (e.key === 'Escape') {
         setShowSettings(false);
+        setShowSponsorScreen(false);
       }
     };
 
@@ -109,6 +161,80 @@ export default function MensajesPresentacionPage() {
             </Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Sponsor dedicated screen
+  if (showSponsorScreen && currentSponsor) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex flex-col relative overflow-hidden">
+        {/* Background animation */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-full animate-pulse"></div>
+          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-500/20 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-8 py-16 relative z-10">
+          {/* Logo */}
+          <div className="mb-8 text-center">
+            <img 
+              src="/icon-bu.png" 
+              alt="Backyard Ultra" 
+              className="w-20 h-20 mx-auto mb-4 rounded-full shadow-2xl"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+            <h1 className="text-xl md:text-2xl font-bold text-white/90 tracking-wider">
+              BACKYARD ULTRA
+            </h1>
+            <p className="text-white/60 text-sm tracking-widest">
+              SANTO DOMINGO 2026
+            </p>
+          </div>
+
+          {/* Sponsor Card */}
+          <div className="animate-sponsorFadeIn">
+            <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-2xl max-w-lg mx-auto">
+              <p className="text-center text-purple-600 font-semibold text-sm uppercase tracking-wider mb-6">
+                Patrocinador Oficial
+              </p>
+              <div className="w-full h-40 md:h-56 flex items-center justify-center p-4">
+                <img
+                  src={currentSponsor.logo}
+                  alt={currentSponsor.name}
+                  className="max-h-full max-w-full object-contain"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+              <p className="text-center text-gray-800 font-bold text-xl md:text-2xl mt-6">
+                {currentSponsor.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Thank you message */}
+          <p className="text-white/70 text-center mt-8 text-lg">
+            Gracias por hacer posible este evento
+          </p>
+        </div>
+
+        {/* CSS for animations */}
+        <style>{`
+          @keyframes sponsorFadeIn {
+            from {
+              opacity: 0;
+              transform: scale(0.9);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+          .animate-sponsorFadeIn {
+            animation: sponsorFadeIn 0.5s ease-out forwards;
+          }
+        `}</style>
       </div>
     );
   }
@@ -216,6 +342,25 @@ export default function MensajesPresentacionPage() {
         </div>
       </div>
 
+      {/* Sponsor Corner Logo */}
+      {currentSponsor && (
+        <div className="absolute bottom-6 right-6 z-40 animate-sponsorCorner">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg max-w-[180px]">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider text-center mb-2">
+              Patrocinado por
+            </p>
+            <div className="h-16 flex items-center justify-center">
+              <img
+                src={currentSponsor.logo}
+                alt={currentSponsor.name}
+                className="max-h-full max-w-full object-contain"
+                onError={(e) => { e.target.parentElement.parentElement.style.display = 'none'; }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -243,6 +388,42 @@ export default function MensajesPresentacionPage() {
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>3s</span>
                   <span>15s</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Pantalla patrocinador cada: {messagesUntilSponsor} mensajes
+                </label>
+                <input
+                  type="range"
+                  min="3"
+                  max="10"
+                  value={messagesUntilSponsor}
+                  onChange={(e) => setMessagesUntilSponsor(Number(e.target.value))}
+                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>3</span>
+                  <span>10</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Duración pantalla patrocinador: {sponsorScreenDuration} segundos
+                </label>
+                <input
+                  type="range"
+                  min="2"
+                  max="8"
+                  value={sponsorScreenDuration}
+                  onChange={(e) => setSponsorScreenDuration(Number(e.target.value))}
+                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>2s</span>
+                  <span>8s</span>
                 </div>
               </div>
 
@@ -281,6 +462,19 @@ export default function MensajesPresentacionPage() {
         }
         .animate-fadeIn {
           animation: fadeIn 0.6s ease-out forwards;
+        }
+        @keyframes sponsorCorner {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-sponsorCorner {
+          animation: sponsorCorner 0.5s ease-out forwards;
         }
       `}</style>
     </div>
