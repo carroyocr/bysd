@@ -24,6 +24,9 @@ export default function RaceControlPanel() {
   const [showResetSubsModal, setShowResetSubsModal] = useState(false);
   const [resetSubsConfirmation, setResetSubsConfirmation] = useState('');
   const [resettingSubs, setResettingSubs] = useState(false);
+  const [showResetCheersModal, setShowResetCheersModal] = useState(false);
+  const [resetCheersConfirmation, setResetCheersConfirmation] = useState('');
+  const [resettingCheers, setResettingCheers] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
