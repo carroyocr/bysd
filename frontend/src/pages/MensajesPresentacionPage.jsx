@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, Settings, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -27,22 +27,20 @@ const sponsors = [
 
 export default function MensajesPresentacionPage() {
   const [messages, setMessages] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [duration, setDuration] = useState(8);
   const [showSettings, setShowSettings] = useState(false);
-  const [currentSponsor, setCurrentSponsor] = useState(null);
-  const [showSponsorScreen, setShowSponsorScreen] = useState(false);
   const [sponsorScreenDuration, setSponsorScreenDuration] = useState(4);
-  const [messagesUntilSponsor, setMessagesUntilSponsor] = useState(4);
-  const [messageCounter, setMessageCounter] = useState(0);
-
-  // Get random sponsor
-  const getRandomSponsor = useCallback(() => {
-    return sponsors[Math.floor(Math.random() * sponsors.length)];
-  }, []);
+  
+  // New state for alternating pattern
+  const [displayMode, setDisplayMode] = useState('message'); // 'message' or 'sponsor'
+  const [messagesShownInCycle, setMessagesShownInCycle] = useState(0);
+  const [currentSponsorIndex, setCurrentSponsorIndex] = useState(0);
+  
+  const timerRef = useRef(null);
 
   // Load messages
   const loadMessages = useCallback(async () => {
@@ -62,40 +60,44 @@ export default function MensajesPresentacionPage() {
 
   useEffect(() => {
     loadMessages();
-    setCurrentSponsor(getRandomSponsor());
     const refreshInterval = setInterval(loadMessages, 120000);
     return () => clearInterval(refreshInterval);
-  }, [loadMessages, getRandomSponsor]);
+  }, [loadMessages]);
 
-  // Auto-advance slideshow
+  // Main slideshow logic
   useEffect(() => {
-    if (!isPlaying || messages.length === 0 || showSponsorScreen) return;
+    if (!isPlaying || messages.length === 0) return;
 
-    const timer = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % messages.length);
-      setMessageCounter(prev => prev + 1);
-      
-      // Change corner sponsor randomly
-      if (Math.random() > 0.5) {
-        setCurrentSponsor(getRandomSponsor());
+    const currentDuration = displayMode === 'message' ? duration : sponsorScreenDuration;
+
+    timerRef.current = setTimeout(() => {
+      if (displayMode === 'message') {
+        // We just showed a message
+        const newMessagesShown = messagesShownInCycle + 1;
+        
+        if (newMessagesShown >= 3) {
+          // After 3 messages, show sponsor
+          setDisplayMode('sponsor');
+          setMessagesShownInCycle(0);
+        } else {
+          // Show next message
+          setMessagesShownInCycle(newMessagesShown);
+          setCurrentMessageIndex(prev => (prev + 1) % messages.length);
+        }
+      } else {
+        // We just showed a sponsor, go back to messages
+        setDisplayMode('message');
+        setCurrentSponsorIndex(prev => (prev + 1) % sponsors.length);
+        setCurrentMessageIndex(prev => (prev + 1) % messages.length);
       }
-    }, duration * 1000);
+    }, currentDuration * 1000);
 
-    return () => clearInterval(timer);
-  }, [isPlaying, messages.length, duration, showSponsorScreen, getRandomSponsor]);
-
-  // Check if we should show sponsor screen
-  useEffect(() => {
-    if (messageCounter > 0 && messageCounter % messagesUntilSponsor === 0 && !showSponsorScreen) {
-      setShowSponsorScreen(true);
-      setCurrentSponsor(getRandomSponsor());
-      
-      // Hide sponsor screen after duration
-      setTimeout(() => {
-        setShowSponsorScreen(false);
-      }, sponsorScreenDuration * 1000);
-    }
-  }, [messageCounter, messagesUntilSponsor, sponsorScreenDuration, showSponsorScreen, getRandomSponsor]);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [isPlaying, messages.length, duration, sponsorScreenDuration, displayMode, messagesShownInCycle, currentMessageIndex]);
 
   // Hide controls after inactivity
   useEffect(() => {
@@ -122,21 +124,33 @@ export default function MensajesPresentacionPage() {
         e.preventDefault();
         setIsPlaying(prev => !prev);
       } else if (e.key === 'ArrowRight') {
-        setCurrentIndex(prev => (prev + 1) % messages.length);
-        setMessageCounter(prev => prev + 1);
+        if (displayMode === 'message') {
+          const newMessagesShown = messagesShownInCycle + 1;
+          if (newMessagesShown >= 3) {
+            setDisplayMode('sponsor');
+            setMessagesShownInCycle(0);
+          } else {
+            setMessagesShownInCycle(newMessagesShown);
+            setCurrentMessageIndex(prev => (prev + 1) % messages.length);
+          }
+        } else {
+          setDisplayMode('message');
+          setCurrentSponsorIndex(prev => (prev + 1) % sponsors.length);
+          setCurrentMessageIndex(prev => (prev + 1) % messages.length);
+        }
       } else if (e.key === 'ArrowLeft') {
-        setCurrentIndex(prev => (prev - 1 + messages.length) % messages.length);
+        setCurrentMessageIndex(prev => (prev - 1 + messages.length) % messages.length);
       } else if (e.key === 'Escape') {
         setShowSettings(false);
-        setShowSponsorScreen(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [messages.length]);
+  }, [messages.length, displayMode, messagesShownInCycle]);
 
-  const currentMessage = messages[currentIndex];
+  const currentMessage = messages[currentMessageIndex];
+  const currentSponsor = sponsors[currentSponsorIndex];
 
   if (loading) {
     return (
@@ -166,13 +180,33 @@ export default function MensajesPresentacionPage() {
   }
 
   // Sponsor dedicated screen
-  if (showSponsorScreen && currentSponsor) {
+  if (displayMode === 'sponsor' && currentSponsor) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex flex-col relative overflow-hidden">
         {/* Background animation */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-full animate-pulse"></div>
           <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-500/20 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
+        </div>
+
+        {/* Controls */}
+        <div className={`absolute top-0 left-0 right-0 z-50 p-4 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex justify-between items-center max-w-7xl mx-auto">
+            <Link to="/comunidad">
+              <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Salir
+              </Button>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setIsPlaying(!isPlaying)} className="text-white/80 hover:text-white hover:bg-white/10">
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+              </Button>
+              <Button variant="ghost" onClick={() => setShowSettings(true)} className="text-white/80 hover:text-white hover:bg-white/10">
+                <Settings className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -194,7 +228,7 @@ export default function MensajesPresentacionPage() {
           </div>
 
           {/* Sponsor Card */}
-          <div className="animate-sponsorFadeIn">
+          <div key={currentSponsorIndex} className="animate-sponsorFadeIn">
             <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-2xl max-w-lg mx-auto">
               <p className="text-center text-purple-600 font-semibold text-sm uppercase tracking-wider mb-6">
                 Patrocinador Oficial
@@ -219,17 +253,19 @@ export default function MensajesPresentacionPage() {
           </p>
         </div>
 
-        {/* CSS for animations */}
+        {/* Settings Modal */}
+        {showSettings && <SettingsModal 
+          duration={duration} 
+          setDuration={setDuration}
+          sponsorScreenDuration={sponsorScreenDuration}
+          setSponsorScreenDuration={setSponsorScreenDuration}
+          setShowSettings={setShowSettings}
+        />}
+
         <style>{`
           @keyframes sponsorFadeIn {
-            from {
-              opacity: 0;
-              transform: scale(0.9);
-            }
-            to {
-              opacity: 1;
-              transform: scale(1);
-            }
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
           }
           .animate-sponsorFadeIn {
             animation: sponsorFadeIn 0.5s ease-out forwards;
@@ -239,6 +275,7 @@ export default function MensajesPresentacionPage() {
     );
   }
 
+  // Message screen
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex flex-col relative overflow-hidden">
       {/* Background animation */}
@@ -247,7 +284,7 @@ export default function MensajesPresentacionPage() {
         <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-500/20 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      {/* Controls - show on hover/movement */}
+      {/* Controls */}
       <div className={`absolute top-0 left-0 right-0 z-50 p-4 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <Link to="/comunidad">
@@ -256,20 +293,11 @@ export default function MensajesPresentacionPage() {
               Salir
             </Button>
           </Link>
-          
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="text-white/80 hover:text-white hover:bg-white/10"
-            >
+            <Button variant="ghost" onClick={() => setIsPlaying(!isPlaying)} className="text-white/80 hover:text-white hover:bg-white/10">
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setShowSettings(true)}
-              className="text-white/80 hover:text-white hover:bg-white/10"
-            >
+            <Button variant="ghost" onClick={() => setShowSettings(true)} className="text-white/80 hover:text-white hover:bg-white/10">
               <Settings className="w-5 h-5" />
             </Button>
           </div>
@@ -295,10 +323,7 @@ export default function MensajesPresentacionPage() {
         </div>
 
         {/* Message Card */}
-        <div 
-          key={currentIndex}
-          className="w-full max-w-4xl animate-fadeIn"
-        >
+        <div key={currentMessageIndex} className="w-full max-w-4xl animate-fadeIn">
           <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20">
             {/* Athlete Info */}
             <div className="text-center mb-8">
@@ -329,154 +354,122 @@ export default function MensajesPresentacionPage() {
         </div>
 
         {/* Progress indicator */}
-        <div className="mt-8 flex items-center gap-2">
+        <div className="mt-8 flex items-center gap-4">
           <span className="text-white/60 text-sm">
-            {currentIndex + 1} / {messages.length}
+            Mensaje {currentMessageIndex + 1} / {messages.length}
           </span>
-          <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white/80 rounded-full transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / messages.length) * 100}%` }}
-            ></div>
+          <div className="flex gap-1">
+            {[0, 1, 2].map(i => (
+              <div 
+                key={i}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  i <= messagesShownInCycle ? 'bg-white' : 'bg-white/30'
+                }`}
+              />
+            ))}
           </div>
+          <span className="text-white/40 text-xs">
+            → Patrocinador
+          </span>
         </div>
       </div>
 
-      {/* Sponsor Corner Logo */}
-      {currentSponsor && (
-        <div className="absolute bottom-6 right-6 z-40 animate-sponsorCorner">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg max-w-[180px]">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider text-center mb-2">
-              Patrocinado por
-            </p>
-            <div className="h-16 flex items-center justify-center">
-              <img
-                src={currentSponsor.logo}
-                alt={currentSponsor.name}
-                className="max-h-full max-w-full object-contain"
-                onError={(e) => { e.target.parentElement.parentElement.style.display = 'none'; }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Configuración</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowSettings(false)}>
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+      {showSettings && <SettingsModal 
+        duration={duration} 
+        setDuration={setDuration}
+        sponsorScreenDuration={sponsorScreenDuration}
+        setSponsorScreenDuration={setSponsorScreenDuration}
+        setShowSettings={setShowSettings}
+      />}
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duración por mensaje: {duration} segundos
-                </label>
-                <input
-                  type="range"
-                  min="3"
-                  max="15"
-                  value={duration}
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>3s</span>
-                  <span>15s</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pantalla patrocinador cada: {messagesUntilSponsor} mensajes
-                </label>
-                <input
-                  type="range"
-                  min="3"
-                  max="10"
-                  value={messagesUntilSponsor}
-                  onChange={(e) => setMessagesUntilSponsor(Number(e.target.value))}
-                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>3</span>
-                  <span>10</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Duración pantalla patrocinador: {sponsorScreenDuration} segundos
-                </label>
-                <input
-                  type="range"
-                  min="2"
-                  max="8"
-                  value={sponsorScreenDuration}
-                  onChange={(e) => setSponsorScreenDuration(Number(e.target.value))}
-                  className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>2s</span>
-                  <span>8s</span>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">Controles de teclado</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Espacio</kbd> Pausar/Reanudar</li>
-                  <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">←</kbd> Mensaje anterior</li>
-                  <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">→</kbd> Mensaje siguiente</li>
-                  <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Esc</kbd> Cerrar configuración</li>
-                </ul>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setShowSettings(false)}
-              className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600"
-            >
-              Cerrar
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* CSS for animations */}
       <style>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95) translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
+          from { opacity: 0; transform: scale(0.95) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .animate-fadeIn {
           animation: fadeIn 0.6s ease-out forwards;
         }
-        @keyframes sponsorCorner {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        .animate-sponsorCorner {
-          animation: sponsorCorner 0.5s ease-out forwards;
-        }
       `}</style>
+    </div>
+  );
+}
+
+// Settings Modal Component
+function SettingsModal({ duration, setDuration, sponsorScreenDuration, setSponsorScreenDuration, setShowSettings }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Configuración</h3>
+          <Button variant="ghost" size="sm" onClick={() => setShowSettings(false)}>
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Duración por mensaje: {duration} segundos
+            </label>
+            <input
+              type="range"
+              min="3"
+              max="15"
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>3s</span>
+              <span>15s</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Duración pantalla patrocinador: {sponsorScreenDuration} segundos
+            </label>
+            <input
+              type="range"
+              min="2"
+              max="8"
+              value={sponsorScreenDuration}
+              onChange={(e) => setSponsorScreenDuration(Number(e.target.value))}
+              className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>2s</span>
+              <span>8s</span>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 rounded-lg p-4">
+            <h4 className="font-medium text-purple-900 mb-2">Secuencia</h4>
+            <p className="text-sm text-purple-700">
+              3 mensajes → 1 patrocinador → 3 mensajes → 1 patrocinador...
+            </p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="font-medium text-gray-900 mb-2">Controles de teclado</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Espacio</kbd> Pausar/Reanudar</li>
+              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">←</kbd> Mensaje anterior</li>
+              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">→</kbd> Siguiente</li>
+              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Esc</kbd> Cerrar</li>
+            </ul>
+          </div>
+        </div>
+
+        <Button
+          onClick={() => setShowSettings(false)}
+          className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600"
+        >
+          Cerrar
+        </Button>
+      </div>
     </div>
   );
 }
