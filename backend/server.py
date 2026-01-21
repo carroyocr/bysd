@@ -83,7 +83,7 @@ async def initialize_race_data():
             {'bib': '010', 'nombre': 'Cristian', 'apellidos': 'Minaya Domínguez', 'nacionalidad': 'DOM'},
             {'bib': '011', 'nombre': 'Luis Emilio', 'apellidos': 'Cabral Rivera', 'nacionalidad': 'DOM'},
             {'bib': '012', 'nombre': 'Enemencio', 'apellidos': 'Pérez', 'nacionalidad': 'DOM'},
-            {'bib': '013', 'nombre': 'Walter Damián', 'apellidos': 'Parra', 'nacionalidad': 'DOM'},
+            {'bib': '013', 'nombre': 'Walter Damián', 'apellidos': 'Parra', 'nacionalidad': 'VEN'},
             {'bib': '014', 'nombre': 'Jorge', 'apellidos': 'Toribio', 'nacionalidad': 'DOM'},
             {'bib': '015', 'nombre': 'Olimpia', 'apellidos': 'Arellano Campos', 'nacionalidad': 'MEX'},
             {'bib': '016', 'nombre': 'Aivaliklis', 'apellidos': 'Jeanluc', 'nacionalidad': 'FRA'},

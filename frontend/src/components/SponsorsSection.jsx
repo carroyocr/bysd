@@ -105,7 +105,7 @@ export default function SponsorsSection() {
     {
       name: 'Michelob Ultra',
       description: 'Cerveza premium enfocada en un estilo de vida activo, reconocida por su perfil ligero y refrescante, ideal para quienes buscan equilibrio entre rendimiento, bienestar y disfrute.',
-      instagram: 'https://www.instagram.com/michelobultra/',
+      instagram: 'https://www.instagram.com/michelobultradom/',
       logo: '/sponsors/michelob-ultra.png',
     },
     {
