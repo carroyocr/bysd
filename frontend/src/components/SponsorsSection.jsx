@@ -103,6 +103,12 @@ export default function SponsorsSection() {
       logo: '/sponsors/max-sport.png',
     },
     {
+      name: 'Michelob Ultra',
+      description: 'Cerveza premium enfocada en un estilo de vida activo, reconocida por su perfil ligero y refrescante, ideal para quienes buscan equilibrio entre rendimiento, bienestar y disfrute.',
+      instagram: 'https://www.instagram.com/michelobultra/',
+      logo: '/sponsors/michelob-ultra.png',
+    },
+    {
       name: 'Molino del Sol',
       description: 'Marca referente en alimentos, alineada con nutrición, energía y bienestar para un estilo de vida activo.',
       instagram: 'https://www.instagram.com/molinodelsolrd/',
