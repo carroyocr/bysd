@@ -15,7 +15,7 @@ const sponsors = [
   { name: 'Dra. Vilma Arias', logo: '/sponsors/dra-vilma-arias.png' },
   { name: 'El Catador', logo: '/sponsors/el-catador.png' },
   { name: 'En la Montaña Podcast', logo: '/sponsors/en-la-montana-podcast.png' },
-  { name: 'En Simpex', logo: '/sponsors/en-simpex.png' },
+  { name: 'Simpex', logo: '/sponsors/en-simpex.png' },
   { name: 'Fiduciaria Reservas', logo: '/sponsors/fiduciaria-reservas.png' },
   { name: 'Gatorade', logo: '/sponsors/gatorade.png' },
   { name: 'General de Seguros', logo: '/sponsors/general-seguros.png' },

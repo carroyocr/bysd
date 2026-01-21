@@ -39,7 +39,7 @@ export default function SponsorsSection() {
     {
       name: 'Café Santo Domingo',
       description: 'Marca emblemática de la República Dominicana, reconocida por la calidad de su café y su compromiso con la tradición cafetera, acompañando a generaciones con productos que reflejan identidad, sabor y orgullo nacional.',
-      instagram: 'https://www.instagram.com/cafesantodomingord/',
+      instagram: 'https://www.instagram.com/cafesantodomingo/',
       logo: '/sponsors/cafe-santo-domingo.png',
     },
     {
@@ -57,7 +57,7 @@ export default function SponsorsSection() {
     {
       name: 'El Catador',
       description: 'Referente en vinos y destilados en la República Dominicana, reconocido por su curaduría especializada y su compromiso con la calidad, ofreciendo experiencias que combinan tradición, conocimiento y buen gusto.',
-      instagram: 'https://www.instagram.com/elcatador/',
+      instagram: 'https://www.instagram.com/loscatadores/',
       logo: '/sponsors/el-catador.png',
     },
     {
@@ -67,7 +67,7 @@ export default function SponsorsSection() {
       logo: '/sponsors/en-la-montana-podcast.png',
     },
     {
-      name: 'En Simpex',
+      name: 'Simpex',
       description: 'Empresa destacada por traer al mercado dominicano una variada gama de productos de la más alta calidad, ampliando el acceso del consumidor a marcas confiables.',
       instagram: 'https://www.instagram.com/simpexrd/',
       logo: '/sponsors/en-simpex.png',
@@ -75,7 +75,7 @@ export default function SponsorsSection() {
     {
       name: 'Fiduciaria Reservas',
       description: 'Entidad fiduciaria del Grupo Reservas, especializada en la administración de fideicomisos, ofreciendo soluciones transparentes y seguras para la gestión eficiente de recursos y el desarrollo de proyectos públicos y privados.',
-      instagram: 'https://www.instagram.com/fiduciariareservas/',
+      instagram: 'https://www.instagram.com/fidureservas/',
       logo: '/sponsors/fiduciaria-reservas.png',
     },
     {
