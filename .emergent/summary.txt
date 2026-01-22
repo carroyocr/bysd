@@ -2,77 +2,95 @@
 The user initially requested a simple informational web application for an event called Backyard Ultra Santo Domingo 2026. The project evolved into a full-stack, real-time race tracking system with a React frontend, FastAPI backend, and MongoDB database.
 
 PRODUCT REQUIREMENTS:
-1.  **Informational Website:** A multi-page React application with pages for Event Info, Runner's Guide, Rules, Logistics, FAQ, and Sponsors.
-2.  **Live Race Tracking System:**
-    *   **Secure Admin Panel:** Login, control lap numbers, mark athletes as DNF/DNS, revert to a previous lap, and reset the race database. It also includes a viewer for the lap's corresponding time of day.
-    *   **Public Dashboard:** Displays real-time statistics, a filterable participant list with CSV export, a countdown timer to the race start, and a special Winner Section.
-3.  **PDF Viewer:** A flipbook style PDF viewer for the Runner's Guide.
-4.  **UI/UX:** A mobile-responsive design for the live dashboard, consistent styling across pages, and conditional animations.
-5.  **Athlete Following & Notifications:**
-    *   Users can follow athletes via a checkbox on the public dashboard.
-    *   Users can subscribe with their email to receive notifications for followed athletes.
-    *   Notifications are sent via Gmail when a lap is completed or an athlete is marked DNF.
-    - An unsubscribe option is available.
+1.  **Informational Website:** A multi-page React application.
+2.  **Live Race Tracking System:** Secure admin panel and a public dashboard.
+3.  **PDF Viewer:** For the Runner's Guide.
+4.  **Athlete Following & Email Notifications.**
+5.  **Community Interaction Features:** Cheer messages, leaderboards, badges, and a message presentation/slideshow mode.
+6.  **Volunteer Management System:** A new section for volunteers to view and sign up for available shifts, with management capabilities in the admin panel. Data for this system was provided via Excel files.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-A functional full-stack application with a React frontend, FastAPI backend, and MongoDB database. All originally requested features are implemented and have been tested through multiple iterations. This includes the informational site, the admin panel with race controls (lap completion, DNF/DNS marking, lap reversal), and the public live dashboard with real-time stats and a countdown. The mobile-responsive design and a complete email notification system using the user's Gmail account are also in place.
+A comprehensive full-stack application featuring a React frontend, FastAPI backend, and MongoDB. The application includes informational pages, a secure admin panel with extensive race control features, a real-time public tracking dashboard, an email notification system, and a Comunidad page for fan interactions. A new Voluntarios section has been built, featuring a tab for Asignación de Turnos where volunteers can see available slots and sign up. The backend has been set up with new collections and endpoints to manage volunteer and assignment data, which was initially loaded from user-provided Excel files.
 
 **Last working item**:
-- **Last item agent was working:** The agent began implementing a new batch of features requested by the user. The first and most critical change is to alter the core logic of how Did Not Finish (DNF) is handled.
+- **Last item agent was working:** The user requested that the data from the two Excel files (volunteers and assignments) be embedded directly into the application's backend code to make it self-contained. The agent began this process by extracting the data from  into a Python list format (). The next step is to do the same for the volunteers' data and integrate both into the backend.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Both. The backend testing agent needs to verify the new DNF logic across all affected endpoints (, , ). The frontend testing agent should simulate the DNF flow to verify that the athlete's lap count does not increase and that the UI reflects this change correctly.
+- **Which testing method agent to use?** backend testing agent. The test should involve calling the  endpoint (after it's modified) to confirm that the  and  collections in MongoDB are populated correctly from the new hardcoded data structures, not from files.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-None.
+- **Issue 1: (P0 - HIGHEST PRIORITY)** Embed volunteer and assignment data directly into the backend code.
+  - **Description:** The user wants to remove the dependency on the  and  files. The data should be hardcoded into the backend so the application can be initialized without external files.
+  - **Attempted fixes:** The agent successfully converted the  data into a Python list of dictionaries.
+  - **Next debug checklist:**
+    1.  View the  file using  with  to understand its structure.
+    2.  Extract the data from  into a Python list of dictionaries named .
+    3.  Open .
+    4.  Paste both  and  lists directly into the file.
+    5.  Modify the  endpoint within that file to use these hardcoded lists to populate the database collections, removing the logic that reads from Excel files.
+    6.  Restart the backend service (backend: stopped
+backend: started).
+    7.  Test by calling the  endpoint to verify successful data population.
+  - **Why fix this issue and what will be achieved with the fix?** To make the application self-contained, improve stability, and simplify deployment by removing dependencies on external files.
+  - **Status:** IN PROGRESS
+  - **Is recurring issue?** N
+  - **Should Test frontend/backend/both after fix?** Backend.
+  - **Blocked on other issue:** No.
+
+- **Issue 2: (P1)** Incorrect error message on volunteer assignment failure.
+  - **Description:** When a user attempts to sign up for a volunteer slot using an email that is not registered in the volunteer database, the frontend displays a generic Error de conexión or Error al realizar la asignación toast. It fails to show the specific, user-friendly error message sent by the backend: El correo electrónico no corresponde a un voluntario registrado.
+  - **Attempted fixes:** The agent tried multiple approaches within  in  to correctly parse the error response (using , , and ). The root cause appears to be an external script () intercepting the network response and consuming the response body on 4xx errors before the component's  logic can access it.
+  - **Next debug checklist:**
+    1.  Review , focusing on the  block within the  and  functions.
+    2.  The  approach was close but failed. A robust solution could be to modify the backend.
+    3.  **Proposed Fix:** In , for the 400 error response in the  endpoint, add the error message to a custom header (e.g., ).
+    4.  Then, in the frontend's  function, if , read the error message from  instead of trying to read the body.
+  - **Why fix this issue and what will be achieved with the fix?** To provide clear, actionable feedback to users, improving the user experience and reducing confusion.
+  - **Status:** IN PROGRESS
+  - **Is recurring issue?** Y
+  - **Should Test frontend/backend/both after fix?** Frontend.
+  - **Blocked on other issue:** No.
 
 **In progress Task List**:
-The user has requested a new set of features. The agent has started working on the first one.
-
-- **Task 1: (P0 - HIGHEST PRIORITY)** Modify DNF Logic.
-  - **Description:** The user has requested a fundamental change: when an admin marks a runner as DNF, the runner **should not** be credited with an additional lap. Their  should remain what it was before being marked as DNF.
-  - **Where to resume:** The agent was about to modify the  function in . The update operation that increments  and  needs to be removed from this function.
-  - **What will be achieved with this?** The application's race logic will align with the user's new requirement. This change will also require verifying and potentially adjusting the revert lap and winner detection logic.
-  - **Status:** IN PROGRESS
-  - **Should Test frontend/backend/both after fix?** Both.
-  - **Blocked on something:** No.
+None.
 
 **Upcoming and Future Tasks**
-
 - **Upcoming Tasks:**
-  - **(P1) Follower Counter:** In the admin panel, display a count next to each athlete showing how many users are subscribed to their notifications. This requires modifying the backend to aggregate this count from the  collection and updating the  frontend component to display it.
-  - **(P2) Cheer Message Submission Form:** On the public dashboard, add a button to each runner's card/row. This button should open a form where a fan can write a message of encouragement, which will eventually be posted to Twitter/X. This involves creating a new MongoDB collection (), a backend endpoint to save the messages, and a frontend modal/form.
-  - **(P3) Cheer Message Feed:** Create a new UI component (e.g., a modal or a section on the page) to display the submitted cheer messages, ordered from most recent to oldest.
+  - **(P1) Fan Badge Level-Up Notification:** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
+  - **(P2) Enhanced Filtering on Comunidad Page:** Add filters to the cheer message feed by athlete or fan.
+  - **(P3) Code Cleanup - Remove Twitter/X Integration:** Remove the  dependency, , and related  variables.
 
 - **Future Tasks:**
-  - **(BLOCKED) Twitter/X Integration:** Automatically post the cheer messages to the event's Twitter/X account.
-    - **Blocker:** This is blocked pending user-provided API credentials for Twitter/X (API Key, API Secret, Access Token, Access Token Secret). The user has only provided login credentials, which are insufficient for API access.
+  - **(P4) Refactor Hardcoded Data:** Move hardcoded sponsor data from  and participant data from  into separate configuration files. (Note: The user's recent request to hardcode volunteer data might conflict with this; clarification may be needed later).
+  - **(P5) Optimize PDF File:** Compress the  file (27MB) to improve load times.
 
 **Completed work in this session**
-- **DNF Revert Logic Fix:** Resolved a complex bug where reverting a lap did not correctly reactivate athletes who were marked DNF during a multi-step sequence of events. The final logic correctly handles this edge case.
-- **CSV Export Encoding:** Fixed an issue with special characters (e.g., Gaitán) in the CSV export by adding a UTF-8 BOM () and quoting fields.
-- **UI/Layout Standardization:**
-  - Moved the Admin link from a floating button on the dashboard to the main navigation menu.
-  - Standardized the background and header layout of the En Vivo page to match the rest of the site, fixing alignment and spacing issues.
-  - Aligned all statistic counter cards on the live dashboard to have a uniform height.
-- **Conditional Animation:** The En Vivo link in the navigation now only blinks after the official race start date and time.
-- **Mobile Responsiveness (Live Dashboard):**
-  - The main statistics cards were condensed into a compact grid for small screens.
-  - The participant list was transformed from a wide table into a vertical list of cards for easier mobile viewing.
-- **Athlete Following & Email Notifications:**
-  - **Following System:** Implemented a follow feature using a heart icon next to each athlete, with state saved to .
-  - **Email Subscription:** Developed a full email notification system using the user's Gmail account and an App Password. This includes a frontend modal for users to subscribe, select notification frequency, and a backend service () to handle sending emails.
-  - **Responsive Email Template:** Designed an HTML email template that uses vertical cards to display athlete data correctly on mobile devices.
-  - **Subscription Management:** Implemented logic to automatically update a user's subscription when they follow/unfollow new athletes and added an Unsubscribe button with a confirmation dialog.
-  - **Smart Notifications:** Implemented logic to stop sending lap complete notifications to a user once all the athletes they follow are marked as DNF or DNS.
-  - **Bug Fix:** Corrected a bug where the subscription confirmation email incorrectly showed active athletes with a DNS status.
+- **Volunteer Management System:** Created a full-featured volunteer assignment system with a new Asignación tab on the  page. This includes backend endpoints for fetching, assigning, and unassigning slots, with data populated from user-provided Excel files. The UI features filters, statistics, responsive cards for each slot, and modals for user actions.
+- **UI Cleanup on Volunteers Page:** Refined the  page to show only the volunteer manual and the tabs, removing extra cards and sections as requested.
+- **Admin Panel Enhancements:**
+  - Added a feature to prevent lap registration before the scheduled time, with a toggle to disable it.
+  - Added secure buttons to reset email subscriptions and delete all cheer messages, both requiring text confirmation.
+- **Bug Fixes:**
+  - **Multiple Emails:** Fixed a bug causing multiple confirmation emails to be sent upon subscription updates.
+  - **Unsubscribe Count:** Corrected an issue where the public follower count did not update after a user unsubscribed.
+  - **Data Correction:** Fixed the nationality of participant Walter Damián Parra in the database.
+- **Feature Enhancements:**
+  - **Slideshow Mode:** Created a  page to display cheer messages in a loop, with a 3 messages, 1 sponsor cadence.
+  - **Athlete Leaderboard:** Changed the Top Athletes ranking to be based on subscriber count instead of cheer messages.
+  - **New Sponsors:** Added four new sponsors to the sponsors page and the presentation slideshow.
+- **UI/UX Refinements:**
+  - Standardized the header design across the Seguimiento (formerly En Vivo) and Comunidad pages.
+  - Renamed all user-facing instances of En Vivo to Seguimiento for consistency.
+  - Formatted time displays in the volunteer section to use AM/PM.
 
 **Earlier issues found/mentioned but not fixed**
-- **Hardcoded Data:** Sponsor information in  and the initial participant list in  are hardcoded. This was identified as an area for future refactoring to improve maintainability.
-- **Large PDF File:** The  file (27MB) could be optimized to improve load times for the PDF viewer.
+- The abandoned Twitter integration code (, ) remains in the codebase.
+- Hardcoded sponsor information in .
+- Hardcoded initial participant list in .
+- The large (27MB)  file is not optimized.
 
 **Known issue recurrence from previous fork**
 None.
@@ -84,78 +102,81 @@ None.
 - **Frontend:** React, , Tailwind CSS, , .
 - **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver).
 - **Database:** MongoDB.
-- **Authentication:** JWT (JSON Web Tokens) with .
-- **Email:** Python  for sending emails via Gmail SMTP.
+- **Data Processing:**  and  were used to process Excel files (this dependency will be removed by the current P0 task).
 
 **key DB schema**
-- **race_config:** 
-- **participants:** 
-- **admin_users:** 
+- **volunteer_assignments:**  (New)
+- **volunteers:**  (New)
+- **cheer_messages:** 
 - **email_subscriptions:** 
+- **participants:** 
 
 **changes in tech stack**
-- The project evolved from a frontend-only app to a full-stack application with a FastAPI backend and MongoDB.
-- Integrated Python's  for sending emails.
+-  and  were installed to handle  files. These can be removed after the current task of hardcoding the data is complete.
 
 **All files of reference**
-- : Core file for all backend logic. **This is the primary file for the next task.**
-- : Contains all email sending logic and HTML templates.
-- : Core file for the public-facing dashboard, including mobile views and the subscription system.
-- : Core file for the admin interface.
-- : Stores credentials, including the user's Gmail App Password.
+- : Contains all logic for the new volunteer management system.
+- : The frontend component for the entire volunteers page, including the new assignment grid. It is over 700 lines long and quite complex.
+- : Modified to include the new  API router.
+- : The component for the message/sponsor slideshow.
 
 **Areas that need refactoring**:
-- Extract hardcoded sponsor data from  into a separate JSON file.
-- Extract hardcoded participant data from  into a seeding script that reads from a JSON or CSV file.
+- The  component is very large and handles state, data fetching, and rendering for three separate tabs. It should be broken down into smaller, more manageable components (e.g., , , ).
+- The unused Twitter integration code should be removed.
+- Hardcoded data for sponsors and initial participants should be moved to a more maintainable format.
 
 **key api endpoints**
-- 
-- 
-- 
-- 
--  (New)
--  (New)
--  (New)
+- **Volunteers:**
+  - 
+  - 
+  - 
+  - 
+- **Admin/Race Control:**
+  - 
+  - 
+- **Public/Subscriptions:**
+  - 
+  - 
+  - 
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
 - **Admin Credentials:**  / 
-- **New DNF Logic:** Your immediate task is to change the core DNF logic as per the user's latest request (do not add a lap on DNF). This is a P0 task.
-- **Gmail Integration:** The application sends emails using the user's Gmail account: . The necessary App Password is stored in . Do not expose this key.
-- **Twitter/X API Blocker:** The user wants to integrate Twitter/X posts but has only provided login credentials. You need **API Keys** (API Key, Secret, Access Token, Secret). Proceed with building the UI and database parts of the feature, but reiterate that the final integration is blocked until the correct keys are provided.
+- **Current P0 Task:** Your immediate priority is to hardcode the volunteer and assignment data into  to remove the Excel file dependency.
+- **Pending P1 Bug:** Be aware of the frontend bug where specific error messages from the backend are not displayed during volunteer assignment. The proposed fix is to use custom response headers for error details.
+- **Large Component:** The file  is very large and complex. Edit with caution.
 
 **documents and test reports created in this job**
-- 
-- 
+None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests to include total KM in the subscription email.
-2.  **User:** Reports that if a new runner is followed after subscribing, notifications for them don't work. (Fixed)
-3.  **User:** Reports the email template is not responsive on mobile. (Fixed with a new card-based template)
-4.  **User:** Asks for an Unsubscribe button. (Implemented)
-5.  **User:** Requests that notifications stop if all followed runners are DNF. (Implemented)
-6.  **User:** Asks to show lap/km in the confirmation email and fix a bug showing active runners as DNS. (Implemented)
-7.  **User:** Clarifies that the Active status badge should also be visible. (Implemented)
-8.  **User:** Makes a new set of major requests: change DNF logic, add follower counter, add cheer messages for Twitter, and add a feed for those messages.
-9.  **Agent:** Confirms understanding and asks for Twitter API credentials.
-10. **User:** Agrees for the agent to proceed with the other tasks while they look for the Twitter credentials.
+1.  **User:** Requests a way to delete all cheer messages and change the athlete ranking logic to be based on followers. (Implemented)
+2.  **User:** Asks for sponsor logos to be added to the message presentation mode. (Implemented)
+3.  **User:** Specifies a sequence of 3 messages followed by 1 sponsor screen for the presentation mode. (Implemented)
+4.  **User:** Reverts a previous decision, asking to remove a small corner sponsor logo from the message slides. (Reverted)
+5.  **User:** Provides information for new sponsors to be added. (Implemented)
+6.  **User:** Reports an incorrect nationality for a participant. (Fixed)
+7.  **User:** Provides a detailed request to build a new volunteer assignment system, uploading two Excel files with data. (Implemented)
+8.  **User:** Gives feedback on the new volunteer page, requesting UI cleanup, a new filter, and time format changes. (Implemented)
+9.  **User:** Reports that the volunteer assignment functionality is not working, providing a screenshot of an error. (Investigated, root cause found to be poor frontend error handling)
+10. **User:** Requests that the data from the Excel files be included directly in the application code. (This is the current task).
 
 **Project Health Check:**
-- **Broken:** None. The app is functional but the DNF logic is pending an update based on the latest user request.
-- **Mocked:** The Twitter/X integration is planned but will be mocked (UI/DB only) until API credentials are provided.
+- **Broken:** The error handling for the volunteer assignment/unassignment feature on the frontend is broken. It shows a generic error instead of the specific message from the backend API.
+- **Mocked:** None.
 
 **3rd Party Integrations**
 - : For PDF viewer.
 - : For JWTs.
 - : For password hashing.
-- **Gmail SMTP:** Using Python's built-in  library, configured with user-provided credentials.
-- **Twitter/X API (Planned):** Requires user to provide API keys.
+- **Gmail SMTP:** Using Python's built-in .
+- , : Used for one-time data import, will be obsolete after the current task.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, for the winner section feature.
-- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Testing agent used after significant changes:** NO. The agent self-tested using screenshots and curl commands.
+- **Troubleshoot agent used after agent stuck in loop:** NO.
 - **Test files created:** None.
-- **Known regressions:** None.
+- **Known regressions:** The volunteer assignment error handling is a new bug introduced with the feature.
 
 **Credentials to test flow:**
 - **Admin Panel URL:** 
@@ -163,4 +184,5 @@ None.
 - **Password:** 
 
 **What agent forgot to execute**
-The agent was in the middle of executing the plan to change the DNF logic and had just viewed the relevant file () before the session ended. The next step is to edit this file.</analysis>
+- The agent has not yet completed the user's latest request to embed the Excel data into the backend code. It has only completed the first part (extracting assignment data).
+- The agent did not fully resolve the frontend bug related to displaying specific error messages, although it correctly identified the cause.</analysis>
