@@ -216,29 +216,6 @@ export default function VolunteersSection() {
     },
   ];
 
-  const coreValues = [
-    {
-      icon: <AlertCircle className="w-6 h-6" />,
-      title: 'Seguridad',
-      description: 'Proteger a corredores y equipo en todo momento',
-    },
-    {
-      icon: <Heart className="w-6 h-6" />,
-      title: 'Respeto',
-      description: 'Trato humano y colaborativo con todos',
-    },
-    {
-      icon: <Users className="w-6 h-6" />,
-      title: 'Convivencia',
-      description: 'Buena energía, organización y apoyo constante',
-    },
-    {
-      icon: <ClipboardCheck className="w-6 h-6" />,
-      title: 'Cuidado Ambiental',
-      description: 'Minimizar residuos y mantener el área limpia',
-    },
-  ];
-
   const importantRules = [
     'Puntualidad en todos los turnos',
     'Usar la camiseta oficial de Staff para identificación',
