@@ -86,9 +86,9 @@ export default function VolunteersSection() {
       });
       
       const status = res.status;
-      const data = await res.json().catch(() => ({}));
       
       if (status >= 200 && status < 300) {
+        const data = await res.json().catch(() => ({}));
         setActionMessage({ type: 'success', text: data.message || 'Asignación exitosa' });
         loadSlots();
         setTimeout(() => {
@@ -97,7 +97,20 @@ export default function VolunteersSection() {
           setActionMessage(null);
         }, 2000);
       } else {
-        setActionMessage({ type: 'error', text: data.detail || 'Error al realizar la asignación' });
+        // Try to get error from custom header first (more reliable)
+        const headerError = res.headers.get('X-Error-Detail');
+        let errorMsg = headerError || 'Error al realizar la asignación';
+        
+        // Fallback to body if header not available
+        if (!headerError) {
+          try {
+            const data = await res.json();
+            errorMsg = data.detail || errorMsg;
+          } catch (e) {
+            // Use default error message
+          }
+        }
+        setActionMessage({ type: 'error', text: errorMsg });
       }
     } catch (error) {
       console.error('Error en asignación:', error);
@@ -122,9 +135,9 @@ export default function VolunteersSection() {
       });
       
       const status = res.status;
-      const data = await res.json().catch(() => ({}));
       
       if (status >= 200 && status < 300) {
+        const data = await res.json().catch(() => ({}));
         setActionMessage({ type: 'success', text: data.message || 'Asignación eliminada' });
         loadSlots();
         setTimeout(() => {
@@ -133,7 +146,20 @@ export default function VolunteersSection() {
           setActionMessage(null);
         }, 2000);
       } else {
-        setActionMessage({ type: 'error', text: data.detail || 'Error al eliminar la asignación' });
+        // Try to get error from custom header first (more reliable)
+        const headerError = res.headers.get('X-Error-Detail');
+        let errorMsg = headerError || 'Error al eliminar la asignación';
+        
+        // Fallback to body if header not available
+        if (!headerError) {
+          try {
+            const data = await res.json();
+            errorMsg = data.detail || errorMsg;
+          } catch (e) {
+            // Use default error message
+          }
+        }
+        setActionMessage({ type: 'error', text: errorMsg });
       }
     } catch (error) {
       console.error('Error en desasignación:', error);
