@@ -423,6 +423,15 @@ export default function VolunteersSection() {
                         <option key={idx} value={shift}>Turno {shift}</option>
                       ))}
                     </select>
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Todos los estados</option>
+                      <option value="asignado">Asignados</option>
+                      <option value="disponible">Disponibles</option>
+                    </select>
                   </div>
 
                   {/* Stats */}
@@ -441,63 +450,84 @@ export default function VolunteersSection() {
                     </div>
                   </div>
 
-                  {/* Slots Grid */}
+                  {/* Slots Grid - Card based for responsiveness */}
                   {loadingSlots ? (
                     <div className="text-center py-12">
                       <Calendar className="w-12 h-12 text-muted-foreground animate-pulse mx-auto mb-4" />
                       <p className="text-muted-foreground">Cargando asignaciones...</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-muted/30">
-                            <th className="text-left p-3 font-semibold">Posición</th>
-                            <th className="text-center p-3 font-semibold">Turno</th>
-                            <th className="text-center p-3 font-semibold">Horario</th>
-                            <th className="text-left p-3 font-semibold">Voluntario Asignado</th>
-                            <th className="text-center p-3 font-semibold">Acción</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredSlots.map((slot) => (
-                            <tr key={slot.id} className={`border-b hover:bg-muted/20 ${!slot.email_asignado ? 'bg-amber-50/50' : ''}`}>
-                              <td className="p-3">
-                                <p className="font-medium text-foreground">{slot.puesto}</p>
-                                <p className="text-xs text-muted-foreground">Slot #{slot.slot}</p>
-                              </td>
-                              <td className="p-3 text-center">
-                                <Badge variant="outline" className="font-mono">
+                    <div className="space-y-3">
+                      {filteredSlots.map((slot) => (
+                        <div 
+                          key={slot.id} 
+                          className={`p-4 rounded-lg border ${
+                            slot.email_asignado 
+                              ? 'bg-white border-green-200' 
+                              : 'bg-amber-50/50 border-amber-200'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-foreground truncate">{slot.puesto}</p>
+                                <Badge variant="outline" className="font-mono text-xs flex-shrink-0">
                                   {slot.turno}
                                 </Badge>
-                              </td>
-                              <td className="p-3 text-center">
-                                <p className="font-mono text-sm">
-                                  {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{slot.dia}</p>
-                              </td>
-                              <td className="p-3">
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {slot.dia} • {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between sm:justify-end gap-3">
+                              <div className="min-w-0">
                                 {slot.nombre_asignado ? (
-                                  <div className="flex items-center gap-2">
-                                    <Check className="w-4 h-4 text-green-600" />
-                                    <span className="text-green-700 font-medium">{slot.nombre_asignado}</span>
+                                  <div className="flex items-center gap-1">
+                                    <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                    <span className="text-green-700 font-medium text-sm truncate max-w-[150px]">
+                                      {slot.nombre_asignado}
+                                    </span>
                                   </div>
                                 ) : (
-                                  <span className="text-amber-600 italic">Disponible</span>
+                                  <span className="text-amber-600 italic text-sm">Disponible</span>
                                 )}
-                              </td>
-                              <td className="p-3 text-center">
-                                {slot.email_asignado ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-red-300 text-red-600 hover:bg-red-50"
-                                    onClick={() => openUnassignModal(slot)}
-                                  >
-                                    <Trash2 className="w-3 h-3 mr-1" />
-                                    Eliminar
-                                  </Button>
+                              </div>
+                              {slot.email_asignado ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-300 text-red-600 hover:bg-red-50 flex-shrink-0"
+                                  onClick={() => openUnassignModal(slot)}
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Eliminar
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  className="bg-primary hover:bg-accent flex-shrink-0"
+                                  onClick={() => openAssignModal(slot)}
+                                >
+                                  <Check className="w-3 h-3 mr-1" />
+                                  Asignarme
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {filteredSlots.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No se encontraron espacios con los filtros seleccionados
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Rules Tab */}
                                 ) : (
                                   <Button
                                     size="sm"
