@@ -241,6 +241,13 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Frontend lee errores del header personalizado para evitar problemas con interceptores externos
   - CORS configurado para exponer header `X-Error-Detail`
   - Mensajes de error específicos ahora se muestran correctamente al usuario
+- ✅ **Sistema de Notificaciones por Email para Voluntarios**:
+  - **Email de Recordatorio (1 hora antes)**: Notifica al voluntario con detalles del turno
+  - **Email Masivo (Viernes 23 a las 6pm)**: Envía resumen de todas las asignaciones
+  - Templates HTML profesionales con logo de la carrera
+  - Scheduler automático con APScheduler (63 jobs programados)
+  - Endpoints para pruebas manuales y control del scheduler
+  - Nuevos archivos: `volunteer_email_service.py`, `volunteer_scheduler.py`
 
 ### 17 Enero 2026
 - Sistema de notificaciones por email implementado
