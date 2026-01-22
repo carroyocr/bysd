@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Heart, ClipboardCheck, AlertCircle, Phone, Shirt, Download, Calendar, Search, X, Check, Trash2 } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Calendar, Search, X, Check, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -13,6 +13,7 @@ export default function VolunteersSection() {
   const [filterName, setFilterName] = useState('');
   const [filterPosition, setFilterPosition] = useState('');
   const [filterShift, setFilterShift] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [positions, setPositions] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -64,7 +65,10 @@ export default function VolunteersSection() {
       (slot.nombre_asignado && slot.nombre_asignado.toLowerCase().includes(filterName.toLowerCase()));
     const matchesPosition = !filterPosition || slot.puesto === filterPosition;
     const matchesShift = !filterShift || slot.turno === filterShift;
-    return matchesName && matchesPosition && matchesShift;
+    const matchesStatus = !filterStatus || 
+      (filterStatus === 'asignado' && slot.email_asignado) ||
+      (filterStatus === 'disponible' && !slot.email_asignado);
+    return matchesName && matchesPosition && matchesShift && matchesStatus;
   });
 
   // Handle assign
