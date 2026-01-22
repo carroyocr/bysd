@@ -11,8 +11,8 @@ GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
     """Generate HTML email template with race branding - Mobile optimized with cards"""
     
-    # Base URL for community page
-    base_url = "https://backyard-ultra-sd.preview.emergentagent.com"
+    # Base URL for community page - use environment variable for production
+    base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
     
     # Generate athlete cards (mobile-friendly vertical layout)
     athletes_cards = ""
