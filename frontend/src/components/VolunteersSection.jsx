@@ -781,6 +781,180 @@ export default function VolunteersSection() {
           </Tabs>
         </div>
       </div>
+
+      {/* Assign Modal */}
+      {showAssignModal && selectedSlot && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-strong">
+            <CardHeader className="border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Asignarse al Turno</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedSlot.puesto}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowAssignModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Turno</p>
+                      <p className="font-semibold">{selectedSlot.turno}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Fecha</p>
+                      <p className="font-semibold">{selectedSlot.dia}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">Horario</p>
+                      <p className="font-semibold">{formatTime(selectedSlot.hora_inicio)} - {formatTime(selectedSlot.hora_fin)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Confirma tu correo electrónico
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Debe coincidir con el correo registrado como voluntario
+                  </p>
+                </div>
+
+                {actionMessage && (
+                  <div className={`p-3 rounded-lg text-sm ${
+                    actionMessage.type === 'success' 
+                      ? 'bg-green-50 text-green-800 border border-green-200' 
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {actionMessage.text}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowAssignModal(false)}
+                    disabled={actionLoading}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-primary"
+                    onClick={handleAssign}
+                    disabled={!emailInput.trim() || actionLoading}
+                  >
+                    {actionLoading ? 'Procesando...' : 'Confirmar Asignación'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Unassign Modal */}
+      {showUnassignModal && selectedSlot && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-strong border-red-200">
+            <CardHeader className="border-b border-red-100 bg-red-50/50">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-red-900">Eliminar Asignación</CardTitle>
+                  <p className="text-sm text-red-700 mt-1">
+                    {selectedSlot.puesto}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowUnassignModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Turno</p>
+                      <p className="font-semibold">{selectedSlot.turno}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Fecha</p>
+                      <p className="font-semibold">{selectedSlot.dia}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Horario</p>
+                      <p className="font-semibold">{formatTime(selectedSlot.hora_inicio)} - {formatTime(selectedSlot.hora_fin)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Asignado a</p>
+                      <p className="font-semibold text-green-700">{selectedSlot.nombre_asignado}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Confirma tu correo electrónico para eliminar
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Solo el voluntario asignado puede eliminar su asignación
+                  </p>
+                </div>
+
+                {actionMessage && (
+                  <div className={`p-3 rounded-lg text-sm ${
+                    actionMessage.type === 'success' 
+                      ? 'bg-green-50 text-green-800 border border-green-200' 
+                      : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {actionMessage.text}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowUnassignModal(false)}
+                    disabled={actionLoading}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                    onClick={handleUnassign}
+                    disabled={!emailInput.trim() || actionLoading}
+                  >
+                    {actionLoading ? 'Procesando...' : 'Eliminar Asignación'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </section>
   );
 }
