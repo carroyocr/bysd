@@ -280,6 +280,77 @@ def shutdown_scheduler():
         logger.info("Scheduler shutdown complete")
 
 
+def schedule_single_reminder(slot_id: int, dia: str, hora_inicio: str) -> bool:
+    """Schedule a reminder for a single slot (called when a new assignment is made)"""
+    global scheduler
+    
+    if not scheduler:
+        logger.warning("Scheduler not initialized, cannot schedule reminder")
+        return False
+    
+    try:
+        # Calculate reminder time (1 hour before)
+        start_time = parse_time_to_datetime(dia, hora_inicio)
+        if not start_time:
+            logger.warning(f"Could not parse datetime for slot {slot_id}")
+            return False
+        
+        reminder_time = start_time - timedelta(hours=1)
+        now = datetime.now()
+        
+        # Only schedule if reminder time is in the future
+        if reminder_time > now:
+            job_id = f"reminder_slot_{slot_id}"
+            
+            # Remove existing job if any
+            existing_job = scheduler.get_job(job_id)
+            if existing_job:
+                scheduler.remove_job(job_id)
+            
+            # Schedule the reminder
+            scheduler.add_job(
+                send_shift_reminder,
+                trigger=DateTrigger(run_date=reminder_time),
+                args=[slot_id],
+                id=job_id,
+                name=f"Reminder for slot {slot_id}"
+            )
+            logger.info(f"Scheduled reminder for slot {slot_id} at {reminder_time}")
+            return True
+        else:
+            logger.info(f"Reminder time for slot {slot_id} is in the past, not scheduling")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error scheduling reminder for slot {slot_id}: {str(e)}")
+        return False
+
+
+def cancel_single_reminder(slot_id: int) -> bool:
+    """Cancel a reminder for a single slot (called when an assignment is removed)"""
+    global scheduler
+    
+    if not scheduler:
+        logger.warning("Scheduler not initialized, cannot cancel reminder")
+        return False
+    
+    try:
+        job_id = f"reminder_slot_{slot_id}"
+        existing_job = scheduler.get_job(job_id)
+        
+        if existing_job:
+            scheduler.remove_job(job_id)
+            logger.info(f"Cancelled reminder for slot {slot_id}")
+            return True
+        else:
+            logger.info(f"No reminder found for slot {slot_id}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error cancelling reminder for slot {slot_id}: {str(e)}")
+        return False
+
+
 def get_scheduled_jobs():
     """Get list of all scheduled jobs"""
     global scheduler
