@@ -690,10 +690,10 @@ export default function VolunteersSection() {
                     <p className="font-semibold text-foreground">Para Emergencias:</p>
                     <div className="bg-destructive/10 p-4 rounded-lg border border-destructive/30">
                       <p className="text-sm font-semibold text-foreground">
-                        Iniciar mensajes con "URGENTE"
+                        Iniciar mensajes con &quot;URGENTE&quot;
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Ejemplo: "URGENTE – Atleta caído en zona de carpas – solicita médico."
+                        Ejemplo: &quot;URGENTE – Atleta caído en zona de carpas – solicita médico.&quot;
                       </p>
                     </div>
                   </div>
