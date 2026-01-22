@@ -277,6 +277,18 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     
     volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
     
+    # Schedule reminder for this new assignment
+    try:
+        from services.volunteer_scheduler import schedule_single_reminder
+        schedule_single_reminder(
+            slot_id=slot_id,
+            dia=slot.get("dia", ""),
+            hora_inicio=slot.get("hora_inicio", "")
+        )
+    except Exception as e:
+        # Don't fail the assignment if scheduler fails
+        print(f"Warning: Could not schedule reminder for slot {slot_id}: {e}")
+    
     return {
         "message": f"¡Asignación exitosa! {volunteer_name} ha sido asignado/a al turno.",
         "success": True,
