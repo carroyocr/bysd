@@ -115,16 +115,17 @@ export default function VolunteersSection() {
     setActionMessage(null);
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/unassign/${selectedSlot.id}`, {
+      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/unassign/${selectedSlot.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
       });
       
-      const data = await response.clone().json();
+      const status = res.status;
+      const data = await res.json().catch(() => ({}));
       
-      if (response.ok) {
-        setActionMessage({ type: 'success', text: data.message });
+      if (status >= 200 && status < 300) {
+        setActionMessage({ type: 'success', text: data.message || 'Asignación eliminada' });
         loadSlots();
         setTimeout(() => {
           setShowUnassignModal(false);
