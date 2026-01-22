@@ -246,6 +246,7 @@ app.add_middleware(
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Error-Detail"],
 )
 
 # Configure logging
