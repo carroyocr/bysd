@@ -385,3 +385,249 @@ async def init_volunteer_data():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# EMAIL NOTIFICATION ENDPOINTS
+# ============================================================================
+
+class TestEmailRequest(BaseModel):
+    email: str
+    type: str  # "reminder" or "assignments"
+    slot_id: Optional[int] = None  # Required for reminder type
+
+
+@router.post("/send-test-reminder")
+async def send_test_reminder_email(request: TestEmailRequest):
+    """Send a test reminder email (1 hour before shift)"""
+    from server import db as database
+    from services.volunteer_email_service import send_volunteer_reminder_email
+    
+    email = request.email.strip().lower()
+    
+    # Get a sample assignment for testing
+    if request.slot_id:
+        assignment = await database.volunteer_assignments.find_one(
+            {"id": request.slot_id, "email_asignado": {"$ne": None}},
+            {"_id": 0}
+        )
+    else:
+        # Get first assigned slot
+        assignment = await database.volunteer_assignments.find_one(
+            {"email_asignado": {"$ne": None}},
+            {"_id": 0}
+        )
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="No hay asignaciones disponibles para probar")
+    
+    # Use test volunteer name
+    volunteer_name = "Voluntario de Prueba"
+    
+    success = await send_volunteer_reminder_email(
+        to_email=email,
+        volunteer_name=volunteer_name,
+        assignment=assignment
+    )
+    
+    if success:
+        return {
+            "message": f"Email de recordatorio enviado exitosamente a {email}",
+            "success": True,
+            "assignment_tested": {
+                "puesto": assignment.get("puesto"),
+                "turno": assignment.get("turno"),
+                "hora_inicio": assignment.get("hora_inicio")
+            }
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el email")
+
+
+@router.post("/send-test-assignments")
+async def send_test_assignments_email(request: TestEmailRequest):
+    """Send a test assignments summary email (Friday 6pm email)"""
+    from server import db as database
+    from services.volunteer_email_service import send_volunteer_assignments_email
+    
+    email = request.email.strip().lower()
+    
+    # Get sample assignments for testing (get multiple to show the multi-turno feature)
+    assignments = await database.volunteer_assignments.find(
+        {"email_asignado": {"$ne": None}},
+        {"_id": 0}
+    ).limit(4).to_list(4)
+    
+    if not assignments:
+        raise HTTPException(status_code=404, detail="No hay asignaciones disponibles para probar")
+    
+    # Use test volunteer name
+    volunteer_name = "Voluntario de Prueba"
+    
+    success = await send_volunteer_assignments_email(
+        to_email=email,
+        volunteer_name=volunteer_name,
+        assignments=assignments
+    )
+    
+    if success:
+        return {
+            "message": f"Email de asignaciones enviado exitosamente a {email}",
+            "success": True,
+            "total_assignments_shown": len(assignments)
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el email")
+
+
+@router.post("/send-reminder/{slot_id}")
+async def send_slot_reminder(slot_id: int):
+    """Send reminder email to the volunteer assigned to a specific slot"""
+    from server import db as database
+    from services.volunteer_email_service import send_volunteer_reminder_email
+    
+    # Get the assignment
+    assignment = await database.volunteer_assignments.find_one(
+        {"id": slot_id},
+        {"_id": 0}
+    )
+    
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Slot no encontrado")
+    
+    if not assignment.get("email_asignado"):
+        raise HTTPException(status_code=400, detail="Este slot no tiene voluntario asignado")
+    
+    # Get volunteer info
+    volunteer = await database.volunteers.find_one(
+        {"email": assignment["email_asignado"]},
+        {"_id": 0}
+    )
+    
+    if not volunteer:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+    
+    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+    
+    success = await send_volunteer_reminder_email(
+        to_email=assignment["email_asignado"],
+        volunteer_name=volunteer_name,
+        assignment=assignment
+    )
+    
+    if success:
+        return {
+            "message": f"Recordatorio enviado a {volunteer_name}",
+            "success": True,
+            "email": assignment["email_asignado"]
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el email")
+
+
+@router.post("/send-all-assignments")
+async def send_all_volunteers_assignments():
+    """Send assignments summary email to ALL volunteers with assignments (Friday 6pm email)"""
+    from server import db as database
+    from services.volunteer_email_service import send_volunteer_assignments_email
+    
+    # Get all unique emails with assignments
+    pipeline = [
+        {"$match": {"email_asignado": {"$ne": None}}},
+        {"$group": {"_id": "$email_asignado"}}
+    ]
+    
+    unique_emails = await database.volunteer_assignments.aggregate(pipeline).to_list(1000)
+    
+    results = {
+        "total_volunteers": len(unique_emails),
+        "emails_sent": 0,
+        "emails_failed": 0,
+        "details": []
+    }
+    
+    for item in unique_emails:
+        email = item["_id"]
+        
+        # Get volunteer info
+        volunteer = await database.volunteers.find_one(
+            {"email": email},
+            {"_id": 0}
+        )
+        
+        if not volunteer:
+            results["emails_failed"] += 1
+            results["details"].append({"email": email, "status": "volunteer_not_found"})
+            continue
+        
+        # Get all assignments for this volunteer
+        assignments = await database.volunteer_assignments.find(
+            {"email_asignado": email},
+            {"_id": 0}
+        ).to_list(100)
+        
+        volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+        
+        success = await send_volunteer_assignments_email(
+            to_email=email,
+            volunteer_name=volunteer_name,
+            assignments=assignments
+        )
+        
+        if success:
+            results["emails_sent"] += 1
+            results["details"].append({
+                "email": email,
+                "name": volunteer_name,
+                "assignments_count": len(assignments),
+                "status": "sent"
+            })
+        else:
+            results["emails_failed"] += 1
+            results["details"].append({"email": email, "status": "send_failed"})
+    
+    return results
+
+
+@router.get("/volunteers-with-assignments")
+async def get_volunteers_with_assignments():
+    """Get list of all volunteers who have at least one assignment"""
+    from server import db as database
+    
+    # Get all unique emails with assignments
+    pipeline = [
+        {"$match": {"email_asignado": {"$ne": None}}},
+        {"$group": {
+            "_id": "$email_asignado",
+            "total_turnos": {"$sum": 1},
+            "turnos": {"$push": {
+                "puesto": "$puesto",
+                "turno": "$turno",
+                "dia": "$dia",
+                "hora_inicio": "$hora_inicio",
+                "hora_fin": "$hora_fin"
+            }}
+        }},
+        {"$sort": {"total_turnos": -1}}
+    ]
+    
+    assignments_by_email = await database.volunteer_assignments.aggregate(pipeline).to_list(1000)
+    
+    result = []
+    for item in assignments_by_email:
+        email = item["_id"]
+        volunteer = await database.volunteers.find_one(
+            {"email": email},
+            {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1}
+        )
+        
+        if volunteer:
+            result.append({
+                "email": email,
+                "nombre": f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip(),
+                "total_turnos": item["total_turnos"],
+                "turnos": item["turnos"]
+            })
+    
+    return result
+
