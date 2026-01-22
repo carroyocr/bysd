@@ -283,4 +283,12 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    # Shutdown volunteer scheduler
+    try:
+        from services.volunteer_scheduler import shutdown_scheduler
+        shutdown_scheduler()
+        logging.info("Volunteer scheduler shutdown complete")
+    except Exception as e:
+        logging.warning(f"Error shutting down scheduler: {e}")
+    
     client.close()
