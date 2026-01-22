@@ -120,14 +120,7 @@ export default function VolunteersSection() {
         body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
       });
       
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        console.error('Error parsing JSON:', text);
-        throw new Error('Error al procesar la respuesta del servidor');
-      }
+      const data = await response.clone().json();
       
       if (response.ok) {
         setActionMessage({ type: 'success', text: data.message });
@@ -142,7 +135,7 @@ export default function VolunteersSection() {
       }
     } catch (error) {
       console.error('Error en desasignación:', error);
-      setActionMessage({ type: 'error', text: error.message || 'Error de conexión. Intenta de nuevo.' });
+      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
     } finally {
       setActionLoading(false);
     }
