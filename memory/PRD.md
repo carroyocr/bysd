@@ -194,6 +194,18 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - ✅ Navegación actualizada: "Comunidad" entre "En Vivo" y "Admin"
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
+### 22 Enero 2026
+- ✅ **Sistema de Voluntarios - Datos Embebidos (P0)**:
+  - Datos de 90 asignaciones de turnos incrustados en `backend/routes/volunteers.py`
+  - Datos de 54 voluntarios registrados incrustados en el código
+  - Eliminada dependencia de archivos Excel externos
+  - Endpoint `POST /api/volunteers/init-data` ahora usa datos hardcodeados
+- ✅ **Fix P1 - Manejo de errores en asignación de voluntarios**:
+  - Backend retorna mensajes de error en header `X-Error-Detail`
+  - Frontend lee errores del header personalizado para evitar problemas con interceptores externos
+  - CORS configurado para exponer header `X-Error-Detail`
+  - Mensajes de error específicos ahora se muestran correctamente al usuario
+
 ### 17 Enero 2026
 - Sistema de notificaciones por email implementado
 - Sistema de seguir atletas (localStorage)
