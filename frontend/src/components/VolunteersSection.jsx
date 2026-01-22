@@ -7,6 +7,157 @@ import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 export default function VolunteersSection() {
+  // State for assignments tab
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [filterName, setFilterName] = useState('');
+  const [filterPosition, setFilterPosition] = useState('');
+  const [filterShift, setFilterShift] = useState('');
+  const [positions, setPositions] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showUnassignModal, setShowUnassignModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [emailInput, setEmailInput] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState(null);
+
+  // Load slots data
+  const loadSlots = async () => {
+    setLoadingSlots(true);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/slots`);
+      if (response.ok) {
+        const data = await response.json();
+        setSlots(data);
+      }
+    } catch (error) {
+      console.error('Error loading slots:', error);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Load filter options
+  const loadFilterOptions = async () => {
+    try {
+      const [posRes, shiftRes] = await Promise.all([
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/positions`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/shifts`)
+      ]);
+      if (posRes.ok) setPositions(await posRes.json());
+      if (shiftRes.ok) setShifts(await shiftRes.json());
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadSlots();
+    loadFilterOptions();
+  }, []);
+
+  // Filter slots
+  const filteredSlots = slots.filter(slot => {
+    const matchesName = !filterName || 
+      slot.puesto.toLowerCase().includes(filterName.toLowerCase()) ||
+      (slot.nombre_asignado && slot.nombre_asignado.toLowerCase().includes(filterName.toLowerCase()));
+    const matchesPosition = !filterPosition || slot.puesto === filterPosition;
+    const matchesShift = !filterShift || slot.turno === filterShift;
+    return matchesName && matchesPosition && matchesShift;
+  });
+
+  // Handle assign
+  const handleAssign = async () => {
+    if (!emailInput.trim() || !selectedSlot) return;
+    
+    setActionLoading(true);
+    setActionMessage(null);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/assign/${selectedSlot.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setActionMessage({ type: 'success', text: data.message });
+        loadSlots();
+        setTimeout(() => {
+          setShowAssignModal(false);
+          setEmailInput('');
+          setActionMessage(null);
+        }, 2000);
+      } else {
+        setActionMessage({ type: 'error', text: data.detail });
+      }
+    } catch (error) {
+      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle unassign
+  const handleUnassign = async () => {
+    if (!emailInput.trim() || !selectedSlot) return;
+    
+    setActionLoading(true);
+    setActionMessage(null);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/unassign/${selectedSlot.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setActionMessage({ type: 'success', text: data.message });
+        loadSlots();
+        setTimeout(() => {
+          setShowUnassignModal(false);
+          setEmailInput('');
+          setActionMessage(null);
+        }, 2000);
+      } else {
+        setActionMessage({ type: 'error', text: data.detail });
+      }
+    } catch (error) {
+      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openAssignModal = (slot) => {
+    setSelectedSlot(slot);
+    setEmailInput('');
+    setActionMessage(null);
+    setShowAssignModal(true);
+  };
+
+  const openUnassignModal = (slot) => {
+    setSelectedSlot(slot);
+    setEmailInput('');
+    setActionMessage(null);
+    setShowUnassignModal(true);
+  };
+
+  const formatTime = (time) => {
+    if (!time) return '';
+    const parts = time.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return time;
+  };
+
   const volunteerRoles = [
     {
       title: 'Staff de Registro y Check-in',
