@@ -306,36 +306,6 @@ export default function VolunteersSection() {
             </p>
           </div>
 
-          {/* Volunteer Application */}
-          <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-7 h-7 text-accent" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">¿Quieres ser Voluntario?</h3>
-                    <p className="text-muted-foreground">
-                      Únete a nuestro equipo y forma parte de esta experiencia única. Completa el formulario de registro para postularte como voluntario del evento.
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href="https://forms.gle/3drhJ6n77du4qZVu5"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0"
-                >
-                  <Button size="lg" className="bg-accent hover:bg-primary text-accent-foreground shadow-medium hover:shadow-strong transition-all duration-300">
-                    <Users className="w-5 h-5 mr-2" />
-                    Postular Ahora
-                  </Button>
-                </a>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Download Manual */}
           <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
             <CardContent className="p-8">
@@ -365,21 +335,6 @@ export default function VolunteersSection() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Core Values */}
-          <div className="grid md:grid-cols-4 gap-4">
-            {coreValues.map((value, index) => (
-              <Card key={index} className="bg-card border-border shadow-soft text-center">
-                <CardContent className="p-6 space-y-3">
-                  <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center text-accent mx-auto">
-                    {value.icon}
-                  </div>
-                  <h4 className="font-bold text-foreground">{value.title}</h4>
-                  <p className="text-sm text-muted-foreground">{value.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="roles" className="w-full">
