@@ -164,10 +164,19 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 
 ## Backlog / Tareas Pendientes
 
-### 🟠 P1 - Mejoras Sugeridas
+### 🔴 P1 - Próximas Tareas
+- [ ] Notificación UI cuando un fan sube de nivel de badge
+- [ ] Filtros mejorados en página Comunidad (por atleta o fan)
+- [ ] Limpieza de código: Remover integración abandonada de Twitter/X
+  - Eliminar `tweepy` de requirements.txt
+  - Eliminar `backend/services/twitter_service.py`
+  - Remover variables de entorno relacionadas
+
+### 🟠 P2 - Mejoras Sugeridas
 - [ ] Mover datos de patrocinadores a archivo JSON externo
 - [ ] Extraer lista de participantes a archivo CSV/JSON separado
 - [ ] Optimizar PDF del manual (actualmente 27MB)
+- [ ] Refactorizar VolunteersSection.jsx (700+ líneas) en componentes más pequeños
 
 ### 🟡 P2 - Mejoras Opcionales
 - [ ] Historial detallado de vueltas (laps_log ya existe pero no tiene UI)
