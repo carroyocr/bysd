@@ -8,8 +8,8 @@ from datetime import datetime
 GMAIL_USER = os.environ.get("GMAIL_USER")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 
-# Base URL for the application
-BASE_URL = "https://backyard-ultra-sd.preview.emergentagent.com"
+# Base URL for the application - use environment variable for production
+BASE_URL = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
 LOGO_URL = f"{BASE_URL}/icon-bu.png"
 
 
