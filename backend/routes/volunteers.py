@@ -631,3 +631,62 @@ async def get_volunteers_with_assignments():
     
     return result
 
+
+# ============================================================================
+# SCHEDULER ENDPOINTS
+# ============================================================================
+
+@router.post("/scheduler/init")
+async def initialize_scheduler():
+    """Initialize the volunteer email scheduler"""
+    from services.volunteer_scheduler import init_scheduler, schedule_friday_email, schedule_all_reminders
+    
+    init_scheduler()
+    schedule_friday_email()
+    result = await schedule_all_reminders()
+    
+    return {
+        "message": "Scheduler initialized successfully",
+        "friday_email_scheduled": True,
+        "reminders": result
+    }
+
+
+@router.post("/scheduler/schedule-reminders")
+async def schedule_reminders():
+    """Schedule all 1-hour reminder emails"""
+    from services.volunteer_scheduler import schedule_all_reminders
+    
+    result = await schedule_all_reminders()
+    return result
+
+
+@router.post("/scheduler/schedule-friday-email")
+async def schedule_friday():
+    """Schedule the Friday 6pm mass email"""
+    from services.volunteer_scheduler import schedule_friday_email
+    
+    schedule_friday_email()
+    return {"message": "Friday mass email scheduled for January 23, 2026 at 6:00 PM"}
+
+
+@router.get("/scheduler/jobs")
+async def get_scheduler_jobs():
+    """Get list of all scheduled jobs"""
+    from services.volunteer_scheduler import get_scheduled_jobs
+    
+    jobs = get_scheduled_jobs()
+    return {
+        "total_jobs": len(jobs),
+        "jobs": jobs
+    }
+
+
+@router.post("/scheduler/trigger-friday-email-now")
+async def trigger_friday_email_now():
+    """Manually trigger the Friday mass email (for testing)"""
+    from services.volunteer_scheduler import send_friday_mass_email
+    
+    await send_friday_mass_email()
+    return {"message": "Friday mass email triggered"}
+
