@@ -97,6 +97,12 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 | `/api/volunteers/unassign/{slot_id}` | POST | Eliminar asignación de slot |
 | `/api/volunteers/list` | GET | Lista de voluntarios registrados |
 | `/api/volunteers/init-data` | POST | Inicializar datos desde código embebido |
+| `/api/volunteers/send-test-reminder` | POST | Enviar email de prueba (recordatorio 1h antes) |
+| `/api/volunteers/send-test-assignments` | POST | Enviar email de prueba (resumen de asignaciones) |
+| `/api/volunteers/send-reminder/{slot_id}` | POST | Enviar recordatorio a voluntario de slot específico |
+| `/api/volunteers/send-all-assignments` | POST | Enviar email masivo a todos los voluntarios |
+| `/api/volunteers/scheduler/init` | POST | Inicializar scheduler de emails |
+| `/api/volunteers/scheduler/jobs` | GET | Ver jobs programados |
 
 #### Colecciones MongoDB (Voluntarios)
 - **volunteers**: `{ email, nombre, apellidos, sexo, lugar_residencia, telefono, created_at }`
