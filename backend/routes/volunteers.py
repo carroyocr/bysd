@@ -333,6 +333,14 @@ async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
         {"$set": {"email_asignado": None, "updated_at": datetime.utcnow()}}
     )
     
+    # Cancel the reminder for this slot
+    try:
+        from services.volunteer_scheduler import cancel_single_reminder
+        cancel_single_reminder(slot_id)
+    except Exception as e:
+        # Don't fail the unassignment if scheduler fails
+        print(f"Warning: Could not cancel reminder for slot {slot_id}: {e}")
+    
     return {
         "message": "Asignación eliminada exitosamente",
         "success": True
