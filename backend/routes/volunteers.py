@@ -1,11 +1,169 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
 router = APIRouter()
 
+# ============================================================================
+# HARDCODED DATA - Embedded from Excel files
+# ============================================================================
+
+ASSIGNMENTS_DATA = [
+    {"id": 1, "puesto": "Área de Carpas / Zona de Atletas", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "anajuliasepulvedar@gmail.com"},
+    {"id": 2, "puesto": "Área de Carpas / Zona de Atletas", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "anajuliasepulvedar@gmail.com"},
+    {"id": 3, "puesto": "Área de Carpas / Zona de Atletas", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "anajuliasepulvedar@gmail.com"},
+    {"id": 4, "puesto": "Área de Carpas / Zona de Atletas", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": "veronica.ccuevas@gmail.com"},
+    {"id": 5, "puesto": "Área de Carpas / Zona de Atletas", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 6, "puesto": "Área de Carpas / Zona de Atletas", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 7, "puesto": "Área de Carpas / Zona de Atletas", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": None},
+    {"id": 8, "puesto": "Centro de Información y Redes", "turno": "A", "dia": "2026-01-24", "hora_inicio": "06:00:00", "hora_fin": "08:30:00", "slot": 1, "email_asignado": "attysshm@gmail.com"},
+    {"id": 9, "puesto": "Centro de Información y Redes", "turno": "A", "dia": "2026-01-24", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "uzielemilio21@gmail.com"},
+    {"id": 10, "puesto": "Centro de Información y Redes", "turno": "A", "dia": "2026-01-24", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "carolinazapata8@gmail.com"},
+    {"id": 11, "puesto": "Centro de Información y Redes", "turno": "A", "dia": "2026-01-24", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "geizel26@gmail.com"},
+    {"id": 12, "puesto": "Centro de Información y Redes", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "uzielemilio21@gmail.com"},
+    {"id": 13, "puesto": "Centro de Información y Redes", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "geizel26@gmail.com"},
+    {"id": 14, "puesto": "Centro de Información y Redes", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": None},
+    {"id": 15, "puesto": "Centro de Información y Redes", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 16, "puesto": "Centro de Información y Redes", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 17, "puesto": "Centro de Información y Redes", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "geizel26@gmail.com"},
+    {"id": 18, "puesto": "Control de Vueltas", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "jessejunior22@gmail.com"},
+    {"id": 19, "puesto": "Control de Vueltas", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "miguelangel104@hotmail.com"},
+    {"id": 20, "puesto": "Control de Vueltas", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "carolinazapata8@gmail.com"},
+    {"id": 21, "puesto": "Control de Vueltas", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 2, "email_asignado": "loren216454@gmail.com"},
+    {"id": 22, "puesto": "Control de Vueltas", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": None},
+    {"id": 23, "puesto": "Control de Vueltas", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": "laurajavier1816@gmail.com"},
+    {"id": 24, "puesto": "Control de Vueltas", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 25, "puesto": "Control de Vueltas", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 26, "puesto": "Control de Vueltas", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "minaya9507@gmail.com"},
+    {"id": 27, "puesto": "Corral de salida y animación", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "daurisme@gmail.com"},
+    {"id": 28, "puesto": "Corral de salida y animación", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "gabrieldcm1000@gmail.com"},
+    {"id": 29, "puesto": "Corral de salida y animación", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 3, "email_asignado": "danio286@gmail.com"},
+    {"id": 30, "puesto": "Corral de salida y animación", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 4, "email_asignado": "annaoc1107@gmail.com"},
+    {"id": 31, "puesto": "Corral de salida y animación", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "daurisme@gmail.com"},
+    {"id": 32, "puesto": "Corral de salida y animación", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 2, "email_asignado": "rafaelsuazoh@gmail.com"},
+    {"id": 33, "puesto": "Corral de salida y animación", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 3, "email_asignado": "annaoc1107@gmail.com"},
+    {"id": 34, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 6, "email_asignado": "elianacalderonmena@gmail.com"},
+    {"id": 35, "puesto": "Corral de salida y animación", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "rafaelsuazoh@gmail.com"},
+    {"id": 36, "puesto": "Corral de salida y animación", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 2, "email_asignado": "minaya9507@gmail.com"},
+    {"id": 37, "puesto": "Corral de salida y animación", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": "rafaelsuazoh@gmail.com"},
+    {"id": 38, "puesto": "Corral de salida y animación", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 4, "email_asignado": "elianacalderonmena@gmail.com"},
+    {"id": 39, "puesto": "Corral de salida y animación", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": "ronald.dbtc@gmail.com"},
+    {"id": 40, "puesto": "Corral de salida y animación", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 2, "email_asignado": None},
+    {"id": 41, "puesto": "Corral de salida y animación", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 42, "puesto": "Corral de salida y animación", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 2, "email_asignado": "ronald.dbtc@gmail.com"},
+    {"id": 43, "puesto": "Corral de salida y animación", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 2, "email_asignado": "elianacalderonmena@gmail.com"},
+    {"id": 44, "puesto": "Corral de salida y animación", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": None},
+    {"id": 45, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "dattotilia57@gmail.com"},
+    {"id": 46, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "contrerasgeorgina@gmail.com"},
+    {"id": 47, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "contrerasgeorgina@gmail.com"},
+    {"id": 48, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": "annaoc1107@gmail.com"},
+    {"id": 49, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 50, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": "laurajavier1816@gmail.com"},
+    {"id": 51, "puesto": "Equipo Médico / Apoyo Seguridad", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": None},
+    {"id": 52, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "eduardogarciapallares7@gmail.com"},
+    {"id": 53, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "eduardogarciapallares7@gmail.com"},
+    {"id": 54, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 3, "email_asignado": "sordehiperez@gmail.com"},
+    {"id": 55, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 4, "email_asignado": "alexamperegrina@gmail.com"},
+    {"id": 56, "puesto": "Hidratación y Snacks", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 5, "email_asignado": "ritarodriguezlara@gmail.com"},
+    {"id": 57, "puesto": "Corral de salida y animación", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "elianacalderonmena@gmail.com"},
+    {"id": 58, "puesto": "Hidratación y Snacks", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "eduardogarciapallares7@gmail.com"},
+    {"id": 59, "puesto": "Hidratación y Snacks", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 2, "email_asignado": "eduardogarciapallares7@gmail.com"},
+    {"id": 60, "puesto": "Hidratación y Snacks", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 3, "email_asignado": "miguelina.vasquez@gmail.com"},
+    {"id": 61, "puesto": "Hidratación y Snacks", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 4, "email_asignado": "johangalvan18@gmail.com"},
+    {"id": 62, "puesto": "Hidratación y Snacks", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 5, "email_asignado": "sketchjose99@gmail.com"},
+    {"id": 63, "puesto": "Hidratación y Snacks", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "laurajavier1816@gmail.com"},
+    {"id": 64, "puesto": "Hidratación y Snacks", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 2, "email_asignado": "johangalvan18@gmail.com"},
+    {"id": 65, "puesto": "Hidratación y Snacks", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 3, "email_asignado": "veronica.ccuevas@gmail.com"},
+    {"id": 66, "puesto": "Hidratación y Snacks", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": None},
+    {"id": 67, "puesto": "Hidratación y Snacks", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 2, "email_asignado": None},
+    {"id": 68, "puesto": "Hidratación y Snacks", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 69, "puesto": "Hidratación y Snacks", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 2, "email_asignado": None},
+    {"id": 70, "puesto": "Hidratación y Snacks", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 71, "puesto": "Hidratación y Snacks", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 2, "email_asignado": None},
+    {"id": 72, "puesto": "Hidratación y Snacks", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "sketchjose99@gmail.com"},
+    {"id": 73, "puesto": "Orden y Limpieza", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": "contrerasgeorgina@gmail.com"},
+    {"id": 74, "puesto": "Orden y Limpieza", "turno": "A", "dia": "2026-01-24", "hora_inicio": "07:30:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": "minaya9507@gmail.com"},
+    {"id": 75, "puesto": "Orden y Limpieza", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 1, "email_asignado": "cfmateus07@gmail.com"},
+    {"id": 76, "puesto": "Orden y Limpieza", "turno": "B", "dia": "2026-01-24", "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "slot": 2, "email_asignado": "menciacb2209@gmail.com"},
+    {"id": 77, "puesto": "Orden y Limpieza", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 1, "email_asignado": "loren216454@gmail.com"},
+    {"id": 78, "puesto": "Orden y Limpieza", "turno": "C", "dia": "2026-01-24", "hora_inicio": "16:00:00", "hora_fin": "20:00:00", "slot": 2, "email_asignado": None},
+    {"id": 79, "puesto": "Orden y Limpieza", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 1, "email_asignado": None},
+    {"id": 80, "puesto": "Orden y Limpieza", "turno": "D", "dia": "2026-01-24", "hora_inicio": "20:00:00", "hora_fin": "00:00:00", "slot": 2, "email_asignado": None},
+    {"id": 81, "puesto": "Orden y Limpieza", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 1, "email_asignado": None},
+    {"id": 82, "puesto": "Orden y Limpieza", "turno": "E", "dia": "2026-01-25", "hora_inicio": "00:00:00", "hora_fin": "04:00:00", "slot": 2, "email_asignado": None},
+    {"id": 83, "puesto": "Orden y Limpieza", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 1, "email_asignado": None},
+    {"id": 84, "puesto": "Orden y Limpieza", "turno": "F", "dia": "2026-01-25", "hora_inicio": "04:00:00", "hora_fin": "08:00:00", "slot": 2, "email_asignado": None},
+    {"id": 85, "puesto": "Orden y Limpieza", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 1, "email_asignado": None},
+    {"id": 86, "puesto": "Orden y Limpieza", "turno": "G", "dia": "2026-01-25", "hora_inicio": "08:00:00", "hora_fin": "12:00:00", "slot": 2, "email_asignado": None},
+    {"id": 87, "puesto": "Registro y Check-in", "turno": "A", "dia": "2026-01-24", "hora_inicio": "06:00:00", "hora_fin": "08:30:00", "slot": 1, "email_asignado": "derlinmedrano09@gmail.com"},
+    {"id": 88, "puesto": "Registro y Check-in", "turno": "A", "dia": "2026-01-24", "hora_inicio": "06:00:00", "hora_fin": "08:30:00", "slot": 2, "email_asignado": "auramorel29@gmail.com"},
+    {"id": 89, "puesto": "Registro y Check-in", "turno": "A", "dia": "2026-01-24", "hora_inicio": "06:00:00", "hora_fin": "08:30:00", "slot": 3, "email_asignado": "mariaigl@icloud.com"},
+    {"id": 90, "puesto": "Registro y Check-in", "turno": "A", "dia": "2026-01-24", "hora_inicio": "06:00:00", "hora_fin": "08:30:00", "slot": 4, "email_asignado": "uzielemilio21@gmail.com"},
+]
+
+VOLUNTEERS_DATA = [
+    {"email": "veronica.ccuevas@gmail.com", "nombre": "Verónica Pamela", "apellidos": "Cabrera Cuevas", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18295694353"},
+    {"email": "perlamassielbatista@gmail.com", "nombre": "Perla Massiel", "apellidos": "Peña Batista", "sexo": "Mujer", "lugar_residencia": "Moca", "telefono": "18297800752"},
+    {"email": "elianacalderonmena@gmail.com", "nombre": "Eliana nathalie", "apellidos": "Calderon mena", "sexo": "Mujer", "lugar_residencia": "Moca", "telefono": "18097601193"},
+    {"email": "brinydelmonter2@gmail.com", "nombre": "Bryny", "apellidos": "Delmonte", "sexo": "Mujer", "lugar_residencia": "Santiago", "telefono": "18494069957"},
+    {"email": "dorisap79@gmail.com", "nombre": "Doris", "apellidos": "Alburquerque", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18295865607"},
+    {"email": "danio286@gmail.com", "nombre": "Daniela", "apellidos": "Ortiz", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18492010087"},
+    {"email": "jessejunior22@gmail.com", "nombre": "Jesse", "apellidos": "Pérez", "sexo": "Hombre", "lugar_residencia": "Santo Domingo Este", "telefono": "18096532699"},
+    {"email": "liligutierrez310@gmail.com", "nombre": "Liliana", "apellidos": "Gutiérrez Camilo", "sexo": "Mujer", "lugar_residencia": "Bella vista", "telefono": "18293428788"},
+    {"email": "gabrieldcm1000@gmail.com", "nombre": "Gabriel", "apellidos": "De Castro", "sexo": "Hombre", "lugar_residencia": "Santo Domingo, República Dominicana", "telefono": "18296372972"},
+    {"email": "silifriedman@gmail.com", "nombre": "Sili", "apellidos": "Friedman", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18492529157"},
+    {"email": "loren216454@gmail.com", "nombre": "Lorenza julia", "apellidos": "Martinez", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18296160976"},
+    {"email": "laura.i.urena@gmail.com", "nombre": "Laura", "apellidos": "Ureña Bencosme", "sexo": "Mujer", "lugar_residencia": "DN - El Millón", "telefono": "18492579985"},
+    {"email": "eduardogarciapallares7@gmail.com", "nombre": "Eduardo", "apellidos": "Garcia Pallares", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "18096696921"},
+    {"email": "anajuliasepulvedar@gmail.com", "nombre": "Ana Julia", "apellidos": "Sepulveda Ramirez", "sexo": "Mujer", "lugar_residencia": "Rosa Duarte #03 Gazcue", "telefono": "18296620657"},
+    {"email": "rafaelsuazoh@gmail.com", "nombre": "Rafael", "apellidos": "Suazo Herrera", "sexo": "Hombre", "lugar_residencia": "Bella Vista", "telefono": "18496558431"},
+    {"email": "minaya0507@gmail.com", "nombre": "Randy", "apellidos": "Minaya", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "18295574450"},
+    {"email": "sketchjose99@gmail.com", "nombre": "Jose", "apellidos": "Tejada", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "18299888160"},
+    {"email": "alexamperegrina@gmail.com", "nombre": "Alexa", "apellidos": "Martínez Peregrina", "sexo": "Mujer", "lugar_residencia": "Distrito Nacional, Santo Domingo", "telefono": "18493502980"},
+    {"email": "contrerasgeorgina@gmail.com", "nombre": "Georgina", "apellidos": "Contreras", "sexo": "Mujer", "lugar_residencia": "Arroyo Hondo 3ro.", "telefono": "18297415439"},
+    {"email": "chefesmeraldamartinez@gmail.com", "nombre": "Esmeralda", "apellidos": "Martínez", "sexo": "Mujer", "lugar_residencia": "Punta cana", "telefono": "18094094664"},
+    {"email": "papoti@gmail.com", "nombre": "Apolinar", "apellidos": "Nunez", "sexo": "Hombre", "lugar_residencia": "Santiago", "telefono": "18097632172"},
+    {"email": "100392598yp10@gmail.com", "nombre": "Yanibel", "apellidos": "Peña", "sexo": "Mujer", "lugar_residencia": "La Vega", "telefono": "18292506114"},
+    {"email": "isammejia04@gmail.com", "nombre": "Isabella", "apellidos": "Mejía Rodríguez", "sexo": "Mujer", "lugar_residencia": "La Castellana. Distrito Nacional", "telefono": "18099820290"},
+    {"email": "ronald.dbtc@gmail.com", "nombre": "Ronald", "apellidos": "Santos perez", "sexo": "Hombre", "lugar_residencia": "Santo domingo distrito", "telefono": "18499932515"},
+    {"email": "menciacb2209@gmail.com", "nombre": "Mencia", "apellidos": "Cuevas", "sexo": "Mujer", "lugar_residencia": "Santo domingo", "telefono": "18097038179"},
+    {"email": "anibalconga@gmail.com", "nombre": "José Anibal", "apellidos": "De León Valera", "sexo": "Hombre", "lugar_residencia": "Distrito Nacional", "telefono": None},
+    {"email": "miguelangel104@hotmail.com", "nombre": "Miguel", "apellidos": "Rodríguez", "sexo": "Hombre", "lugar_residencia": "Santo Domingo Este", "telefono": "18292749620"},
+    {"email": "laurajavier1816@gmail.com", "nombre": "Laura", "apellidos": "Javier", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18493575019"},
+    {"email": "attysshm@gmail.com", "nombre": "Attys", "apellidos": "Saint-Hilaire", "sexo": "Mujer", "lugar_residencia": "España", "telefono": "18296847474"},
+    {"email": "lisvetparramontas@gmail.com", "nombre": "Lisvet", "apellidos": "Parra Montas", "sexo": "Mujer", "lugar_residencia": "San Pedro de Macoris", "telefono": "18293997628"},
+    {"email": "derlinmedrano09@gmail.com", "nombre": "Derlin", "apellidos": "Medrano Guzmán", "sexo": "Mujer", "lugar_residencia": "Santiago", "telefono": "18494043240"},
+    {"email": "auramorel29@gmail.com", "nombre": "Aura", "apellidos": "Morel Peña", "sexo": "Mujer", "lugar_residencia": "Santiago", "telefono": "18097132004"},
+    {"email": "miguelina.vasquez@gmail.com", "nombre": "Miguelina", "apellidos": "Vasquez", "sexo": "Mujer", "lugar_residencia": "Av. Carlos Perez Ricart", "telefono": "18098184829"},
+    {"email": "ritarodriguezlara@gmail.com", "nombre": "Rita", "apellidos": "Rodriguez Lara", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18299164217"},
+    {"email": "cindy.javierluna@gmail.com", "nombre": "Cindy", "apellidos": "Javier", "sexo": "Mujer", "lugar_residencia": "Distrito nacional", "telefono": None},
+    {"email": "berlinguerrero21@gmail.com", "nombre": "Berlin Reynaldo", "apellidos": "Guerrero Guerrero", "sexo": "Hombre", "lugar_residencia": "Higüey", "telefono": None},
+    {"email": "uzielemilio21@gmail.com", "nombre": "Uziel Emilio", "apellidos": "Rodriguez", "sexo": "Hombre", "lugar_residencia": "Santo Domingo, Distrito Nacional. Av, Independencia", "telefono": "18299301588"},
+    {"email": "carolinazapata8@gmail.com", "nombre": "Carolina", "apellidos": "Zapata", "sexo": "Mujer", "lugar_residencia": "Santo Domingo Este", "telefono": "18294133370"},
+    {"email": "sordehiperez@gmail.com", "nombre": "Sammir", "apellidos": "Ordehi Pérez", "sexo": "Hombre", "lugar_residencia": "Autop. Juan Pablo Duarte Km 11 Residencial Fermin Arturo", "telefono": "4020023947"},
+    {"email": "daurisme@gmail.com", "nombre": "Daurisme", "apellidos": "Verdeja", "sexo": "Mujer", "lugar_residencia": "Santo domingo", "telefono": "18098831177"},
+    {"email": "davidshdez18@gmail.com", "nombre": "David", "apellidos": "Sánchez Hernández", "sexo": "Hombre", "lugar_residencia": "Santo Domingo, RD", "telefono": "18099059634"},
+    {"email": "denisse.acr@gmail.com", "nombre": "Denisse", "apellidos": "Casado", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18092162876"},
+    {"email": "cfmateus07@gmail.com", "nombre": "Mateus", "apellidos": "Soares Caldeira", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "18494522224"},
+    {"email": "johangalvan18@gmail.com", "nombre": "Johan", "apellidos": "Galvan De Los Santos", "sexo": "Hombre", "lugar_residencia": "Distrito Nacional", "telefono": "18494992804"},
+    {"email": "annaoc1107@gmail.com", "nombre": "Ana", "apellidos": "Ortiz", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18492010181"},
+    {"email": "fabiangel12@gmail.com", "nombre": "Fabiola", "apellidos": "Castillo", "sexo": "Mujer", "lugar_residencia": "Los Alamos", "telefono": "18499129927"},
+    {"email": "dattotilia57@gmail.com", "nombre": "Otilia", "apellidos": "Datt", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "18292593951"},
+    {"email": "ltiradocordova@gmail.com", "nombre": "Luis", "apellidos": "Tirado Córdova", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "18099249784"},
+    {"email": "mariaigl@icloud.com", "nombre": "María Isabel", "apellidos": "Gutierrez", "sexo": "Mujer", "lugar_residencia": "Santo Domingo", "telefono": "8295998437"},
+    {"email": "gleyflers7@gmail.com", "nombre": "Gleyfler", "apellidos": "Salvador", "sexo": "Hombre", "lugar_residencia": "Punta Cana", "telefono": "8299836510"},
+    {"email": "minaya9507@gmail.com", "nombre": "Randy", "apellidos": "Minaya", "sexo": "Hombre", "lugar_residencia": "Santo Domingo", "telefono": "8295574450"},
+    {"email": "esterlinleonardo17@gmail.com", "nombre": "Esterlin", "apellidos": "Leonardo De Los Santos", "sexo": "Hombre", "lugar_residencia": "Sol de luz, villa mella", "telefono": "8098201939"},
+    {"email": "anaramirez29853@gmail.com", "nombre": "Ana Teresa", "apellidos": "Martinez Ramírez", "sexo": "Mujer", "lugar_residencia": "Santo Domingo norte", "telefono": "8092723204"},
+    {"email": "geizel26@gmail.com", "nombre": "Geizel", "apellidos": "Voluntario", "sexo": None, "lugar_residencia": None, "telefono": None},
+]
+
+# ============================================================================
 # Models
+# ============================================================================
+
 class VolunteerBase(BaseModel):
     email: str
     nombre: str
@@ -33,7 +191,10 @@ class AssignmentResponse(BaseModel):
     success: bool
 
 
-# Get all assignment slots with volunteer names
+# ============================================================================
+# Endpoints
+# ============================================================================
+
 @router.get("/slots")
 async def get_assignment_slots():
     """Get all assignment slots with assigned volunteer names"""
@@ -41,7 +202,6 @@ async def get_assignment_slots():
     
     slots = await database.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
     
-    # Get volunteer names for assigned slots
     for slot in slots:
         if slot.get("email_asignado"):
             volunteer = await database.volunteers.find_one(
@@ -58,7 +218,6 @@ async def get_assignment_slots():
     return slots
 
 
-# Get available positions (unique puesto values)
 @router.get("/positions")
 async def get_positions():
     """Get list of unique positions"""
@@ -68,7 +227,6 @@ async def get_positions():
     return sorted(positions)
 
 
-# Get available shifts (unique turno values)
 @router.get("/shifts")
 async def get_shifts():
     """Get list of unique shifts"""
@@ -78,7 +236,6 @@ async def get_shifts():
     return sorted(shifts)
 
 
-# Assign volunteer to a slot
 @router.post("/assign/{slot_id}")
 async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     """Assign a volunteer to a slot"""
@@ -89,20 +246,27 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     # Verify volunteer exists
     volunteer = await database.volunteers.find_one({"email": email})
     if not volunteer:
-        raise HTTPException(
-            status_code=400, 
-            detail="El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."
+        # Use JSONResponse with custom header for error detail (P1 fix)
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."},
+            headers={"X-Error-Detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."}
         )
     
     # Check slot exists and is available
     slot = await database.volunteer_assignments.find_one({"id": slot_id})
     if not slot:
-        raise HTTPException(status_code=404, detail="Slot no encontrado")
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Slot no encontrado"},
+            headers={"X-Error-Detail": "Slot no encontrado"}
+        )
     
     if slot.get("email_asignado"):
-        raise HTTPException(
-            status_code=400, 
-            detail="Este espacio ya está asignado a otro voluntario"
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Este espacio ya está asignado a otro voluntario"},
+            headers={"X-Error-Detail": "Este espacio ya está asignado a otro voluntario"}
         )
     
     # Assign volunteer
@@ -120,7 +284,6 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     }
 
 
-# Remove assignment from a slot
 @router.post("/unassign/{slot_id}")
 async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
     """Remove a volunteer assignment from a slot"""
@@ -131,16 +294,25 @@ async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
     # Check slot exists
     slot = await database.volunteer_assignments.find_one({"id": slot_id})
     if not slot:
-        raise HTTPException(status_code=404, detail="Slot no encontrado")
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Slot no encontrado"},
+            headers={"X-Error-Detail": "Slot no encontrado"}
+        )
     
     if not slot.get("email_asignado"):
-        raise HTTPException(status_code=400, detail="Este espacio no tiene asignación")
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Este espacio no tiene asignación"},
+            headers={"X-Error-Detail": "Este espacio no tiene asignación"}
+        )
     
     # Verify the email matches the assigned volunteer
     if slot["email_asignado"].lower() != email:
-        raise HTTPException(
-            status_code=400, 
-            detail="El correo electrónico no corresponde al voluntario asignado. No es posible eliminar la asignación."
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "El correo electrónico no corresponde al voluntario asignado. No es posible eliminar la asignación."},
+            headers={"X-Error-Detail": "El correo electrónico no corresponde al voluntario asignado. No es posible eliminar la asignación."}
         )
     
     # Remove assignment
@@ -155,7 +327,6 @@ async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
     }
 
 
-# Get all volunteers
 @router.get("/list")
 async def get_volunteers():
     """Get all registered volunteers"""
@@ -169,68 +340,34 @@ async def get_volunteers():
     return volunteers
 
 
-# Initialize data from Excel files
 @router.post("/init-data")
 async def init_volunteer_data():
-    """Initialize volunteer and assignment data from Excel files"""
-    import pandas as pd
+    """Initialize volunteer and assignment data from hardcoded data"""
     from server import db as database
     
     try:
-        # Read assignments
-        assignments_url = "https://customer-assets.emergentagent.com/job_ultra-track-sd/artifacts/9euvepdl_Asigacio%CC%81n.xlsx"
-        df_assign = pd.read_excel(assignments_url)
-        
-        # Read volunteers
-        volunteers_url = "https://customer-assets.emergentagent.com/job_ultra-track-sd/artifacts/g0om8zpx_base%20de%20voluntarios%20final.xlsx"
-        df_vol = pd.read_excel(volunteers_url)
-        
         # Clear existing data
         await database.volunteer_assignments.drop()
         await database.volunteers.drop()
         
-        # Process assignments
+        # Process assignments from hardcoded data
         assignments = []
-        for idx, row in df_assign.iterrows():
-            hora_inicio = str(row['Hora Inicio']) if pd.notna(row['Hora Inicio']) else ""
-            hora_fin = str(row['Hora Fin']) if pd.notna(row['Hora Fin']) else ""
-            
-            if " " in hora_inicio:
-                hora_inicio = hora_inicio.split()[0]
-            if " " in hora_fin:
-                hora_fin = hora_fin.split()[0]
-            
-            email = str(row['Email']).strip().lower() if pd.notna(row['Email']) else None
-            if email == 'nan':
-                email = None
-                
+        for item in ASSIGNMENTS_DATA:
             assignments.append({
-                "id": idx + 1,
-                "puesto": str(row['Puesto']) if pd.notna(row['Puesto']) else "",
-                "turno": str(row['Turno']) if pd.notna(row['Turno']) else "",
-                "dia": str(row['Día']).split()[0] if pd.notna(row['Día']) else "",
-                "hora_inicio": hora_inicio,
-                "hora_fin": hora_fin,
-                "slot": int(row['Slot #']) if pd.notna(row['Slot #']) else 1,
-                "email_asignado": email,
+                **item,
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             })
         
-        # Process volunteers
+        # Process volunteers from hardcoded data
         volunteers = []
         seen_emails = set()
-        for idx, row in df_vol.iterrows():
-            email = str(row['Dirección de correo electrónico']).strip().lower() if pd.notna(row['Dirección de correo electrónico']) else None
-            if email and email != 'nan' and email not in seen_emails:
+        for item in VOLUNTEERS_DATA:
+            email = item["email"].strip().lower()
+            if email not in seen_emails:
                 seen_emails.add(email)
                 volunteers.append({
-                    "email": email,
-                    "nombre": str(row['Nombre']).strip() if pd.notna(row['Nombre']) else "",
-                    "apellidos": str(row['Apellidos']).strip() if pd.notna(row['Apellidos']) else "",
-                    "sexo": str(row['Sexo']) if pd.notna(row['Sexo']) else None,
-                    "lugar_residencia": str(row['Lugar de Residencia']) if pd.notna(row['Lugar de Residencia']) else None,
-                    "telefono": str(row['Número Celular']) if pd.notna(row['Número Celular']) else None,
+                    **item,
                     "created_at": datetime.utcnow()
                 })
         
@@ -241,7 +378,7 @@ async def init_volunteer_data():
             await database.volunteers.insert_many(volunteers)
         
         return {
-            "message": "Datos inicializados exitosamente",
+            "message": "Datos inicializados exitosamente desde datos embebidos",
             "assignments_count": len(assignments),
             "volunteers_count": len(volunteers)
         }
