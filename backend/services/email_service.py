@@ -132,7 +132,8 @@ async def send_notification_email(
         return False
     
     try:
-        unsubscribe_link = f"https://backyard-ultra-sd.preview.emergentagent.com/api/race/unsubscribe/{subscription_id}"
+        base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+        unsubscribe_link = f"{base_url}/api/race/unsubscribe/{subscription_id}"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = f"🏃 {subject} - Backyard Ultra SD 2026"
