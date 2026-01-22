@@ -75,6 +75,33 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 2. Al menos 1 atleta retirado (DNF)
 3. El atleta activo tiene MÁS vueltas que todos los retirados
 
+### 5. Sistema de Gestión de Voluntarios (Completado 22 Ene 2026)
+#### Página de Voluntarios (`/voluntarios`)
+- **Manual de Voluntarios**: Enlace a PDF descargable
+- **Pestañas**: Roles, Asignación, Reglas, Emergencias
+
+#### Pestaña de Asignación
+- **Filtros**: Por nombre/posición, posición, turno, estado
+- **Estadísticas**: Total espacios, asignados, disponibles
+- **Grid de turnos**: Muestra slots con información completa
+- **Asignación por email**: Modal para confirmar correo registrado
+- **Eliminación de asignación**: Solo el voluntario asignado puede eliminar
+
+#### API Endpoints Voluntarios
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/volunteers/slots` | GET | Obtener todos los slots con asignaciones |
+| `/api/volunteers/positions` | GET | Posiciones únicas disponibles |
+| `/api/volunteers/shifts` | GET | Turnos únicos disponibles |
+| `/api/volunteers/assign/{slot_id}` | POST | Asignar voluntario a slot |
+| `/api/volunteers/unassign/{slot_id}` | POST | Eliminar asignación de slot |
+| `/api/volunteers/list` | GET | Lista de voluntarios registrados |
+| `/api/volunteers/init-data` | POST | Inicializar datos desde código embebido |
+
+#### Colecciones MongoDB (Voluntarios)
+- **volunteers**: `{ email, nombre, apellidos, sexo, lugar_residencia, telefono, created_at }`
+- **volunteer_assignments**: `{ id, puesto, turno, dia, hora_inicio, hora_fin, slot, email_asignado, created_at, updated_at }`
+
 ---
 
 ## API Endpoints
