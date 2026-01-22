@@ -138,6 +138,12 @@ export default function SponsorsSection() {
       instagram: 'https://www.instagram.com/vidasanavidaultra/',
       logo: '/sponsors/vida-sana-ultra.png',
     },
+    {
+      name: 'Panaca',
+      description: 'Parque temático agropecuario en Punta Cana que celebra la cultura, naturaleza y vida rural con experiencias interactivas, espectáculos ecuestres y rutas educativas que conectan visitantes con el campo dominicano.',
+      instagram: 'https://www.instagram.com/panacapuntacana/',
+      logo: '/sponsors/panaca.png',
+    },
   ];
 
   return (
