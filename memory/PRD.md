@@ -4,7 +4,7 @@
 - **Proyecto**: Sistema de tracking en vivo para carrera Backyard Ultra
 - **Evento**: Santo Domingo 2026
 - **Fecha de Creación**: Enero 2026
-- **Última Actualización**: 18 Enero 2026
+- **Última Actualización**: 22 Enero 2026
 
 ## Descripción del Producto
 Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso de una carrera Backyard Ultra. Incluye:
