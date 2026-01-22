@@ -374,10 +374,14 @@ export default function VolunteersSection() {
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="roles" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1">
+            <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1">
               <TabsTrigger value="roles" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
                 <ClipboardCheck className="w-4 h-4 mr-2" />
                 Roles
+              </TabsTrigger>
+              <TabsTrigger value="assignments" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
+                <Calendar className="w-4 h-4 mr-2" />
+                Asignación
               </TabsTrigger>
               <TabsTrigger value="rules" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
                 <Shirt className="w-4 h-4 mr-2" />
