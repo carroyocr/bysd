@@ -528,33 +528,6 @@ export default function VolunteersSection() {
             </TabsContent>
 
             {/* Rules Tab */}
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    className="bg-primary hover:bg-accent"
-                                    onClick={() => openAssignModal(slot)}
-                                  >
-                                    <Check className="w-3 h-3 mr-1" />
-                                    Asignarme
-                                  </Button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {filteredSlots.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No se encontraron espacios con los filtros seleccionados
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Rules Tab */}
             <TabsContent value="rules" className="space-y-6 mt-6">
               <Card className="border-border shadow-soft">
                 <CardHeader>
