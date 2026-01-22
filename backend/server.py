@@ -39,8 +39,33 @@ async def startup_db_indexes():
         await initialize_race_data()
         
         logging.info("Database indexes created successfully")
+        
+        # Initialize volunteer email scheduler
+        await initialize_volunteer_scheduler()
+        
     except Exception as e:
         logging.warning(f"Index creation warning (may already exist): {e}")
+
+
+async def initialize_volunteer_scheduler():
+    """Initialize the volunteer email scheduler on startup"""
+    try:
+        from services.volunteer_scheduler import init_scheduler, schedule_friday_email, schedule_all_reminders
+        
+        # Initialize scheduler
+        init_scheduler()
+        
+        # Schedule the Friday 6pm mass email
+        schedule_friday_email()
+        
+        # Schedule all 1-hour reminders
+        result = await schedule_all_reminders()
+        
+        logging.info(f"Volunteer scheduler initialized: {result.get('scheduled', 0)} reminders scheduled")
+        logging.info("Friday mass email scheduled for January 23, 2026 at 6:00 PM")
+        
+    except Exception as e:
+        logging.error(f"Error initializing volunteer scheduler: {e}")
 
 async def initialize_race_data():
     """Initialize race data: admin user and participants"""
