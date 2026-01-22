@@ -441,6 +441,148 @@ export default function VolunteersSection() {
               </Card>
             </TabsContent>
 
+            {/* Assignments Tab */}
+            <TabsContent value="assignments" className="space-y-6 mt-6">
+              <Card className="border-border shadow-soft">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Asignación de Turnos</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Consulta los turnos disponibles y asígnate a un espacio usando tu correo electrónico registrado
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* Filters */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por nombre o posición..."
+                        value={filterName}
+                        onChange={(e) => setFilterName(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <select
+                      value={filterPosition}
+                      onChange={(e) => setFilterPosition(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Todas las posiciones</option>
+                      {positions.map((pos, idx) => (
+                        <option key={idx} value={pos}>{pos}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={filterShift}
+                      onChange={(e) => setFilterShift(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="">Todos los turnos</option>
+                      {shifts.map((shift, idx) => (
+                        <option key={idx} value={shift}>Turno {shift}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-muted/30 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-foreground">{slots.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Espacios</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-green-600">{slots.filter(s => s.email_asignado).length}</p>
+                      <p className="text-xs text-green-700">Asignados</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-amber-600">{slots.filter(s => !s.email_asignado).length}</p>
+                      <p className="text-xs text-amber-700">Disponibles</p>
+                    </div>
+                  </div>
+
+                  {/* Slots Grid */}
+                  {loadingSlots ? (
+                    <div className="text-center py-12">
+                      <Calendar className="w-12 h-12 text-muted-foreground animate-pulse mx-auto mb-4" />
+                      <p className="text-muted-foreground">Cargando asignaciones...</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/30">
+                            <th className="text-left p-3 font-semibold">Posición</th>
+                            <th className="text-center p-3 font-semibold">Turno</th>
+                            <th className="text-center p-3 font-semibold">Horario</th>
+                            <th className="text-left p-3 font-semibold">Voluntario Asignado</th>
+                            <th className="text-center p-3 font-semibold">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredSlots.map((slot) => (
+                            <tr key={slot.id} className={`border-b hover:bg-muted/20 ${!slot.email_asignado ? 'bg-amber-50/50' : ''}`}>
+                              <td className="p-3">
+                                <p className="font-medium text-foreground">{slot.puesto}</p>
+                                <p className="text-xs text-muted-foreground">Slot #{slot.slot}</p>
+                              </td>
+                              <td className="p-3 text-center">
+                                <Badge variant="outline" className="font-mono">
+                                  {slot.turno}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-center">
+                                <p className="font-mono text-sm">
+                                  {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{slot.dia}</p>
+                              </td>
+                              <td className="p-3">
+                                {slot.nombre_asignado ? (
+                                  <div className="flex items-center gap-2">
+                                    <Check className="w-4 h-4 text-green-600" />
+                                    <span className="text-green-700 font-medium">{slot.nombre_asignado}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-amber-600 italic">Disponible</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-center">
+                                {slot.email_asignado ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-300 text-red-600 hover:bg-red-50"
+                                    onClick={() => openUnassignModal(slot)}
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Eliminar
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="bg-primary hover:bg-accent"
+                                    onClick={() => openAssignModal(slot)}
+                                  >
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Asignarme
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredSlots.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No se encontraron espacios con los filtros seleccionados
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Rules Tab */}
             <TabsContent value="rules" className="space-y-6 mt-6">
               <Card className="border-border shadow-soft">
