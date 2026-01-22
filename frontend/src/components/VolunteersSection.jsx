@@ -85,7 +85,12 @@ export default function VolunteersSection() {
         body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
       });
       
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error('Error al procesar la respuesta del servidor');
+      }
       
       if (response.ok) {
         setActionMessage({ type: 'success', text: data.message });
@@ -96,10 +101,11 @@ export default function VolunteersSection() {
           setActionMessage(null);
         }, 2000);
       } else {
-        setActionMessage({ type: 'error', text: data.detail });
+        setActionMessage({ type: 'error', text: data.detail || 'Error al realizar la asignación' });
       }
     } catch (error) {
-      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
+      console.error('Error en asignación:', error);
+      setActionMessage({ type: 'error', text: error.message || 'Error de conexión. Intenta de nuevo.' });
     } finally {
       setActionLoading(false);
     }
