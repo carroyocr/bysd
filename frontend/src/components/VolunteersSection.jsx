@@ -157,7 +157,12 @@ export default function VolunteersSection() {
     if (!time) return '';
     const parts = time.split(':');
     if (parts.length >= 2) {
-      return `${parts[0]}:${parts[1]}`;
+      let hour = parseInt(parts[0], 10);
+      const minutes = parts[1];
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      hour = hour % 12;
+      if (hour === 0) hour = 12;
+      return `${hour}:${minutes} ${ampm}`;
     }
     return time;
   };
