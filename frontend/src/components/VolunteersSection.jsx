@@ -127,10 +127,12 @@ export default function VolunteersSection() {
         body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
       });
       
+      const text = await response.text();
       let data;
       try {
-        data = await response.json();
+        data = JSON.parse(text);
       } catch (e) {
+        console.error('Error parsing JSON:', text);
         throw new Error('Error al procesar la respuesta del servidor');
       }
       
