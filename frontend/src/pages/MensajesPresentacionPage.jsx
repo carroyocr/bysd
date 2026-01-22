@@ -23,6 +23,7 @@ const sponsors = [
   { name: 'Max Sport Uniforms', logo: '/sponsors/max-sport.png' },
   { name: 'Michelob Ultra', logo: '/sponsors/michelob-ultra.png' },
   { name: 'Molino del Sol', logo: '/sponsors/molino-del-sol.png' },
+  { name: 'Panaca', logo: '/sponsors/panaca.png' },
   { name: 'Pico Diego de Ocampo Trail', logo: '/sponsors/pico-diego-ocampo.png' },
   { name: 'Senderitmo', logo: '/sponsors/senderitmo.png' },
   { name: 'Suzuki', logo: '/sponsors/suzuki.png' },
