@@ -238,13 +238,7 @@ async def mark_dns(
     if participant.get("status") == "retired":
         raise HTTPException(status_code=400, detail="El participante ya está retirado")
     
-    if participant.get("laps_completed", 0) > 0:
-        raise HTTPException(
-            status_code=400, 
-            detail="No se puede marcar como DNS a un participante que ya completó vueltas. Use 'Marcar Retirado' en su lugar."
-        )
-    
-    # Update participant status - keep laps and km at 0
+    # Update participant status - reset laps and km to 0
     await database.participants.update_one(
         {"bib": bib},
         {
@@ -258,7 +252,10 @@ async def mark_dns(
         }
     )
     
-    return {"message": f"Participante {bib} marcado como DNS (No se presentó)"}
+    # Also delete any lap logs for this participant
+    await database.laps_log.delete_many({"participant_bib": bib})
+    
+    return {"message": f"Participante {bib} marcado como DNS (No se presentó). Vueltas reseteadas a 0."}
 
 @router.post("/reactivate")
 async def reactivate_participant(
