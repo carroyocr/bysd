@@ -1271,3 +1271,185 @@ async def get_twitter_status():
     """Check Twitter integration status"""
     from services.twitter_service import check_twitter_config
     return check_twitter_config()
+
+
+@router.post("/send-runner-emails")
+async def send_runner_completion_emails(
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Send completion emails to all runners when there is a winner (excludes DNS)"""
+    from server import db as database
+    from services.runner_email_service import send_runner_completion_email, get_runner_email
+    
+    # Check if there's a winner
+    race_status = await database.race_config.find_one({"key": "status"}, {"_id": 0})
+    active_participants = await database.participants.find(
+        {"status": "active"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    retired_participants = await database.participants.find(
+        {"status": "retired"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Check winner conditions
+    winner_bib = None
+    if len(active_participants) == 1 and len(retired_participants) > 0:
+        winner = active_participants[0]
+        winner_laps = winner.get("laps_completed", 0)
+        max_retired_laps = max([p.get("laps_completed", 0) for p in retired_participants], default=0)
+        if winner_laps > max_retired_laps:
+            winner_bib = winner.get("bib")
+    
+    # Get all participants except DNS
+    participants = await database.participants.find(
+        {"status": {"$ne": "dns"}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    results = {
+        "total_runners": len(participants),
+        "emails_sent": 0,
+        "emails_failed": 0,
+        "no_email": 0,
+        "winner_bib": winner_bib,
+        "details": []
+    }
+    
+    for participant in participants:
+        bib = participant.get("bib", "")
+        nombre = participant.get("nombre", "")
+        apellidos = participant.get("apellidos", "")
+        full_name = f"{nombre} {apellidos}".strip()
+        total_km = participant.get("total_km", 0)
+        laps_completed = participant.get("laps_completed", 0)
+        
+        # Get email
+        email = get_runner_email(bib)
+        if not email:
+            results["no_email"] += 1
+            results["details"].append({
+                "bib": bib,
+                "name": full_name,
+                "status": "no_email"
+            })
+            continue
+        
+        # Get followers count
+        followers_count = await database.email_subscriptions.count_documents({
+            "athletes_bibs": bib,
+            "is_active": True
+        })
+        
+        # Get cheer messages
+        cheer_messages = await database.cheer_messages.find(
+            {"athlete_bib": bib},
+            {"_id": 0}
+        ).sort("created_at", 1).to_list(500)
+        
+        messages_count = len(cheer_messages)
+        is_winner = bib == winner_bib
+        
+        # Send email
+        success = await send_runner_completion_email(
+            to_email=email,
+            runner_name=full_name,
+            total_km=total_km,
+            laps_completed=laps_completed,
+            followers_count=followers_count,
+            messages_count=messages_count,
+            cheer_messages=cheer_messages,
+            is_winner=is_winner
+        )
+        
+        if success:
+            results["emails_sent"] += 1
+            results["details"].append({
+                "bib": bib,
+                "name": full_name,
+                "email": email,
+                "is_winner": is_winner,
+                "laps": laps_completed,
+                "messages": messages_count,
+                "status": "sent"
+            })
+        else:
+            results["emails_failed"] += 1
+            results["details"].append({
+                "bib": bib,
+                "name": full_name,
+                "email": email,
+                "status": "failed"
+            })
+    
+    return results
+
+
+@router.post("/send-runner-email-test")
+async def send_test_runner_email(
+    bib: str,
+    test_email: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Send a test completion email for a specific runner to a test email address"""
+    from server import db as database
+    from services.runner_email_service import send_runner_completion_email
+    
+    # Get participant
+    participant = await database.participants.find_one(
+        {"bib": bib},
+        {"_id": 0}
+    )
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    nombre = participant.get("nombre", "")
+    apellidos = participant.get("apellidos", "")
+    full_name = f"{nombre} {apellidos}".strip()
+    total_km = participant.get("total_km", 0)
+    laps_completed = participant.get("laps_completed", 0)
+    
+    # Get followers count
+    followers_count = await database.email_subscriptions.count_documents({
+        "athletes_bibs": bib,
+        "is_active": True
+    })
+    
+    # Get cheer messages
+    cheer_messages = await database.cheer_messages.find(
+        {"athlete_bib": bib},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    
+    messages_count = len(cheer_messages)
+    
+    # Send test email
+    success = await send_runner_completion_email(
+        to_email=test_email,
+        runner_name=full_name,
+        total_km=total_km,
+        laps_completed=laps_completed,
+        followers_count=followers_count,
+        messages_count=messages_count,
+        cheer_messages=cheer_messages,
+        is_winner=False
+    )
+    
+    if success:
+        return {
+            "message": f"Email de prueba enviado a {test_email}",
+            "runner": full_name,
+            "bib": bib,
+            "stats": {
+                "total_km": total_km,
+                "laps": laps_completed,
+                "followers": followers_count,
+                "messages": messages_count
+            }
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error al enviar el email")
