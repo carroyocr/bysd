@@ -98,6 +98,27 @@ export default function ComunidadPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, currentPage, loadMessages]);
 
+  // Load leaderboard when tab changes
+  useEffect(() => {
+    if (activeTab === 'athletes' && athleteLeaderboard.length === 0) {
+      loadAthleteLeaderboard();
+    } else if (activeTab === 'fans' && fanLeaderboard.length === 0) {
+      loadFanLeaderboard();
+    }
+  }, [activeTab]);
+
+  // Pagination handlers
+  const goToPage = (page) => {
+    if (page >= 1 && page <= pagination.total_pages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleManualRefresh = () => {
+    loadMessages(currentPage);
+  };
+
   const loadAthleteLeaderboard = async () => {
     setLoadingAthletes(true);
     try {
