@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor } from 'lucide-react';
+import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,9 +13,21 @@ export default function ComunidadPage() {
   // Stats
   const [stats, setStats] = useState({ totalMessages: 0, totalFans: 0, totalAthletes: 0 });
   
-  // Messages
+  // Messages with pagination
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total_count: 0,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false
+  });
+  
+  // Auto-refresh control
+  const [autoRefresh, setAutoRefresh] = useState(true);
   
   // Leaderboards
   const [athleteLeaderboard, setAthleteLeaderboard] = useState([]);
@@ -37,35 +49,27 @@ export default function ComunidadPage() {
   // Filter for messages
   const [messageFilter, setMessageFilter] = useState('');
 
-  // Load messages on mount
-  useEffect(() => {
-    loadMessages();
-    loadAthletes();
-    const interval = setInterval(loadMessages, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Load leaderboard when tab changes
-  useEffect(() => {
-    if (activeTab === 'athletes' && athleteLeaderboard.length === 0) {
-      loadAthleteLeaderboard();
-    } else if (activeTab === 'fans' && fanLeaderboard.length === 0) {
-      loadFanLeaderboard();
-    }
-  }, [activeTab]);
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async (page = 1) => {
     setLoadingMessages(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=100`);
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=50&page=${page}`);
       if (response.ok) {
         const data = await response.json();
-        setMessages(data);
+        setMessages(data.messages || []);
+        setPagination(data.pagination || {
+          page: 1,
+          limit: 50,
+          total_count: 0,
+          total_pages: 1,
+          has_next: false,
+          has_prev: false
+        });
         
-        const uniqueFans = new Set(data.map(m => m.fan_name));
-        const uniqueAthletes = new Set(data.map(m => m.athlete_bib));
+        // Update stats with real total count
+        const uniqueFans = new Set((data.messages || []).map(m => m.fan_name));
+        const uniqueAthletes = new Set((data.messages || []).map(m => m.athlete_bib));
         setStats({
-          totalMessages: data.length,
+          totalMessages: data.pagination?.total_count || 0,
           totalFans: uniqueFans.size,
           totalAthletes: uniqueAthletes.size
         });
@@ -75,7 +79,24 @@ export default function ComunidadPage() {
     } finally {
       setLoadingMessages(false);
     }
-  };
+  }, []);
+
+  // Load messages on mount and when page changes
+  useEffect(() => {
+    loadMessages(currentPage);
+    loadAthletes();
+  }, [currentPage, loadMessages]);
+
+  // Auto-refresh interval
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      loadMessages(currentPage);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [autoRefresh, currentPage, loadMessages]);
 
   const loadAthleteLeaderboard = async () => {
     setLoadingAthletes(true);
