@@ -27,6 +27,10 @@ export default function RaceControlPanel() {
   const [showResetCheersModal, setShowResetCheersModal] = useState(false);
   const [resetCheersConfirmation, setResetCheersConfirmation] = useState('');
   const [resettingCheers, setResettingCheers] = useState(false);
+  const [showAdjustLapsModal, setShowAdjustLapsModal] = useState(false);
+  const [adjustLapsParticipant, setAdjustLapsParticipant] = useState(null);
+  const [newLapsValue, setNewLapsValue] = useState(0);
+  const [adjustingLaps, setAdjustingLaps] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
