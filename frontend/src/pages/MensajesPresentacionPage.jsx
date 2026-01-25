@@ -53,7 +53,9 @@ export default function MensajesPresentacionPage() {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=200`);
       if (response.ok) {
         const data = await response.json();
-        const sorted = data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        // Handle both old array format and new paginated format
+        const messagesArray = data.messages || data;
+        const sorted = messagesArray.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         setMessages(sorted);
       }
     } catch (error) {
