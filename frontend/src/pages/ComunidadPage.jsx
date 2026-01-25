@@ -336,22 +336,52 @@ export default function ComunidadPage() {
           {/* Messages Tab */}
           {activeTab === 'messages' && (
             <div className="space-y-4">
-              {/* Filter */}
-              <Input
-                type="text"
-                placeholder="Filtrar por número o nombre de corredor..."
-                value={messageFilter}
-                onChange={(e) => setMessageFilter(e.target.value)}
-                className="w-full"
-              />
+              {/* Controls Row: Filter, Auto-refresh, Manual refresh */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  type="text"
+                  placeholder="Filtrar por número o nombre de corredor..."
+                  value={messageFilter}
+                  onChange={(e) => setMessageFilter(e.target.value)}
+                  className="flex-1"
+                />
+                <div className="flex items-center gap-2">
+                  {/* Auto-refresh toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer bg-gray-100 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={autoRefresh}
+                      onChange={(e) => setAutoRefresh(e.target.checked)}
+                      className="w-4 h-4 accent-purple-600"
+                    />
+                    <span className="text-sm text-gray-700 whitespace-nowrap">Auto</span>
+                  </label>
+                  {/* Manual refresh button */}
+                  <Button
+                    onClick={handleManualRefresh}
+                    disabled={loadingMessages}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Actualizar</span>
+                  </Button>
+                </div>
+              </div>
               
               {/* Messages List */}
               <Card className="shadow-lg">
                 <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50 py-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <MessageCircle className="w-5 h-5 text-purple-600" />
-                    Mensajes de Ánimo
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <MessageCircle className="w-5 h-5 text-purple-600" />
+                      Mensajes de Ánimo
+                    </CardTitle>
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                      {pagination.total_count.toLocaleString()} total
+                    </Badge>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0 max-h-[500px] overflow-y-auto">
                   {loadingMessages ? (
@@ -410,6 +440,64 @@ export default function ComunidadPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Pagination Controls */}
+              {pagination.total_pages > 1 && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <Button
+                    onClick={() => goToPage(1)}
+                    disabled={!pagination.has_prev || loadingMessages}
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    Primera
+                  </Button>
+                  <Button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={!pagination.has_prev || loadingMessages}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline ml-1">Anterior</span>
+                  </Button>
+                  
+                  <div className="flex items-center gap-1 px-3">
+                    <span className="text-sm text-muted-foreground">Página</span>
+                    <select
+                      value={currentPage}
+                      onChange={(e) => goToPage(parseInt(e.target.value))}
+                      className="px-2 py-1 border rounded text-sm bg-white"
+                      disabled={loadingMessages}
+                    >
+                      {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map(page => (
+                        <option key={page} value={page}>{page}</option>
+                      ))}
+                    </select>
+                    <span className="text-sm text-muted-foreground">de {pagination.total_pages}</span>
+                  </div>
+                  
+                  <Button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={!pagination.has_next || loadingMessages}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <span className="hidden sm:inline mr-1">Siguiente</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => goToPage(pagination.total_pages)}
+                    disabled={!pagination.has_next || loadingMessages}
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    Última
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
