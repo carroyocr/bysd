@@ -463,9 +463,14 @@ async def complete_lap_all_active(
     import asyncio
     asyncio.create_task(send_lap_notifications(database, current_lap))
     
+    message = f"Vuelta {current_lap} completada para {updated_count} atletas"
+    if skipped_count > 0:
+        message += f" ({skipped_count} ya tenían la vuelta registrada)"
+    
     return {
-        "message": f"Vuelta {current_lap} completada para {updated_count} atletas activos",
+        "message": message,
         "updated_count": updated_count,
+        "skipped_count": skipped_count,
         "new_lap": new_lap,
         "previous_lap": current_lap
     }
