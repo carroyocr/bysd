@@ -257,6 +257,51 @@ async def mark_dns(
     
     return {"message": f"Participante {bib} marcado como DNS (No se presentó). Vueltas reseteadas a 0."}
 
+
+@router.post("/adjust-laps")
+async def adjust_participant_laps(
+    request: AdjustLapsRequest,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Manually adjust the number of laps for a participant"""
+    from server import db as database
+    
+    participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    if participant.get("status") == "dns":
+        raise HTTPException(status_code=400, detail="No se pueden ajustar vueltas de un participante DNS")
+    
+    if request.new_laps < 0:
+        raise HTTPException(status_code=400, detail="Las vueltas no pueden ser negativas")
+    
+    old_laps = participant.get("laps_completed", 0)
+    new_km = round(request.new_laps * KM_PER_LAP, 1)
+    
+    # Update participant laps
+    await database.participants.update_one(
+        {"bib": request.bib},
+        {
+            "$set": {
+                "laps_completed": request.new_laps,
+                "total_km": new_km,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": f"Vueltas de {request.bib} ajustadas de {old_laps} a {request.new_laps}",
+        "bib": request.bib,
+        "old_laps": old_laps,
+        "new_laps": request.new_laps,
+        "total_km": new_km
+    }
+
+
 @router.post("/reactivate")
 async def reactivate_participant(
     request: dict,
