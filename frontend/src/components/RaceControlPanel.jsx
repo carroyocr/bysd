@@ -474,6 +474,33 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleSendRunnerEmails = async () => {
+    const token = localStorage.getItem('admin_token');
+    setSendingRunnerEmails(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/send-runner-emails`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al enviar correos');
+      }
+
+      const data = await response.json();
+      showMessage(`Correos enviados: ${data.emails_sent} exitosos, ${data.emails_failed} fallidos, ${data.no_email} sin email`, 'success');
+      setShowSendRunnerEmailsModal(false);
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setSendingRunnerEmails(false);
+    }
+  };
+
   const openAdjustLapsModal = (participant) => {
     setAdjustLapsParticipant(participant);
     setNewLapsValue(participant.laps_completed || 0);
