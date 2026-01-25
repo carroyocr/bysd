@@ -877,18 +877,42 @@ export default function RaceControlPanel() {
                               >
                                 Marcar DNS
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openAdjustLapsModal(participant)}
+                                disabled={saving}
+                                className="border-blue-500 text-blue-600"
+                                title="Ajustar vueltas manualmente"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
                             </>
                           )}
                           {(participant.status === 'retired' || participant.status === 'dns') && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleRetired(participant)}
-                              disabled={saving}
-                              className="border-green-500 text-green-600"
-                            >
-                              Reactivar
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleRetired(participant)}
+                                disabled={saving}
+                                className="border-green-500 text-green-600"
+                              >
+                                Reactivar
+                              </Button>
+                              {participant.status === 'retired' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openAdjustLapsModal(participant)}
+                                  disabled={saving}
+                                  className="border-blue-500 text-blue-600"
+                                  title="Ajustar vueltas manualmente"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
