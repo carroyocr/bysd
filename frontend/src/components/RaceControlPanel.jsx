@@ -578,6 +578,14 @@ export default function RaceControlPanel() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
+              onClick={() => setShowSendRunnerEmailsModal(true)}
+              variant="outline"
+              className="border-green-300 text-green-600 hover:bg-green-50"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Enviar Correos Corredores
+            </Button>
+            <Button
               onClick={() => setShowResetSubsModal(true)}
               variant="outline"
               className="border-pink-300 text-pink-600 hover:bg-pink-50"
