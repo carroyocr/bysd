@@ -1272,6 +1272,75 @@ export default function RaceControlPanel() {
           </Card>
         </div>
       )}
+
+      {/* Send Runner Emails Modal */}
+      {showSendRunnerEmailsModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-green-300 shadow-strong">
+            <CardHeader className="border-b border-green-200 bg-green-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-green-900">Enviar Correos a Corredores</CardTitle>
+                  <p className="text-sm text-green-700 mt-1">Resumen de carrera y mensajes de ánimo</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-2">📧 Se enviará a cada corredor:</h3>
+                  <ul className="text-sm text-green-800 space-y-1">
+                    <li>• Mensaje de felicitación personalizado</li>
+                    <li>• Resumen: KM recorridos, vueltas, seguidores</li>
+                    <li>• Todos los mensajes de ánimo recibidos</li>
+                    <li>• El ganador recibirá badge de campeón</li>
+                  </ul>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-amber-900 mb-2">⚠️ Nota importante:</h3>
+                  <ul className="text-sm text-amber-800 space-y-1">
+                    <li>• Solo se envía a corredores que participaron (no DNS)</li>
+                    <li>• Corredores sin email registrado serán omitidos</li>
+                    <li>• Este proceso puede tomar varios minutos</li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => setShowSendRunnerEmailsModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={sendingRunnerEmails}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSendRunnerEmails}
+                    disabled={sendingRunnerEmails}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {sendingRunnerEmails ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Enviar Correos
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
