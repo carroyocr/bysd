@@ -472,6 +472,50 @@ export default function RaceControlPanel() {
     }
   };
 
+  const openAdjustLapsModal = (participant) => {
+    setAdjustLapsParticipant(participant);
+    setNewLapsValue(participant.laps_completed || 0);
+    setShowAdjustLapsModal(true);
+  };
+
+  const handleAdjustLaps = async () => {
+    if (!adjustLapsParticipant) return;
+    
+    const token = localStorage.getItem('admin_token');
+    setAdjustingLaps(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/adjust-laps`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          bib: adjustLapsParticipant.bib,
+          new_laps: parseInt(newLapsValue, 10)
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al ajustar vueltas');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setShowAdjustLapsModal(false);
+      setAdjustLapsParticipant(null);
+      setNewLapsValue(0);
+      
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setAdjustingLaps(false);
+    }
+  };
+
   const filteredParticipants = participants.filter(p => {
     const search = searchTerm.toLowerCase();
     const matchesSearch = (
