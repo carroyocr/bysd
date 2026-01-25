@@ -1075,21 +1075,29 @@ async def submit_cheer_message(
 @router.get("/cheers")
 async def get_cheer_messages(
     limit: int = 50,
+    page: int = 1,
     athlete_bib: Optional[str] = None,
     db=Depends(lambda: None)
 ):
-    """Get cheer messages (most recent first)"""
+    """Get cheer messages with pagination (most recent first)"""
     from server import db as database
     
     query = {}
     if athlete_bib:
         query["athlete_bib"] = athlete_bib
     
-    # Get messages sorted by created_at descending
+    # Calculate skip for pagination
+    skip = (page - 1) * limit
+    
+    # Get total count for pagination info
+    total_count = await database.cheer_messages.count_documents(query)
+    total_pages = (total_count + limit - 1) // limit  # Ceiling division
+    
+    # Get messages sorted by created_at descending with pagination
     messages = await database.cheer_messages.find(
         query,
         {"_id": 0}
-    ).sort("created_at", -1).limit(limit).to_list(limit)
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Enrich with athlete names
     for msg in messages:
@@ -1101,7 +1109,17 @@ async def get_cheer_messages(
             msg["athlete_name"] = f"{athlete['nombre']} {athlete['apellidos']}"
             msg["athlete_nacionalidad"] = athlete.get("nacionalidad", "")
     
-    return messages
+    return {
+        "messages": messages,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }
 
 
 @router.get("/cheers/count")
