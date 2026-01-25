@@ -32,6 +32,8 @@ export default function RaceControlPanel() {
   const [newLapsValue, setNewLapsValue] = useState(0);
   const [adjustingLaps, setAdjustingLaps] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
+  const [sendingRunnerEmails, setSendingRunnerEmails] = useState(false);
+  const [showSendRunnerEmailsModal, setShowSendRunnerEmailsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
     const saved = localStorage.getItem('race_time_validation');
