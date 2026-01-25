@@ -44,6 +44,10 @@ class CompleteLapRequest(BaseModel):
     bib: str
     lap_number: int
 
+class AdjustLapsRequest(BaseModel):
+    bib: str
+    new_laps: int
+
 class RaceStats(BaseModel):
     current_lap: int
     total_laps_completed: int
