@@ -405,14 +405,24 @@ async def complete_lap_all_active(
         return {
             "message": "No hay participantes activos",
             "updated_count": 0,
+            "skipped_count": 0,
             "new_lap": current_lap + 1
         }
     
     updated_count = 0
+    skipped_count = 0
     
     # Update all active participants
     for participant in active_participants:
-        new_laps = participant.get("laps_completed", 0) + 1
+        current_laps = participant.get("laps_completed", 0)
+        
+        # Skip if participant already has the current lap completed
+        # (i.e., their laps_completed >= current_lap means they already registered this lap)
+        if current_laps >= current_lap:
+            skipped_count += 1
+            continue
+        
+        new_laps = current_laps + 1
         new_km = round(new_laps * KM_PER_LAP, 1)
         
         # Update participant
