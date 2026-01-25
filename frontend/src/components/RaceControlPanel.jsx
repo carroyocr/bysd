@@ -1155,6 +1155,86 @@ export default function RaceControlPanel() {
           </Card>
         </div>
       )}
+
+      {/* Adjust Laps Modal */}
+      {showAdjustLapsModal && adjustLapsParticipant && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md border-blue-300 shadow-strong">
+            <CardHeader className="border-b border-blue-200 bg-blue-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Edit3 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-blue-900">Ajustar Vueltas</CardTitle>
+                  <p className="text-sm text-blue-700 mt-1">
+                    {adjustLapsParticipant.nombre} {adjustLapsParticipant.apellidos} (BIB: {adjustLapsParticipant.bib})
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-800">Vueltas actuales:</span>
+                    <span className="font-bold text-2xl text-blue-900">{adjustLapsParticipant.laps_completed}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Nuevo número de vueltas
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={newLapsValue}
+                    onChange={(e) => setNewLapsValue(e.target.value)}
+                    className="text-center font-mono text-2xl h-14"
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Total KM: {(parseFloat(newLapsValue) * 6.7).toFixed(1)} km
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowAdjustLapsModal(false);
+                      setAdjustLapsParticipant(null);
+                      setNewLapsValue(0);
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={adjustingLaps}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleAdjustLaps}
+                    disabled={adjustingLaps || parseInt(newLapsValue, 10) < 0}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {adjustingLaps ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Guardar Cambios
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
