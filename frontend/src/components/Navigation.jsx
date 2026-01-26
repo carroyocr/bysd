@@ -14,7 +14,7 @@ const navLinks = [
   { href: '/reglas', label: 'Reglas' },
   { href: '/logistica', label: 'Logística' },
   { href: '/patrocinadores', label: 'Patrocinadores' },
-  { href: '/en-vivo', label: 'Seguimiento', highlightAfterRaceStart: true },
+  { href: '/en-vivo', label: 'Resultados' },
   { href: '/comunidad', label: 'Comunidad' },
   { href: '/encuesta', label: 'Encuesta' },
 ];

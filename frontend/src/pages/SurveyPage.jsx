@@ -38,8 +38,6 @@ const RatingInput = ({ name, value, onChange, label }) => (
           >
             {num}
           </Label>
-          {num === 1 && <span className="text-xs text-muted-foreground mt-1">Malo</span>}
-          {num === 5 && <span className="text-xs text-muted-foreground mt-1">Excelente</span>}
         </div>
       ))}
     </RadioGroup>
