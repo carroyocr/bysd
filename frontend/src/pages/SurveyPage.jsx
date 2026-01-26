@@ -639,6 +639,7 @@ const SpectatorsSurveyForm = () => {
     recomendaria: '',
     comentarios_adicionales: ''
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -659,17 +660,26 @@ const SpectatorsSurveyForm = () => {
       }
     }
     
-    if (!formData.nombre || !formData.email || !formData.asistiria_nuevamente || !formData.recomendaria) {
-      toast.error('Por favor completa todos los campos obligatorios');
+    if (!isAnonymous && (!formData.nombre || !formData.email)) {
+      toast.error('Por favor completa tu nombre y email, o marca la opción de envío anónimo');
+      return;
+    }
+    
+    if (!formData.asistiria_nuevamente || !formData.recomendaria) {
+      toast.error('Por favor completa las preguntas de asistencia y recomendación');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const submitData = isAnonymous 
+        ? { ...formData, nombre: 'Anónimo', email: 'anonimo@encuesta.local', is_anonymous: true }
+        : { ...formData, is_anonymous: false };
+        
       const response = await fetch(`${API_URL}/api/surveys/spectators`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       });
       
       if (response.ok) {
