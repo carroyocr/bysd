@@ -631,19 +631,7 @@ export default function LiveDashboard() {
         )}
 
         {/* Stats Cards - Compact on mobile */}
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-            <CardContent className="p-2 sm:p-4 lg:p-6 h-full">
-              <div className="flex flex-col sm:flex-row items-center sm:justify-between h-full text-center sm:text-left">
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Vuelta</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">{stats.current_lap}</p>
-                </div>
-                <Activity className="hidden sm:block w-8 h-8 lg:w-10 lg:h-10 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 mb-8">
           <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-2 sm:p-4 lg:p-6 h-full">
               <div className="flex flex-col sm:flex-row items-center sm:justify-between h-full text-center sm:text-left">
