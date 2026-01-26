@@ -236,6 +236,23 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - ✅ Navegación actualizada: "Comunidad" entre "En Vivo" y "Admin"
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
+### 26 Enero 2026
+- ✅ **Sistema de Encuestas de Satisfacción (P0)**:
+  - Nueva página `/encuesta` con 3 formularios (Atletas, Voluntarios, Espectadores)
+  - Backend endpoints: POST `/api/surveys/athletes`, `/volunteers`, `/spectators`
+  - Admin endpoints: GET `/api/surveys/stats`, `/api/surveys/{type}/responses`
+  - Nueva sección "Resultados de Encuestas" en panel admin con:
+    - Estadísticas por tipo (total, por categoría)
+    - Tabs para ver respuestas de cada tipo
+    - Cards expandibles con detalles de cada respuesta
+    - Exportar a CSV por categoría
+  - Colecciones MongoDB: `surveys_athletes`, `surveys_volunteers`, `surveys_spectators`
+- ✅ **Cambios de UI para Fin de Carrera**:
+  - Oculto countdown en página `/seguimiento`
+  - Movido link "Admin" de navegación principal al footer
+  - Agregado link "Volver al Home" en página `/admin/login`
+  - Agregado link "Encuesta" en navegación y footer
+
 ### 22 Enero 2026
 - ✅ **Sistema de Voluntarios - Datos Embebidos (P0)**:
   - Datos de 90 asignaciones de turnos incrustados en `backend/routes/volunteers.py`
