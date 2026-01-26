@@ -493,6 +493,7 @@ const VolunteersSurveyForm = () => {
           </Select>
         </div>
       </div>
+      )}
 
       {/* Ratings Section */}
       <div className="space-y-4">
