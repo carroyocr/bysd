@@ -32,18 +32,6 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Check if race has started
-  useEffect(() => {
-    const checkRaceStart = () => {
-      setRaceStarted(new Date() >= RACE_START_DATE);
-    };
-    
-    checkRaceStart();
-    const timer = setInterval(checkRaceStart, 1000);
-    
-    return () => clearInterval(timer);
-  }, []);
-
   const handleLinkClick = () => {
     setIsOpen(false);
   };
