@@ -712,42 +712,58 @@ const SpectatorsSurveyForm = () => {
         <p className="text-sm font-semibold text-purple-800">👁️ Encuesta para Espectadores</p>
       </div>
 
+      {/* Anonymous Option */}
+      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
+        <Checkbox 
+          id="anonymous-spectators"
+          checked={isAnonymous}
+          onCheckedChange={setIsAnonymous}
+        />
+        <div className="flex items-center gap-2">
+          <UserX className="w-4 h-4 text-gray-500" />
+          <Label htmlFor="anonymous-spectators" className="text-sm font-medium cursor-pointer">
+            Enviar encuesta de forma anónima
+          </Label>
+        </div>
+      </div>
+
       {/* Personal Info */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="spec-nombre">Nombre completo *</Label>
-          <Input 
-            id="spec-nombre" 
-            value={formData.nombre} 
-            onChange={(e) => handleChange('nombre', e.target.value)}
-            required
-          />
+      {!isAnonymous && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="spec-nombre">Nombre completo *</Label>
+            <Input 
+              id="spec-nombre" 
+              value={formData.nombre} 
+              onChange={(e) => handleChange('nombre', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="spec-email">Email *</Label>
+            <Input 
+              id="spec-email" 
+              type="email"
+              value={formData.email} 
+              onChange={(e) => handleChange('email', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="relacion">Relación con el evento</Label>
+            <Select onValueChange={(val) => handleChange('relacion_evento', val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una opción" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="familiar">Familiar de corredor</SelectItem>
+                <SelectItem value="amigo">Amigo de corredor</SelectItem>
+                <SelectItem value="aficionado">Aficionado al running</SelectItem>
+                <SelectItem value="curioso">Visitante curioso</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="spec-email">Email *</Label>
-          <Input 
-            id="spec-email" 
-            type="email"
-            value={formData.email} 
-            onChange={(e) => handleChange('email', e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="relacion">Relación con el evento</Label>
-          <Select onValueChange={(val) => handleChange('relacion_evento', val)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecciona una opción" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="familiar">Familiar de corredor</SelectItem>
-              <SelectItem value="amigo">Amigo de corredor</SelectItem>
-              <SelectItem value="aficionado">Aficionado al running</SelectItem>
-              <SelectItem value="curioso">Visitante curioso</SelectItem>
-              <SelectItem value="otro">Otro</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      )}
       </div>
 
       {/* Ratings Section */}
