@@ -959,14 +959,27 @@ export default function LiveDashboard() {
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <Button
-                          onClick={() => openCheerModal(participant)}
-                          variant="ghost"
-                          size="sm"
-                          className="p-2 text-purple-500 hover:text-purple-600 hover:bg-purple-50"
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                        </Button>
+                        <div className="flex justify-center gap-1">
+                          {(participant.status === 'winner' || participant.status === 'retired') && (
+                            <Button
+                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
+                              variant="ghost"
+                              size="sm"
+                              className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              title="Descargar Certificado"
+                            >
+                              <Download className="w-5 h-5" />
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => openCheerModal(participant)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-2 text-purple-500 hover:text-purple-600 hover:bg-purple-50"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                          </Button>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Button
