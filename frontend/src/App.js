@@ -51,6 +51,7 @@ export default function App() {
                     <Route path="/en-vivo" element={<LiveDashboardPage />} />
                     <Route path="/comunidad" element={<ComunidadPage />} />
                     <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
+                    <Route path="/encuesta" element={<SurveyPage />} />
                   </Routes>
                 </main>
                 <Footer />
