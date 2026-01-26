@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, User, AlertCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Lock, User, AlertCircle, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -44,6 +44,15 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+      {/* Back to Home button */}
+      <Link
+        to="/"
+        className="fixed top-4 left-4 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-md hover:bg-white transition-colors text-foreground"
+      >
+        <Home className="w-5 h-5" />
+        <span className="text-sm font-medium">Volver al Inicio</span>
+      </Link>
+
       <Card className="w-full max-w-md border-border shadow-strong">
         <CardHeader className="text-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -101,6 +110,16 @@ export default function AdminLogin() {
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
           </form>
+
+          {/* Link back to home */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Volver al sitio principal
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
