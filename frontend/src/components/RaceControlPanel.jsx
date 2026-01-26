@@ -958,16 +958,20 @@ export default function RaceControlPanel() {
                       </td>
                       <td className="py-3 px-4">
                         <Badge
-                          variant={participant.status === 'active' ? 'default' : 'secondary'}
+                          variant={participant.status === 'active' || participant.status === 'winner' ? 'default' : 'secondary'}
                           className={
-                            participant.status === 'active' 
+                            participant.status === 'winner'
+                              ? 'bg-yellow-500'
+                              : participant.status === 'active' 
                               ? 'bg-green-500' 
                               : participant.status === 'dns'
                               ? 'bg-gray-500'
                               : 'bg-red-500'
                           }
                         >
-                          {participant.status === 'active' 
+                          {participant.status === 'winner'
+                            ? '🏆 Ganador'
+                            : participant.status === 'active' 
                             ? 'Activo' 
                             : participant.status === 'dns'
                             ? 'DNS'
