@@ -755,6 +755,7 @@ export default function LiveDashboard() {
                   >
                     <option value="all">Todos</option>
                     <option value="winner">Ganador</option>
+                    <option value="honor">Invitada de Honor</option>
                     <option value="retired">DNF</option>
                     <option value="dns">DNS</option>
                   </select>
