@@ -597,6 +597,40 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleMarkHonor = async (participant) => {
+    if (!window.confirm(`¿Estás seguro de marcar a ${participant.nombre} ${participant.apellidos} como Invitada de Honor?`)) {
+      return;
+    }
+    
+    const token = localStorage.getItem('admin_token');
+    setSaving(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-honor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bib: participant.bib })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al marcar como Invitada de Honor');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleAdjustLaps = async () => {
     if (!adjustLapsParticipant) return;
     
