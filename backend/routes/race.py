@@ -75,7 +75,8 @@ async def get_race_stats(db=Depends(lambda: None)):
     
     athletes_dnf = sum(1 for p in participants if p.get("status") == "retired")
     athletes_dns = sum(1 for p in participants if p.get("status") == "dns")
-    athletes_active = len(participants) - athletes_dnf - athletes_dns
+    athletes_winner = sum(1 for p in participants if p.get("status") == "winner")
+    athletes_active = len(participants) - athletes_dnf - athletes_dns - athletes_winner
     
     # Total km is based on completed laps (not current lap)
     total_km = total_laps_completed * KM_PER_LAP
@@ -83,30 +84,41 @@ async def get_race_stats(db=Depends(lambda: None)):
     # Total km of all athletes (sum of individual km)
     total_km_all_athletes = sum(p.get("total_km", 0) for p in participants)
     
-    # Check for winner: Only 1 active athlete who has completed at least one lap alone
-    # Winner condition: Last athlete standing who completed the lap that all DNF athletes couldn't finish
+    # Check for winner: First check if there's a manually marked winner
     winner = None
-    active_participants = [p for p in participants if p.get("status") == "active"]
-    retired_participants = [p for p in participants if p.get("status") == "retired"]
+    manual_winner = next((p for p in participants if p.get("status") == "winner"), None)
     
-    if len(active_participants) == 1 and len(retired_participants) > 0:
-        winner_participant = active_participants[0]
-        winner_laps = winner_participant.get("laps_completed", 0)
+    if manual_winner:
+        winner = {
+            "bib": manual_winner.get("bib"),
+            "nombre": manual_winner.get("nombre"),
+            "apellidos": manual_winner.get("apellidos"),
+            "nacionalidad": manual_winner.get("nacionalidad"),
+            "laps_completed": manual_winner.get("laps_completed", 0),
+            "total_km": manual_winner.get("total_km", 0)
+        }
+    else:
+        # Auto-detect winner: Only 1 active athlete who has completed at least one lap alone
+        active_participants = [p for p in participants if p.get("status") == "active"]
+        retired_participants = [p for p in participants if p.get("status") == "retired"]
         
-        # Find the maximum laps completed by any retired athlete
-        max_retired_laps = max((p.get("laps_completed", 0) for p in retired_participants), default=0)
-        
-        # Winner must have completed MORE laps than all retired athletes
-        # This means they finished one lap alone after the second-to-last person retired
-        if winner_laps > max_retired_laps:
-            winner = {
-                "bib": winner_participant.get("bib"),
-                "nombre": winner_participant.get("nombre"),
-                "apellidos": winner_participant.get("apellidos"),
-                "nacionalidad": winner_participant.get("nacionalidad"),
-                "laps_completed": winner_laps,
-                "total_km": winner_participant.get("total_km", 0)
-            }
+        if len(active_participants) == 1 and len(retired_participants) > 0:
+            winner_participant = active_participants[0]
+            winner_laps = winner_participant.get("laps_completed", 0)
+            
+            # Find the maximum laps completed by any retired athlete
+            max_retired_laps = max((p.get("laps_completed", 0) for p in retired_participants), default=0)
+            
+            # Winner must have completed MORE laps than all retired athletes
+            if winner_laps > max_retired_laps:
+                winner = {
+                    "bib": winner_participant.get("bib"),
+                    "nombre": winner_participant.get("nombre"),
+                    "apellidos": winner_participant.get("apellidos"),
+                    "nacionalidad": winner_participant.get("nacionalidad"),
+                    "laps_completed": winner_laps,
+                    "total_km": winner_participant.get("total_km", 0)
+                }
     
     return RaceStats(
         current_lap=current_lap,
