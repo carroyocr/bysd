@@ -87,6 +87,7 @@ const AthletesSurveyForm = () => {
     recomendaria: '',
     comentarios_adicionales: ''
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
