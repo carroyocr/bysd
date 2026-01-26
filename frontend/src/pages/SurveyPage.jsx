@@ -162,37 +162,52 @@ const AthletesSurveyForm = () => {
         <p className="text-sm font-semibold text-blue-800">📋 Encuesta para Atletas</p>
       </div>
 
-      {/* Personal Info */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="nombre">Nombre completo *</Label>
-          <Input 
-            id="nombre" 
-            value={formData.nombre} 
-            onChange={(e) => handleChange('nombre', e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
-          <Input 
-            id="email" 
-            type="email"
-            value={formData.email} 
-            onChange={(e) => handleChange('email', e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="bib">Número de dorsal</Label>
-          <Input 
-            id="bib" 
-            value={formData.bib} 
-            onChange={(e) => handleChange('bib', e.target.value)}
-            placeholder="Ej: 001"
-          />
+      {/* Anonymous Option */}
+      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
+        <Checkbox 
+          id="anonymous-athletes"
+          checked={isAnonymous}
+          onCheckedChange={setIsAnonymous}
+        />
+        <div className="flex items-center gap-2">
+          <UserX className="w-4 h-4 text-gray-500" />
+          <Label htmlFor="anonymous-athletes" className="text-sm font-medium cursor-pointer">
+            Enviar encuesta de forma anónima
+          </Label>
         </div>
       </div>
+
+      {/* Personal Info */}
+      {!isAnonymous && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="nombre">Nombre completo *</Label>
+            <Input 
+              id="nombre" 
+              value={formData.nombre} 
+              onChange={(e) => handleChange('nombre', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input 
+              id="email" 
+              type="email"
+              value={formData.email} 
+              onChange={(e) => handleChange('email', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bib">Número de dorsal</Label>
+            <Input 
+              id="bib" 
+              value={formData.bib} 
+              onChange={(e) => handleChange('bib', e.target.value)}
+              placeholder="Ej: 001"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Ratings Section */}
       <div className="space-y-4">
