@@ -338,6 +338,51 @@ async def edit_participant(
     }
 
 
+@router.post("/mark-winner")
+async def mark_winner(
+    request: dict,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Mark a participant as the race winner"""
+    from server import db as database
+    
+    bib = request.get("bib")
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    if participant.get("status") == "winner":
+        raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
+    
+    # Check if there's already a winner
+    existing_winner = await database.participants.find_one({"status": "winner"}, {"_id": 0})
+    if existing_winner:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
+        )
+    
+    # Mark as winner
+    await database.participants.update_one(
+        {"bib": bib},
+        {
+            "$set": {
+                "status": "winner",
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": f"¡{participant.get('nombre')} {participant.get('apellidos')} ha sido marcado como GANADOR!",
+        "bib": bib,
+        "nombre": participant.get("nombre"),
+        "apellidos": participant.get("apellidos")
+    }
+
+
 @router.post("/reactivate")
 async def reactivate_participant(
     request: dict,
