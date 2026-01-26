@@ -1351,6 +1351,94 @@ export default function RaceControlPanel() {
         </div>
       )}
 
+      {/* Edit Participant Modal */}
+      {showEditParticipantModal && editParticipant && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-md border-purple-300 shadow-strong">
+            <CardHeader className="border-b border-purple-200 bg-purple-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                  <UserCog className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl text-purple-900">Editar Corredor</CardTitle>
+                  <p className="text-sm text-purple-700 mt-1">BIB: {editParticipant.bib}</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Nombre
+                  </label>
+                  <Input
+                    value={editFormData.nombre}
+                    onChange={(e) => setEditFormData({...editFormData, nombre: e.target.value})}
+                    placeholder="Nombre"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Apellidos
+                  </label>
+                  <Input
+                    value={editFormData.apellidos}
+                    onChange={(e) => setEditFormData({...editFormData, apellidos: e.target.value})}
+                    placeholder="Apellidos"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Nacionalidad (código ISO 3 letras)
+                  </label>
+                  <Input
+                    value={editFormData.nacionalidad}
+                    onChange={(e) => setEditFormData({...editFormData, nacionalidad: e.target.value.toUpperCase()})}
+                    placeholder="Ej: DOM, VEN, MEX"
+                    maxLength={3}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowEditParticipantModal(false);
+                      setEditParticipant(null);
+                      setEditFormData({ nombre: '', apellidos: '', nacionalidad: '' });
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={editingParticipant}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleEditParticipant}
+                    disabled={editingParticipant || !editFormData.nombre || !editFormData.apellidos || !editFormData.nacionalidad}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {editingParticipant ? (
+                      <>
+                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Guardar Cambios
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Send Runner Emails Modal */}
       {showSendRunnerEmailsModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
