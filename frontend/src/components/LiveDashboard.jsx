@@ -656,14 +656,14 @@ export default function LiveDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-gradient-to-br from-yellow-50 to-amber-100 border-yellow-300">
             <CardContent className="p-2 sm:p-4 lg:p-6 h-full">
               <div className="flex flex-col sm:flex-row items-center sm:justify-between h-full text-center sm:text-left">
                 <div>
-                  <p className="text-xs sm:text-sm text-blue-700">Activos</p>
-                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900">{stats.athletes_active}</p>
+                  <p className="text-xs sm:text-sm text-amber-700">Ganador</p>
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-amber-900">🏆</p>
                 </div>
-                <Users className="hidden sm:block w-8 h-8 lg:w-10 lg:h-10 text-blue-600" />
+                <Trophy className="hidden sm:block w-8 h-8 lg:w-10 lg:h-10 text-amber-600" />
               </div>
             </CardContent>
           </Card>
