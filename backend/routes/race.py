@@ -1625,9 +1625,6 @@ async def check_certificate(bib: str, db=Depends(lambda: None)):
     if status == "dns":
         return {"available": False, "reason": "No disponible para DNS"}
     
-    if status == "active":
-        return {"available": False, "reason": "Disponible al finalizar"}
-    
     certificate_path = CERTIFICATES_DIR / f"{bib}.pdf"
     
     if not certificate_path.exists():
