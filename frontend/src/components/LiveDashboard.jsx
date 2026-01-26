@@ -743,7 +743,7 @@ export default function LiveDashboard() {
                     className="flex-1 min-w-[100px] px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="all">Todos</option>
-                    <option value="active">Activos</option>
+                    <option value="winner">Ganador</option>
                     <option value="retired">DNF</option>
                     <option value="dns">DNS</option>
                   </select>
