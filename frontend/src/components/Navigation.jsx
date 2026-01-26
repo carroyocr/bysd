@@ -22,7 +22,6 @@ const navLinks = [
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [raceStarted, setRaceStarted] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
