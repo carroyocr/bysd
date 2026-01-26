@@ -413,6 +413,25 @@ export default function LiveDashboard() {
       setParticipants(participantsData);
       setLastUpdate(new Date());
       setLoading(false);
+      
+      // Check certificates availability for non-DNS participants
+      const certChecks = await Promise.all(
+        participantsData
+          .filter(p => p.status !== 'dns')
+          .map(async (p) => {
+            try {
+              const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate-check/${p.bib}`);
+              const data = await res.json();
+              return { bib: p.bib, available: data.available };
+            } catch {
+              return { bib: p.bib, available: false };
+            }
+          })
+      );
+      
+      const certMap = {};
+      certChecks.forEach(c => { certMap[c.bib] = c.available; });
+      setCertificatesAvailable(certMap);
     } catch (err) {
       console.error('Error loading data:', err);
       setLoading(false);
