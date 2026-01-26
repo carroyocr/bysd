@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi.responses import FileResponse
 from typing import Optional, List
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import os
+from pathlib import Path
 from bson import ObjectId
 from models.race import (
     AdminLogin, RaceConfig, Participant, LapLog,
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/api/race", tags=["race"])
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026")
 ALGORITHM = "HS256"
 KM_PER_LAP = 6.7
+CERTIFICATES_DIR = Path(__file__).parent.parent / "static" / "certificates" / "individual"
 
 # Helper function to verify JWT token
 def verify_token(authorization: Optional[str] = Header(None)):
