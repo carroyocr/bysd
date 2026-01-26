@@ -764,7 +764,6 @@ const SpectatorsSurveyForm = () => {
           </div>
         </div>
       )}
-      </div>
 
       {/* Ratings Section */}
       <div className="space-y-4">
