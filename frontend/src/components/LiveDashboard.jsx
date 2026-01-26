@@ -821,6 +821,8 @@ export default function LiveDashboard() {
                         className={
                           participant.status === 'winner'
                             ? 'bg-amber-500'
+                            : participant.status === 'honor'
+                            ? 'bg-purple-500'
                             : participant.status === 'active' 
                             ? 'bg-green-500' 
                             : participant.status === 'dns'
@@ -830,6 +832,8 @@ export default function LiveDashboard() {
                       >
                         {participant.status === 'winner'
                           ? '🏆 Ganador'
+                          : participant.status === 'honor'
+                          ? '⭐ Invitada de Honor'
                           : participant.status === 'active' 
                           ? 'Activo' 
                           : participant.status === 'dns'
