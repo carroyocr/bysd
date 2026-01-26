@@ -110,17 +110,26 @@ const AthletesSurveyForm = () => {
       }
     }
     
-    if (!formData.nombre || !formData.email || !formData.participaria_nuevamente || !formData.recomendaria) {
-      toast.error('Por favor completa todos los campos obligatorios');
+    if (!isAnonymous && (!formData.nombre || !formData.email)) {
+      toast.error('Por favor completa tu nombre y email, o marca la opción de envío anónimo');
+      return;
+    }
+    
+    if (!formData.participaria_nuevamente || !formData.recomendaria) {
+      toast.error('Por favor completa las preguntas de participación y recomendación');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const submitData = isAnonymous 
+        ? { ...formData, nombre: 'Anónimo', email: 'anonimo@encuesta.local', is_anonymous: true }
+        : { ...formData, is_anonymous: false };
+        
       const response = await fetch(`${API_URL}/api/surveys/athletes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       });
       
       if (response.ok) {
