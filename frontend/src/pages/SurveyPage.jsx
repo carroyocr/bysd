@@ -146,6 +146,11 @@ const AthletesSurveyForm = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Mobile Survey Title */}
+      <div className="sm:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+        <p className="text-sm font-semibold text-blue-800">📋 Encuesta para Atletas</p>
+      </div>
+
       {/* Personal Info */}
       <div className="grid md:grid-cols-3 gap-4">
         <div className="space-y-2">
