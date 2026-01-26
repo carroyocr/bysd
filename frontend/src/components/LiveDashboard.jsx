@@ -982,7 +982,7 @@ export default function LiveDashboard() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex justify-center gap-1">
-                          {(participant.status === 'winner' || participant.status === 'retired') && (
+                          {certificatesAvailable[participant.bib] && (
                             <Button
                               onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
                               variant="ghost"
