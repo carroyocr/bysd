@@ -918,14 +918,18 @@ export default function LiveDashboard() {
                       <td className="py-3 px-4 text-center">
                         <Badge
                           className={
-                            participant.status === 'active' 
+                            participant.status === 'winner'
+                              ? 'bg-amber-500'
+                              : participant.status === 'active' 
                               ? 'bg-green-500' 
                               : participant.status === 'dns'
                               ? 'bg-gray-500'
                               : 'bg-red-500'
                           }
                         >
-                          {participant.status === 'active' 
+                          {participant.status === 'winner'
+                            ? '🏆 Ganador'
+                            : participant.status === 'active' 
                             ? 'Activo' 
                             : participant.status === 'dns'
                             ? 'DNS'
