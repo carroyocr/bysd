@@ -265,6 +265,10 @@ app.include_router(race_router)
 from routes.volunteers import router as volunteers_router
 app.include_router(volunteers_router, prefix="/api/volunteers", tags=["volunteers"])
 
+# Include survey routes
+from routes.surveys import router as surveys_router
+app.include_router(surveys_router, prefix="/api/surveys", tags=["surveys"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
