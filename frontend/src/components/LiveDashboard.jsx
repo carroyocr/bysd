@@ -842,7 +842,7 @@ export default function LiveDashboard() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      {(participant.status === 'winner' || participant.status === 'retired') && (
+                      {certificatesAvailable[participant.bib] && (
                         <Button
                           onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
                           variant="ghost"
