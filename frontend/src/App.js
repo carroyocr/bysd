@@ -18,6 +18,7 @@ import EnviarAnimoPage from './pages/EnviarAnimoPage';
 import MensajesPresentacionPage from './pages/MensajesPresentacionPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
+import SurveyPage from './pages/SurveyPage';
 import './App.css';
 
 export default function App() {
