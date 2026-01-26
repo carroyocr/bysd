@@ -18,6 +18,8 @@ export default function Footer() {
     { href: '/logistica', label: 'Logística' },
     { href: '/patrocinadores', label: 'Patrocinadores' },
     { href: '/faq', label: 'FAQ' },
+    { href: '/encuesta', label: 'Encuesta' },
+    { href: '/admin/login', label: 'Admin' },
   ];
 
   return (
