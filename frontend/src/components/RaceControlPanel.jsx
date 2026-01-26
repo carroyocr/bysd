@@ -979,6 +979,16 @@ export default function RaceControlPanel() {
                               >
                                 <Edit3 className="w-4 h-4" />
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditParticipantModal(participant)}
+                                disabled={saving}
+                                className="border-purple-500 text-purple-600"
+                                title="Editar datos del corredor"
+                              >
+                                <UserCog className="w-4 h-4" />
+                              </Button>
                             </>
                           )}
                           {(participant.status === 'retired' || participant.status === 'dns') && (
@@ -1004,6 +1014,16 @@ export default function RaceControlPanel() {
                                   <Edit3 className="w-4 h-4" />
                                 </Button>
                               )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditParticipantModal(participant)}
+                                disabled={saving}
+                                className="border-purple-500 text-purple-600"
+                                title="Editar datos del corredor"
+                              >
+                                <UserCog className="w-4 h-4" />
+                              </Button>
                             </>
                           )}
                         </div>
