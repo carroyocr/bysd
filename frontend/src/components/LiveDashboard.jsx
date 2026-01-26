@@ -435,7 +435,7 @@ export default function LiveDashboard() {
       `"${p.nombre}"`,
       `"${p.apellidos}"`,
       p.nacionalidad,
-      p.status === 'active' ? 'Activo' : (p.status === 'dns' ? 'DNS' : 'DNF'),
+      p.status === 'winner' ? 'Ganador' : (p.status === 'active' ? 'Activo' : (p.status === 'dns' ? 'DNS' : 'DNF')),
       p.laps_completed,
       p.total_km,
       p.retired_at_lap || '-'
