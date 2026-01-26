@@ -1052,6 +1052,23 @@ export default function RaceControlPanel() {
                               GANADOR
                             </Badge>
                           )}
+                          {participant.status === 'honor' && (
+                            <>
+                              <Badge className="bg-purple-500 text-white">
+                                ⭐ INVITADA DE HONOR
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openEditParticipantModal(participant)}
+                                disabled={saving}
+                                className="border-purple-500 text-purple-600"
+                                title="Editar datos"
+                              >
+                                <UserCog className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
                           {(participant.status === 'retired' || participant.status === 'dns') && (
                             <>
                               <Button
