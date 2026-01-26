@@ -512,6 +512,56 @@ export default function RaceControlPanel() {
     setShowAdjustLapsModal(true);
   };
 
+  const openEditParticipantModal = (participant) => {
+    setEditParticipant(participant);
+    setEditFormData({
+      nombre: participant.nombre,
+      apellidos: participant.apellidos,
+      nacionalidad: participant.nacionalidad
+    });
+    setShowEditParticipantModal(true);
+  };
+
+  const handleEditParticipant = async () => {
+    if (!editParticipant) return;
+    
+    const token = localStorage.getItem('admin_token');
+    setEditingParticipant(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/edit-participant`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          bib: editParticipant.bib,
+          nombre: editFormData.nombre,
+          apellidos: editFormData.apellidos,
+          nacionalidad: editFormData.nacionalidad
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al editar participante');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      setShowEditParticipantModal(false);
+      setEditParticipant(null);
+      setEditFormData({ nombre: '', apellidos: '', nacionalidad: '' });
+      
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setEditingParticipant(false);
+    }
+  };
+
   const handleAdjustLaps = async () => {
     if (!adjustLapsParticipant) return;
     
