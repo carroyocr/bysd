@@ -1568,7 +1568,7 @@ async def send_test_runner_email(
 
 @router.get("/certificate/{bib}")
 async def get_certificate(bib: str, db=Depends(lambda: None)):
-    """Get certificate PDF for a participant. Only available for winners and DNF athletes."""
+    """Get certificate PDF for a participant. Opens in browser for viewing."""
     from server import db as database
     
     # Check participant exists and has valid status
@@ -1600,12 +1600,13 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
     apellidos = participant.get("apellidos", "")
     filename = f"Certificado_{nombre}_{apellidos}_{bib}.pdf".replace(" ", "_")
     
+    # Return with inline disposition so it opens in browser
     return FileResponse(
         path=certificate_path,
         media_type="application/pdf",
         filename=filename,
         headers={
-            "Content-Disposition": f"attachment; filename={filename}"
+            "Content-Disposition": f"inline; filename={filename}"
         }
     )
 
