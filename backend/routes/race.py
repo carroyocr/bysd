@@ -1564,3 +1564,85 @@ async def send_test_runner_email(
         }
     else:
         raise HTTPException(status_code=500, detail="Error al enviar el email")
+
+
+@router.get("/certificate/{bib}")
+async def get_certificate(bib: str, db=Depends(lambda: None)):
+    """Get certificate PDF for a participant. Only available for winners and DNF athletes."""
+    from server import db as database
+    
+    # Check participant exists and has valid status
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    status = participant.get("status", "active")
+    
+    # DNS athletes cannot download certificates
+    if status == "dns":
+        raise HTTPException(
+            status_code=403, 
+            detail="Los atletas DNS no tienen certificado disponible"
+        )
+    
+    # Active athletes need to wait until they finish
+    if status == "active":
+        raise HTTPException(
+            status_code=403, 
+            detail="El certificado estará disponible cuando finalice la carrera"
+        )
+    
+    # Check if certificate exists
+    certificate_path = CERTIFICATES_DIR / f"{bib}.pdf"
+    
+    if not certificate_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="Certificado no disponible para este participante"
+        )
+    
+    # Get participant name for filename
+    nombre = participant.get("nombre", "")
+    apellidos = participant.get("apellidos", "")
+    filename = f"Certificado_{nombre}_{apellidos}_{bib}.pdf".replace(" ", "_")
+    
+    return FileResponse(
+        path=certificate_path,
+        media_type="application/pdf",
+        filename=filename,
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/certificate-check/{bib}")
+async def check_certificate(bib: str, db=Depends(lambda: None)):
+    """Check if a participant can download their certificate"""
+    from server import db as database
+    
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        return {"available": False, "reason": "Participante no encontrado"}
+    
+    status = participant.get("status", "active")
+    
+    if status == "dns":
+        return {"available": False, "reason": "No disponible para DNS"}
+    
+    if status == "active":
+        return {"available": False, "reason": "Disponible al finalizar"}
+    
+    certificate_path = CERTIFICATES_DIR / f"{bib}.pdf"
+    
+    if not certificate_path.exists():
+        return {"available": False, "reason": "Certificado no generado"}
+    
+    return {
+        "available": True, 
+        "status": status,
+        "nombre": participant.get("nombre"),
+        "apellidos": participant.get("apellidos")
+    }
