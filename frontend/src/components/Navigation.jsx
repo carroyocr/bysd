@@ -119,25 +119,20 @@ export default function Navigation() {
               </div>
               <div className="flex-1 overflow-y-auto py-6">
                 <div className="flex flex-col gap-2 pr-2">
-                  {navLinks.map((link) => {
-                    const shouldHighlight = link.highlightAfterRaceStart && raceStarted;
-                    return (
-                      <Link
-                        key={link.href}
-                        to={link.href}
-                        onClick={handleLinkClick}
-                        className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
-                          shouldHighlight
-                            ? 'bg-gradient-to-r from-primary to-accent text-white font-semibold'
-                            : location.pathname === link.href
-                            ? 'text-primary bg-secondary'
-                            : 'text-foreground hover:text-primary hover:bg-secondary'
-                        }`}
-                      >
-                        {link.label}
-                      </Link>
-                    );
-                  })}
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      to={link.href}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        location.pathname === link.href
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
             </SheetContent>
