@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import SurveyResultsSection from './SurveyResultsSection';
 
 // Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
 const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
