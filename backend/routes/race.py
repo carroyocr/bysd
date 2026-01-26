@@ -302,6 +302,42 @@ async def adjust_participant_laps(
     }
 
 
+@router.post("/edit-participant")
+async def edit_participant(
+    request: EditParticipantRequest,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Edit participant data (name, last name, nationality)"""
+    from server import db as database
+    
+    participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    # Update participant data
+    await database.participants.update_one(
+        {"bib": request.bib},
+        {
+            "$set": {
+                "nombre": request.nombre,
+                "apellidos": request.apellidos,
+                "nacionalidad": request.nacionalidad.upper(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": f"Datos del participante {request.bib} actualizados",
+        "bib": request.bib,
+        "nombre": request.nombre,
+        "apellidos": request.apellidos,
+        "nacionalidad": request.nacionalidad.upper()
+    }
+
+
 @router.post("/reactivate")
 async def reactivate_participant(
     request: dict,
