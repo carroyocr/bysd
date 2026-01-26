@@ -1611,6 +1611,62 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
     )
 
 
+@router.get("/certificate/{bib}/image")
+async def get_certificate_image(bib: str, db=Depends(lambda: None)):
+    """Get certificate as high-resolution PNG image for social media sharing."""
+    import fitz  # PyMuPDF
+    from fastapi.responses import Response
+    from server import db as database
+    
+    # Check participant exists and has valid status
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    status = participant.get("status", "active")
+    
+    if status == "dns":
+        raise HTTPException(
+            status_code=403, 
+            detail="Los atletas DNS no tienen certificado disponible"
+        )
+    
+    certificate_path = CERTIFICATES_DIR / f"{bib}.pdf"
+    
+    if not certificate_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="Certificado no disponible para este participante"
+        )
+    
+    # Convert PDF to high-resolution image
+    doc = fitz.open(str(certificate_path))
+    page = doc[0]
+    
+    # High resolution: 300 DPI (default is 72, so multiply by ~4.17)
+    zoom = 4.0  # 4x zoom for high resolution (~288 DPI)
+    mat = fitz.Matrix(zoom, zoom)
+    pix = page.get_pixmap(matrix=mat, alpha=False)
+    
+    # Convert to PNG bytes
+    img_bytes = pix.tobytes("png")
+    doc.close()
+    
+    # Get participant name for filename
+    nombre = participant.get("nombre", "")
+    apellidos = participant.get("apellidos", "")
+    filename = f"Certificado_{nombre}_{apellidos}_{bib}.png".replace(" ", "_")
+    
+    return Response(
+        content=img_bytes,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
 @router.get("/certificate-check/{bib}")
 async def check_certificate(bib: str, db=Depends(lambda: None)):
     """Check if a participant can download their certificate"""
