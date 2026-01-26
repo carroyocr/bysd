@@ -428,12 +428,15 @@ const VolunteersSurveyForm = () => {
               <SelectValue placeholder="Selecciona tu área" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="hidratacion">Hidratación</SelectItem>
-              <SelectItem value="registro">Registro</SelectItem>
-              <SelectItem value="ruta">Control de ruta</SelectItem>
-              <SelectItem value="logistica">Logística</SelectItem>
-              <SelectItem value="medico">Apoyo médico</SelectItem>
-              <SelectItem value="otro">Otro</SelectItem>
+              <SelectItem value="Área de Carpas / Zona de Atletas">Área de Carpas / Zona de Atletas</SelectItem>
+              <SelectItem value="Centro de Información y Redes">Centro de Información y Redes</SelectItem>
+              <SelectItem value="Control de Vueltas">Control de Vueltas</SelectItem>
+              <SelectItem value="Corral de salida y animación">Corral de salida y animación</SelectItem>
+              <SelectItem value="Equipo Médico / Apoyo Seguridad">Equipo Médico / Apoyo Seguridad</SelectItem>
+              <SelectItem value="Hidratación y Snacks">Hidratación y Snacks</SelectItem>
+              <SelectItem value="Orden y Limpieza">Orden y Limpieza</SelectItem>
+              <SelectItem value="Registro y Check-in">Registro y Check-in</SelectItem>
+              <SelectItem value="Otro">Otro</SelectItem>
             </SelectContent>
           </Select>
         </div>
