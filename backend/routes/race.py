@@ -1586,13 +1586,6 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
             detail="Los atletas DNS no tienen certificado disponible"
         )
     
-    # Active athletes need to wait until they finish
-    if status == "active":
-        raise HTTPException(
-            status_code=403, 
-            detail="El certificado estará disponible cuando finalice la carrera"
-        )
-    
     # Check if certificate exists
     certificate_path = CERTIFICATES_DIR / f"{bib}.pdf"
     
