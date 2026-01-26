@@ -32,6 +32,10 @@ export default function RaceControlPanel() {
   const [adjustLapsParticipant, setAdjustLapsParticipant] = useState(null);
   const [newLapsValue, setNewLapsValue] = useState(0);
   const [adjustingLaps, setAdjustingLaps] = useState(false);
+  const [showEditParticipantModal, setShowEditParticipantModal] = useState(false);
+  const [editParticipant, setEditParticipant] = useState(null);
+  const [editFormData, setEditFormData] = useState({ nombre: '', apellidos: '', nacionalidad: '' });
+  const [editingParticipant, setEditingParticipant] = useState(false);
   const [followersCount, setFollowersCount] = useState({});
   const [sendingRunnerEmails, setSendingRunnerEmails] = useState(false);
   const [showSendRunnerEmailsModal, setShowSendRunnerEmailsModal] = useState(false);
