@@ -48,6 +48,12 @@ class AdjustLapsRequest(BaseModel):
     bib: str
     new_laps: int
 
+class EditParticipantRequest(BaseModel):
+    bib: str
+    nombre: str
+    apellidos: str
+    nacionalidad: str
+
 class RaceStats(BaseModel):
     current_lap: int
     total_laps_completed: int
