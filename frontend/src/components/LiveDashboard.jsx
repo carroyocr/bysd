@@ -1003,15 +1003,34 @@ export default function LiveDashboard() {
                       <td className="py-3 px-4 text-center">
                         <div className="flex justify-center gap-1">
                           {certificatesAvailable[participant.bib] && (
-                            <Button
-                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
-                              variant="ghost"
-                              size="sm"
-                              className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                              title="Descargar Certificado"
-                            >
-                              <Download className="w-5 h-5" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  title="Certificado"
+                                >
+                                  <Download className="w-5 h-5" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
+                                  className="cursor-pointer"
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Ver PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}/image`, '_blank')}
+                                  className="cursor-pointer"
+                                >
+                                  <Image className="w-4 h-4 mr-2" />
+                                  Descargar Imagen (HD)
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                           <Button
                             onClick={() => openCheerModal(participant)}
