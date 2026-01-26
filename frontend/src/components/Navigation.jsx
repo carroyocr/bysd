@@ -16,7 +16,7 @@ const navLinks = [
   { href: '/patrocinadores', label: 'Patrocinadores' },
   { href: '/en-vivo', label: 'Seguimiento', highlightAfterRaceStart: true },
   { href: '/comunidad', label: 'Comunidad' },
-  { href: '/admin/login', label: 'Admin' },
+  { href: '/encuesta', label: 'Encuesta' },
 ];
 
 export default function Navigation() {
