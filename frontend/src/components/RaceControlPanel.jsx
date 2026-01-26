@@ -563,6 +563,40 @@ export default function RaceControlPanel() {
     }
   };
 
+  const handleMarkWinner = async (participant) => {
+    if (!window.confirm(`¿Estás seguro de marcar a ${participant.nombre} ${participant.apellidos} como GANADOR?`)) {
+      return;
+    }
+    
+    const token = localStorage.getItem('admin_token');
+    setMarkingWinner(true);
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-winner`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bib: participant.bib })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al marcar ganador');
+      }
+
+      const data = await response.json();
+      showMessage(data.message, 'success');
+      
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setMarkingWinner(false);
+    }
+  };
+
   const handleAdjustLaps = async () => {
     if (!adjustLapsParticipant) return;
     
