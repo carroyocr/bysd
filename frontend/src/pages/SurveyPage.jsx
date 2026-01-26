@@ -796,38 +796,39 @@ const SpectatorsSurveyForm = () => {
 
 export default function SurveyPage() {
   return (
-    <div className="min-h-screen pt-24 pb-16 bg-gradient-to-b from-background to-muted/30">
+    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-screen pt-24">
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-4">
-            Encuesta de Satisfacción
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Tu opinión es muy importante para nosotros. Ayúdanos a mejorar completando esta breve encuesta.
-          </p>
-        </div>
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
+              Encuesta de Satisfacción
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Tu opinión es muy importante para nosotros. Ayúdanos a mejorar completando esta breve encuesta.
+            </p>
+          </div>
 
-        {/* Survey Tabs */}
-        <Card className="max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-primary" />
-              Selecciona tu tipo de participación
-            </CardTitle>
-            <CardDescription>
-              Elige la encuesta que corresponde a tu rol en el evento
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="athletes" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
-                <TabsTrigger value="athletes" className="flex items-center gap-2" data-testid="tab-athletes">
-                  <Users className="w-4 h-4" />
-                  <span className="hidden sm:inline">Atletas</span>
-                </TabsTrigger>
-                <TabsTrigger value="volunteers" className="flex items-center gap-2" data-testid="tab-volunteers">
-                  <Heart className="w-4 h-4" />
+          {/* Survey Tabs */}
+          <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary" />
+                Selecciona tu tipo de participación
+              </CardTitle>
+              <CardDescription>
+                Elige la encuesta que corresponde a tu rol en el evento
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="athletes" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-8">
+                  <TabsTrigger value="athletes" className="flex items-center gap-2" data-testid="tab-athletes">
+                    <Users className="w-4 h-4" />
+                    <span className="hidden sm:inline">Atletas</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="volunteers" className="flex items-center gap-2" data-testid="tab-volunteers">
+                    <Heart className="w-4 h-4" />
                   <span className="hidden sm:inline">Voluntarios</span>
                 </TabsTrigger>
                 <TabsTrigger value="spectators" className="flex items-center gap-2" data-testid="tab-spectators">
