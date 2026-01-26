@@ -399,6 +399,43 @@ async def mark_winner(
     }
 
 
+@router.post("/mark-honor")
+async def mark_honor(
+    request: dict,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Mark a participant as Guest of Honor (Invitada de Honor)"""
+    from server import db as database
+    
+    bib = request.get("bib")
+    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    
+    if participant.get("status") == "honor":
+        raise HTTPException(status_code=400, detail="Este participante ya es Invitada de Honor")
+    
+    # Mark as honor
+    await database.participants.update_one(
+        {"bib": bib},
+        {
+            "$set": {
+                "status": "honor",
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "message": f"¡{participant.get('nombre')} {participant.get('apellidos')} ha sido marcado como Invitada de Honor!",
+        "bib": bib,
+        "nombre": participant.get("nombre"),
+        "apellidos": participant.get("apellidos")
+    }
+
+
 @router.post("/reactivate")
 async def reactivate_participant(
     request: dict,
