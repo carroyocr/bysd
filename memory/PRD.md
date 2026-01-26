@@ -108,6 +108,35 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - **volunteers**: `{ email, nombre, apellidos, sexo, lugar_residencia, telefono, created_at }`
 - **volunteer_assignments**: `{ id, puesto, turno, dia, hora_inicio, hora_fin, slot, email_asignado, created_at, updated_at }`
 
+### 6. Sistema de Encuestas de Satisfacción (Completado 26 Ene 2026)
+#### Página de Encuestas (`/encuesta`)
+- **Tres formularios**: Atletas, Voluntarios, Espectadores
+- **Campos comunes**: Nombre, Email, Ratings (1-5), Texto libre
+- **Validación**: Campos requeridos, rango de ratings
+- **Confirmación visual**: Mensaje de éxito tras envío
+
+#### Panel Admin - Resultados de Encuestas
+- **Estadísticas rápidas**: Total, por categoría
+- **Tabs**: Atletas, Voluntarios, Espectadores
+- **Cards expandibles**: Ver detalle de cada respuesta
+- **Exportar CSV**: Por categoría
+
+#### API Endpoints Encuestas
+| Endpoint | Método | Descripción |
+|----------|--------|-------------|
+| `/api/surveys/athletes` | POST | Enviar encuesta de atleta |
+| `/api/surveys/volunteers` | POST | Enviar encuesta de voluntario |
+| `/api/surveys/spectators` | POST | Enviar encuesta de espectador |
+| `/api/surveys/stats` | GET | Estadísticas de encuestas |
+| `/api/surveys/athletes/responses` | GET | Respuestas de atletas |
+| `/api/surveys/volunteers/responses` | GET | Respuestas de voluntarios |
+| `/api/surveys/spectators/responses` | GET | Respuestas de espectadores |
+
+#### Colecciones MongoDB (Encuestas)
+- **surveys_athletes**: `{ nombre, email, bib, ratings..., lo_mejor, areas_mejora, created_at }`
+- **surveys_volunteers**: `{ nombre, email, area_voluntariado, ratings..., lo_mejor, areas_mejora, created_at }`
+- **surveys_spectators**: `{ nombre, email, relacion_evento, ratings..., lo_mejor, areas_mejora, created_at }`
+
 ---
 
 ## API Endpoints
