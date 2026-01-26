@@ -1061,6 +1061,16 @@ export default function RaceControlPanel() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => handleMarkHonor(participant)}
+                                disabled={saving}
+                                className="border-purple-400 text-purple-500 hover:bg-purple-50"
+                                title="Marcar como Invitada de Honor"
+                              >
+                                <Star className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => openAdjustLapsModal(participant)}
                                 disabled={saving}
                                 className="border-blue-500 text-blue-600"
