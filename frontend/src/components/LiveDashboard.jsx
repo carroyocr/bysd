@@ -68,6 +68,9 @@ export default function LiveDashboard() {
   // Followers count (like admin panel)
   const [followersCount, setFollowersCount] = useState({});
   
+  // Certificates availability
+  const [certificatesAvailable, setCertificatesAvailable] = useState({});
+  
   // Cheer count for link
   const [cheerCount, setCheerCount] = useState(0);
   
