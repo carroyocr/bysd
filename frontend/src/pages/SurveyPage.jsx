@@ -851,7 +851,8 @@ export default function SurveyPage() {
             </Tabs>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
