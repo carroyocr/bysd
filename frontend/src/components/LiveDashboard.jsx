@@ -820,6 +820,17 @@ export default function LiveDashboard() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
+                      {(participant.status === 'winner' || participant.status === 'retired') && (
+                        <Button
+                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
+                          variant="ghost"
+                          size="sm"
+                          className="p-2 text-amber-600 hover:text-amber-700"
+                          title="Descargar Certificado"
+                        >
+                          <Download className="w-5 h-5" />
+                        </Button>
+                      )}
                       <Button
                         onClick={() => openCheerModal(participant)}
                         variant="ghost"
