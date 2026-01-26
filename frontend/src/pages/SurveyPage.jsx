@@ -7,8 +7,9 @@ import { Textarea } from '../components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
-import { Users, Heart, Eye, Star, Send, CheckCircle } from 'lucide-react';
+import { Users, Heart, Eye, Star, Send, CheckCircle, UserX } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
