@@ -1007,6 +1007,16 @@ export default function RaceControlPanel() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => handleMarkWinner(participant)}
+                                disabled={saving || markingWinner}
+                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                title="Marcar como Ganador"
+                              >
+                                <Trophy className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => openAdjustLapsModal(participant)}
                                 disabled={saving}
                                 className="border-blue-500 text-blue-600"
@@ -1025,6 +1035,12 @@ export default function RaceControlPanel() {
                                 <UserCog className="w-4 h-4" />
                               </Button>
                             </>
+                          )}
+                          {participant.status === 'winner' && (
+                            <Badge className="bg-yellow-500 text-white">
+                              <Trophy className="w-3 h-3 mr-1" />
+                              GANADOR
+                            </Badge>
                           )}
                           {(participant.status === 'retired' || participant.status === 'dns') && (
                             <>
