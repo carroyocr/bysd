@@ -228,10 +228,12 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - **Archivos de tests**: 
   - `/app/tests/test_race_winner.py`
   - `/app/tests/test_new_features.py`
+  - `/app/backend/tests/test_surveys.py`
 - **Reportes**: 
   - `/app/test_reports/iteration_1.json`
   - `/app/test_reports/iteration_2.json`
-- **Cobertura**: 28/28 tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_3.json`
+- **Cobertura**: 43/43 tests backend (100%), UI tests completos (100%)
 
 ---
 
