@@ -79,7 +79,8 @@ async def get_race_stats(db=Depends(lambda: None)):
     athletes_dnf = sum(1 for p in participants if p.get("status") == "retired")
     athletes_dns = sum(1 for p in participants if p.get("status") == "dns")
     athletes_winner = sum(1 for p in participants if p.get("status") == "winner")
-    athletes_active = len(participants) - athletes_dnf - athletes_dns - athletes_winner
+    athletes_honor = sum(1 for p in participants if p.get("status") == "honor")
+    athletes_active = len(participants) - athletes_dnf - athletes_dns - athletes_winner - athletes_honor
     
     # Total km is based on completed laps (not current lap)
     total_km = total_laps_completed * KM_PER_LAP
