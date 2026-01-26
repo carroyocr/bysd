@@ -362,6 +362,7 @@ const VolunteersSurveyForm = () => {
     recomendaria: '',
     comentarios_adicionales: ''
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -383,17 +384,26 @@ const VolunteersSurveyForm = () => {
       }
     }
     
-    if (!formData.nombre || !formData.email || !formData.voluntario_nuevamente || !formData.recomendaria) {
-      toast.error('Por favor completa todos los campos obligatorios');
+    if (!isAnonymous && (!formData.nombre || !formData.email)) {
+      toast.error('Por favor completa tu nombre y email, o marca la opción de envío anónimo');
+      return;
+    }
+    
+    if (!formData.voluntario_nuevamente || !formData.recomendaria) {
+      toast.error('Por favor completa las preguntas de participación y recomendación');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const submitData = isAnonymous 
+        ? { ...formData, nombre: 'Anónimo', email: 'anonimo@encuesta.local', is_anonymous: true }
+        : { ...formData, is_anonymous: false };
+        
       const response = await fetch(`${API_URL}/api/surveys/volunteers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       });
       
       if (response.ok) {
@@ -426,8 +436,24 @@ const VolunteersSurveyForm = () => {
         <p className="text-sm font-semibold text-green-800">❤️ Encuesta para Voluntarios</p>
       </div>
 
+      {/* Anonymous Option */}
+      <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
+        <Checkbox 
+          id="anonymous-volunteers"
+          checked={isAnonymous}
+          onCheckedChange={setIsAnonymous}
+        />
+        <div className="flex items-center gap-2">
+          <UserX className="w-4 h-4 text-gray-500" />
+          <Label htmlFor="anonymous-volunteers" className="text-sm font-medium cursor-pointer">
+            Enviar encuesta de forma anónima
+          </Label>
+        </div>
+      </div>
+
       {/* Personal Info */}
-      <div className="grid md:grid-cols-3 gap-4">
+      {!isAnonymous && (
+        <div className="grid md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="vol-nombre">Nombre completo *</Label>
           <Input 
