@@ -1376,12 +1376,23 @@ async def get_cheer_messages(
     limit: int = 50,
     page: int = 1,
     athlete_bib: Optional[str] = None,
+    race_code: Optional[str] = Query(None, description="Race code to filter by"),
     db=Depends(lambda: None)
 ):
     """Get cheer messages with pagination (most recent first)"""
     from server import db as database
     
+    # Get race code - use parameter or get active race
+    active_race_code = race_code
+    if not active_race_code:
+        active_race_code = await get_active_race_code(database)
+    
+    # Determine data source based on race code
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     query = {}
+    if active_race_code:
+        query["race_code"] = active_race_code
     if athlete_bib:
         query["athlete_bib"] = athlete_bib
     
@@ -1398,12 +1409,25 @@ async def get_cheer_messages(
         {"_id": 0}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Enrich with athlete names
+    # Enrich with athlete names - check registrations first for new races
     for msg in messages:
-        athlete = await database.participants.find_one(
-            {"bib": msg["athlete_bib"]},
-            {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
-        )
+        athlete = None
+        if active_race_code and active_race_code not in LEGACY_RACE_CODES:
+            # Try registrations first for new races
+            bib_int = int(msg["athlete_bib"].lstrip('0')) if msg["athlete_bib"].lstrip('0').isdigit() else None
+            if bib_int:
+                athlete = await database.registrations.find_one(
+                    {"race_code": active_race_code, "bib": bib_int},
+                    {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
+                )
+        
+        # Fallback to participants
+        if not athlete:
+            athlete = await database.participants.find_one(
+                {"bib": msg["athlete_bib"]},
+                {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
+            )
+        
         if athlete:
             msg["athlete_name"] = f"{athlete['nombre']} {athlete['apellidos']}"
             msg["athlete_nacionalidad"] = athlete.get("nacionalidad", "")
