@@ -1520,20 +1520,25 @@ async def send_runner_completion_emails(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Send completion emails to all runners when there is a winner (excludes DNS)"""
+    """Send completion emails to all runners of the active race when there is a winner (excludes DNS)"""
     from server import db as database
-    from services.runner_email_service import send_runner_completion_email, get_runner_email
+    from services.runner_email_service import send_runner_completion_email
     
-    # Check if there's a winner
-    race_status = await database.race_config.find_one({"key": "status"}, {"_id": 0})
-    active_participants = await database.participants.find(
-        {"status": "active"},
-        {"_id": 0}
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    if not active_race_code:
+        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
+    
+    # Get participants from registrations collection
+    active_participants = await database.registrations.find(
+        {"race_code": active_race_code, "status": "active", "bib": {"$ne": None}},
+        {"_id": 0, "edit_token": 0}
     ).to_list(100)
     
-    retired_participants = await database.participants.find(
-        {"status": "retired"},
-        {"_id": 0}
+    retired_participants = await database.registrations.find(
+        {"race_code": active_race_code, "status": "retired", "bib": {"$ne": None}},
+        {"_id": 0, "edit_token": 0}
     ).to_list(100)
     
     # Check winner conditions
@@ -1543,12 +1548,16 @@ async def send_runner_completion_emails(
         winner_laps = winner.get("laps_completed", 0)
         max_retired_laps = max([p.get("laps_completed", 0) for p in retired_participants], default=0)
         if winner_laps > max_retired_laps:
-            winner_bib = winner.get("bib")
+            winner_bib = str(winner.get("bib")).zfill(3)
     
     # Get all participants except DNS
-    participants = await database.participants.find(
-        {"status": {"$ne": "dns"}},
-        {"_id": 0}
+    participants = await database.registrations.find(
+        {
+            "race_code": active_race_code,
+            "status": {"$in": ["active", "retired", "winner"]},
+            "bib": {"$ne": None}
+        },
+        {"_id": 0, "edit_token": 0}
     ).to_list(100)
     
     results = {
@@ -1557,19 +1566,20 @@ async def send_runner_completion_emails(
         "emails_failed": 0,
         "no_email": 0,
         "winner_bib": winner_bib,
+        "race_code": active_race_code,
         "details": []
     }
     
     for participant in participants:
-        bib = participant.get("bib", "")
+        bib = str(participant.get("bib")).zfill(3) if participant.get("bib") else ""
         nombre = participant.get("nombre", "")
         apellidos = participant.get("apellidos", "")
         full_name = f"{nombre} {apellidos}".strip()
         total_km = participant.get("total_km", 0)
         laps_completed = participant.get("laps_completed", 0)
         
-        # Get email
-        email = get_runner_email(bib)
+        # Get email from registration
+        email = participant.get("email")
         if not email:
             results["no_email"] += 1
             results["details"].append({
@@ -1579,15 +1589,16 @@ async def send_runner_completion_emails(
             })
             continue
         
-        # Get followers count
+        # Get followers count (for this race)
         followers_count = await database.email_subscriptions.count_documents({
             "athletes_bibs": bib,
-            "is_active": True
+            "race_code": active_race_code,
+            "active": True
         })
         
-        # Get cheer messages
+        # Get cheer messages (for this race)
         cheer_messages = await database.cheer_messages.find(
-            {"athlete_bib": bib},
+            {"athlete_bib": bib, "race_code": active_race_code},
             {"_id": 0}
         ).sort("created_at", 1).to_list(500)
         
