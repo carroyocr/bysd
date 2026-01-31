@@ -88,6 +88,25 @@ export function RaceConfigProvider({ children }) {
     return config.code ? config.code.toLowerCase() : 'bysd-2026';
   };
 
+  // Get edition label (Primera, Segunda, Tercera, etc.)
+  const getEditionLabel = () => {
+    const editions = [
+      '', 'Primera', 'Segunda', 'Tercera', 'Cuarta', 'Quinta',
+      'Sexta', 'Séptima', 'Octava', 'Novena', 'Décima'
+    ];
+    const num = config.edition_number || 1;
+    if (num <= 10) {
+      return `${editions[num]} Edición`;
+    }
+    return `Edición #${num}`;
+  };
+
+  // Format registration cost
+  const getFormattedCost = () => {
+    const cost = config.registration_cost || DEFAULT_CONFIG.registration_cost;
+    return `RD$${cost.toLocaleString('es-DO')}`;
+  };
+
   const value = {
     config,
     loading,
@@ -99,6 +118,8 @@ export function RaceConfigProvider({ children }) {
     getShortDate,
     getYear,
     getRaceSlug,
+    getEditionLabel,
+    getFormattedCost,
     // Shorthand getters
     raceName: config.name || DEFAULT_CONFIG.name,
     raceCode: config.code || DEFAULT_CONFIG.code,
@@ -106,6 +127,8 @@ export function RaceConfigProvider({ children }) {
     raceTime: config.start_time || DEFAULT_CONFIG.start_time,
     raceLocation: config.location || DEFAULT_CONFIG.location,
     raceLogo: config.logo_url || DEFAULT_CONFIG.logo_url,
+    registrationCost: config.registration_cost || DEFAULT_CONFIG.registration_cost,
+    editionNumber: config.edition_number || DEFAULT_CONFIG.edition_number,
   };
 
   return (
