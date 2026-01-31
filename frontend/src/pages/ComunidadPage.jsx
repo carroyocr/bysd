@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function ComunidadPage() {
+  const { raceName } = useRaceConfig();
   // Active tab: 'messages', 'athletes', 'fans'
   const [activeTab, setActiveTab] = useState('messages');
   
@@ -260,7 +262,7 @@ export default function ComunidadPage() {
             Comunidad
           </h1>
           <p className="text-center text-purple-100 mb-4">
-            Backyard Ultra Santo Domingo 2026
+            {raceName}
           </p>
           <div className="flex justify-center gap-2 flex-wrap">
             <Link to="/en-vivo">
