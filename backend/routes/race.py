@@ -1202,7 +1202,7 @@ async def reset_subscriptions(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Reset all email subscriptions (admin only)"""
+    """Reset email subscriptions for the active race only (admin only)"""
     from server import db as database
     
     # Verify confirmation
@@ -1210,14 +1210,23 @@ async def reset_subscriptions(
     if confirmation != "SUSCRIPCIONES":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir SUSCRIPCIONES")
     
-    # Count before deletion
-    subs_count = await database.email_subscriptions.count_documents({})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
     
-    # Drop email subscriptions collection
-    await database.email_subscriptions.drop()
+    if not active_race_code:
+        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
+    
+    # Count before deletion for active race
+    subs_count = await database.email_subscriptions.count_documents({"race_code": active_race_code})
+    
+    # Delete only subscriptions for this race
+    result = await database.email_subscriptions.delete_many({"race_code": active_race_code})
     
     return {
-        "message": f"Se han eliminado {subs_count} suscripciones de correo exitosamente",
+        "message": f"Se han eliminado {result.deleted_count} suscripciones de correo de la carrera {active_race_code}",
+        "deleted_count": result.deleted_count,
+        "race_code": active_race_code
+    }
         "deleted_count": subs_count
     }
 
