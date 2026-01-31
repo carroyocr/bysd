@@ -1524,12 +1524,27 @@ def get_fan_badge(cheer_count: int) -> dict:
 @router.get("/fans/leaderboard")
 async def get_fans_leaderboard(
     limit: int = 10,
+    race_code: Optional[str] = Query(None, description="Race code to filter by"),
     db=Depends(lambda: None)
 ):
     """Get leaderboard of fans with most cheer messages sent"""
     from server import db as database
     
-    pipeline = [
+    # Get race code - use parameter or get active race
+    active_race_code = race_code
+    if not active_race_code:
+        active_race_code = await get_active_race_code(database)
+    
+    # Build match stage
+    match_stage = {}
+    if active_race_code:
+        match_stage = {"$match": {"race_code": active_race_code}}
+    
+    pipeline = []
+    if match_stage:
+        pipeline.append(match_stage)
+    
+    pipeline.extend([
         {"$group": {
             "_id": "$fan_name",
             "cheer_count": {"$sum": 1},
@@ -1537,7 +1552,7 @@ async def get_fans_leaderboard(
         }},
         {"$sort": {"cheer_count": -1}},
         {"$limit": limit}
-    ]
+    ])
     
     results = await database.cheer_messages.aggregate(pipeline).to_list(limit)
     
@@ -1558,17 +1573,28 @@ async def get_fans_leaderboard(
 @router.get("/fans/badge/{fan_name}")
 async def get_fan_badge_info(
     fan_name: str,
+    race_code: Optional[str] = Query(None, description="Race code to filter by"),
     db=Depends(lambda: None)
 ):
     """Get badge info for a specific fan"""
     from server import db as database
     
-    # Count messages by this fan
-    count = await database.cheer_messages.count_documents({"fan_name": fan_name})
+    # Get race code - use parameter or get active race
+    active_race_code = race_code
+    if not active_race_code:
+        active_race_code = await get_active_race_code(database)
+    
+    # Build query
+    query = {"fan_name": fan_name}
+    if active_race_code:
+        query["race_code"] = active_race_code
+    
+    # Count messages by this fan for this race
+    count = await database.cheer_messages.count_documents(query)
     
     # Get unique athletes cheered
     pipeline = [
-        {"$match": {"fan_name": fan_name}},
+        {"$match": query},
         {"$group": {"_id": "$athlete_bib"}}
     ]
     athletes = await database.cheer_messages.aggregate(pipeline).to_list(100)
