@@ -35,7 +35,7 @@ const STEPS = [
 export default function InscripcionPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { config, raceName, raceCode } = useRaceConfig();
+  const { config, raceName, raceCode, getFormattedCost, registrationCost } = useRaceConfig();
   
   // Check if editing existing registration
   const editToken = searchParams.get('token');
