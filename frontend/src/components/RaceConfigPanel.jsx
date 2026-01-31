@@ -19,6 +19,7 @@ export default function RaceConfigPanel() {
   const [saving, setSaving] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [archiveOnCreate, setArchiveOnCreate] = useState(true);
   
   // Form state for creating new race
   const [newRace, setNewRace] = useState({
