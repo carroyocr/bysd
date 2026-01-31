@@ -301,9 +301,10 @@ export default function SponsorsManagement() {
                     {sponsor.logo_url ? (
                       <div className="w-20 h-20 rounded-lg border overflow-hidden bg-white flex items-center justify-center">
                         <img 
-                          src={sponsor.logo_url} 
+                          src={`${API_URL}${sponsor.logo_url}`} 
                           alt={sponsor.name}
                           className="max-w-full max-h-full object-contain p-1"
+                          onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       </div>
                     ) : (
