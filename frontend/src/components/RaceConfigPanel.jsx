@@ -6,7 +6,8 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { 
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
-  Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle 
+  Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
+  DollarSign, Hash
 } from 'lucide-react';
 import { toast } from 'sonner';
 
