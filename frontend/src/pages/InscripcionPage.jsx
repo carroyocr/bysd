@@ -1256,7 +1256,7 @@ export default function InscripcionPage() {
                   Cuatro (4) meses antes del evento, enviaremos un correo electrónico a todos los prerregistrados con las instrucciones para realizar el pago de la inscripción.
                 </p>
                 <p className="font-semibold text-lg text-blue-900">
-                  El costo de la carrera será de RD$3,500.
+                  El costo de la carrera será de {getFormattedCost()}.
                 </p>
                 <p>
                   A partir de la recepción de ese correo, el participante contará con un plazo de <strong>treinta (30) días</strong> para completar el pago correspondiente.
