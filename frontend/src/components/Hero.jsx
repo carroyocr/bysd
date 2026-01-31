@@ -67,11 +67,11 @@ export default function Hero() {
               
               <div className="pt-6">
                 <Link 
-                  to="/inscripcion"
+                  to="/pre-registro"
                   className="inline-flex items-center gap-3 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-full transition-all duration-300 group shadow-lg hover:shadow-xl"
                 >
                   <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold">¡Inscríbete Ahora!</span>
+                  <span className="text-sm font-semibold">¡Pre Regístrate Ahora!</span>
                 </Link>
               </div>
             </div>
