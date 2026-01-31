@@ -190,7 +190,8 @@ export default function ComunidadPage() {
   const loadFanLeaderboard = async () => {
     setLoadingFans(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=20`);
+      const raceCodeParam = displayRaceCode ? `&race_code=${displayRaceCode}` : '';
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/leaderboard?limit=20${raceCodeParam}`);
       if (response.ok) {
         const data = await response.json();
         setFanLeaderboard(data);
@@ -204,7 +205,8 @@ export default function ComunidadPage() {
 
   const loadAthletes = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`);
+      const raceCodeParam = displayRaceCode ? `?race_code=${displayRaceCode}` : '';
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants${raceCodeParam}`);
       if (response.ok) {
         const data = await response.json();
         setAthletes(data);
@@ -220,7 +222,8 @@ export default function ComunidadPage() {
       return;
     }
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/badge/${encodeURIComponent(name)}`);
+      const raceCodeParam = displayRaceCode ? `?race_code=${displayRaceCode}` : '';
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/fans/badge/${encodeURIComponent(name)}${raceCodeParam}`);
       if (response.ok) {
         const data = await response.json();
         if (data.cheer_count > 0) {
