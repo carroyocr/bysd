@@ -1,97 +1,100 @@
 <analysis>**original_problem_statement:**
-The user has requested several adjustments to reflect the completion of the race and the implementation of a new Encuesta (Survey) feature.
+The user initially requested several post-race updates, including UI changes and a new survey system. This evolved into a series of iterative feature additions and UI tweaks based on user feedback. The final and most significant request is a major architectural refactor to make the entire application parametric, allowing an administrator to configure and launch new editions of the race (e.g., BYSD-2027) from an admin panel without requiring code changes.
 
 PRODUCT REQUIREMENTS:
-1.  **UI/Data Adjustments for Race Completion:**
-    *   On the Seguimiento (Live Tracking) page, hide the countdown timer.
-    *   On the admin dashboard, hide the Current Lap box.
-    *   Change the status of participant Livio (BIB 090) from Active to Winner.
-    *   Change the nationality of participant Walter Damián (BIB 013) from DOM to VEN.
-2.  **Navigation and UI Changes:**
-    *   Move the Admin link from the main navigation menu to the Enlaces Rápidos (Quick Links) section in the footer.
-    *   Add a Volver al Home (Back to Home) link on the Admin login page.
-3.  **New Encuesta (Survey) System:**
-    *   Create a new page/section in the main menu called Encuesta.
-    *   This page should contain three distinct forms for Athletes, Volunteers, and Spectators, based on user-provided  files.
-    *   Create a new database collection to store survey responses.
-    *   Create a new section in the admin panel to view the results of each survey type individually.
+1.  **Race Completion UI:** Hide race-in-progress elements (countdown, Current Lap card), rename Seguimiento (Tracking) to Resultados (Results).
+2.  **New Survey System:** Create a new Encuesta page with three distinct forms (Athletes, Volunteers, Spectators). Store responses in the database and create an admin view for results. Allow for anonymous submissions.
+3.  **Participant Management:**
+    *   Add a feature for admins to edit a runner's data (name, nationality).
+    *   Add a feature for admins to manually mark the last remaining runner as the Winner.
+    *   Add a new participant status: Invitada de Honor (Guest of Honor).
+4.  **Certificate Generation:**
+    *   Generate individual printable certificates for all DNF participants and the Winner from a master PDF file.
+    *   Provide an option for users to view the certificate as a PDF in the browser and download it as a high-resolution PNG image for social media.
+    *   DNS (Did Not Start) participants should not have access to certificates.
+5.  **Parametric Refactor (Major Task):**
+    *   Create a new Carrera Activa admin page to manage race-specific settings: Name, Date, Start Time, Location, and Logo.
+    *   Reorganize the admin area into separate pages/tabs: Race Control, Survey Results, and Active Race Config.
+    *   Replace all hardcoded values throughout the codebase (race name, date, etc.) with variables pulled from the new active race configuration.
+    *   Modify the main navigation so that pages like Patrocinadores, Resultados, and Comunidad are nested under the current race edition (e.g., ).
+    *   Tag race data (laps, participants) and survey results with the corresponding race edition name.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-A full-stack race management application with a React frontend, FastAPI backend, and MongoDB database. The agent has already performed the requested database updates (changing Livio's status to winner and Walter Damián's nationality to VEN). It has also implemented the frontend code changes for hiding race-in-progress elements, moving the admin link, and adding a home link to the admin login page. The foundation for the new survey system has been laid by creating an empty  file, registering it in , and extracting the survey questions from the user-provided documents.
+A full-stack race management application. All initial requests regarding post-race UI updates, the complete survey system (including anonymous submissions), and the certificate generation (PDF view + HD image download) have been implemented and tested. The application now also includes an Invitada de Honor status for participants.
+
+The agent has just started the major parametric refactoring task. It has created the foundational files for the new, reorganized admin section (), the race configuration panel (), and the corresponding backend route file (). The main application route in  has been updated to point  to the new .
 
 **Last working item**:
-- **Last item agent was working:** The agent was beginning the implementation of the new Encuesta (Survey) feature after completing a series of smaller UI and data-related requests. The immediate next step is to build out the survey system's backend (database model, API endpoints) and frontend (forms, admin view).
+- **Last item agent was working:** The agent was scaffolding the new admin interface and backend structure for the Carrera Activa (Active Race) configuration panel. This is the first step in the major parametric refactor.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
 - **Which testing method agent to use?** both
-    - **Frontend (for UI changes):** Use the screenshot tool to verify the UI changes on the  page, the main navigation/footer, and the  page.
-    - **Backend/Frontend (for Survey feature):** After building the feature, use the testing agent to perform an end-to-end test: submit each of the three survey types from the new  page and then log in as an admin to verify the results are displayed correctly in the new admin survey results view.
+    - **Backend:** Use  to test the new race configuration endpoints as they are created.
+    - **Frontend:** Use the screenshot tool to verify the new tabbed admin layout and the Carrera Activa form. Once the full refactor is complete, a full regression test using the  will be necessary.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: (P0 - HIGHEST PRIORITY)** Implement the Encuesta (Survey) System.
-  - **Description:** Create a new section for surveys with three forms (Athlete, Volunteer, Spectator). Store responses in a new DB collection (). Create an admin view for the results.
-  - **Attempted fixes:** The agent has created the basic backend file  and extracted the questions from the user-provided files. No core logic has been implemented yet.
+- **Issue 1: (P0 - HIGHEST PRIORITY)** Complete the parametric application refactor.
+  - **Description:** This is a large, multi-part task to make the application configurable for future race editions from an admin panel.
+  - **Attempted fixes:** The initial file structure has been created: , , and . The main admin route in  has been updated.
   - **Next debug checklist:**
     1.  **Backend ():**
-        *   Define a Pydantic model for survey submissions () to include fields like , , , and .
-        *   Create a  endpoint to store new survey submissions in the  collection.
-        *   Create an admin-protected  endpoint to fetch survey results, allowing filtering by .
-    2.  **Frontend:**
-        *   Create .
-        *   Add a new route for  in  and a link in .
-        *   In , build a UI (e.g., tabs) to select a survey type and dynamically render the correct form based on the extracted questions.
-        *   Implement the form submission logic to call the  endpoint.
-        *   Create an admin component () to display results from .
-        *   Integrate the  component into the admin panel ().
-  - **Why fix this issue and what will be achieved with the fix?** This is a new core feature requested by the user to gather feedback from race participants, volunteers, and spectators.
+        *   Define Pydantic models for race configuration.
+        *   Create  endpoint to save/update the active race configuration (name, date, time, logo URL, etc.).
+        *   Implement file upload logic for the race logo, storing it in a static directory.
+        *   Create  endpoint to fetch the current active race configuration for the frontend.
+    2.  **Frontend ():**
+        *   Build the form with inputs for Name, Date, Time, Location, and a file uploader for the logo.
+        *   Implement state management and API calls to fetch and save the race configuration.
+    3.  **Frontend (Global Refactor):**
+        *   Create a context or service to provide the active race configuration data globally.
+        *   Systematically search the entire frontend codebase for hardcoded strings (Backyard Ultra Santo Domingo 2026, race date, etc.) and replace them with dynamic values from the new config.
+    4.  **Admin Panel Reorganization:**
+        *   Integrate  and the modified  as tabs within the new .
+        *   Add a button/mechanism on the Race Control and Survey Results pages to tag the current data with the active race edition's name.
+    5.  **Navigation Refactor ():**
+        *   Implement the logic to create nested menu items for Resultados, Comunidad, and Patrocinadores based on the race edition (e.g., ).
+  - **Why fix this issue and what will be achieved with the fix?** This is the user's primary goal: to make the application reusable for future races without developer intervention, turning it into a parametric platform.
   - **Status:** IN PROGRESS
   - **Is recurring issue?** N
   - **Should Test frontend/backend/both after fix?** Both.
   - **Blocked on other issue:** No.
 
-- **Issue 2: (P1)** Verify and test all recent UI/Data changes.
-  - **Description:** The agent has made several UI and data changes to reflect the race's completion, but these have not been tested.
-  - **Attempted fixes:** Code has been edited across multiple components.
-  - **Next debug checklist:**
-    1.  Take a screenshot of  to verify the countdown timer is hidden and Livio is correctly displayed as Ganador.
-    2.  Check the main page () to confirm Admin is removed from the main navigation and now appears in the footer's Enlaces Rápidos.
-    3.  Take a screenshot of  to confirm the Volver al Home link is present.
-    4.  Log into the admin panel and verify Walter Damián's country flag is for Venezuela (VEN).
-  - **Why fix this issue and what will be achieved with the fix?** To confirm that the smaller tasks requested by the user have been successfully completed before deploying.
-  - **Status:** TESTING PENDING
-  - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Frontend.
-  - **Blocked on other issue:** No.
-
 **In progress Task List**:
-None.
+- **Task 1: (P0)** Complete the parametric application refactor (same as Issue 1).
+  - **Where to resume:** Flesh out the  component with the form UI and implement the corresponding backend endpoints in .
+  - **What will be achieved with this?** A fully functional admin panel for managing race editions.
+  - **Status:** IN PROGRESS
+  - **Should Test frontend/backend/both after fix?** Both.
+  - **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
   - **(P1)** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
   - **(P2)** Add filters to the Comunidad page cheer message feed by athlete or fan.
-  - **(P3)** Remove the unused Twitter/X integration code (, , and related  variables).
 - **Future Tasks:**
-  - **(P4)** Refactor hardcoded data (sponsors, initial participants) into separate, more maintainable configuration files.
-  - **(P5)** Optimize the 27MB  file to reduce its size and improve loading times.
+  - **(P3)** Remove the unused Twitter/X integration code (, ).
+  - **(P4)** Optimize the 27MB  file to reduce its size and improve loading times.
 
 **Completed work in this session**
-- **DNS Logic Fix:** Fixed a bug that prevented an admin from marking a participant as DNS if they already had laps recorded. The system now correctly resets laps to 0.
-- **Manual Lap Adjustment Feature:** Implemented a new feature in the admin panel to manually edit a runner's lap count, complete with a backend endpoint and frontend modal.
-- **Community Page Pagination:** Fixed a bug where the community page only showed the first 100 messages. Implemented full backend pagination and added a paginator, a real message counter, and an auto-refresh toggle to the frontend.
-- **Runner Felicitation Emails:** Created a system to email all runners post-race with a custom message, performance stats, and a list of their cheer messages. Added a trigger button to the admin panel.
-- **Dynamic Volunteer Scheduler:** The volunteer email scheduler now automatically schedules/cancels reminders when assignments are created or removed.
-- ** Bug Fix:** The Register lap for all button now correctly skips runners who have already completed the current lap.
-- **New Sponsor Panaca Added:** Integrated the new sponsor's logo and information into the sponsors page and the message slideshow.
-- **UI & Data Updates (In Progress):** Performed database updates and coded frontend changes to reflect the race's completion.
+- **Survey System:** Fully implemented with forms for Athletes, Volunteers, and Spectators, an admin results view, and an anonymous submission option.
+- **Certificate Generation System:** Implemented a feature allowing users to view a PDF certificate or download a high-resolution PNG image. This included processing user-provided PDFs, creating backend endpoints, and adding a dropdown menu to the frontend.
+- **Production Deployment Fix:** Added missing  and  dependencies to  to fix a production issue with certificate generation.
+- **New Participant Status Invitada de Honor:** Added the new status to the backend data model and integrated it across the frontend UI (admin panel, results page filters, and status badges).
+- **Admin Panel Enhancements:**
+  - Added a feature to manually mark a participant as the Winner.
+  - Added a modal to edit a runner's data (name, nationality).
+- **UI/UX Improvements:**
+  - Renamed Seguimiento to Resultados and removed blinking effect.
+  - Removed Current Lap card from the Results page as the race is over.
+  - Refined survey UI by removing redundant labels and adding mobile-specific titles.
+  - Fixed the main navigation bar to have a non-transparent background for better visibility.
+- **Parametric Refactor Kick-off:** Created the initial file structure for the new tabbed admin interface and race configuration system.
 
 **Earlier issues found/mentioned but not fixed**
 - The abandoned Twitter integration code (, ) remains in the codebase.
-- Hardcoded sponsor information in .
-- Hardcoded initial participant list in .
 - The large (27MB)  file is not optimized.
 
 **Known issue recurrence from previous fork**
@@ -104,37 +107,38 @@ None.
 - **Frontend:** React, , Tailwind CSS, , .
 - **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver).
 - **Database:** MongoDB.
-- **Email:**  for scheduling,  for sending.
+- **Image/PDF Processing:**  (fitz) and  for converting PDF pages to high-resolution PNG images.
 
 **key DB schema**
-- **surveys (new):** 
-- **volunteer_assignments:** 
-- **volunteers:** 
-- **cheer_messages:** 
-- **email_subscriptions:** 
+- **race_config (new):** 
+- **surveys:** 
 - **participants:** 
 
 **changes in tech stack**
-- No new technologies, but  was recently added and configured to run on application startup.
+- **Added Dependencies:**  and  were installed and added to  for certificate-to-image conversion.
 
 **All files of reference**
-- **New File:** 
-- **Modified for UI/Data changes:**
-  -  (to add survey router)
+- **New Files (Parametric Refactor):**
   - 
   - 
   - 
+- **New Files (Features):**
   - 
   - 
-- **User-provided files for survey questions (content extracted):**
-  - 
-  - 
-  - 
+  - All certificate PDFs under 
+- **Heavily Modified Files:**
+  -  (new endpoints for edit, winner, honor, certificates)
+  -  (new participant status honor)
+  -  (new buttons, modals, and status badges)
+  -  (UI changes, certificate download button)
+  -  (menu renaming, style changes)
+  -  (added new dependencies)
+  -  (updated admin route)
 
 **Areas that need refactoring**:
-- The  component is very large and could be broken down.
-- Unused Twitter integration code should be removed.
-- Hardcoded data for sponsors and initial participants should be externalized.
+- The main goal of the current task is a large-scale refactor to make the app parametric.
+-  remains extremely large (over 1500 lines) and complex. It should be broken down into smaller, more manageable components (e.g., ParticipantTable, EditParticipantModal).
+-  contains the logic and JSX for all three survey forms. It could be split into sub-components for better organization.
 
 **key api endpoints**
 -  (to be created)
@@ -142,34 +146,49 @@ None.
 - 
 - 
 - 
+- 
+- 
+-  (serves PDF inline)
+-  (serves PNG for download)
+- 
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
-- **Top Priority:** Complete the implementation of the Encuesta (Survey) feature, including backend endpoints, database schema, and frontend forms/views.
-- **Secondary Task:** Verify the recently implemented UI changes related to the race completion.
+- **Top Priority:** The primary focus is completing the large parametric refactoring task. The foundation has been laid, but the core logic (saving/retrieving config, replacing hardcoded values) is yet to be implemented.
+- **New Admin Structure:** The admin section is no longer a single page. It is now a tabbed interface controlled by .
+- **Certificate Files:** The generated PDF certificates are located in . These files must be included in any deployment.
 - **Admin Credentials:**  / 
-- **Survey Content:** The questions for all three surveys have been extracted from the user's files and are available in the chat history.
 
 **documents and test reports created in this job**
-None.
+- 
+- All certificate files located under 
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Requests a series of UI and data changes to reflect the race completion (hide countdown, change status to winner, etc.) and introduces the request for a new Encuesta (Survey) feature.
-9.  **User:** Provides the three  files containing the questions for the athlete, spectator, and volunteer surveys.
+10. **User:** Asks why their credits are decreasing without active development.
+9.  **Agent:** Explains credit consumption (deployed apps, agent work) and advises how to check usage.
+8.  **User:** Initiates a major refactoring request to make the application parametric for future race editions. Details the requirements for an Active Race admin panel, reorganizing the admin UI, and making content (race name, date, logo) dynamic.
+7.  **Agent:** Asks clarifying questions about the refactor (logo handling, sponsor/results data).
+6.  **User:** Provides answers to the agent's questions, giving the green light to proceed as the agent sees fit.
+5.  **Agent:** Lays out a phased implementation plan and begins work by creating the new backend and frontend scaffolding for the race configuration system.
+4. **User:** Requests to include an additional category in the participant classification: Invitada de Honor.
+3. **User:** Reports that the certificates had an error and provides new, corrected files.
+2. **User:** Requests that certificates open in a new browser tab for viewing instead of direct download, with an option to download if desired.
+1. **User:** Requests an additional feature for certificates: the ability to download them as a high-resolution image for social media.
 
 **Project Health Check:**
 - **Broken:** None.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Gmail SMTP:** For sending emails (volunteers, race completion).
+- **Gmail SMTP:** For sending emails.
 - : For the runner's guide PDF.
 - : For JWTs.
 - : For password hashing.
 - : For scheduled emails.
+- ** / :** For PDF-to-image conversion for certificates.
 
 **Testing status**
-- **Testing agent used after significant changes:** NO
+- **Testing agent used after significant changes:** YES
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
 - **Known regressions:** None.
@@ -180,5 +199,4 @@ None.
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent has not yet added the new Encuesta link to the main navigation menu (). This should be done as part of the survey feature implementation.
-- The agent has implemented multiple frontend changes but has not performed any visual testing to confirm they work as expected.</analysis>
+- The agent is in the middle of a large, user-requested refactoring task. No items have been forgotten, but the main task is incomplete. The next steps are clearly defined: build the UI and backend logic for the Carrera Activa configuration panel.</analysis>
