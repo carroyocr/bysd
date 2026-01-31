@@ -858,6 +858,18 @@ async def update_registration_admin(email: str, race_code: str, updates: AdminRe
                 detail=f"El número de BIB {update_data['bib']} ya está asignado a otro participante"
             )
     
+    # If changing status to "active", initialize race tracking fields
+    if update_data.get("status") == "active":
+        current_status = registration.get("status")
+        if current_status != "active":
+            # Initialize race tracking fields if not already set
+            if registration.get("laps_completed") is None:
+                update_data["laps_completed"] = 0
+            if registration.get("total_km") is None:
+                update_data["total_km"] = 0.0
+            if registration.get("retired_at_lap") is None:
+                update_data["retired_at_lap"] = None
+    
     update_data["updated_at"] = datetime.now(timezone.utc)
     
     await registrations_collection.update_one(
