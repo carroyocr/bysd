@@ -2,8 +2,11 @@ import React from 'react';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Link } from 'react-router-dom';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function Hero() {
+  const { getShortDate, getYear, raceLocation } = useRaceConfig();
+  
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Pattern */}
@@ -44,7 +47,7 @@ export default function Hero() {
                   <Calendar className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                   <div className="text-left">
                     <div className="text-xs text-muted-foreground font-medium group-hover:text-primary transition-colors">Fecha</div>
-                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Sábado 24 Enero, 2026</div>
+                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{getShortDate()}</div>
                   </div>
                 </a>
                 
@@ -68,7 +71,7 @@ export default function Hero() {
                   className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 hover:bg-primary/20 rounded-full border border-primary/30 hover:border-primary transition-all duration-300 group"
                 >
                   <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold text-foreground">Participantes 2026</span>
+                  <span className="text-sm font-semibold text-foreground">Participantes {getYear()}</span>
                 </Link>
               </div>
             </div>
