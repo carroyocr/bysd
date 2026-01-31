@@ -1000,7 +1000,7 @@ async def subscribe_to_notifications(
         for bib in request.athletes_bibs:
             athlete = await database.registrations.find_one(
                 {"race_code": active_race_code, "bib": int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None},
-                {"_id": 0, "edit_token": 0, "bib": 1, "nombre": 1, "apellidos": 1, "nacionalidad": 1, "laps_completed": 1, "total_km": 1}
+                {"_id": 0, "edit_token": 0}
             )
             if athlete:
                 athlete["bib"] = bib  # Keep original BIB format
