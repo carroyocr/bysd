@@ -5,9 +5,11 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function EnviarAnimoPage() {
   const { bib } = useParams();
+  const { raceName } = useRaceConfig();
   const [athlete, setAthlete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fanName, setFanName] = useState('');
@@ -132,7 +134,7 @@ export default function EnviarAnimoPage() {
             Mensaje de Ánimo
           </h1>
           <p className="text-center text-purple-100">
-            Backyard Ultra Santo Domingo 2026
+            {raceName}
           </p>
         </div>
       </div>
