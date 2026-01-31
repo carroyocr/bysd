@@ -6,9 +6,12 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import PDFFlipViewer from './PDFFlipViewer';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function RunnersSection() {
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const { config, getFormattedDate } = useRaceConfig();
+  
   const mandatoryEquipment = [
     'Linterna frontal con batería suficiente para al menos 8 horas',
     'Luz trasera roja visible y fija',
