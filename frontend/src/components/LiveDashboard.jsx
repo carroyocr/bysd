@@ -481,7 +481,7 @@ export default function LiveDashboard({ raceCode }) {
     }, 30000); // Auto-refresh every 30 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [displayRaceCode]);  // Reload when race code changes
 
   const exportToCSV = () => {
     const headers = ['BIB', 'Nombre', 'Apellidos', 'Nacionalidad', 'Estado', 'Vueltas', 'Kilómetros', 'Retirado en Vuelta'];
