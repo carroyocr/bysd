@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const navLinks = [
   { href: '/evento', label: 'Evento' },
@@ -20,6 +21,7 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { raceCode, getYear } = useRaceConfig();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,7 +60,7 @@ export default function Navigation() {
             </div>
             <div className="hidden md:block">
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
-              <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO 2026</div>
+              <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO {getYear()}</div>
             </div>
           </Link>
 
