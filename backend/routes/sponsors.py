@@ -146,9 +146,17 @@ async def upload_sponsor_logo(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP o SVG")
     
-    # Create filename
+    # Create filename - sanitize to remove special characters
+    import unicodedata
+    import re
+    
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"
-    safe_name = sponsor_name.lower().replace(" ", "-").replace(".", "")
+    # Normalize unicode to ASCII equivalents, remove accents
+    safe_name = unicodedata.normalize('NFKD', sponsor_name.lower())
+    safe_name = safe_name.encode('ascii', 'ignore').decode('ascii')
+    safe_name = re.sub(r'[^a-z0-9\-]', '-', safe_name)
+    safe_name = re.sub(r'-+', '-', safe_name).strip('-')
+    
     filename = f"{race_code.upper()}_{safe_name}.{ext}"
     filepath = UPLOADS_DIR / filename
     
