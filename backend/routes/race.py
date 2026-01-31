@@ -884,28 +884,59 @@ async def reset_database(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
+    """Reset race data for the active race only (participants tracking, not pre-registration data)"""
     from server import db as database
-    import bcrypt
     
     # Verify confirmation
     confirmation = request.get("confirmation", "")
     if confirmation != "REINICIO":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir REINICIO")
     
-    # Drop collections
-    await database.participants.drop()
-    await database.race_config.drop()
-    await database.laps_log.drop()
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
     
-    # Don't drop admin_users, just reset it
-    # This way the user stays logged in
+    if not active_race_code:
+        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
     
-    # Reinitialize race config
-    await database.race_config.insert_one({
-        "current_lap": 1,
-        "race_status": "active",
-        "updated_at": datetime.utcnow()
-    })
+    # Reset race tracking data for active race only (in registrations collection)
+    # This resets laps_completed, total_km, retired_at_lap for participants with status 'active', 'retired', etc.
+    result = await database.registrations.update_many(
+        {
+            "race_code": active_race_code,
+            "status": {"$in": ["active", "retired", "winner", "honor"]}
+        },
+        {
+            "$set": {
+                "laps_completed": 0,
+                "total_km": 0.0,
+                "retired_at_lap": None,
+                "status": "active",  # Reset to active
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Reset race config for this race
+    await database.race_config.update_one(
+        {"race_code": active_race_code},
+        {
+            "$set": {
+                "current_lap": 1,
+                "race_status": "active",
+                "updated_at": datetime.now(timezone.utc)
+            }
+        },
+        upsert=True
+    )
+    
+    # Delete lap logs for this race only
+    await database.laps_log.delete_many({"race_code": active_race_code})
+    
+    return {
+        "message": f"Datos de carrera {active_race_code} reiniciados exitosamente",
+        "race_code": active_race_code,
+        "participants_reset": result.modified_count
+    }
     
     # Reinitialize participants
     participants_data = [
