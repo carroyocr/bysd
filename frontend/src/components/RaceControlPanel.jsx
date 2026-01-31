@@ -80,13 +80,15 @@ export default function RaceControlPanel({ embedded = false }) {
     if (!timeValidationEnabled) return true;
     
     // Calculate when lap N ends: race start + N hours
-    const lapEndTime = new Date(RACE_START_DATE.getTime() + lap * 60 * 60 * 1000);
+    const raceStart = getRaceStartDate();
+    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
     return currentTime >= lapEndTime;
   };
 
   // Get time remaining until lap can be completed
   const getTimeUntilLapComplete = (lap) => {
-    const lapEndTime = new Date(RACE_START_DATE.getTime() + lap * 60 * 60 * 1000);
+    const raceStart = getRaceStartDate();
+    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
     const diff = lapEndTime - currentTime;
     
     if (diff <= 0) return null;
