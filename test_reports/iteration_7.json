@@ -1,0 +1,129 @@
+{
+  "summary": "Completed backend testing of race-code-scoped endpoints. All 27 tests passed. Fixed MongoDB projection error in subscribe endpoint. All reset endpoints (reset-database, reset-cheers, reset-subscriptions) correctly filter by active race_code (BYSD-2027) and return race_code in response. Subscribe and cheer endpoints include race_code in new records.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_race_code_scoped_endpoints.py",
+    "/app/test_reports/pytest/pytest_race_code_scoped.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fixed MongoDB projection error in subscribe endpoint (line 1001-1003) - was mixing inclusion and exclusion projections",
+    "reset-database correctly resets only registrations with race_code=BYSD-2027 and status in ['active', 'retired', 'winner', 'honor']",
+    "reset-cheers correctly deletes only cheer_messages with race_code=BYSD-2027",
+    "reset-subscriptions correctly deletes only email_subscriptions with race_code=BYSD-2027",
+    "send-runner-emails correctly queries registrations with race_code=BYSD-2027",
+    "subscribe endpoint includes race_code in new subscriptions",
+    "cheer endpoint includes race_code in new cheer messages",
+    "All reset endpoints return race_code in response for confirmation"
+  ],
+  "updated_files": [
+    "/app/backend/routes/race.py",
+    "/app/backend/tests/test_race_code_scoped_endpoints.py"
+  ],
+  "success_rate": {
+    "backend": "100% (27/27 tests passed)",
+    "frontend": "N/A (backend only testing)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!",
+    "active_race_code": "BYSD-2027"
+  },
+  "seed_data_creation": "Used existing registration: Cristhian Arroyo (carroyo@riesgobancario.com) with BIB=001 for BYSD-2027",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Race-code-scoped endpoints are working correctly. All reset operations (reset-database, reset-cheers, reset-subscriptions) only affect data for the active race (BYSD-2027). New subscriptions and cheer messages include race_code field. The subscribe endpoint had a MongoDB projection bug that was fixed (mixing inclusion/exclusion projections).",
+  "features_verified": {
+    "reset_database_scoped": {
+      "description": "POST /api/race/reset-database only resets data for active race",
+      "status": "PASSED",
+      "evidence": "Returns race_code=BYSD-2027 in response, resets only registrations with that race_code"
+    },
+    "reset_cheers_scoped": {
+      "description": "POST /api/race/reset-cheers only deletes messages for active race",
+      "status": "PASSED",
+      "evidence": "Returns race_code=BYSD-2027 in response, deletes only cheer_messages with that race_code"
+    },
+    "reset_subscriptions_scoped": {
+      "description": "POST /api/race/reset-subscriptions only deletes subscriptions for active race",
+      "status": "PASSED",
+      "evidence": "Returns race_code=BYSD-2027 in response, deletes only email_subscriptions with that race_code"
+    },
+    "send_runner_emails_scoped": {
+      "description": "POST /api/race/send-runner-emails uses participants from active race",
+      "status": "PASSED",
+      "evidence": "Returns race_code=BYSD-2027 in response, queries registrations with that race_code"
+    },
+    "subscribe_includes_race_code": {
+      "description": "POST /api/race/subscribe includes race_code in new subscriptions",
+      "status": "PASSED",
+      "evidence": "New subscriptions are created with race_code field"
+    },
+    "cheer_includes_race_code": {
+      "description": "POST /api/race/cheer includes race_code in new messages",
+      "status": "PASSED",
+      "evidence": "New cheer messages are created with race_code field"
+    },
+    "confirmation_required": {
+      "description": "Reset endpoints require correct confirmation strings",
+      "status": "PASSED",
+      "evidence": "reset-database requires 'REINICIO', reset-cheers requires 'MENSAJES', reset-subscriptions requires 'SUSCRIPCIONES'"
+    },
+    "authentication_required": {
+      "description": "Admin endpoints require authentication",
+      "status": "PASSED",
+      "evidence": "reset-database, reset-cheers, reset-subscriptions, send-runner-emails all return 401 without auth"
+    },
+    "public_endpoints": {
+      "description": "Subscribe and cheer are public endpoints",
+      "status": "PASSED",
+      "evidence": "Both endpoints work without authentication"
+    }
+  },
+  "tests_executed": {
+    "backend_api_tests": [
+      "reset-database requires 'REINICIO' confirmation ✓",
+      "reset-database returns race_code in response ✓",
+      "reset-database scoped to active race (BYSD-2027) ✓",
+      "reset-cheers requires 'MENSAJES' confirmation ✓",
+      "reset-cheers returns race_code in response ✓",
+      "reset-subscriptions requires 'SUSCRIPCIONES' confirmation ✓",
+      "reset-subscriptions returns race_code in response ✓",
+      "subscribe includes race_code ✓",
+      "subscribe update existing works ✓",
+      "cheer includes race_code ✓",
+      "cheer validates message length (max 280) ✓",
+      "cheer validates fan name length (max 50) ✓",
+      "cheer validates athlete exists ✓",
+      "send-runner-emails requires auth ✓",
+      "send-runner-emails returns race_code ✓",
+      "full flow: subscribe, cheer, reset ✓",
+      "stats after reset-database ✓",
+      "participants after reset-database ✓",
+      "reset-database requires auth ✓",
+      "reset-cheers requires auth ✓",
+      "reset-subscriptions requires auth ✓",
+      "subscribe is public (no auth) ✓",
+      "cheer is public (no auth) ✓",
+      "subscribe requires at least one athlete ✓",
+      "reset-database rejects empty confirmation ✓",
+      "reset-cheers rejects empty confirmation ✓",
+      "reset-subscriptions rejects empty confirmation ✓"
+    ]
+  },
+  "bug_fixed": {
+    "description": "MongoDB projection error in subscribe endpoint",
+    "file": "/app/backend/routes/race.py",
+    "line": "1001-1003",
+    "issue": "Mixed inclusion and exclusion projections in find_one query",
+    "fix": "Changed projection to exclusion only: {\"_id\": 0, \"edit_token\": 0}"
+  }
+}
