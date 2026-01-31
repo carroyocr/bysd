@@ -201,6 +201,14 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Botones de Admin Filtrados por Carrera** (31 Enero 2026)
+  - `reset-database`: Solo reinicia tracking de vueltas de la carrera activa (no borra datos históricos)
+  - `reset-cheers`: Solo borra mensajes de ánimo de la carrera activa
+  - `reset-subscriptions`: Solo borra suscripciones de la carrera activa
+  - `send-runner-emails`: Usa participantes de registrations de la carrera activa
+  - Nuevas suscripciones y mensajes de ánimo ahora incluyen `race_code`
+  - Eliminado código muerto (lista de 90 participantes hardcodeados)
+  - Eliminada sección de encuestas del Panel de Control (solo en pestaña dedicada)
 - [x] **Panel de Control usa Pre-Registros Activos** (31 Enero 2026)
   - Endpoints `/api/race/stats` y `/api/race/participants` ahora priorizan colección `registrations`
   - Filtrado por `race_code` de la carrera activa
@@ -221,7 +229,6 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
 ### 🔴 P1 - Próximas Tareas
-- [ ] Filtrado de mensajes de ánimo por race_code
 - [ ] Notificación UI cuando un fan sube de nivel de badge
 - [ ] Filtros mejorados en página Comunidad (por atleta o fan)
 - [ ] Limpieza de código: Remover integración abandonada de Twitter/X
