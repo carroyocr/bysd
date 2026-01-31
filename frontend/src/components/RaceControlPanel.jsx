@@ -9,7 +9,7 @@ import SurveyResultsSection from './SurveyResultsSection';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function RaceControlPanel({ embedded = false }) {
-  const { raceName, getRaceStartDate } = useRaceConfig();
+  const { raceName, raceCode, getRaceStartDate } = useRaceConfig();
   const [currentLap, setCurrentLap] = useState(1);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
