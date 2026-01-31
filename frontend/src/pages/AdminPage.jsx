@@ -3,11 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
+import PreRegistrationManagement from '../components/PreRegistrationManagement';
 
 export default function AdminPage() {
   const navigate = useNavigate();
