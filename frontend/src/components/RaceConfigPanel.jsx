@@ -366,14 +366,6 @@ export default function RaceConfigPanel() {
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => handleArchiveData(activeRace.code)}
-                  disabled={saving}
-                >
-                  <Archive className="w-4 h-4 mr-2" />
-                  Archivar Datos
-                </Button>
                 <Button onClick={handleUpdateRace} disabled={saving}>
                   {saving ? (
                     <RotateCw className="w-4 h-4 mr-2 animate-spin" />
@@ -387,6 +379,51 @@ export default function RaceConfigPanel() {
           )}
         </CardContent>
       </Card>
+
+      {/* Archive and Create New Race Section */}
+      {activeRace && !activeRace.is_default && !showCreateForm && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <Archive className="w-5 h-5" />
+              Finalizar Edición y Crear Nueva
+            </CardTitle>
+            <CardDescription>
+              Archiva los datos de la carrera actual y prepara una nueva edición
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white p-4 rounded-lg border border-amber-200">
+              <h4 className="font-medium text-amber-900 mb-2">¿Qué sucede al archivar?</h4>
+              <ul className="text-sm text-amber-800 space-y-1">
+                <li>• Los participantes actuales se guardan en el historial</li>
+                <li>• Los mensajes de ánimo se archivan</li>
+                <li>• Los patrocinadores se conservan</li>
+                <li>• Podrás consultar estos datos en el historial</li>
+              </ul>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                onClick={() => handleArchiveData(activeRace.code)}
+                disabled={saving || activeRace.data_archived}
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                {activeRace.data_archived ? 'Datos Ya Archivados' : 'Solo Archivar Datos'}
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => setShowCreateForm(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Nueva Edición de Carrera
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create New Race Form */}
       {showCreateForm && (
