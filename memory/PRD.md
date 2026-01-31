@@ -294,6 +294,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
 ### 31 Enero 2026
+- ✅ **Panel de Control usa Pre-Registros Activos (P0)**:
+  - Endpoints `/api/race/stats` y `/api/race/participants` modificados para usar `registrations`
+  - Aceptan parámetro `race_code` para filtrar por carrera
+  - Solo muestra participantes con status "active", "retired", "dns", "winner", "honor" y BIB asignado
+  - Fallback automático a colección `participants` para compatibilidad
+  - Endpoint `complete-lap-all-active` actualizado para trabajar con `registrations`
+  - Al cambiar status a "active" se inicializan campos: `laps_completed=0`, `total_km=0.0`
+  - **Tests**: 20 tests de backend (100% coverage)
+
 - ✅ **Gestión de Pre-Registros en Panel Admin (P0)**:
   - **Nueva pestaña "Pre-Registros" en `/admin`**:
     - Ver lista de todos los pre-registrados para la carrera activa
