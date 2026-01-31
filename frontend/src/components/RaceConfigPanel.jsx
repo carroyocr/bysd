@@ -389,6 +389,38 @@ export default function RaceConfigPanel() {
                     placeholder="Ej: Parque del Este, Santo Domingo"
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Costo de Inscripción (RD$)
+                  </Label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={editForm.registration_cost}
+                    onChange={(e) => setEditForm({...editForm, registration_cost: parseFloat(e.target.value) || 0})}
+                    placeholder="3500"
+                  />
+                  <p className="text-xs text-muted-foreground">Se mostrará en la página de pre-registro</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Hash className="w-4 h-4" />
+                    Número de Edición
+                  </Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editForm.edition_number}
+                    onChange={(e) => setEditForm({...editForm, edition_number: parseInt(e.target.value) || 1})}
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-muted-foreground">1 = Primera, 2 = Segunda, etc.</p>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">
