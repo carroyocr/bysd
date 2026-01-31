@@ -36,7 +36,7 @@ export default function AdminLogin() {
       const data = await response.json();
       localStorage.setItem('admin_token', data.token);
       localStorage.setItem('admin_username', data.username);
-      navigate('/admin/race-control');
+      navigate('/admin');
     } catch (err) {
       setError(err.message);
     } finally {
