@@ -83,6 +83,30 @@ async def get_all_races(db=Depends(lambda: None)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
+    # Ensure legacy race BYSD-2026 is always included for historical results
+    LEGACY_RACES = [
+        {
+            "code": "BYSD-2026",
+            "name": "Backyard Ultra Santo Domingo 2026",
+            "date": "2026-01-24",
+            "start_time": "09:00",
+            "location": "Parque del Este, Santo Domingo, República Dominicana",
+            "logo_url": "/icon-bu.png",
+            "is_active": False,
+            "is_legacy": True,  # Flag to indicate this uses legacy data
+            "archived_at": "2026-01-25T00:00:00"
+        }
+    ]
+    
+    # Add legacy races if not already in the list
+    existing_codes = {r.get("code") for r in races}
+    for legacy_race in LEGACY_RACES:
+        if legacy_race["code"] not in existing_codes:
+            races.append(legacy_race)
+    
+    # Sort by date descending
+    races.sort(key=lambda x: x.get("date", ""), reverse=True)
+    
     return {"races": races}
 
 
