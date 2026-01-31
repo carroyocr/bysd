@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function Hero() {
-  const { getShortDate, getYear, raceLocation } = useRaceConfig();
+  const { getShortDate, getYear, raceLocation, getEditionLabel } = useRaceConfig();
   
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -25,7 +25,7 @@ export default function Hero() {
             <div className="text-center space-y-6 animate-slide-up lg:text-left">
               <Badge className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft">
                 <Clock className="w-4 h-4" />
-                Primera Edición
+                {getEditionLabel()}
               </Badge>
               
               <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl text-foreground leading-none tracking-tight">
