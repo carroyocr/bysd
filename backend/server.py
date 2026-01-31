@@ -273,6 +273,10 @@ app.include_router(surveys_router, prefix="/api/surveys", tags=["surveys"])
 from routes.race_config import router as race_config_router
 app.include_router(race_config_router)
 
+# Include registration routes
+from routes.registration import router as registration_router
+app.include_router(registration_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
