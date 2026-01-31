@@ -276,6 +276,32 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - ✅ Navegación actualizada: "Comunidad" entre "En Vivo" y "Admin"
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
+### 31 Enero 2026
+- ✅ **Refactor Paramétrico de la Aplicación (P0)**:
+  - **Backend - Configuración de Carrera (`backend/routes/race_config.py`)**:
+    - `GET /api/race-config/active` - Obtener carrera activa
+    - `GET /api/race-config/all` - Listar todas las carreras
+    - `GET /api/race-config/{code}` - Obtener carrera por código
+    - `POST /api/race-config/create` - Crear nueva carrera (con JWT auth)
+    - `PUT /api/race-config/update/{code}` - Actualizar carrera (con JWT auth)
+    - `POST /api/race-config/activate/{code}` - Activar carrera (con JWT auth)
+    - `POST /api/race-config/upload-logo/{code}` - Subir logo (con JWT auth)
+    - `POST /api/race-config/archive-data/{code}` - Archivar datos de carrera
+  - **Frontend - Contexto Global (`frontend/src/contexts/RaceConfigContext.jsx`)**:
+    - Hook `useRaceConfig()` para acceder a configuración
+    - Funciones helper: `getYear()`, `getShortDate()`, `getRaceStartDate()`
+  - **Componentes Actualizados para usar valores dinámicos**:
+    - Navigation.jsx, Hero.jsx, Footer.jsx
+    - LiveDashboard.jsx, RaceControlPanel.jsx
+    - EventInfo.jsx, SponsorsSection.jsx
+    - ComunidadPage.jsx, EnviarAnimoPage.jsx, ParticipantsList.jsx, AdminLogin.jsx
+  - **Panel de Admin Reorganizado (`/admin`)**:
+    - 3 pestañas: Panel de Control, Encuestas, Carrera Activa
+    - Nueva página AdminPage.jsx con navegación por tabs
+    - RaceConfigPanel.jsx para gestionar configuración de carrera
+  - **Nueva colección MongoDB**: `race_configurations`
+  - **Tests**: 21 tests de backend + tests de UI (100% coverage)
+
 ### 26 Enero 2026
 - ✅ **Sistema de Encuestas de Satisfacción (P0)**:
   - Nueva página `/encuesta` con 3 formularios (Atletas, Voluntarios, Espectadores)
