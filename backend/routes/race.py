@@ -1127,14 +1127,25 @@ async def reset_cheers(
 
 @router.get("/subscribers-count-public")
 async def get_subscribers_count_public(
+    race_code: Optional[str] = Query(None, description="Race code to filter by"),
     db=Depends(lambda: None)
 ):
     """Get the count of subscribers for each athlete (public endpoint for ranking)"""
     from server import db as database
     
+    # Get race code - use parameter or get active race
+    active_race_code = race_code
+    if not active_race_code:
+        active_race_code = await get_active_race_code(database)
+    
+    # Build match query
+    match_query = {"active": True}
+    if active_race_code:
+        match_query["race_code"] = active_race_code
+    
     # Aggregate to count how many active subscriptions include each athlete
     pipeline = [
-        {"$match": {"active": True}},
+        {"$match": match_query},
         {"$unwind": "$athletes_bibs"},
         {"$group": {
             "_id": "$athletes_bibs",
