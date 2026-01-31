@@ -165,8 +165,8 @@ async def upload_sponsor_logo(
         content = await file.read()
         await f.write(content)
     
-    # Update sponsor with logo URL
-    logo_url = f"/static/uploads/sponsors/{filename}"
+    # Update sponsor with logo URL - use /api/uploads for correct routing
+    logo_url = f"/api/uploads/sponsors/{filename}"
     await db.sponsors.update_one(
         {"name": sponsor_name, "race_code": race_code.upper()},
         {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc)}}
