@@ -263,13 +263,17 @@ async def set_current_lap(
     if request.current_lap < 1:
         raise HTTPException(status_code=400, detail="La vuelta debe ser mayor a 0")
     
-    # Update or create race config
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Update or create race config (with race_code for multi-race support)
     await database.race_config.update_one(
-        {},
+        {"race_code": active_race_code} if active_race_code else {},
         {
             "$set": {
                 "current_lap": request.current_lap,
-                "updated_at": datetime.utcnow()
+                "race_code": active_race_code,
+                "updated_at": datetime.now(timezone.utc)
             }
         },
         upsert=True
