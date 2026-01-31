@@ -778,3 +778,122 @@ async def get_registration_stats(race_code: str):
     stats["talla_distribution"] = {s["_id"]: s["count"] for s in sizes_result if s["_id"]}
     
     return stats
+
+
+class AdminRegistrationUpdate(BaseModel):
+    """Model for admin updates to registration"""
+    nombre: Optional[str] = None
+    apellidos: Optional[str] = None
+    email: Optional[EmailStr] = None
+    fecha_nacimiento: Optional[str] = None
+    sexo: Optional[Literal["Masculino", "Femenino"]] = None
+    nacionalidad: Optional[str] = None
+    telefono: Optional[str] = None
+    ciudad_residencia: Optional[str] = None
+    anos_experiencia: Optional[int] = None
+    maxima_distancia_km: Optional[float] = None
+    motivacion: Optional[str] = None
+    tipo_sangre: Optional[str] = None
+    condicion_medica: Optional[Literal["Sí", "No"]] = None
+    condicion_medica_detalle: Optional[str] = None
+    alergias: Optional[Literal["Sí", "No"]] = None
+    alergias_detalle: Optional[str] = None
+    contacto_emergencia_nombre: Optional[str] = None
+    contacto_emergencia_relacion: Optional[str] = None
+    contacto_emergencia_telefono: Optional[str] = None
+    talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL"]] = None
+    personalizacion_camiseta: Optional[str] = None
+    bib: Optional[int] = None
+    status: Optional[Literal["pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"]] = None
+    payment_status: Optional[Literal["pending", "paid"]] = None
+
+
+@router.get("/admin/registration/{email}")
+async def get_registration_admin(email: str, race_code: str):
+    """Get single registration by email (admin only)"""
+    registration = await registrations_collection.find_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"_id": 0, "edit_token": 0}
+    )
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    # Convert datetime objects
+    if registration.get("created_at"):
+        registration["created_at"] = registration["created_at"].isoformat()
+    if registration.get("updated_at"):
+        registration["updated_at"] = registration["updated_at"].isoformat()
+    
+    return registration
+
+
+@router.put("/admin/registration/{email}")
+async def update_registration_admin(email: str, race_code: str, updates: AdminRegistrationUpdate):
+    """Update registration data (admin only)"""
+    registration = await registrations_collection.find_one({
+        "email": email.lower(),
+        "race_code": race_code
+    })
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    # Build update dict (only non-None values)
+    update_data = {k: v for k, v in updates.dict().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No se proporcionaron datos para actualizar")
+    
+    # If assigning BIB, check it's unique for this race
+    if "bib" in update_data and update_data["bib"] is not None:
+        existing_bib = await registrations_collection.find_one({
+            "race_code": race_code,
+            "bib": update_data["bib"],
+            "email": {"$ne": email.lower()}
+        })
+        if existing_bib:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"El número de BIB {update_data['bib']} ya está asignado a otro participante"
+            )
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Registro actualizado exitosamente"}
+
+
+@router.delete("/admin/registration/{email}")
+async def delete_registration_admin(email: str, race_code: str):
+    """Delete a registration (admin only)"""
+    result = await registrations_collection.delete_one({
+        "email": email.lower(),
+        "race_code": race_code
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    return {"message": "Registro eliminado exitosamente"}
+
+
+@router.get("/admin/next-bib/{race_code}")
+async def get_next_bib(race_code: str):
+    """Get the next available BIB number for a race"""
+    # Find the highest BIB number currently assigned
+    pipeline = [
+        {"$match": {"race_code": race_code, "bib": {"$ne": None}}},
+        {"$group": {"_id": None, "max_bib": {"$max": "$bib"}}}
+    ]
+    
+    result = await registrations_collection.aggregate(pipeline).to_list(1)
+    
+    if not result or result[0].get("max_bib") is None:
+        return {"next_bib": 1}
+    
+    return {"next_bib": result[0]["max_bib"] + 1}
