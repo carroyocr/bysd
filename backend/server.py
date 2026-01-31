@@ -277,6 +277,10 @@ app.include_router(race_config_router)
 from routes.registration import router as registration_router
 app.include_router(registration_router)
 
+# Include sponsors routes
+from routes.sponsors import router as sponsors_router
+app.include_router(sponsors_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
