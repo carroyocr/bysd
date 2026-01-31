@@ -112,13 +112,13 @@ export default function ComunidadPage() {
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [displayRaceCode]);
 
   // Load messages on mount and when page changes
   useEffect(() => {
     loadMessages(currentPage);
     loadAthletes();
-  }, [currentPage, loadMessages]);
+  }, [currentPage, loadMessages, displayRaceCode]);
 
   // Auto-refresh interval
   useEffect(() => {
