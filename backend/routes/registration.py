@@ -409,7 +409,6 @@ async def register_participant(registration: RegistrationCreate):
     
     return {
         "message": "Pre registro completado exitosamente",
-        "bib": bib,
         "edit_token": edit_token,
         "registration_id": str(result.inserted_id)
     }
