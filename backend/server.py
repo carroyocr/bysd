@@ -287,6 +287,10 @@ app.include_router(registration_router)
 from routes.sponsors import router as sponsors_router
 app.include_router(sponsors_router)
 
+# Include volunteer registration routes
+from routes.volunteer_registration import router as volunteer_registration_router
+app.include_router(volunteer_registration_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
