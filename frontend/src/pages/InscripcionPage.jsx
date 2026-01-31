@@ -459,7 +459,104 @@ export default function InscripcionPage() {
   // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
-      case 0: // Email verification
+      case 0: // Email verification or Access Recovery
+        // Access Recovery Mode
+        if (accessMode) {
+          return (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <Mail className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold">Acceder a mi Pre Registro</h2>
+                <p className="text-muted-foreground mt-2">
+                  Ingresa tu correo para recibir un código de acceso
+                </p>
+              </div>
+              
+              <div className="space-y-4 max-w-md mx-auto">
+                <div className="space-y-2">
+                  <Label htmlFor="accessEmail">Correo Electrónico *</Label>
+                  <Input
+                    id="accessEmail"
+                    type="email"
+                    value={accessEmail}
+                    onChange={(e) => setAccessEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    disabled={accessCodeSent}
+                  />
+                </div>
+                
+                {!accessCodeSent ? (
+                  <Button 
+                    onClick={requestAccess} 
+                    disabled={requestingAccess}
+                    className="w-full"
+                  >
+                    {requestingAccess ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                    ) : (
+                      'Enviar Código de Acceso'
+                    )}
+                  </Button>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="accessCode">Código de Acceso (6 dígitos)</Label>
+                      <Input
+                        id="accessCode"
+                        type="text"
+                        maxLength={6}
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="000000"
+                        className="text-center text-2xl tracking-widest"
+                      />
+                    </div>
+                    
+                    <Button 
+                      onClick={verifyAccess} 
+                      disabled={verifyingAccess}
+                      className="w-full"
+                    >
+                      {verifyingAccess ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
+                      ) : (
+                        'Acceder a mi Registro'
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => { setAccessCodeSent(false); setAccessCode(''); }}
+                      className="w-full"
+                    >
+                      Cambiar email
+                    </Button>
+                  </>
+                )}
+                
+                <div className="pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setAccessMode(false);
+                      setAccessEmail('');
+                      setAccessCode('');
+                      setAccessCodeSent(false);
+                    }}
+                    className="w-full"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Volver al Pre Registro
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
+        // Normal registration flow
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
@@ -537,6 +634,20 @@ export default function InscripcionPage() {
                   </Button>
                 </>
               )}
+              
+              {/* Access existing registration link */}
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground text-center mb-3">
+                  ¿Ya te registraste anteriormente?
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setAccessMode(true)}
+                  className="w-full"
+                >
+                  Acceder a mi Pre Registro Existente
+                </Button>
+              </div>
             </div>
           </div>
         );
