@@ -376,9 +376,9 @@ export default function InscripcionPage() {
           }
           
           setRegistrationComplete(true);
-          toast.success('¡Inscripción completada!');
+          toast.success('¡Pre registro completado!');
         } else {
-          toast.error(data.detail || 'Error en la inscripción');
+          toast.error(data.detail || 'Error en el pre registro');
         }
       }
     } catch (error) {
