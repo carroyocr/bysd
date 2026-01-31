@@ -943,22 +943,24 @@ export default function InscripcionPage() {
               </div>
               
               <h1 className="text-3xl font-bold text-foreground mb-2">
-                {isEditing ? '¡Datos Actualizados!' : '¡Inscripción Exitosa!'}
+                {isEditing ? '¡Datos Actualizados!' : '¡Pre Registro Exitoso!'}
               </h1>
               
               <p className="text-muted-foreground mb-6">
                 {isEditing 
                   ? 'Tus datos han sido actualizados correctamente.'
-                  : 'Tu inscripción ha sido registrada. Recibirás un correo de confirmación.'
+                  : 'Tu pre registro ha sido recibido. Recibirás un correo de confirmación con los próximos pasos.'
                 }
               </p>
               
-              {registrationResult?.bib && (
-                <div className="bg-primary/5 rounded-lg p-6 mb-6">
-                  <p className="text-sm text-muted-foreground mb-2">Tu número de dorsal (BIB)</p>
-                  <p className="text-5xl font-bold text-primary">#{registrationResult.bib}</p>
-                </div>
-              )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-semibold text-blue-800 mb-2">📋 Próximos Pasos</h3>
+                <ul className="text-sm text-blue-700 space-y-2">
+                  <li>• Cuatro (4) meses antes del evento, recibirás un correo con las instrucciones para el pago.</li>
+                  <li>• El costo de la carrera será de <strong>RD$3,500</strong>.</li>
+                  <li>• Tendrás 30 días para completar el pago desde la recepción del correo.</li>
+                </ul>
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/">
@@ -987,7 +989,7 @@ export default function InscripcionPage() {
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
-            {isEditing ? 'Editar Inscripción' : 'Inscripción'}
+            {isEditing ? 'Editar Pre Registro' : 'Pre Registro'}
           </h1>
           <p className="text-center text-purple-100 mb-4">
             {raceName || 'Backyard Ultra Santo Domingo'}
@@ -1001,6 +1003,38 @@ export default function InscripcionPage() {
           )}
         </div>
       </div>
+      
+      {/* Pre-registration Info Banner */}
+      {!isEditing && currentStep === 0 && (
+        <div className="container mx-auto px-4 mt-6">
+          <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-bold text-blue-900 mb-3">📋 Prerregistro Abierto</h2>
+              <div className="space-y-3 text-sm text-blue-800">
+                <p>
+                  El prerregistro al evento ya se encuentra abierto.
+                  <strong> Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                </p>
+                <p>
+                  Cuatro (4) meses antes del evento, enviaremos un correo electrónico a todos los prerregistrados con las instrucciones para realizar el pago de la inscripción.
+                </p>
+                <p className="font-semibold text-lg text-blue-900">
+                  El costo de la carrera será de RD$3,500.
+                </p>
+                <p>
+                  A partir de la recepción de ese correo, el participante contará con un plazo de <strong>treinta (30) días</strong> para completar el pago correspondiente.
+                </p>
+                <p>
+                  Si el pago no se realiza dentro de ese período, el prerregistro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
+                </p>
+                <p className="text-blue-600 italic">
+                  ⚠️ Te recomendamos estar atento a tu correo electrónico y verificar también la carpeta de spam.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
       {/* Progress Steps */}
       <div className="container mx-auto px-4 -mt-6">
