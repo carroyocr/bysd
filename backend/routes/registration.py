@@ -183,7 +183,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     race_code = registration.get('race_code', '')
     
     # Build edit URL - use the correct route
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://runner-portal-1.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
+    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://race-dashboard-12.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
     subject = f"¡Pre Registro Confirmado! - {race_code}"
     html_content = f"""

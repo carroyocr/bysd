@@ -1,100 +1,92 @@
 <analysis>**original_problem_statement:**
-The user initially requested post-race UI updates, a survey system, and certificate generation. This evolved into a major architectural refactor to make the application parametric, allowing an administrator to configure and launch new editions of the race (e.g., BYSD-2027) from an admin panel without requiring code changes.
+The user's overall goal is to transform a single-event race portal into a multi-event, parametric platform managed from an admin panel.
 
-Subsequently, the user requested a complete participant pre-registration system, moving away from a Google Form.
+Initial requests included UI updates, a survey system, and certificate generation. This evolved into a major refactor to allow an administrator to create and manage different race editions (e.g., BYSD-2027) without code changes.
 
-PRODUCT REQUIREMENTS:
-1.  **Parametric Refactor (Mostly Complete):**
-    *   Create an Carrera Activa admin page to manage race-specific settings (Name, Date, Logo).
-    *   Reorganize the admin area into tabs: Race Control, Survey Results, and Active Race Config.
-    *   Replace hardcoded values (race name, date) with variables from the active race configuration.
-    *   Modify main navigation so that Patrocinadores, Resultados, and Comunidad are nested under the current race edition (e.g., ).
-2.  **Pre-Registration System (New Feature):**
-    *   Create a new page for participants to pre-register.
-    *   The form should capture the same information as a provided Google Form link.
-    *   Include fields for t-shirt/bib name customization and a high-resolution photo upload.
-    *   Implement an email verification mechanism.
-    *   Send a confirmation email upon registration.
-    *   The registration should be associated with the currently active race.
-    *   The system should allow users to edit their information later using a secure link or an email-based code verification.
-    *   The process is a pre-registration, not a final registration. BIB numbers should not be assigned automatically. An informational banner explaining the process and cost is required.
+During this session, the user requested several major features to build upon the new parametric architecture:
+1.  **Participant Management:** Create a new section in the admin panel to manage pre-registered participants, including editing their information and assigning a BIB number.
+2.  **Race Control Integration:** The main Race Control panel should use the data from the pre-registration system ( collection) for the active race, only showing participants marked as active.
+3.  **Race-Specific Admin Actions:** All dangerous admin buttons (Reset Database, Send Emails, Reset Cheers) must be modified to only affect the *currently active race*, preserving data from past races.
+4.  **Legacy Data Compatibility:** Implement a solution to display results for a previous, completed race (BYSD-2026) whose data exists in an older database schema (the  collection).
+5.  **Comunidad Page Integration:** The Comunidad (Community) page must also be filtered to show cheer messages and leaderboards specific to the selected race edition.
+6.  **Sponsor Management:** Create a full CRUD system in the admin panel for managing sponsors. This system should allow adding, editing, and deleting sponsors (name, description, Instagram, logo) for new races, while keeping the hardcoded sponsors for the legacy BYSD-2026 race.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-The application has undergone a significant parametric refactor. The frontend is now almost fully dynamic, pulling race configuration (name, date, etc.) from a backend endpoint. The main navigation features dropdown menus for Patrocinadores, Resultados, and Comunidad, which are dynamically populated with links to past and present race editions (e.g., ).
+The application is now a fully functional, parametric race management platform. The frontend and backend correctly handle data segregation between different race editions.
 
-A complete, multi-step pre-registration system has been built from scratch. It includes a new page (), backend logic for handling data, email verification, user authentication via a temporary code for editing their data, and photo uploads. The concept was changed from Registration to Pre-Registration per user request, removing automatic BIB assignment and adding a detailed informational banner.
-
-The agent was last working on a final UI tweak to the navigation menu font size.
+Key systems in place:
+1.  **Parametric Architecture:** The backend filters almost all data (participants, results, cheers, sponsors) by . The frontend uses dynamic routes () and a  to display data for the selected race.
+2.  **Dual Data Source:** The system intelligently serves data for new races (e.g., BYSD-2027) from the new  collection, while serving data for the legacy  race from the old  collection. This provides backward compatibility.
+3.  **Admin Panel:** The admin panel is feature-rich, with tabs for:
+    *   **Race Control:** Live management of the active race (tracking laps, DNF, etc.), now powered by the  collection.
+    *   **Pre-Registros:** A full CRUD interface to manage pre-registered users, assign BIBs, and change their status.
+    *   **Patrocinadores:** A full CRUD interface to manage sponsors for new races, including logo uploads.
+    *   **Race Config:** Creating and archiving race editions.
+    *   **Survey Results:** Viewing survey data.
+4.  **Static File Serving:** A dedicated route () has been set up in the backend to handle serving uploaded files (like sponsor logos), correctly resolving ingress and CORS issues in the preview environment.
 
 **Last working item**:
-- **Last item agent was working:** Adjusting the navigation menu's CSS to reduce the font size. The user requested this to prevent the Pre Registro button from wrapping onto two lines.
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N
-- **Which testing method agent to use?** frontend testing agent. A simple screenshot of the home page is sufficient to verify that the navigation bar text and buttons are correctly aligned and sized.
+- **Last item agent was working:** Fixing the sponsor logo upload and display functionality. The initial implementation was blocked by a combination of frontend click propagation issues, backend file sanitization, and, most importantly, the preview environment's ingress routing. The fix involved changing the static file serving path from  to  and ensuring the backend and frontend constructed the full image URL correctly.
+- **Status:** USER VERIFICATION PENDING
+- **Agent Testing Done:** Y (Tested with curl, file system checks, and multiple screenshots confirming the logo now displays correctly on both the admin and public pages.)
+- **Which testing method agent to use?** frontend testing agent. Ask the user to verify the sponsor logo upload and display functionality. If it still fails, the testing agent can perform a full E2E test of the sponsor management feature.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: (P0 - HIGHEST PRIORITY)** Finalize and verify the navigation menu font size change.
-  - **Description:** The user wants the font size of the navigation menu items reduced to  so the Pre Registro button fits on a single line.
-  - **Attempted fixes:** The agent ran several  commands on  to change  to  and adjust padding.
+- **Issue 1: (P0 - HIGHEST PRIORITY)** Verify the fix for sponsor logo uploads.
+  - **Description:** The user reported that the logo upload for sponsors was not working. The agent identified and fixed multiple issues related to file path routing and URL construction.
+  - **Attempted fixes:**
+    1.  Simplified the frontend  component to ensure click propagation to the hidden file input.
+    2.  Mounted a static file directory in  using FastAPI's .
+    3.  Sanitized filenames on the backend to remove special characters.
+    4.  **Crucially, changed the serving path from  to  to work with the Kubernetes ingress, which routes all  prefixed paths to the backend.**
+    5.  Updated frontend components to construct the full image URL using the backend URL environment variable.
   - **Next debug checklist:**
-    1.  Take a screenshot of the main page () to visually confirm if the navigation bar appears as requested.
-    2.  If the button still wraps, inspect  again. Check for any other CSS classes related to padding, margin, or font size that might be affecting the layout.
-    3.  Confirm the fix and inform the user.
-  - **Why fix this issue and what will be achieved with the fix?** It is a direct UI/UX request from the user to improve the application's visual presentation.
-  - **Status:** IN PROGRESS
+    1.  Confirm with the user that the logo upload feature is now working as expected.
+    2.  If the user still reports issues, take a screenshot of the browser's developer console network tab while attempting an upload to check for any new errors.
+    3.  Use the testing agent to run a full E2E test on the Patrocinadores feature in the admin panel.
+  - **Why fix this issue and what will be achieved with the fix?** This is the final step in completing the user-requested sponsor management feature.
+  - **Status:** USER VERIFICATION PENDING
   - **Is recurring issue?** N
   - **Should Test frontend/backend/both after fix?** Frontend
   - **Blocked on other issue:** None.
 
-- **Issue 2: (P1)** Data is shared across all race editions.
-  - **Description:** Although the UI correctly navigates to separate pages for each race edition (e.g., ), the backend currently serves the same global data (participants, cheer messages, results) for all of them. The data is not being filtered by .
-  - **Attempted fixes:** None. This was identified by the agent as the logical next step after completing the frontend routing.
-  - **Next debug checklist:**
-    1.  **Database Schema:** Add a  field to the  and  collections in MongoDB. New pre-registrations already include this field. Existing data may need a migration script.
-    2.  **Backend API ():** Modify endpoints like  and  to accept a  parameter and use it to filter the MongoDB queries.
-    3.  **Frontend (, ):** Verify that these components are passing the  from the URL parameter to their API calls to fetch filtered data.
-    4.  **Admin Panel ():** Update the admin panel to display and manage participants associated with the currently active race edition, instead of all participants globally.
-  - **Why fix this issue and what will be achieved with the fix?** This is the final and most critical part of the parametric refactor. It will ensure data integrity and make the separation between race editions functional, not just cosmetic.
-  - **Status:** NOT STARTED
-  - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Both
-  - **Blocked on other issue:** No. This should be the next major task after confirming the UI fix from Issue 1.
-
 **In progress Task List**:
-- **Task 1: (P0)** Finalize and verify navigation menu UI. (Same as Issue 1).
-  - **Where to resume:** Take a screenshot of the application's homepage to verify the visual changes in .
-  - **What will be achieved with this?** A visually polished navigation bar that meets the user's specific request.
-  - **Status:** IN PROGRESS
-  - **Should Test frontend/backend/both after fix?** Frontend.
-  - **Blocked on something:** No.
+- None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **(P1)** Implement backend data filtering by  for participants, results, and messages (This is the same as Issue 2).
+    - **(P1)** Implement a UI notification (e.g., a toast) when a fan levels up their badge. (Mentioned in previous finish summary, UI/UX enhancement).
+    - **(P2)** Add filters to the Comunidad page cheer message feed (e.g., by athlete or fan).
 - **Future Tasks:**
-    - **(P2)** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
-    - **(P3)** Add filters to the Comunidad page cheer message feed by athlete or fan.
-    - **(P4)** Remove the unused Twitter/X integration code (, ).
-    - **(P5)** Optimize the 27MB  file to reduce its size.
+    - **(P3)** Remove the unused Twitter/X integration code (, ).
+    - **(P4)** Optimize the 27MB  file to reduce its size.
+    - **(P5)** Refactor  which is a large component.
 
 **Completed work in this session**
-- **Parametric Refactor (Frontend):**
-  - Created a global  to manage the active race's data.
-  - Refactored all relevant frontend components to use dynamic data from the context instead of hardcoded values.
-  - Implemented dynamic dropdown menus in the navigation for Patrocinadores, Resultados, and Comunidad, populated with all available race editions.
-  - Created dynamic routes (, etc.) to display pages for specific race editions.
-- **Participant Pre-Registration System (New Feature):**
-  - Built a complete multi-step pre-registration page () with email verification, a detailed form, and photo upload capabilities.
-  - Created all necessary backend endpoints () to handle the pre-registration flow, including sending verification codes and confirmation emails.
-  - Implemented a secure way for users to return and edit their pre-registration data using a code sent to their email.
-- **UI/UX Improvements:**
-  - Improved the Admin Panel UX for archiving and creating new races.
-  - Fixed an admin login redirection bug.
-  - Restructured the home page and main navigation based on user feedback, removing the Participants button from the hero and adding a prominent Pre Registro button.
-  - Removed the Participants list from the Corredores page.
+- **Pre-Registration Admin Management:**
+  - Created a new Pre-Registros tab in the admin panel.
+  - Implemented backend endpoints () and a frontend UI to list, search, filter, edit, and assign BIBs to pre-registered users.
+- **Race Control & Data Integration:**
+  - Refactored all  backend endpoints () to read from the  collection instead of the legacy  collection.
+  - Data is now filtered by the active  and the participant's .
+- **Race-Specific Admin Actions:**
+  - Modified the Reset Database, Reset Cheers, Reset Subscriptions, and Send Runner Emails buttons to be race-specific, operating only on the active . This prevents accidental data deletion from past races.
+- **Legacy Data Compatibility:**
+  - Implemented a dual-source logic in the backend. API calls for  now read from the old  collection, while all other races read from .
+  - This makes historical data for the completed race visible on the public results page ().
+- **Comunidad Page Filtering:**
+  - The Community page () and its associated API endpoints now correctly filter cheer messages and leaderboards by .
+- **Sponsor Management System:**
+  - Created a new  collection and associated backend CRUD endpoints ().
+  - Built a new Patrocinadores tab in the admin panel for full management of sponsors for new races.
+  - Implemented a logo upload feature.
+  - The public sponsors page () now shows dynamic data for new races and hardcoded data for the legacy  race.
+- **Bug Fixes & UI Polish:**
+  - Fixed a  issue causing navigation dropdowns to appear behind other page content.
+  - Fixed the sponsor logo upload functionality by changing the static file serving path to  to resolve ingress routing issues.
 
 **Earlier issues found/mentioned but not fixed**
 - The abandoned Twitter integration code (, ) remains in the codebase.
@@ -107,75 +99,88 @@ The agent was last working on a final UI tweak to the navigation menu font size.
 
 
 **Key Technical Concepts**
-- **React Context API:** Used for global state management of the active race configuration.
-- **Parametric Routing:** Using  with URL parameters () to render dynamic content for different race editions.
-- **Async File Uploads:** Using  on the backend for participant photo uploads.
-- **Email Service ():** Used for sending verification codes and pre-registration confirmation emails.
+- **React Context API:** For global state management of the active race configuration.
+- **Parametric Routing:** Using  with URL parameters ().
+- **Dual Data Architecture:** Conditionally querying different MongoDB collections ( vs. ) based on the  to support legacy data.
+- **FastAPI Static File Serving:** Using  to serve uploaded images. The serving path is prefixed with  to ensure correct routing through the Kubernetes ingress.
+- **Async File Uploads:** Using  on the backend for sponsor logo uploads.
 
 **key DB schema**
-- ** (new):** 
-- **:** 
+- **:**  (extended with race-tracking fields).
+- **:** .
+- ** (new):** .
+- **:**  (extended).
+- **:**  (extended).
 
 **changes in tech stack**
-- **Added Dependency:**  was installed and added to  for asynchronous file handling.
+- No new dependencies were added, but the method for serving static files was fundamentally changed to accommodate the preview environment's architecture.
 
 **All files of reference**
-- **Last Modified:** 
-- **New Feature Files:**
-  - 
-  - 
-- **Core Refactor Files:**
-  - 
-  - 
-- **Files for Next Task (Issue 2):**
-  - 
-  - 
-  - 
+- **Sponsor Feature:**
+  -  (New)
+  -  (New)
+  -  (Modified)
+- **Data Integration & Legacy Support:**
+  -  (Heavily Modified)
+  -  (Modified)
+  -  (Modified)
+  -  (Modified)
+  -  (Modified)
+- **Admin Panel:**
+  -  (Modified)
+  -  (New)
+  -  (Modified)
+- **Core Backend:**
+  -  (Modified for new router and static files)
 
 **Areas that need refactoring**:
--  remains a very large component that could be broken down.
-- The most urgent refactor is to implement data filtering by  in the backend APIs to complete the parametric architecture (see Issue 2).
+-  has been identified as a very large component that could be broken down.
+-  has grown very large and complex due to handling both new and legacy logic. It could be split into smaller, more focused files.
 
 **key api endpoints**
-- **New Registration Endpoints:**
-    - 
-    - 
-    - 
-    - 
-    - 
-    - 
-- **Race Config Endpoints:**
-    - 
-    - 
+- **Sponsors:**
+  - 
+  - 
+- **Static Files:**
+  -  (New serving path for all uploaded content)
+- **Admin Registration:**
+  - 
+- **Race Data (now race-code aware):**
+  - 
+  - 
+- **Cheers Data (now race-code aware):**
+  - 
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
-- **Top Priority:**
-    1.  Confirm the navigation menu font size fix (Issue 1) requested by the user.
-    2.  Tackle the most critical pending task: filtering all race-related data (participants, results, messages) by  on the backend to complete the parametric refactor (Issue 2).
+- **Top Priority:** Confirm with the user that the sponsor logo upload fix works.
+- **Data Architecture:** Be aware of the dual-data system. New races use . The hardcoded  race uses . This logic is primarily in .
+- **Static Files:** All uploaded files (e.g., sponsor logos) MUST be served via the  path configured in . Do not use a generic  path, as it will be intercepted by the frontend router in the preview environment.
 
 **documents and test reports created in this job**
 - 
-- The agent updated  multiple times.
+- 
+- 
+-  (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **10.** vamos a crear una nueva pagina para que los participantes se puedan inscribir... (User requests a new registration page).
-- **9.** Encuesta pasalo para acesos rápidos. Elimina el botón de Participantes 2027 del Home y agrega un botón que lleve también a la inscripción. (User requests UI changes: move Survey link, replace Participants button with Registration button).
-- **8.** El botón de editar, que se incluye en el correo de confirmación de inscripción no está funcionando... (User reports the edit link from the confirmation email is broken and requests to change Registration to Pre-registration, remove auto-BIB, and add a large informational text block).
-- **7.** El link de editar registro que llega al correo no está funcionando. Igual sería bueno agregar un link para que la persona pueda ingresar con su correo y enviando código de validación. (User reports the edit link is still not working and requests an alternative login method via email code).
-- **6.** Bajale un punto a la fuente del menú para los botones para que se acomeden de mejor forma y que el botón de Pre Registro se vea en una sola linea y no en dos. (User requests to reduce the navigation menu font size).
-- **5.** hay que hacer lo mismo con patrocinadores (User requests to add the race edition dropdown menu to the Sponsors link).
-- **4.** Cree la nueva carrera, pero no crear los subniveles en el menú... (User reports that the navigation menu isn't showing sub-menus for the different race editions).
-- **3.** Debería haber una lógica que me permita archivar la carrera y crear una nueva. (User requests a clearer workflow for archiving an old race and creating a new one).
-- **2.** creo que el link de admin no fue actualizado. Estoy entrando desde Enlaces Rápidos. (User reports the admin link in the footer is not working as expected after login).
-- **1.** Los cambios en la página de administrativo. (User reports not seeing the new admin page layout).
+1.  **la carga del logo parece no estar funcionando.** (The logo upload isn't working.) -> Agent investigated and deployed a fix. Status: USER VERIFICATION PENDING.
+2.  **vamos a agregar el menú de administración una opción para darle mantenimiento a los patrocinadores...** (Request to add sponsor management to the admin panel.) -> Agent implemented this feature completely. Status: COMPLETED.
+3.  **los botones del menú en la versión desktop se sobreponen uno con el control...** (Desktop menu dropdowns are overlapping content.) -> Agent fixed the . Status: COMPLETED.
+4.  **El nuevo panel de Comunidad debe asociarse a la carrera que esté activa...** (The Community page must be associated with the active race.) -> Agent implemented filtering by . Status: COMPLETED.
+5.  **Tengo un problema, en producción ya hay una carrera terminada... Prefiero la opción 2.** (Problem: There's a finished race in production. User prefers a dual-compatibility solution.) -> Agent implemented the legacy data fallback. Status: COMPLETED.
+6.  **Asocia los botones de Envia Correo Corredores... a los Atletas pre registrados...** (Associate admin buttons with active, pre-registered athletes.) -> Agent made the admin actions race-specific. Status: COMPLETED.
+7.  **En el panel de control aún están los resultados de la encuesta. Eliminalos...** (The survey results are still on the control panel. Remove them.) -> Agent removed the section. Status: COMPLETED.
+8.  **Ahora modifica el panel de control para que utilice la información de los atletas que se han pre registraron...** (Modify the control panel to use data from pre-registered athletes.) -> Agent integrated the Race Control panel with the  collection. Status: COMPLETED.
+9.  **En el panel de Administrativo incluye una nueva página que permita editar la información del participante prerregistrado...** (In the Admin panel, include a new page to edit pre-registered participant info.) -> Agent built the Pre-registration management page. Status: COMPLETED.
+10. **Initial  confirmation was skipped** as the user immediately provided a new, high-priority feature request (En el panel de Administrativo...).
 
 **Project Health Check:**
-- **Broken:** The data layer is inconsistent with the new parametric UI. Backend endpoints serve global data for all race editions, which is incorrect.
+- **Broken:** None. The major data inconsistency issue from the previous fork has been resolved.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Gmail SMTP:** For sending verification and confirmation emails via .
+- **Gmail SMTP:** For sending emails via .
 - : For the runner's guide PDF.
 - : For JWTs.
 - : For password hashing.
@@ -183,10 +188,10 @@ The agent was last working on a final UI tweak to the navigation menu font size.
 - ** / :** For PDF-to-image conversion for certificates.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, but this was before the pre-registration system and other recent major changes were implemented. A new full regression test is advisable after the next phase of work.
+- **Testing agent used after significant changes:** YES. The agent correctly used the testing subagent after completing the Pre-registration admin, Race Control integration, and Admin Buttons features.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
-- **Known regressions:** The data served to the frontend is not correctly filtered by race edition, which is a functional regression from the user's expectation of a parametric system.
+- **Known regressions:** None. The previous regression (data not filtered by race) has been fixed.
 
 **Credentials to test flow:**
 - **Admin Panel URL:** 
@@ -194,4 +199,4 @@ The agent was last working on a final UI tweak to the navigation menu font size.
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent has not forgotten anything. It correctly identified that the backend data needs to be filtered by  as the next major step but prioritized completing the UI/UX changes requested by the user first. The agent is in the middle of the final UI tweak.</analysis>
+- The initial task from the last handoff (adjusting navigation menu font size) was not explicitly confirmed as complete. However, subsequent screenshots show the Pre Registro button fitting on one line, so the issue appears to be resolved as a side effect of other UI work. It's a minor point that doesn't require further action unless the user brings it up again.</analysis>
