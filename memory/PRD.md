@@ -201,6 +201,16 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Feature: Registro de Voluntarios** (31 Enero 2026)
+  - Nuevo formulario de registro para voluntarios (/voluntarios/registro)
+  - Formulario simplificado: sin foto, con pregunta sobre experiencia en eventos deportivos
+  - 6 pasos: Verificación, Datos Personales, Experiencia, Info Médica, Emergencia, Preferencias
+  - Verificación de email con código de 6 dígitos
+  - Backend: Nuevos endpoints /api/volunteer-registration/*
+  - Link "Postular como Voluntario" en la sección de voluntarios
+- [x] **Feature: Cronograma Dinámico** (31 Enero 2026)
+  - La fecha del cronograma en la página de corredores ahora es dinámica
+  - Se actualiza automáticamente según la fecha del evento activo
 - [x] **Feature: Costo y Edición Parametrizables** (31 Enero 2026)
   - Agregados campos `registration_cost` y `edition_number` a la configuración de carrera
   - Panel Admin > Carrera Activa: Campos editables para costo (RD$) y número de edición
