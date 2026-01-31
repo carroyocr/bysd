@@ -242,22 +242,20 @@ export default function InscripcionPage() {
         body: JSON.stringify({ email })
       });
       
-      // Clone response before reading to avoid "body already read" error
-      const responseClone = response.clone();
+      // Get response as text first to avoid body stream issues
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        data = { detail: responseText };
+      }
       
       if (response.ok) {
-        const data = await response.json();
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
-        // Try to parse error response
-        let errorMessage = 'Error enviando código';
-        try {
-          const data = await responseClone.json();
-          errorMessage = data.detail || errorMessage;
-        } catch (parseError) {
-          console.warn('Could not parse error response');
-        }
+        const errorMessage = data.detail || 'Error enviando código';
         
         // Check if it's a "already registered" error
         if (errorMessage.includes('ya está registrado') || errorMessage.includes('ya está pre registrado')) {
