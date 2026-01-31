@@ -135,7 +135,7 @@ export default function Navigation() {
                   }`}
                 >
                   Patrocinadores
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="min-w-[160px]">
