@@ -23,7 +23,6 @@ const staticNavLinks = [
 
 const endNavLinks = [
   { href: '/inscripcion', label: 'Inscripción', highlight: true },
-  { href: '/encuesta', label: 'Encuesta' },
 ];
 
 export default function Navigation() {
