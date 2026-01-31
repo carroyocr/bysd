@@ -597,7 +597,7 @@ export default function LiveDashboard({ raceCode }) {
                     ¡Tenemos un Ganador!
                   </h2>
                   <p className="text-lg text-amber-800">
-                    Último atleta en pie - {raceName}
+                    Último atleta en pie - {getDisplayRaceName()}
                   </p>
                 </div>
                 <div className="max-w-2xl mx-auto bg-white/80 rounded-lg p-6 shadow-medium">
