@@ -289,7 +289,7 @@ app.include_router(sponsors_router)
 
 # Include volunteer registration routes
 from routes.volunteer_registration import router as volunteer_registration_router
-app.include_router(volunteer_registration_router)
+app.include_router(volunteer_registration_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
