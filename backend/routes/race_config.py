@@ -120,7 +120,25 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
         {"_id": 0}
     )
     
+    # If not found in DB, check if it's a legacy race
     if not config:
+        LEGACY_RACES = {
+            "BYSD-2026": {
+                "code": "BYSD-2026",
+                "name": "Backyard Ultra Santo Domingo 2026",
+                "date": "2026-01-24",
+                "start_time": "09:00",
+                "location": "Parque del Este, Santo Domingo, República Dominicana",
+                "logo_url": "/icon-bu.png",
+                "is_active": False,
+                "is_legacy": True,
+                "archived_at": "2026-01-25T00:00:00"
+            }
+        }
+        
+        if code in LEGACY_RACES:
+            return LEGACY_RACES[code]
+        
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     return config
