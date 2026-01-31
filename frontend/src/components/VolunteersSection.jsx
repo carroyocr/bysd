@@ -314,6 +314,31 @@ export default function VolunteersSection() {
             </p>
           </div>
 
+          {/* Volunteer Registration CTA */}
+          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium">
+            <CardContent className="p-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                    <Heart className="w-7 h-7 text-pink-600" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-display text-2xl text-foreground">¡Únete al Equipo!</h3>
+                    <p className="text-muted-foreground">
+                      ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
+                    </p>
+                  </div>
+                </div>
+                <Link to="/voluntarios/registro" className="flex-shrink-0">
+                  <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300">
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Postular como Voluntario
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Download Manual */}
           <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
             <CardContent className="p-8">
