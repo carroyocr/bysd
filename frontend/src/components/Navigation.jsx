@@ -74,6 +74,7 @@ export default function Navigation() {
     }));
   };
 
+  const isPatrocinadoresActive = location.pathname.includes('/patrocinadores');
   const isResultadosActive = location.pathname.includes('/resultados') || location.pathname === '/en-vivo';
   const isComunidadActive = location.pathname.includes('/comunidad');
 
