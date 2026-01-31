@@ -15,7 +15,7 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function PreRegistrationManagement() {
-  const { raceCode } = useRaceConfig();
+  const { raceCode, loading: configLoading } = useRaceConfig();
   const [registrations, setRegistrations] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function PreRegistrationManagement() {
   const token = localStorage.getItem('admin_token');
 
   const loadData = useCallback(async () => {
-    if (!raceCode) return;
+    if (!raceCode || configLoading) return;
     
     setLoading(true);
     try {
@@ -60,7 +60,7 @@ export default function PreRegistrationManagement() {
     } finally {
       setLoading(false);
     }
-  }, [raceCode]);
+  }, [raceCode, configLoading]);
 
   useEffect(() => {
     loadData();
