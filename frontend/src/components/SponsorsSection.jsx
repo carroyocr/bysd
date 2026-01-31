@@ -360,6 +360,8 @@ export default function SponsorsSection({ raceCode }) {
               </p>
             </CardContent>
           </Card>
+            </>
+          )}
         </div>
       </div>
     </section>
