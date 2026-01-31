@@ -84,7 +84,8 @@ export default function ComunidadPage() {
   const loadMessages = useCallback(async (page = 1) => {
     setLoadingMessages(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=50&page=${page}`);
+      const raceCodeParam = displayRaceCode ? `&race_code=${displayRaceCode}` : '';
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheers?limit=50&page=${page}${raceCodeParam}`);
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
