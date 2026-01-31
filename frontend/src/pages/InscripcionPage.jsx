@@ -164,6 +164,66 @@ export default function InscripcionPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
   
+  // Access recovery functions
+  const requestAccess = async () => {
+    if (!accessEmail || !accessEmail.includes('@')) {
+      toast.error('Por favor ingresa un email válido');
+      return;
+    }
+    
+    setRequestingAccess(true);
+    try {
+      const response = await fetch(`${API_URL}/api/registration/request-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: accessEmail })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.sent) {
+        setAccessCodeSent(true);
+        toast.success('Código de acceso enviado a tu correo');
+      } else {
+        toast.error(data.detail || 'Error solicitando acceso');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setRequestingAccess(false);
+    }
+  };
+  
+  const verifyAccess = async () => {
+    if (!accessCode || accessCode.length !== 6) {
+      toast.error('Ingresa el código de 6 dígitos');
+      return;
+    }
+    
+    setVerifyingAccess(true);
+    try {
+      const response = await fetch(`${API_URL}/api/registration/verify-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: accessEmail, code: accessCode })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success('Acceso verificado');
+        // Navigate to edit page with the token
+        navigate(`/pre-registro/editar?token=${data.edit_token}`);
+      } else {
+        toast.error(data.detail || 'Código incorrecto');
+      }
+    } catch (error) {
+      toast.error('Error verificando código');
+    } finally {
+      setVerifyingAccess(false);
+    }
+  };
+  
   const sendVerificationCode = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
