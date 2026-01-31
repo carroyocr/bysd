@@ -377,29 +377,20 @@ async def register_participant(registration: RegistrationCreate):
     })
     
     if existing:
-        raise HTTPException(status_code=400, detail="Ya estás registrado para esta carrera")
-    
-    # Generate BIB number (auto-increment per race)
-    last_registration = await registrations_collection.find_one(
-        {"race_code": registration.race_code},
-        sort=[("bib_number", -1)]
-    )
-    next_bib = (last_registration.get("bib_number", 0) if last_registration else 0) + 1
-    bib = str(next_bib).zfill(3)  # Format as 001, 002, etc.
+        raise HTTPException(status_code=400, detail="Ya estás pre registrado para esta carrera")
     
     # Generate edit token
     edit_token = generate_edit_token()
     
-    # Create registration document
+    # Create registration document (no BIB for pre-registration)
     registration_doc = {
         **registration.dict(),
         "email": email,
-        "bib": bib,
-        "bib_number": next_bib,
+        "bib": None,  # BIB will be assigned later when payment is confirmed
         "edit_token": edit_token,
         "email_verified": True,
         "photo_url": None,
-        "status": "registered",  # registered, confirmed, active, retired, dns, winner
+        "status": "pre_registered",  # pre_registered, registered, confirmed, active, retired, dns, winner
         "payment_status": "pending",  # pending, paid
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
@@ -417,7 +408,7 @@ async def register_participant(registration: RegistrationCreate):
         print(f"Error sending confirmation email: {e}")
     
     return {
-        "message": "Inscripción completada exitosamente",
+        "message": "Pre registro completado exitosamente",
         "bib": bib,
         "edit_token": edit_token,
         "registration_id": str(result.inserted_id)
