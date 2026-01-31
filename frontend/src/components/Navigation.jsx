@@ -209,7 +209,7 @@ export default function Navigation() {
                   }`}
                 >
                   Comunidad
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="min-w-[160px]">
@@ -240,7 +240,7 @@ export default function Navigation() {
                 key={link.href}
                 to={link.href}
                 onClick={handleLinkClick}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap ${
                   link.highlight
                     ? 'bg-primary text-white hover:bg-primary/90'
                     : location.pathname === link.href
