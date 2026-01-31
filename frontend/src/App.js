@@ -21,6 +21,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
 import AdminPage from './pages/AdminPage';
 import SurveyPage from './pages/SurveyPage';
+import InscripcionPage from './pages/InscripcionPage';
 import './App.css';
 
 export default function App() {
