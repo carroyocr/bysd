@@ -249,15 +249,17 @@ export default function InscripcionPage() {
         toast.success('Código enviado a tu correo');
       } else {
         // Check if it's a "already registered" error
-        if (data.detail && data.detail.includes('ya está registrado')) {
+        const errorMessage = data.detail || '';
+        if (errorMessage.includes('ya está registrado') || errorMessage.includes('ya está pre registrado')) {
           setEmailAlreadyRegistered(true);
           toast.info('Este correo ya tiene un pre-registro');
         } else {
-          toast.error(data.detail || 'Error enviando código');
+          toast.error(errorMessage || 'Error enviando código');
         }
       }
     } catch (error) {
-      toast.error('Error de conexión');
+      console.error('Error in sendVerificationCode:', error);
+      toast.error('Error de conexión. Intenta de nuevo.');
     } finally {
       setSendingCode(false);
     }
