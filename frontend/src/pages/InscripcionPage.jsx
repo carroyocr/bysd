@@ -400,7 +400,7 @@ export default function InscripcionPage() {
               </div>
               <h2 className="text-2xl font-bold">Verificación de Email</h2>
               <p className="text-muted-foreground mt-2">
-                Ingresa tu correo electrónico para comenzar la inscripción
+                Ingresa tu correo electrónico para comenzar el pre registro
               </p>
             </div>
             
