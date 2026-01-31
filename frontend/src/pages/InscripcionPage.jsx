@@ -224,12 +224,16 @@ export default function InscripcionPage() {
     }
   };
   
+  // State for showing "already registered" message
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  
   const sendVerificationCode = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
       return;
     }
     
+    setEmailAlreadyRegistered(false);
     setSendingCode(true);
     try {
       const response = await fetch(`${API_URL}/api/registration/send-verification`, {
@@ -244,7 +248,13 @@ export default function InscripcionPage() {
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
-        toast.error(data.detail || 'Error enviando código');
+        // Check if it's a "already registered" error
+        if (data.detail && data.detail.includes('ya está registrado')) {
+          setEmailAlreadyRegistered(true);
+          toast.info('Este correo ya tiene un pre-registro');
+        } else {
+          toast.error(data.detail || 'Error enviando código');
+        }
       }
     } catch (error) {
       toast.error('Error de conexión');
