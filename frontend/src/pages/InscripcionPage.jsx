@@ -1194,7 +1194,7 @@ export default function InscripcionPage() {
                 <h3 className="font-semibold text-blue-800 mb-2">📋 Próximos Pasos</h3>
                 <ul className="text-sm text-blue-700 space-y-2">
                   <li>• Cuatro (4) meses antes del evento, recibirás un correo con las instrucciones para el pago.</li>
-                  <li>• El costo de la carrera será de <strong>RD$3,500</strong>.</li>
+                  <li>• El costo de la carrera será de <strong>{getFormattedCost()}</strong>.</li>
                   <li>• Tendrás 30 días para completar el pago desde la recepción del correo.</li>
                 </ul>
               </div>
