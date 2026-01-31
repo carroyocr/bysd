@@ -215,8 +215,6 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
                         <td style="padding: 10px 0; color: #6b7280;">Carrera:</td>
                         <td style="padding: 10px 0; color: #1f2937;">{race_code}</td>
                     </tr>
-                        <td style="padding: 10px 0; color: #7c3aed; font-weight: bold; font-size: 18px;">{bib}</td>
-                    </tr>
                     <tr>
                         <td style="padding: 10px 0; color: #6b7280;">Personalización:</td>
                         <td style="padding: 10px 0; color: #1f2937;">{registration.get('personalizacion_camiseta', '')}</td>
@@ -234,20 +232,23 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
                     Si necesitas actualizar tus datos, puedes hacerlo usando el siguiente enlace:
                 </p>
                 <a href="{edit_url}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-                    Editar mi Inscripción
+                    Editar mi Pre Registro
                 </a>
                 <p style="color: #b45309; font-size: 12px; margin-top: 15px;">
                     ⚠️ Guarda este correo. El enlace es personal y te permitirá editar tu información.
                 </p>
             </div>
             
-            <div style="background: #ecfdf5; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #10b981;">
-                <h3 style="color: #065f46; margin-top: 0;">📋 Próximos Pasos</h3>
-                <ul style="color: #047857; font-size: 14px; padding-left: 20px;">
-                    <li>Completa el pago de inscripción si aún no lo has hecho</li>
-                    <li>Sube tu foto de perfil (mínimo 1MB, alta resolución)</li>
-                    <li>Revisa la guía del corredor en nuestra página web</li>
-                    <li>¡Prepárate para el desafío!</li>
+            <div style="background: #dbeafe; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #3b82f6;">
+                <h3 style="color: #1e40af; margin-top: 0;">📋 Importante - Próximos Pasos</h3>
+                <p style="color: #1e40af; font-size: 14px;">
+                    <strong>Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                </p>
+                <ul style="color: #1e40af; font-size: 14px; padding-left: 20px; margin-top: 10px;">
+                    <li>Cuatro (4) meses antes del evento, enviaremos un correo con las instrucciones para realizar el pago.</li>
+                    <li>El costo de la carrera será de <strong>RD$3,500</strong>.</li>
+                    <li>Tendrás un plazo de treinta (30) días para completar el pago.</li>
+                    <li>Si el pago no se realiza en ese período, el prerregistro será desestimado.</li>
                 </ul>
             </div>
             
