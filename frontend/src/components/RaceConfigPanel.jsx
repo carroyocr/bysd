@@ -510,11 +510,43 @@ export default function RaceConfigPanel() {
                 </div>
               </div>
 
+              {/* Archive Option */}
+              {activeRace && !activeRace.is_default && !activeRace.data_archived && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={archiveOnCreate}
+                      onChange={(e) => setArchiveOnCreate(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="font-medium text-amber-900">Archivar datos de "{activeRace.code}" antes de crear</span>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Se guardarán {activeRace.code ? 'los participantes, mensajes de ánimo y patrocinadores' : ''} en el historial.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              {activeRace?.data_archived && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-sm text-green-700">
+                    <CheckCircle className="w-4 h-4 inline mr-2" />
+                    Los datos de "{activeRace.code}" ya fueron archivados.
+                  </p>
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4">
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setArchiveOnCreate(true);
+                  }}
                 >
                   Cancelar
                 </Button>
@@ -524,7 +556,9 @@ export default function RaceConfigPanel() {
                   ) : (
                     <Plus className="w-4 h-4 mr-2" />
                   )}
-                  Crear y Activar Carrera
+                  {archiveOnCreate && activeRace && !activeRace.is_default && !activeRace.data_archived 
+                    ? 'Archivar y Crear Nueva Carrera' 
+                    : 'Crear y Activar Carrera'}
                 </Button>
               </div>
             </form>
