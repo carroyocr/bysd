@@ -4,6 +4,7 @@ import { Lock, User, AlertCircle, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -11,6 +12,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { raceName } = useRaceConfig();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -60,7 +62,7 @@ export default function AdminLogin() {
           </div>
           <CardTitle className="text-2xl">Panel de Administración</CardTitle>
           <p className="text-sm text-muted-foreground mt-2">
-            Control de carrera - Backyard Ultra Santo Domingo 2026
+            Control de carrera - {raceName}
           </p>
         </CardHeader>
         <CardContent>
