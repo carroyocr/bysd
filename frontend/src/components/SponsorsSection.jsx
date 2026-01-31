@@ -221,6 +221,18 @@ export default function SponsorsSection({ raceCode }) {
     return raceName;
   };
 
+  if (loading) {
+    return (
+      <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto px-4">
@@ -240,7 +252,19 @@ export default function SponsorsSection({ raceCode }) {
             )}
           </div>
 
-          {/* Introduction */}
+          {/* Show message if no sponsors */}
+          {sponsors.length === 0 ? (
+            <Card className="bg-muted/50">
+              <CardContent className="py-12 text-center">
+                <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">
+                  Aún no hay patrocinadores registrados para esta carrera
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Introduction */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
             <CardContent className="p-8 md:p-10 space-y-4">
               <div className="flex items-start gap-4">
