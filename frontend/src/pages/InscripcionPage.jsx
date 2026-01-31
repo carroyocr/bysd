@@ -39,6 +39,14 @@ export default function InscripcionPage() {
   // Current step
   const [currentStep, setCurrentStep] = useState(0);
   
+  // Access recovery mode
+  const [accessMode, setAccessMode] = useState(false);
+  const [accessEmail, setAccessEmail] = useState('');
+  const [accessCode, setAccessCode] = useState('');
+  const [accessCodeSent, setAccessCodeSent] = useState(false);
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [verifyingAccess, setVerifyingAccess] = useState(false);
+  
   // Email verification
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
