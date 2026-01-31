@@ -201,6 +201,12 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Panel de Control usa Pre-Registros Activos** (31 Enero 2026)
+  - Endpoints `/api/race/stats` y `/api/race/participants` ahora priorizan colección `registrations`
+  - Filtrado por `race_code` de la carrera activa
+  - Solo muestra participantes con status "active" y BIB asignado
+  - Fallback a colección `participants` para carreras sin registrations
+  - Campos de tracking (`laps_completed`, `total_km`) inicializados al activar participante
 - [x] **Gestión de Pre-Registros en Admin** (31 Enero 2026)
   - Nueva pestaña "Pre-Registros" en panel de administración
   - Ver/editar información completa de participantes pre-registrados
@@ -215,7 +221,7 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
 ### 🔴 P1 - Próximas Tareas
-- [ ] Filtrado de datos por race_code en backend (participantes, mensajes, resultados)
+- [ ] Filtrado de mensajes de ánimo por race_code
 - [ ] Notificación UI cuando un fan sube de nivel de badge
 - [ ] Filtros mejorados en página Comunidad (por atleta o fan)
 - [ ] Limpieza de código: Remover integración abandonada de Twitter/X
