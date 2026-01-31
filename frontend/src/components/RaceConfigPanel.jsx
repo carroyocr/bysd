@@ -619,20 +619,6 @@ export default function RaceConfigPanel() {
           </CardContent>
         </Card>
       )}
-
-      {/* Button to create new race if active race exists */}
-      {!activeRace?.is_default && !showCreateForm && (
-        <div className="flex justify-center">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowCreateForm(true)}
-            className="border-dashed"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Crear Nueva Edición de Carrera
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
