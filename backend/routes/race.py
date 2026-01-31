@@ -1227,8 +1227,6 @@ async def reset_subscriptions(
         "deleted_count": result.deleted_count,
         "race_code": active_race_code
     }
-        "deleted_count": subs_count
-    }
 
 
 @router.get("/subscribers-count")
