@@ -431,9 +431,12 @@ export default function LiveDashboard({ raceCode }) {
 
   const loadData = async () => {
     try {
+      // Use displayRaceCode to fetch data for specific race or active race
+      const raceCodeParam = displayRaceCode ? `?race_code=${displayRaceCode}` : '';
+      
       const [statsRes, participantsRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`)
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats${raceCodeParam}`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants${raceCodeParam}`)
       ]);
 
       const statsData = await statsRes.json();
