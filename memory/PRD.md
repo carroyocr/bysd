@@ -201,6 +201,11 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Página Comunidad Filtrada por Carrera** (31 Enero 2026)
+  - Frontend pasa `race_code` en todas las llamadas API
+  - Endpoints `/api/race/cheers`, `/api/race/fans/leaderboard`, `/api/race/fans/badge` filtran por race_code
+  - Endpoint `/api/race/subscribers-count-public` filtra por race_code
+  - Nuevos mensajes de ánimo se guardan con race_code de la carrera activa
 - [x] **Compatibilidad Dual para Datos Legacy** (31 Enero 2026)
   - BYSD-2026 usa colección `participants` (legacy)
   - BYSD-2027+ usa colección `registrations` (nuevo)
