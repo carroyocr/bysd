@@ -1055,7 +1055,7 @@ async def reset_cheers(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Reset all cheer messages (admin only)"""
+    """Reset cheer messages for the active race only (admin only)"""
     from server import db as database
     
     # Verify confirmation
@@ -1063,15 +1063,22 @@ async def reset_cheers(
     if confirmation != "MENSAJES":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir MENSAJES")
     
-    # Count before deletion
-    cheers_count = await database.cheer_messages.count_documents({})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
     
-    # Drop cheer messages collection
-    await database.cheer_messages.drop()
+    if not active_race_code:
+        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
+    
+    # Count before deletion for active race
+    cheers_count = await database.cheer_messages.count_documents({"race_code": active_race_code})
+    
+    # Delete only messages for this race
+    result = await database.cheer_messages.delete_many({"race_code": active_race_code})
     
     return {
-        "message": f"Se han eliminado {cheers_count} mensajes de ánimo exitosamente",
-        "deleted_count": cheers_count
+        "message": f"Se han eliminado {result.deleted_count} mensajes de ánimo de la carrera {active_race_code}",
+        "deleted_count": result.deleted_count,
+        "race_code": active_race_code
     }
 
 
