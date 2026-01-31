@@ -11,7 +11,9 @@ const DEFAULT_CONFIG = {
   location: 'Sierra Prieta, Santo Domingo, República Dominicana',
   logo_url: '/icon-bu.png',
   is_active: true,
-  is_default: true
+  is_default: true,
+  registration_cost: 3500,
+  edition_number: 1
 };
 
 const RaceConfigContext = createContext(null);
