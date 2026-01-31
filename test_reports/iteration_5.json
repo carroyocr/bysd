@@ -1,0 +1,166 @@
+{
+  "summary": "Completed comprehensive testing of Pre-Registros tab in admin panel. All 21 backend API tests passed. Frontend UI tests verified stats display, table rendering, expand row details, edit functionality with save, search, and filter features.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_pre_registration_admin.py",
+    "/app/test_reports/pytest/pytest_pre_registration.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PreRegistrationManagement.jsx correctly uses RaceConfigContext for race_code",
+    "API endpoints properly exclude MongoDB _id and edit_token from responses",
+    "BIB uniqueness validation implemented in PUT endpoint (lines 849-859)",
+    "Stats endpoint includes talla_distribution for t-shirt size planning",
+    "Edit form correctly handles BIB assignment with next-bib button",
+    "data-testid attributes present for search and filter elements"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_pre_registration_admin.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!"
+  },
+  "seed_data_creation": "Used existing pre-registration: Cristhian Arroyo (carroyo@riesgobancario.com) for BYSD-2027",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pre-Registros tab fully functional. Admin panel now has 4 tabs: Panel de Control, Pre-Registros, Encuestas, Carrera Activa. Active race is BYSD-2027. Endpoints tested: GET /api/registration/admin/list/{race_code}, GET /api/registration/admin/stats/{race_code}, GET /api/registration/admin/next-bib/{race_code}, GET /api/registration/admin/registration/{email}, PUT /api/registration/admin/registration/{email}. All CRUD operations working correctly.",
+  "features_verified": {
+    "admin_login": {
+      "description": "Admin login with credentials admin/Backyard2026!",
+      "status": "PASSED",
+      "evidence": "Successfully logged in and redirected to /admin?tab=control"
+    },
+    "pre_registros_tab_navigation": {
+      "description": "Navigation to Pre-Registros tab",
+      "status": "PASSED",
+      "evidence": "Tab visible and clickable, loads PreRegistrationManagement component"
+    },
+    "stats_display": {
+      "description": "Stats cards showing Total, Masculino, Femenino, Pagados, Próximo BIB",
+      "status": "PASSED",
+      "evidence": "Screenshot shows Total: 1, Masculino: 1, Femenino: 0, Pagados: 0, Próximo BIB: 2"
+    },
+    "talla_distribution": {
+      "description": "T-shirt size distribution display",
+      "status": "PASSED",
+      "evidence": "Shows XS: 0, S: 0, M: 0, L: 1, XL: 0, XXL: 0"
+    },
+    "registrations_table": {
+      "description": "Table displaying pre-registrations with BIB, Nombre, Email, Talla, Estado, Pago, Acciones",
+      "status": "PASSED",
+      "evidence": "Table shows Cristhian Arroyo with all columns correctly populated"
+    },
+    "expand_row_details": {
+      "description": "Expand row to see participant details",
+      "status": "PASSED",
+      "evidence": "Expanded row shows Información Personal, Carrera, Médico/Emergencia sections with all data"
+    },
+    "edit_participant": {
+      "description": "Edit participant information (BIB, status, payment_status)",
+      "status": "PASSED",
+      "evidence": "Edit mode shows input fields, dropdowns, Save/Cancel buttons. BIB change persisted successfully"
+    },
+    "assign_next_bib": {
+      "description": "Assign next available BIB using # button",
+      "status": "PASSED",
+      "evidence": "# button visible in edit mode, next-bib API returns correct value"
+    },
+    "search_functionality": {
+      "description": "Search by name, email, or BIB",
+      "status": "PASSED",
+      "evidence": "Search by 'Cristhian', 'carroyo', and BIB number all work correctly"
+    },
+    "filter_functionality": {
+      "description": "Filter by status (all, pre_registered, registered, confirmed, active)",
+      "status": "PASSED",
+      "evidence": "Filter dropdown works, shows 'No se encontraron pre-registros' when no matches"
+    },
+    "export_csv_button": {
+      "description": "Export CSV button present",
+      "status": "PASSED",
+      "evidence": "Exportar CSV button visible in UI"
+    },
+    "api_list_registrations": {
+      "description": "GET /api/registration/admin/list/{race_code}",
+      "status": "PASSED",
+      "evidence": "Returns 200 with race_code, total, registrations array"
+    },
+    "api_stats": {
+      "description": "GET /api/registration/admin/stats/{race_code}",
+      "status": "PASSED",
+      "evidence": "Returns 200 with total, masculino, femenino, with_photo, paid, talla_distribution"
+    },
+    "api_next_bib": {
+      "description": "GET /api/registration/admin/next-bib/{race_code}",
+      "status": "PASSED",
+      "evidence": "Returns 200 with next_bib integer"
+    },
+    "api_get_registration": {
+      "description": "GET /api/registration/admin/registration/{email}",
+      "status": "PASSED",
+      "evidence": "Returns 200 with full registration data, excludes _id and edit_token"
+    },
+    "api_update_registration": {
+      "description": "PUT /api/registration/admin/registration/{email}",
+      "status": "PASSED",
+      "evidence": "Returns 200, changes persist (BIB, status, payment_status tested)"
+    }
+  },
+  "tests_executed": {
+    "backend_api_tests": [
+      "GET /api/registration/admin/list/{race_code} returns 200 ✓",
+      "List response has correct structure ✓",
+      "MongoDB _id excluded from list ✓",
+      "edit_token excluded from list ✓",
+      "Test participant found in list ✓",
+      "GET /api/registration/admin/stats/{race_code} returns 200 ✓",
+      "Stats response has correct structure ✓",
+      "Stats includes talla_distribution ✓",
+      "Stats values are integers ✓",
+      "GET /api/registration/admin/next-bib/{race_code} returns 200 ✓",
+      "next_bib structure correct ✓",
+      "GET /api/registration/admin/registration/{email} returns 200 ✓",
+      "Single registration has correct structure ✓",
+      "Sensitive data excluded ✓",
+      "Non-existent email returns 404 ✓",
+      "PUT update BIB returns 200 ✓",
+      "PUT update status returns 200 ✓",
+      "PUT update payment_status returns 200 ✓",
+      "PUT non-existent email returns 404 ✓",
+      "PUT empty body returns 400 ✓",
+      "BIB uniqueness validation exists ✓"
+    ],
+    "frontend_ui_tests": [
+      "Admin login works ✓",
+      "Pre-Registros tab navigation works ✓",
+      "Stats cards display correctly ✓",
+      "T-shirt distribution displays ✓",
+      "Registrations table renders ✓",
+      "Expand row shows details ✓",
+      "Edit mode activates ✓",
+      "BIB input field works ✓",
+      "Status dropdown works ✓",
+      "Payment status dropdown works ✓",
+      "Save button works ✓",
+      "Cancel button works ✓",
+      "Search by name works ✓",
+      "Search by email works ✓",
+      "Search by BIB works ✓",
+      "Filter by status works ✓",
+      "Export CSV button present ✓"
+    ]
+  }
+}
