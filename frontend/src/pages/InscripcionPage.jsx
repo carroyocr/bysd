@@ -1127,7 +1127,7 @@ export default function InscripcionPage() {
                     {submitting || uploadingPhoto ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Procesando...</>
                     ) : (
-                      <>{isEditing ? 'Guardar Cambios' : 'Completar Inscripción'}</>
+                      <>{isEditing ? 'Guardar Cambios' : 'Completar Pre Registro'}</>
                     )}
                   </Button>
                 )}
