@@ -186,6 +186,14 @@ export default function SponsorsSection({ raceCode }) {
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
               Patrocinadores
             </h2>
+            <p className="text-muted-foreground">
+              {getDisplayRaceName()}
+            </p>
+            {displayRaceCode && (
+              <Badge variant="outline" className="text-primary border-primary">
+                {displayRaceCode}
+              </Badge>
+            )}
           </div>
 
           {/* Introduction */}
@@ -197,7 +205,7 @@ export default function SponsorsSection({ raceCode }) {
                 </div>
                 <div className="space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
-                    El {raceName} es posible gracias al apoyo de marcas e instituciones líderes en sus respectivos sectores, que creen en el deporte, la resiliencia y el poder de la comunidad.
+                    El {getDisplayRaceName()} es posible gracias al apoyo de marcas e instituciones líderes en sus respectivos sectores, que creen en el deporte, la resiliencia y el poder de la comunidad.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
                     Cada patrocinador aporta experiencia, calidad y compromiso, haciendo posible que atletas locales e internacionales vivan una competencia segura, bien organizada y al nivel de un evento de clase mundial. Sin su apoyo, nada de esto sería posible.
