@@ -194,10 +194,17 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - `backend/services/email_service.py` - Servicio de emails
 - `frontend/src/components/LiveDashboard.jsx` - Dashboard público
 - `frontend/src/components/RaceControlPanel.jsx` - Panel admin
+- `frontend/src/contexts/RaceConfigContext.jsx` - Contexto global de configuración de carrera
 
 ---
 
 ## Backlog / Tareas Pendientes
+
+### 🟢 Completado Recientemente
+- [x] **Refactor Paramétrico** - Sistema de configuración de carreras desde admin panel
+  - Backend: `/api/race-config/` endpoints (crear, leer, actualizar, activar)
+  - Frontend: `RaceConfigContext` para valores dinámicos globales
+  - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
 ### 🔴 P1 - Próximas Tareas
 - [ ] Notificación UI cuando un fan sube de nivel de badge
@@ -213,7 +220,7 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - [ ] Optimizar PDF del manual (actualmente 27MB)
 - [ ] Refactorizar VolunteersSection.jsx (700+ líneas) en componentes más pequeños
 
-### 🟡 P2 - Mejoras Opcionales
+### 🟡 P3 - Mejoras Opcionales
 - [ ] Historial detallado de vueltas (laps_log ya existe pero no tiene UI)
 - [ ] Notificaciones push cuando hay cambios
 - [ ] Modo oscuro para el dashboard
@@ -229,11 +236,13 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - `/app/tests/test_race_winner.py`
   - `/app/tests/test_new_features.py`
   - `/app/backend/tests/test_surveys.py`
+  - `/app/backend/tests/test_race_config.py` (nuevo)
 - **Reportes**: 
   - `/app/test_reports/iteration_1.json`
   - `/app/test_reports/iteration_2.json`
   - `/app/test_reports/iteration_3.json`
-- **Cobertura**: 43/43 tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_4.json` (nuevo - refactor paramétrico)
+- **Cobertura**: 64/64 tests backend (100%), UI tests completos (100%)
 
 ---
 
