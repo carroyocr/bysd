@@ -49,8 +49,10 @@ export default function Navigation() {
         const response = await fetch(`${API_URL}/api/race-config/all`);
         if (response.ok) {
           const data = await response.json();
+          // Handle response format (races array inside object)
+          const racesArray = data.races || data;
           // Sort by date descending (newest first)
-          const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+          const sorted = racesArray.sort((a, b) => new Date(b.date) - new Date(a.date));
           setAllRaces(sorted);
         }
       } catch (error) {
