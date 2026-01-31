@@ -1159,9 +1159,6 @@ export default function RaceControlPanel({ embedded = false }) {
         </Card>
       </div>
 
-      {/* Survey Results Section */}
-      <SurveyResultsSection />
-
       {/* Reset Database Modal */}
       {showResetModal && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
