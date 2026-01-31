@@ -83,6 +83,23 @@ export default function RaceConfigPanel() {
     
     setSaving(true);
     try {
+      // Archive current race data if option is selected and there's an active race
+      if (archiveOnCreate && activeRace && !activeRace.is_default && !activeRace.data_archived) {
+        toast.info('Archivando datos de la carrera anterior...');
+        const archiveResponse = await fetch(`${API_URL}/api/race-config/archive-data/${activeRace.code}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (archiveResponse.ok) {
+          const archiveData = await archiveResponse.json();
+          toast.success(`Datos archivados: ${archiveData.archived.participants} participantes, ${archiveData.archived.cheer_messages} mensajes`);
+        }
+      }
+      
+      // Create new race
       const response = await fetch(`${API_URL}/api/race-config/create`, {
         method: 'POST',
         headers: {
@@ -97,9 +114,10 @@ export default function RaceConfigPanel() {
         throw new Error(data.detail || 'Error al crear la carrera');
       }
       
-      toast.success('Carrera creada y activada exitosamente');
+      toast.success('Nueva carrera creada y activada exitosamente');
       setShowCreateForm(false);
       setNewRace({ code: '', name: '', date: '', start_time: '09:00', location: '' });
+      setArchiveOnCreate(true);
       await loadData();
     } catch (error) {
       toast.error(error.message);
