@@ -18,6 +18,7 @@ import EnviarAnimoPage from './pages/EnviarAnimoPage';
 import MensajesPresentacionPage from './pages/MensajesPresentacionPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
+import AdminPage from './pages/AdminPage';
 import SurveyPage from './pages/SurveyPage';
 import './App.css';
 
@@ -30,6 +31,7 @@ export default function App() {
           {/* Admin routes without Navigation/Footer */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/race-control" element={<RaceControlPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/mensajes/presentacion" element={<MensajesPresentacionPage />} />
           
           {/* Public routes with Navigation/Footer */}
