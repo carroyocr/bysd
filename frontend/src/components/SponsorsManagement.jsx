@@ -130,17 +130,18 @@ export default function SponsorsManagement() {
   };
 
   const handleDelete = async (sponsorName) => {
-    if (!window.confirm(`¿Eliminar el patrocinador "${sponsorName}"?`)) return;
+    if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Esta acción no se puede deshacer.`)) return;
     
     try {
       const response = await fetch(
-        `${API_URL}/api/sponsors/delete/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
         { method: 'DELETE' }
       );
       
       if (response.ok) {
-        toast.success('Patrocinador eliminado');
-        loadSponsors();
+        toast.success('Patrocinador eliminado permanentemente');
+        // Update local state immediately for better UX
+        setSponsors(prev => prev.filter(s => s.name !== sponsorName));
       } else {
         toast.error('Error al eliminar');
       }
