@@ -201,6 +201,11 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Bug Fix: Pre-registro con email existente** (31 Enero 2026)
+  - Corregido: Al intentar pre-registrarse con un email ya registrado, ahora muestra un mensaje claro
+  - Muestra: "Este correo ya tiene un pre-registro" con botón para acceder al registro existente
+  - El email se pre-llena automáticamente al hacer clic en "Acceder a mi Pre Registro"
+  - Usó XMLHttpRequest para evitar conflictos con interceptores de la plataforma
 - [x] **Bug Fix: Eliminación de Patrocinadores** (31 Enero 2026)
   - Corregido: Al eliminar un patrocinador, ahora desaparece de la UI inmediatamente
   - Cambio: Usar endpoint `hard-delete` (eliminación permanente) en lugar de `delete` (soft delete)
