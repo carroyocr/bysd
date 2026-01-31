@@ -201,6 +201,14 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Gestión de Patrocinadores en Admin** (31 Enero 2026)
+  - Nueva pestaña "Patrocinadores" en panel de administración
+  - CRUD completo: crear, editar, eliminar patrocinadores
+  - Campos: nombre, descripción, Instagram, logo (upload)
+  - Patrocinadores asociados a carrera activa (race_code)
+  - BYSD-2026 mantiene patrocinadores legacy (hardcodeados)
+  - Nuevas carreras usan datos dinámicos de MongoDB
+  - Backend: `/api/sponsors/` endpoints completos
 - [x] **Página Comunidad Filtrada por Carrera** (31 Enero 2026)
   - Frontend pasa `race_code` en todas las llamadas API
   - Endpoints `/api/race/cheers`, `/api/race/fans/leaderboard`, `/api/race/fans/badge` filtran por race_code
