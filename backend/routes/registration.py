@@ -181,25 +181,24 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     nombre = registration.get('nombre', '')
     apellidos = registration.get('apellidos', '')
     race_code = registration.get('race_code', '')
-    bib = registration.get('bib', 'Pendiente')
     
-    # Build edit URL
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://race-config.preview.emergentagent.com')}/inscripcion/editar?token={edit_token}"
+    # Build edit URL - use the correct route
+    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://race-config.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
-    subject = f"¡Inscripción Confirmada! - {race_code}"
+    subject = f"¡Pre Registro Confirmado! - {race_code}"
     html_content = f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; border-radius: 10px; text-align: center;">
-            <h1 style="color: white; margin: 0;">¡Inscripción Confirmada!</h1>
+            <h1 style="color: white; margin: 0;">¡Pre Registro Confirmado!</h1>
             <p style="color: rgba(255,255,255,0.9); margin-top: 10px;">{race_code}</p>
         </div>
         
         <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #1f2937;">¡Felicitaciones {nombre}!</h2>
+            <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
             
             <p style="color: #4b5563; font-size: 16px;">
-                Tu inscripción ha sido registrada exitosamente. Aquí están los detalles de tu registro:
+                Tu pre registro ha sido recibido exitosamente. Aquí están los detalles:
             </p>
             
             <div style="background: white; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
@@ -216,8 +215,6 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
                         <td style="padding: 10px 0; color: #6b7280;">Carrera:</td>
                         <td style="padding: 10px 0; color: #1f2937;">{race_code}</td>
                     </tr>
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Número (BIB):</td>
                         <td style="padding: 10px 0; color: #7c3aed; font-weight: bold; font-size: 18px;">{bib}</td>
                     </tr>
                     <tr>
