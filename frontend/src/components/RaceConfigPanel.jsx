@@ -27,7 +27,9 @@ export default function RaceConfigPanel() {
     name: '',
     date: '',
     start_time: '09:00',
-    location: ''
+    location: '',
+    registration_cost: 3500,
+    edition_number: 1
   });
   
   // Form state for editing active race
@@ -35,7 +37,9 @@ export default function RaceConfigPanel() {
     name: '',
     date: '',
     start_time: '',
-    location: ''
+    location: '',
+    registration_cost: 3500,
+    edition_number: 1
   });
 
   const token = localStorage.getItem('admin_token');
