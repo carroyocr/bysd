@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Query
 from fastapi.responses import FileResponse
 from typing import Optional, List
 import bcrypt
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 from bson import ObjectId
@@ -21,6 +21,16 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026")
 ALGORITHM = "HS256"
 KM_PER_LAP = 6.7
 CERTIFICATES_DIR = Path(__file__).parent.parent / "static" / "certificates" / "individual"
+
+
+# Helper function to get active race code
+async def get_active_race_code(database) -> str:
+    """Get the code of the currently active race"""
+    active_race = await database.race_configurations.find_one({"is_active": True})
+    if active_race:
+        return active_race.get("code")
+    return None
+
 
 # Helper function to verify JWT token
 def verify_token(authorization: Optional[str] = Header(None)):
