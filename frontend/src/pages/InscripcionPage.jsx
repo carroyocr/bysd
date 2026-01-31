@@ -235,23 +235,22 @@ export default function InscripcionPage() {
     
     setEmailAlreadyRegistered(false);
     setSendingCode(true);
-    try {
-      const response = await fetch(`${API_URL}/api/registration/send-verification`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      
-      // Get response as text first to avoid body stream issues
-      const responseText = await response.text();
+    
+    // Use XMLHttpRequest to avoid body stream issues with platform interceptors
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/api/registration/send-verification`, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      setSendingCode(false);
       let data;
       try {
-        data = JSON.parse(responseText);
+        data = JSON.parse(xhr.responseText);
       } catch (e) {
-        data = { detail: responseText };
+        data = { detail: xhr.responseText };
       }
       
-      if (response.ok) {
+      if (xhr.status === 200) {
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
@@ -265,12 +264,14 @@ export default function InscripcionPage() {
           toast.error(errorMessage);
         }
       }
-    } catch (error) {
-      console.error('Error in sendVerificationCode:', error);
-      toast.error('Error de conexión. Intenta de nuevo.');
-    } finally {
+    };
+    
+    xhr.onerror = function() {
       setSendingCode(false);
-    }
+      toast.error('Error de conexión. Intenta de nuevo.');
+    };
+    
+    xhr.send(JSON.stringify({ email }));
   };
   
   const verifyEmail = async () => {
