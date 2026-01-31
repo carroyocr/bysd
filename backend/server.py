@@ -23,10 +23,10 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
-# Mount static files directory
+# Mount static files directory - use /api/uploads to ensure routing through backend
 STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/api/uploads", StaticFiles(directory=str(STATIC_DIR / "uploads")), name="uploads")
 
 # Startup event to create database indexes
 @app.on_event("startup")
