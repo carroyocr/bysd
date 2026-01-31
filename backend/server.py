@@ -269,6 +269,10 @@ app.include_router(volunteers_router, prefix="/api/volunteers", tags=["volunteer
 from routes.surveys import router as surveys_router
 app.include_router(surveys_router, prefix="/api/surveys", tags=["surveys"])
 
+# Include race configuration routes
+from routes.race_config import router as race_config_router
+app.include_router(race_config_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
