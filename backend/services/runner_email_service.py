@@ -322,3 +322,31 @@ async def send_runner_completion_email(
     except Exception as e:
         print(f"Error sending runner completion email to {to_email}: {str(e)}")
         return False
+
+
+async def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    """Send a generic email with HTML content"""
+    
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        print("Gmail credentials not configured")
+        raise Exception("Gmail credentials not configured")
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+        msg['To'] = to_email
+        
+        part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(part)
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        
+        print(f"Email sent to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"Error sending email to {to_email}: {str(e)}")
+        raise
