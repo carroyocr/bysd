@@ -289,6 +289,42 @@ export default function Navigation() {
                     </Link>
                   ))}
 
+                  {/* Mobile Patrocinadores Accordion */}
+                  <div>
+                    <button
+                      onClick={() => toggleMobileSubmenu('patrocinadores')}
+                      className={`w-full px-4 py-3 text-base font-medium rounded-lg transition-colors flex items-center justify-between ${
+                        isPatrocinadoresActive
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Patrocinadores
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedMobile.patrocinadores ? 'rotate-180' : ''}`} />
+                    </button>
+                    {expandedMobile.patrocinadores && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {allRaces.map((race) => (
+                          <Link
+                            key={race.code}
+                            to={`/patrocinadores/${race.code.toLowerCase()}`}
+                            onClick={handleLinkClick}
+                            className={`block px-4 py-2 text-sm rounded-lg transition-colors ${
+                              location.pathname === `/patrocinadores/${race.code.toLowerCase()}`
+                                ? 'text-primary bg-secondary'
+                                : 'text-muted-foreground hover:text-primary hover:bg-secondary/50'
+                            }`}
+                          >
+                            {race.code}
+                            {race.is_active && (
+                              <span className="ml-2 text-xs text-green-600">(Activa)</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Mobile Resultados Accordion */}
                   <div>
                     <button
