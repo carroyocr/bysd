@@ -71,8 +71,16 @@ async def get_active_race(db=Depends(lambda: None)):
             "location": "Parque del Este, Santo Domingo, República Dominicana",
             "logo_url": "/icon-bu.png",
             "is_active": True,
-            "is_default": True
+            "is_default": True,
+            "registration_cost": 3500.0,
+            "edition_number": 1
         }
+    
+    # Ensure defaults for new fields if not present
+    if "registration_cost" not in config:
+        config["registration_cost"] = 3500.0
+    if "edition_number" not in config:
+        config["edition_number"] = 1
     
     return config
 
