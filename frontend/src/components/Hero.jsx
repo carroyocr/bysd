@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, UserPlus } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Link } from 'react-router-dom';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
