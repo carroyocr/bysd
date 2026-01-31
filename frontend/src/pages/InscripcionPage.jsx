@@ -586,7 +586,10 @@ export default function InscripcionPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailAlreadyRegistered(false);
+                  }}
                   placeholder="tu@email.com"
                   disabled={codeSent}
                   data-testid="email-input"
