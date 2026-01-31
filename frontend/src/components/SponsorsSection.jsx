@@ -200,7 +200,8 @@ export default function SponsorsSection({ raceCode }) {
               name: s.name,
               description: s.description,
               instagram: s.instagram,
-              logo: s.logo_url
+              // Convert relative logo URL to full URL
+              logo: s.logo_url ? `${process.env.REACT_APP_BACKEND_URL}${s.logo_url}` : null
             }));
             setSponsors(mappedSponsors);
           }
