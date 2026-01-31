@@ -22,7 +22,7 @@ const staticNavLinks = [
 ];
 
 const endNavLinks = [
-  { href: '/inscripcion', label: 'Inscripción', highlight: true },
+  { href: '/pre-registro', label: 'Pre Registro', highlight: true },
 ];
 
 export default function Navigation() {
