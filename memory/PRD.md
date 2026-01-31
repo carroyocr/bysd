@@ -201,6 +201,12 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Compatibilidad Dual para Datos Legacy** (31 Enero 2026)
+  - BYSD-2026 usa colección `participants` (legacy)
+  - BYSD-2027+ usa colección `registrations` (nuevo)
+  - Lista `LEGACY_RACE_CODES` en backend para carreras históricas
+  - Endpoint `/api/race-config/all` incluye carreras legacy automáticamente
+  - Frontend `LiveDashboard` pasa `race_code` en llamadas API
 - [x] **Botones de Admin Filtrados por Carrera** (31 Enero 2026)
   - `reset-database`: Solo reinicia tracking de vueltas de la carrera activa (no borra datos históricos)
   - `reset-cheers`: Solo borra mensajes de ánimo de la carrera activa
