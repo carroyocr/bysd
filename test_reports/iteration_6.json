@@ -1,0 +1,135 @@
+{
+  "summary": "Completed testing of Race Control Panel modifications to use registrations collection. All 20 backend API tests passed. Frontend UI verified showing participant from registrations with status 'active' in Panel de Control.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_race_control_registrations.py",
+    "/app/test_reports/pytest/pytest_race_control_registrations.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "race.py correctly queries registrations collection with status filter for active race participants",
+    "Fallback to old participants collection works when no registrations exist",
+    "Stats endpoint correctly counts athletes_active, athletes_dnf from registrations",
+    "Participants endpoint excludes pre_registered status (only shows active, retired, dns, winner, honor)",
+    "BIB formatting uses zfill(3) for consistent display (001, 002, etc.)",
+    "RaceControlPanel.jsx correctly passes race_code parameter to API calls"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_race_control_registrations.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "100% (all UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!"
+  },
+  "seed_data_creation": "Used existing registration: Cristhian Arroyo (carroyo@riesgobancario.com) with status 'active' and BIB=1 for BYSD-2027",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Race Control Panel now uses registrations collection for BYSD-2027. Participant Cristhian Arroyo (BIB 001) appears in both Pre-Registros tab (with status 'active') and Panel de Control. The system correctly filters by race_code and status. Fallback to old participants collection works for races without registrations.",
+  "features_verified": {
+    "api_stats_with_race_code": {
+      "description": "GET /api/race/stats?race_code=BYSD-2027",
+      "status": "PASSED",
+      "evidence": "Returns athletes_active=1, athletes_dnf=0 from registrations collection"
+    },
+    "api_participants_with_race_code": {
+      "description": "GET /api/race/participants?race_code=BYSD-2027",
+      "status": "PASSED",
+      "evidence": "Returns 1 participant (Cristhian Arroyo) with status 'active' from registrations"
+    },
+    "participants_exclude_pre_registered": {
+      "description": "Participants endpoint excludes pre_registered status",
+      "status": "PASSED",
+      "evidence": "Only returns participants with status in ['active', 'retired', 'dns', 'winner', 'honor']"
+    },
+    "participants_require_bib": {
+      "description": "Participants must have BIB assigned",
+      "status": "PASSED",
+      "evidence": "Query includes bib: {$ne: null} filter"
+    },
+    "fallback_to_old_participants": {
+      "description": "Falls back to old participants collection when no registrations",
+      "status": "PASSED",
+      "evidence": "Non-existent race_code returns data from old participants collection"
+    },
+    "stats_consistency": {
+      "description": "Stats athletes_active matches participants count",
+      "status": "PASSED",
+      "evidence": "stats.athletes_active == len(participants with status=active)"
+    },
+    "ui_panel_de_control": {
+      "description": "Panel de Control shows participant from registrations",
+      "status": "PASSED",
+      "evidence": "Screenshot shows Cristhian Arroyo (BIB 001) with status 'Activo'"
+    },
+    "ui_participant_table": {
+      "description": "Participant table displays correct data",
+      "status": "PASSED",
+      "evidence": "Table shows BIB, Nombre, Vueltas, Seguidores, Estado, Acciones columns"
+    },
+    "ui_search_functionality": {
+      "description": "Search by name works",
+      "status": "PASSED",
+      "evidence": "Search for 'Cristhian' returns correct result"
+    },
+    "ui_filter_by_status": {
+      "description": "Filter by status works",
+      "status": "PASSED",
+      "evidence": "Filter by 'active' shows Cristhian"
+    },
+    "ui_pre_registros_tab": {
+      "description": "Pre-Registros tab shows participant with active status",
+      "status": "PASSED",
+      "evidence": "Screenshot shows Cristhian Arroyo with Estado='Activo' badge"
+    }
+  },
+  "tests_executed": {
+    "backend_api_tests": [
+      "GET /api/race/stats?race_code=BYSD-2027 returns 200 ✓",
+      "Stats response has correct structure ✓",
+      "Stats shows athletes_active from registrations ✓",
+      "Stats without race_code uses active race ✓",
+      "Stats numeric values are correct types ✓",
+      "GET /api/race/participants?race_code=BYSD-2027 returns 200 ✓",
+      "Participants returns list ✓",
+      "Participants have valid race statuses ✓",
+      "Participants have required fields ✓",
+      "Participants exclude pre_registered ✓",
+      "Participants have BIB assigned ✓",
+      "Test participant in list ✓",
+      "Participants filter by status ✓",
+      "Participants search by name ✓",
+      "Active registration appears in stats ✓",
+      "Active registration appears in participants ✓",
+      "Stats with non-existent race_code fallback ✓",
+      "Participants with non-existent race_code fallback ✓",
+      "Stats and participants consistency ✓",
+      "Participant data completeness ✓"
+    ],
+    "frontend_ui_tests": [
+      "Admin login works ✓",
+      "Panel de Control loads ✓",
+      "Cristhian Arroyo visible in table ✓",
+      "BIB 001 visible ✓",
+      "Active status badge visible ✓",
+      "Participant count shows '1 participantes' ✓",
+      "Registrar Vuelta button visible ✓",
+      "Marcar DNF button visible ✓",
+      "Search functionality works ✓",
+      "Filter by status works ✓",
+      "Pre-Registros tab shows participant ✓",
+      "Pre-Registros shows status 'Activo' ✓"
+    ]
+  }
+}
