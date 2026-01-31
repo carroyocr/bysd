@@ -1,27 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
-const navLinks = [
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const staticNavLinks = [
   { href: '/evento', label: 'Evento' },
   { href: '/corredores', label: 'Corredores' },
   { href: '/voluntarios', label: 'Voluntarios' },
   { href: '/reglas', label: 'Reglas' },
   { href: '/logistica', label: 'Logística' },
   { href: '/patrocinadores', label: 'Patrocinadores' },
-  { href: '/en-vivo', label: 'Resultados' },
-  { href: '/comunidad', label: 'Comunidad' },
+];
+
+const endNavLinks = [
   { href: '/encuesta', label: 'Encuesta' },
 ];
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [allRaces, setAllRaces] = useState([]);
+  const [expandedMobile, setExpandedMobile] = useState({ resultados: false, comunidad: false });
   const location = useLocation();
-  const { raceCode, getYear } = useRaceConfig();
+  const { getYear } = useRaceConfig();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,9 +42,38 @@ export default function Navigation() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch all races for the dropdown
+  useEffect(() => {
+    const fetchRaces = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/all`);
+        if (response.ok) {
+          const data = await response.json();
+          // Sort by date descending (newest first)
+          const sorted = data.sort((a, b) => new Date(b.date) - new Date(a.date));
+          setAllRaces(sorted);
+        }
+      } catch (error) {
+        console.error('Error fetching races:', error);
+      }
+    };
+    fetchRaces();
+  }, []);
+
   const handleLinkClick = () => {
     setIsOpen(false);
+    setExpandedMobile({ resultados: false, comunidad: false });
   };
+
+  const toggleMobileSubmenu = (menu) => {
+    setExpandedMobile(prev => ({
+      ...prev,
+      [menu]: !prev[menu]
+    }));
+  };
+
+  const isResultadosActive = location.pathname.includes('/resultados') || location.pathname === '/en-vivo';
+  const isComunidadActive = location.pathname.includes('/comunidad');
 
   return (
     <nav
@@ -66,7 +106,96 @@ export default function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => (
+            {staticNavLinks.map((link) => (
+              <Link
+                key={link.href}
+                to={link.href}
+                onClick={handleLinkClick}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                  location.pathname === link.href
+                    ? 'text-primary bg-secondary'
+                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            {/* Resultados Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
+                    isResultadosActive
+                      ? 'text-primary bg-secondary'
+                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                  }`}
+                >
+                  Resultados
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[160px]">
+                {allRaces.length > 0 ? (
+                  allRaces.map((race) => (
+                    <DropdownMenuItem key={race.code} asChild>
+                      <Link
+                        to={`/resultados/${race.code.toLowerCase()}`}
+                        className="flex items-center justify-between w-full"
+                      >
+                        <span>{race.code}</span>
+                        {race.is_active && (
+                          <span className="w-2 h-2 rounded-full bg-green-500 ml-2" />
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link to="/en-vivo">Ver Resultados</Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Comunidad Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
+                    isComunidadActive
+                      ? 'text-primary bg-secondary'
+                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                  }`}
+                >
+                  Comunidad
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[160px]">
+                {allRaces.length > 0 ? (
+                  allRaces.map((race) => (
+                    <DropdownMenuItem key={race.code} asChild>
+                      <Link
+                        to={`/comunidad/${race.code.toLowerCase()}`}
+                        className="flex items-center justify-between w-full"
+                      >
+                        <span>{race.code}</span>
+                        {race.is_active && (
+                          <span className="w-2 h-2 rounded-full bg-green-500 ml-2" />
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link to="/comunidad">Ver Comunidad</Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {endNavLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
@@ -105,7 +234,94 @@ export default function Navigation() {
               </div>
               <div className="flex-1 overflow-y-auto py-6">
                 <div className="flex flex-col gap-2 pr-2">
-                  {navLinks.map((link) => (
+                  {staticNavLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      to={link.href}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        location.pathname === link.href
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+
+                  {/* Mobile Resultados Accordion */}
+                  <div>
+                    <button
+                      onClick={() => toggleMobileSubmenu('resultados')}
+                      className={`w-full px-4 py-3 text-base font-medium rounded-lg transition-colors flex items-center justify-between ${
+                        isResultadosActive
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Resultados
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedMobile.resultados ? 'rotate-180' : ''}`} />
+                    </button>
+                    {expandedMobile.resultados && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {allRaces.map((race) => (
+                          <Link
+                            key={race.code}
+                            to={`/resultados/${race.code.toLowerCase()}`}
+                            onClick={handleLinkClick}
+                            className={`block px-4 py-2 text-sm rounded-lg transition-colors ${
+                              location.pathname === `/resultados/${race.code.toLowerCase()}`
+                                ? 'text-primary bg-secondary'
+                                : 'text-muted-foreground hover:text-primary hover:bg-secondary/50'
+                            }`}
+                          >
+                            {race.code}
+                            {race.is_active && (
+                              <span className="ml-2 text-xs text-green-600">(Activa)</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Comunidad Accordion */}
+                  <div>
+                    <button
+                      onClick={() => toggleMobileSubmenu('comunidad')}
+                      className={`w-full px-4 py-3 text-base font-medium rounded-lg transition-colors flex items-center justify-between ${
+                        isComunidadActive
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Comunidad
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedMobile.comunidad ? 'rotate-180' : ''}`} />
+                    </button>
+                    {expandedMobile.comunidad && (
+                      <div className="ml-4 mt-1 space-y-1">
+                        {allRaces.map((race) => (
+                          <Link
+                            key={race.code}
+                            to={`/comunidad/${race.code.toLowerCase()}`}
+                            onClick={handleLinkClick}
+                            className={`block px-4 py-2 text-sm rounded-lg transition-colors ${
+                              location.pathname === `/comunidad/${race.code.toLowerCase()}`
+                                ? 'text-primary bg-secondary'
+                                : 'text-muted-foreground hover:text-primary hover:bg-secondary/50'
+                            }`}
+                          >
+                            {race.code}
+                            {race.is_active && (
+                              <span className="ml-2 text-xs text-green-600">(Activa)</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {endNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       to={link.href}
