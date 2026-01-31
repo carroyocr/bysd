@@ -201,6 +201,12 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Feature: Costo y Edición Parametrizables** (31 Enero 2026)
+  - Agregados campos `registration_cost` y `edition_number` a la configuración de carrera
+  - Panel Admin > Carrera Activa: Campos editables para costo (RD$) y número de edición
+  - Home: Badge dinámico muestra "Primera Edición", "Segunda Edición", etc.
+  - Pre-Registro: El costo se muestra dinámicamente desde la base de datos
+  - Backend: Valores por defecto (RD$3,500, Edición 1) si no están configurados
 - [x] **Bug Fix: Pre-registro con email existente** (31 Enero 2026)
   - Corregido: Al intentar pre-registrarse con un email ya registrado, ahora muestra un mensaje claro
   - Muestra: "Este correo ya tiene un pre-registro" con botón para acceder al registro existente
