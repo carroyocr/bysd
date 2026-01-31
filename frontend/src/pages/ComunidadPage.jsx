@@ -291,14 +291,21 @@ export default function ComunidadPage() {
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
             Comunidad
           </h1>
-          <p className="text-center text-purple-100 mb-4">
-            {raceName}
+          <p className="text-center text-purple-100 mb-1">
+            {getDisplayRaceName()}
           </p>
+          {displayRaceCode && (
+            <p className="text-center text-purple-200 text-sm mb-4">
+              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
+                {displayRaceCode}
+              </Badge>
+            </p>
+          )}
           <div className="flex justify-center gap-2 flex-wrap">
-            <Link to="/en-vivo">
+            <Link to={displayRaceCode ? `/resultados/${displayRaceCode.toLowerCase()}` : "/en-vivo"}>
               <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver a Seguimiento
+                Volver a Resultados
               </Button>
             </Link>
             <Link to="/mensajes/presentacion">
