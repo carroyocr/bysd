@@ -10,7 +10,7 @@ import SurveyResultsSection from './SurveyResultsSection';
 // Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
 const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
 
-export default function RaceControlPanel() {
+export default function RaceControlPanel({ embedded = false }) {
   const [currentLap, setCurrentLap] = useState(1);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
