@@ -51,8 +51,9 @@ export default function Navigation() {
           const data = await response.json();
           // Handle response format (races array inside object)
           const racesArray = data.races || data;
-          // Sort by date descending (newest first)
-          const sorted = racesArray.sort((a, b) => new Date(b.date) - new Date(a.date));
+          // Filter only BYSD races (exclude test races) and sort by date descending
+          const filtered = racesArray.filter(r => r.code.startsWith('BYSD-'));
+          const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
           setAllRaces(sorted);
         }
       } catch (error) {
