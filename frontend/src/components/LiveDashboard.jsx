@@ -87,6 +87,30 @@ export default function LiveDashboard({ raceCode }) {
   const [cheerSending, setCheerSending] = useState(false);
   const [cheerResult, setCheerResult] = useState(null);
 
+  // Fetch race info if viewing a specific race
+  useEffect(() => {
+    const fetchRaceInfo = async () => {
+      if (displayRaceCode) {
+        try {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/${displayRaceCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            setRaceInfo(data);
+          }
+        } catch (error) {
+          console.error('Error fetching race info:', error);
+        }
+      }
+    };
+    fetchRaceInfo();
+  }, [displayRaceCode]);
+
+  // Get display name for the race
+  const getDisplayRaceName = () => {
+    if (raceInfo) return raceInfo.name;
+    return raceName;
+  };
+
   // Save followed athletes to localStorage and update subscription if exists
   useEffect(() => {
     localStorage.setItem(FOLLOWED_ATHLETES_KEY, JSON.stringify(followedAthletes));
