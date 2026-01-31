@@ -3,10 +3,12 @@ import { Users, Search, Filter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function ParticipantsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [nationalityFilter, setNationalityFilter] = useState('');
+  const { getYear } = useRaceConfig();
 
   const participants = [
     { bib: '001', nombre: 'Lucas', apellidos: 'Gaitán', nacionalidad: 'COL' },
@@ -130,7 +132,7 @@ export default function ParticipantsList() {
               <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl">Participantes 2026</CardTitle>
+              <CardTitle className="text-2xl">Participantes {getYear()}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 {filteredParticipants.length} de {participants.length} atletas registrados
               </p>
