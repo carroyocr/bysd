@@ -1,12 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExternalLink, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
-export default function SponsorsSection() {
-  const { raceName } = useRaceConfig();
+export default function SponsorsSection({ raceCode }) {
+  const { raceName, config } = useRaceConfig();
+  
+  // Determine which race to show - from URL param or active race
+  const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
+  const [raceInfo, setRaceInfo] = useState(null);
+  
+  // Fetch race info if viewing a specific race
+  useEffect(() => {
+    const fetchRaceInfo = async () => {
+      if (displayRaceCode) {
+        try {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/${displayRaceCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            setRaceInfo(data);
+          }
+        } catch (error) {
+          console.error('Error fetching race info:', error);
+        }
+      }
+    };
+    fetchRaceInfo();
+  }, [displayRaceCode]);
+
+  // Get display name for the race
+  const getDisplayRaceName = () => {
+    if (raceInfo) return raceInfo.name;
+    return raceName;
+  };
+  
   const sponsors = [
     {
       name: 'AGESS',
