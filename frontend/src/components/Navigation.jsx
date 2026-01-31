@@ -29,7 +29,7 @@ export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [allRaces, setAllRaces] = useState([]);
-  const [expandedMobile, setExpandedMobile] = useState({ resultados: false, comunidad: false });
+  const [expandedMobile, setExpandedMobile] = useState({ patrocinadores: false, resultados: false, comunidad: false });
   const location = useLocation();
   const { getYear } = useRaceConfig();
 
