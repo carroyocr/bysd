@@ -1265,8 +1265,20 @@ async def submit_cheer_message(
     from server import db as database
     from services.twitter_service import post_cheer_to_twitter
     
-    # Validate athlete exists
-    athlete = await database.participants.find_one({"bib": request.athlete_bib}, {"_id": 0})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Validate athlete exists - check registrations first, then participants
+    athlete = None
+    if active_race_code:
+        athlete = await database.registrations.find_one(
+            {"race_code": active_race_code, "bib": int(request.athlete_bib.lstrip('0')) if request.athlete_bib.lstrip('0').isdigit() else None, "status": {"$in": ["active", "retired", "winner"]}},
+            {"_id": 0, "edit_token": 0}
+        )
+    
+    if not athlete:
+        athlete = await database.participants.find_one({"bib": request.athlete_bib}, {"_id": 0})
+    
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
     
@@ -1277,14 +1289,16 @@ async def submit_cheer_message(
     if len(request.fan_name) > 50:
         raise HTTPException(status_code=400, detail="El nombre no puede exceder 50 caracteres")
     
-    # Create cheer message
-    cheer = CheerMessage(
-        athlete_bib=request.athlete_bib,
-        fan_name=request.fan_name,
-        message=request.message
-    )
+    # Create cheer message with race_code
+    cheer_data = {
+        "athlete_bib": request.athlete_bib,
+        "fan_name": request.fan_name,
+        "message": request.message,
+        "race_code": active_race_code,
+        "created_at": datetime.now(timezone.utc)
+    }
     
-    await database.cheer_messages.insert_one(cheer.dict())
+    await database.cheer_messages.insert_one(cheer_data)
     
     # Try to post to Twitter (non-blocking, don't fail if Twitter fails)
     athlete_name = f"{athlete['nombre']} {athlete['apellidos']}"
