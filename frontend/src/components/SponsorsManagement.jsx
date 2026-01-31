@@ -313,7 +313,7 @@ export default function SponsorsManagement() {
                     )}
                     
                     {/* Logo Upload */}
-                    <label className="block mt-2">
+                    <label className="block mt-2 cursor-pointer">
                       <input
                         type="file"
                         accept="image/*"
@@ -321,19 +321,10 @@ export default function SponsorsManagement() {
                         onChange={(e) => handleLogoUpload(sponsor.name, e.target.files[0])}
                         disabled={uploadingLogo === sponsor.name}
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs"
-                        disabled={uploadingLogo === sponsor.name}
-                        asChild
-                      >
-                        <span className="cursor-pointer">
-                          <Upload className="w-3 h-3 mr-1" />
-                          {uploadingLogo === sponsor.name ? '...' : 'Logo'}
-                        </span>
-                      </Button>
+                      <div className={`w-full text-xs px-2 py-1.5 border rounded-md flex items-center justify-center gap-1 transition-colors ${uploadingLogo === sponsor.name ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'}`}>
+                        <Upload className="w-3 h-3" />
+                        {uploadingLogo === sponsor.name ? 'Subiendo...' : 'Subir Logo'}
+                      </div>
                     </label>
                   </div>
                   
