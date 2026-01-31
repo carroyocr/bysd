@@ -547,6 +547,31 @@ export default function RaceConfigPanel() {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>Costo de Inscripción (RD$)</Label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={newRace.registration_cost}
+                    onChange={(e) => setNewRace({...newRace, registration_cost: parseFloat(e.target.value) || 0})}
+                    placeholder="3500"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Número de Edición</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={newRace.edition_number}
+                    onChange={(e) => setNewRace({...newRace, edition_number: parseInt(e.target.value) || 1})}
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-muted-foreground">1 = Primera Edición, 2 = Segunda, etc.</p>
+                </div>
               </div>
 
               {/* Archive Option */}
