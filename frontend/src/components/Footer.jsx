@@ -2,9 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Instagram, Mail, MapPin, Phone } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { getYear, raceName } = useRaceConfig();
 
   const handleLinkClick = () => {
     // ScrollToTop component handles scroll on route change
@@ -36,7 +38,7 @@ export default function Footer() {
                 <div>
                   <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
                   <div className="text-xs text-muted-foreground font-semibold tracking-wider mt-1">
-                    SANTO DOMINGO 2026
+                    SANTO DOMINGO {getYear()}
                   </div>
                 </div>
               </div>
