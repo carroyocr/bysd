@@ -37,6 +37,8 @@ class RaceConfigCreate(BaseModel):
     start_time: str  # e.g., "09:00"
     location: str  # e.g., "Parque del Este, Santo Domingo"
     is_active: bool = True
+    registration_cost: float = 3500.0  # Cost in local currency (RD$)
+    edition_number: int = 1  # Edition number (1 = Primera, 2 = Segunda, etc.)
 
 
 class RaceConfigUpdate(BaseModel):
@@ -45,6 +47,8 @@ class RaceConfigUpdate(BaseModel):
     start_time: Optional[str] = None
     location: Optional[str] = None
     logo_url: Optional[str] = None
+    registration_cost: Optional[float] = None
+    edition_number: Optional[int] = None
 
 
 @router.get("/active")
