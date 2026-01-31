@@ -338,7 +338,8 @@ export default function LiveDashboard() {
   useEffect(() => {
     const calculateCountdown = () => {
       const now = new Date();
-      const difference = RACE_START_DATE - now;
+      const raceStart = getRaceStartDate();
+      const difference = raceStart - now;
 
       if (difference <= 0) {
         setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
@@ -357,7 +358,7 @@ export default function LiveDashboard() {
     const timer = setInterval(calculateCountdown, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [getRaceStartDate]);
 
   // Generate share text for winner
   const getWinnerShareText = () => {
