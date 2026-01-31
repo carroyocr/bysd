@@ -124,6 +124,43 @@ export default function Navigation() {
               </Link>
             ))}
 
+            {/* Patrocinadores Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
+                    isPatrocinadoresActive
+                      ? 'text-primary bg-secondary'
+                      : 'text-foreground hover:text-primary hover:bg-secondary'
+                  }`}
+                >
+                  Patrocinadores
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-[160px]">
+                {allRaces.length > 0 ? (
+                  allRaces.map((race) => (
+                    <DropdownMenuItem key={race.code} asChild>
+                      <Link
+                        to={`/patrocinadores/${race.code.toLowerCase()}`}
+                        className="flex items-center justify-between w-full"
+                      >
+                        <span>{race.code}</span>
+                        {race.is_active && (
+                          <span className="w-2 h-2 rounded-full bg-green-500 ml-2" />
+                        )}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link to="/patrocinadores">Ver Patrocinadores</Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Resultados Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
