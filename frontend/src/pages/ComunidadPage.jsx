@@ -155,10 +155,11 @@ export default function ComunidadPage() {
   const loadAthleteLeaderboard = async () => {
     setLoadingAthletes(true);
     try {
+      const raceCodeParam = displayRaceCode ? `?race_code=${displayRaceCode}` : '';
       // Get subscribers count and participants
       const [subsResponse, participantsResponse] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribers-count-public`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`)
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribers-count-public${raceCodeParam}`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants${raceCodeParam}`)
       ]);
       
       if (subsResponse.ok && participantsResponse.ok) {
