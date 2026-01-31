@@ -594,18 +594,47 @@ export default function InscripcionPage() {
               </div>
               
               {!codeSent ? (
-                <Button 
-                  onClick={sendVerificationCode} 
-                  disabled={sendingCode}
-                  className="w-full"
-                  data-testid="send-code-btn"
-                >
-                  {sendingCode ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
-                  ) : (
-                    'Enviar Código de Verificación'
+                <>
+                  <Button 
+                    onClick={sendVerificationCode} 
+                    disabled={sendingCode}
+                    className="w-full"
+                    data-testid="send-code-btn"
+                  >
+                    {sendingCode ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                    ) : (
+                      'Enviar Código de Verificación'
+                    )}
+                  </Button>
+                  
+                  {/* Show message when email is already registered */}
+                  {emailAlreadyRegistered && (
+                    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-800">Este correo ya tiene un pre-registro</p>
+                          <p className="text-sm text-amber-700 mt-1">
+                            Si deseas ver o editar tu información, usa el botón de abajo para acceder a tu registro existente.
+                          </p>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => {
+                              setAccessMode(true);
+                              setAccessEmail(email);
+                            }}
+                            className="mt-3 bg-amber-600 hover:bg-amber-700"
+                            data-testid="access-existing-btn"
+                          >
+                            Acceder a mi Pre Registro
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </Button>
+                </>
               ) : (
                 <>
                   <div className="space-y-2">
