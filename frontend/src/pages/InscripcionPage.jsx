@@ -141,10 +141,10 @@ export default function InscripcionPage() {
         setIsEditing(true);
         setCurrentStep(1); // Skip verification
         setExistingPhotoUrl(data.photo_url);
-        setRegistrationResult({ bib: data.bib });
+        setRegistrationResult({});
       } else {
         toast.error('Token inválido o expirado');
-        navigate('/inscripcion');
+        navigate('/pre-registro');
       }
     } catch (error) {
       console.error('Error loading registration:', error);
