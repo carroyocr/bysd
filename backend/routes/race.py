@@ -82,38 +82,46 @@ async def get_race_stats(
         active_race_code = await get_active_race_code(database)
     
     # Get race config for this race (current lap tracking)
-    race_config_key = f"race_config_{active_race_code}" if active_race_code else "race_config"
     config = await database.race_config.find_one({"race_code": active_race_code} if active_race_code else {}, {"_id": 0})
     if not config:
         config = {"current_lap": 1}
     
     current_lap = config.get("current_lap", 1)
     
-    # Try to get participants from registrations collection first (for new races)
-    participants = []
-    if active_race_code:
-        # Get from registrations - only those with status "active" in the race (not pre_registered)
-        registrations = await database.registrations.find(
-            {"race_code": active_race_code, "status": {"$in": ["active", "retired", "dns", "winner", "honor"]}},
-            {"_id": 0, "edit_token": 0}
-        ).to_list(1000)
-        
-        # Map registrations to participant format
-        for reg in registrations:
-            participants.append({
-                "bib": str(reg.get("bib")) if reg.get("bib") else None,
-                "nombre": reg.get("nombre"),
-                "apellidos": reg.get("apellidos"),
-                "nacionalidad": reg.get("nacionalidad", "DOM"),
-                "status": reg.get("status", "active"),
-                "laps_completed": reg.get("laps_completed", 0),
-                "total_km": reg.get("total_km", 0.0),
-                "retired_at_lap": reg.get("retired_at_lap")
-            })
+    # Determine data source based on race code
+    # BYSD-2026 (and other legacy races) use the old participants collection
+    # Newer races use the registrations collection
+    LEGACY_RACE_CODES = ["BYSD-2026"]  # Add more legacy race codes here if needed
     
-    # Fallback to old participants collection if no registrations
-    if not participants:
+    participants = []
+    
+    if active_race_code in LEGACY_RACE_CODES:
+        # Use legacy participants collection for historical races
         participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
+    else:
+        # Try registrations collection first for new races
+        if active_race_code:
+            registrations = await database.registrations.find(
+                {"race_code": active_race_code, "status": {"$in": ["active", "retired", "dns", "winner", "honor"]}},
+                {"_id": 0, "edit_token": 0}
+            ).to_list(1000)
+            
+            # Map registrations to participant format
+            for reg in registrations:
+                participants.append({
+                    "bib": str(reg.get("bib")).zfill(3) if reg.get("bib") else None,
+                    "nombre": reg.get("nombre"),
+                    "apellidos": reg.get("apellidos"),
+                    "nacionalidad": reg.get("nacionalidad", "DOM"),
+                    "status": reg.get("status", "active"),
+                    "laps_completed": reg.get("laps_completed", 0),
+                    "total_km": reg.get("total_km", 0.0),
+                    "retired_at_lap": reg.get("retired_at_lap")
+                })
+        
+        # Fallback to old participants collection if no registrations found
+        if not participants:
+            participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
     
     # Filter out participants without BIB for stats calculation
     participants_with_bib = [p for p in participants if p.get("bib")]
