@@ -232,7 +232,7 @@ export default function RunnersSection() {
               <Card className="border-border shadow-soft">
                 <CardHeader>
                   <CardTitle className="text-2xl">Cronograma del Día del Evento</CardTitle>
-                  <p className="text-sm text-muted-foreground">Sábado 24 de Enero, 2026</p>
+                  <p className="text-sm text-muted-foreground">{getFormattedDate()}</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
