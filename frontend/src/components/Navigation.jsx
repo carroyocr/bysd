@@ -108,13 +108,13 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-0.5">
             {staticNavLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
                 onClick={handleLinkClick}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
                   location.pathname === link.href
                     ? 'text-primary bg-secondary'
                     : 'text-foreground hover:text-primary hover:bg-secondary'
@@ -128,7 +128,7 @@ export default function Navigation() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
+                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
                     isPatrocinadoresActive
                       ? 'text-primary bg-secondary'
                       : 'text-foreground hover:text-primary hover:bg-secondary'
