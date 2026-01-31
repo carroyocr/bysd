@@ -52,8 +52,12 @@ export default function App() {
                     <Route path="/logistica" element={<LogisticaPage />} />
                     <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
                     <Route path="/faq" element={<FAQPage />} />
+                    {/* Resultados routes - with and without race code */}
                     <Route path="/en-vivo" element={<LiveDashboardPage />} />
+                    <Route path="/resultados/:raceCode" element={<LiveDashboardPage />} />
+                    {/* Comunidad routes - with and without race code */}
                     <Route path="/comunidad" element={<ComunidadPage />} />
+                    <Route path="/comunidad/:raceCode" element={<ComunidadPage />} />
                     <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
                     <Route path="/encuesta" element={<SurveyPage />} />
                   </Routes>
