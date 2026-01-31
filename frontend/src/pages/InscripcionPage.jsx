@@ -16,6 +16,11 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Helper function to format cost
+const formatCost = (cost) => {
+  return `RD$${(cost || 3500).toLocaleString('es-DO')}`;
+};
+
 // Form steps
 const STEPS = [
   { id: 'verify', title: 'Verificación', icon: Mail },
