@@ -63,6 +63,9 @@ export default function App() {
                     <Route path="/comunidad/:raceCode" element={<ComunidadPage />} />
                     <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
                     <Route path="/encuesta" element={<SurveyPage />} />
+                    {/* Inscripcion routes */}
+                    <Route path="/inscripcion" element={<InscripcionPage />} />
+                    <Route path="/inscripcion/editar" element={<InscripcionPage />} />
                   </Routes>
                 </main>
                 <Footer />
