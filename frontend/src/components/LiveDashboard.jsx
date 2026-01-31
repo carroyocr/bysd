@@ -29,8 +29,13 @@ const FOLLOWED_ATHLETES_KEY = 'backyard_ultra_followed_athletes';
 const SUBSCRIPTION_EMAIL_KEY = 'backyard_ultra_subscription_email';
 const SUBSCRIPTION_SETTINGS_KEY = 'backyard_ultra_subscription_settings';
 
-export default function LiveDashboard() {
-  const { raceName, getRaceStartDate, getYear } = useRaceConfig();
+export default function LiveDashboard({ raceCode }) {
+  const { raceName, getRaceStartDate, getYear, config } = useRaceConfig();
+  
+  // Determine which race to show - from URL param or active race
+  const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
+  const [raceInfo, setRaceInfo] = useState(null);
+  
   const [stats, setStats] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
