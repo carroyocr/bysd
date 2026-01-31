@@ -70,37 +70,72 @@ async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
     return {"token": token, "username": credentials.username}
 
 @router.get("/stats")
-async def get_race_stats(db=Depends(lambda: None)):
+async def get_race_stats(
+    race_code: Optional[str] = Query(None, description="Race code to filter by"),
+    db=Depends(lambda: None)
+):
     from server import db as database
     
-    # Get race config
-    config = await database.race_config.find_one({}, {"_id": 0})
+    # Get race code - use parameter or get active race
+    active_race_code = race_code
+    if not active_race_code:
+        active_race_code = await get_active_race_code(database)
+    
+    # Get race config for this race (current lap tracking)
+    race_config_key = f"race_config_{active_race_code}" if active_race_code else "race_config"
+    config = await database.race_config.find_one({"race_code": active_race_code} if active_race_code else {}, {"_id": 0})
     if not config:
         config = {"current_lap": 1}
     
     current_lap = config.get("current_lap", 1)
     
-    # Get participants stats
-    participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
+    # Try to get participants from registrations collection first (for new races)
+    participants = []
+    if active_race_code:
+        # Get from registrations - only those with status "active" in the race (not pre_registered)
+        registrations = await database.registrations.find(
+            {"race_code": active_race_code, "status": {"$in": ["active", "retired", "dns", "winner", "honor"]}},
+            {"_id": 0, "edit_token": 0}
+        ).to_list(1000)
+        
+        # Map registrations to participant format
+        for reg in registrations:
+            participants.append({
+                "bib": str(reg.get("bib")) if reg.get("bib") else None,
+                "nombre": reg.get("nombre"),
+                "apellidos": reg.get("apellidos"),
+                "nacionalidad": reg.get("nacionalidad", "DOM"),
+                "status": reg.get("status", "active"),
+                "laps_completed": reg.get("laps_completed", 0),
+                "total_km": reg.get("total_km", 0.0),
+                "retired_at_lap": reg.get("retired_at_lap")
+            })
+    
+    # Fallback to old participants collection if no registrations
+    if not participants:
+        participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
+    
+    # Filter out participants without BIB for stats calculation
+    participants_with_bib = [p for p in participants if p.get("bib")]
     
     # Total laps completed is current_lap - 1 (not the sum of all athletes)
     total_laps_completed = max(0, current_lap - 1)
     
-    athletes_dnf = sum(1 for p in participants if p.get("status") == "retired")
-    athletes_dns = sum(1 for p in participants if p.get("status") == "dns")
-    athletes_winner = sum(1 for p in participants if p.get("status") == "winner")
-    athletes_honor = sum(1 for p in participants if p.get("status") == "honor")
-    athletes_active = len(participants) - athletes_dnf - athletes_dns - athletes_winner - athletes_honor
+    athletes_dnf = sum(1 for p in participants_with_bib if p.get("status") == "retired")
+    athletes_dns = sum(1 for p in participants_with_bib if p.get("status") == "dns")
+    athletes_winner = sum(1 for p in participants_with_bib if p.get("status") == "winner")
+    athletes_honor = sum(1 for p in participants_with_bib if p.get("status") == "honor")
+    athletes_active = len(participants_with_bib) - athletes_dnf - athletes_dns - athletes_winner - athletes_honor
     
     # Total km is based on completed laps (not current lap)
     total_km = total_laps_completed * KM_PER_LAP
     
     # Total km of all athletes (sum of individual km)
-    total_km_all_athletes = sum(p.get("total_km", 0) for p in participants)
+    total_km_all_athletes = sum(p.get("total_km", 0) for p in participants_with_bib)
     
     # Check for winner: First check if there's a manually marked winner
     winner = None
-    manual_winner = next((p for p in participants if p.get("status") == "winner"), None)
+    manual_winner = next((p for p in participants_with_bib if p.get("status") == "winner"), None)
     
     if manual_winner:
         winner = {
@@ -113,8 +148,8 @@ async def get_race_stats(db=Depends(lambda: None)):
         }
     else:
         # Auto-detect winner: Only 1 active athlete who has completed at least one lap alone
-        active_participants = [p for p in participants if p.get("status") == "active"]
-        retired_participants = [p for p in participants if p.get("status") == "retired"]
+        active_participants = [p for p in participants_with_bib if p.get("status") == "active"]
+        retired_participants = [p for p in participants_with_bib if p.get("status") == "retired"]
         
         if len(active_participants) == 1 and len(retired_participants) > 0:
             winner_participant = active_participants[0]
