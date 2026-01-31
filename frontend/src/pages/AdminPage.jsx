@@ -63,16 +63,21 @@ export default function AdminPage() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
             <TabsTrigger value="control" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Panel de Control</span>
+              <span className="hidden sm:inline">Control</span>
               <span className="sm:hidden">Control</span>
             </TabsTrigger>
             <TabsTrigger value="registrations" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Pre-Registros</span>
               <span className="sm:hidden">Registros</span>
+            </TabsTrigger>
+            <TabsTrigger value="sponsors" className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Patrocinadores</span>
+              <span className="sm:hidden">Sponsors</span>
             </TabsTrigger>
             <TabsTrigger value="surveys" className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4" />
@@ -81,7 +86,7 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="config" className="flex items-center gap-2">
               <Flag className="w-4 h-4" />
-              <span className="hidden sm:inline">Carrera Activa</span>
+              <span className="hidden sm:inline">Carrera</span>
               <span className="sm:hidden">Carrera</span>
             </TabsTrigger>
           </TabsList>
@@ -92,6 +97,10 @@ export default function AdminPage() {
 
           <TabsContent value="registrations">
             <PreRegistrationManagement />
+          </TabsContent>
+
+          <TabsContent value="sponsors">
+            <SponsorsManagement />
           </TabsContent>
 
           <TabsContent value="surveys">
