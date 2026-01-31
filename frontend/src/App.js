@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
+import { RaceConfigProvider } from './contexts/RaceConfigContext';
 import Navigation from './components/Navigation';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -24,6 +25,7 @@ import './App.css';
 
 export default function App() {
   return (
+    <RaceConfigProvider>
     <Router>
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
@@ -64,5 +66,6 @@ export default function App() {
         <Toaster />
       </div>
     </Router>
+    </RaceConfigProvider>
   );
 }
