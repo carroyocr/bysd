@@ -201,6 +201,11 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Bug Fix: Eliminación de Patrocinadores** (31 Enero 2026)
+  - Corregido: Al eliminar un patrocinador, ahora desaparece de la UI inmediatamente
+  - Cambio: Usar endpoint `hard-delete` (eliminación permanente) en lugar de `delete` (soft delete)
+  - El estado local se actualiza inmediatamente para mejor UX
+  - El mensaje de confirmación ahora advierte que la acción no se puede deshacer
 - [x] **Gestión de Patrocinadores en Admin** (31 Enero 2026)
   - Nueva pestaña "Patrocinadores" en panel de administración
   - CRUD completo: crear, editar, eliminar patrocinadores
