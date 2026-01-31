@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 // Add custom CSS for slow pulse animation
 const customStyles = `
@@ -23,15 +24,13 @@ const customStyles = `
   }
 `;
 
-// Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
-const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
-
 // LocalStorage keys
 const FOLLOWED_ATHLETES_KEY = 'backyard_ultra_followed_athletes';
 const SUBSCRIPTION_EMAIL_KEY = 'backyard_ultra_subscription_email';
 const SUBSCRIPTION_SETTINGS_KEY = 'backyard_ultra_subscription_settings';
 
 export default function LiveDashboard() {
+  const { raceName, getRaceStartDate, getYear } = useRaceConfig();
   const [stats, setStats] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -364,11 +363,11 @@ export default function LiveDashboard() {
   const getWinnerShareText = () => {
     if (!stats?.winner) return '';
     const winner = stats.winner;
-    return `🏆 ¡${winner.nombre} ${winner.apellidos} es el campeón del Backyard Ultra Santo Domingo 2026!\n\n` +
+    return `🏆 ¡${winner.nombre} ${winner.apellidos} es el campeón del ${raceName}!\n\n` +
            `📍 ${winner.nacionalidad}\n` +
            `🔄 ${winner.laps_completed} vueltas completadas\n` +
            `📏 ${winner.total_km} km recorridos\n\n` +
-           `#BackyardUltra #SantoDomingo2026 #Ultrarunning`;
+           `#BackyardUltra #SantoDomingo${getYear()} #Ultrarunning`;
   };
 
   const shareOnTwitter = () => {
@@ -517,7 +516,7 @@ export default function LiveDashboard() {
             Resultados
           </h1>
           <p className="text-center text-purple-100 mb-4">
-            Backyard Ultra Santo Domingo 2026
+            {raceName}
           </p>
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-purple-200">
@@ -561,7 +560,7 @@ export default function LiveDashboard() {
                     ¡Tenemos un Ganador!
                   </h2>
                   <p className="text-lg text-amber-800">
-                    Último atleta en pie - Backyard Ultra Santo Domingo 2026
+                    Último atleta en pie - {raceName}
                   </p>
                 </div>
                 <div className="max-w-2xl mx-auto bg-white/80 rounded-lg p-6 shadow-medium">
