@@ -643,18 +643,49 @@ async def complete_lap_all_active(
 ):
     from server import db as database
     
-    # Get current lap
-    config = await database.race_config.find_one({}, {"_id": 0})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Get current lap (filtered by race)
+    config = await database.race_config.find_one(
+        {"race_code": active_race_code} if active_race_code else {},
+        {"_id": 0}
+    )
     if not config:
-        raise HTTPException(status_code=400, detail="Configuración de carrera no encontrada")
+        config = {"current_lap": 1}
     
     current_lap = config.get("current_lap", 1)
     
-    # Get all active participants
-    active_participants = await database.participants.find(
-        {"status": "active"},
-        {"_id": 0}
-    ).to_list(1000)
+    # Get all active participants - try registrations first
+    active_participants = []
+    use_registrations = False
+    
+    if active_race_code:
+        registrations = await database.registrations.find(
+            {
+                "race_code": active_race_code,
+                "status": "active",
+                "bib": {"$ne": None}
+            },
+            {"_id": 0, "edit_token": 0}
+        ).to_list(1000)
+        
+        if registrations:
+            use_registrations = True
+            for reg in registrations:
+                active_participants.append({
+                    "bib": str(reg.get("bib")).zfill(3),
+                    "email": reg.get("email"),
+                    "laps_completed": reg.get("laps_completed", 0)
+                })
+    
+    # Fallback to participants collection
+    if not active_participants:
+        participants_docs = await database.participants.find(
+            {"status": "active"},
+            {"_id": 0}
+        ).to_list(1000)
+        active_participants = participants_docs
     
     if not active_participants:
         return {
@@ -672,7 +703,6 @@ async def complete_lap_all_active(
         current_laps = participant.get("laps_completed", 0)
         
         # Skip if participant already has the current lap completed
-        # (i.e., their laps_completed >= current_lap means they already registered this lap)
         if current_laps >= current_lap:
             skipped_count += 1
             continue
@@ -681,20 +711,32 @@ async def complete_lap_all_active(
         new_km = round(new_laps * KM_PER_LAP, 1)
         
         # Update participant
-        await database.participants.update_one(
-            {"bib": participant["bib"]},
-            {
-                "$set": {
-                    "laps_completed": new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.utcnow()
+        if use_registrations:
+            await database.registrations.update_one(
+                {"race_code": active_race_code, "email": participant.get("email")},
+                {
+                    "$set": {
+                        "laps_completed": new_laps,
+                        "total_km": new_km,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
                 }
-            }
-        )
+            )
+        else:
+            await database.participants.update_one(
+                {"bib": participant["bib"]},
+                {
+                    "$set": {
+                        "laps_completed": new_laps,
+                        "total_km": new_km,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
         
         # Log the lap
         lap_log = LapLog(
-            participant_bib=participant["bib"],
+            participant_bib=participant.get("bib", ""),
             lap_number=current_lap,
             recorded_by=user.get("username", "admin")
         )
@@ -705,13 +747,15 @@ async def complete_lap_all_active(
     # Increment current lap
     new_lap = current_lap + 1
     await database.race_config.update_one(
-        {},
+        {"race_code": active_race_code} if active_race_code else {},
         {
             "$set": {
                 "current_lap": new_lap,
-                "updated_at": datetime.utcnow()
+                "race_code": active_race_code,
+                "updated_at": datetime.now(timezone.utc)
             }
-        }
+        },
+        upsert=True
     )
     
     # Send lap notifications in background (don't wait for completion)
