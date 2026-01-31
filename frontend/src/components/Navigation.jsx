@@ -19,7 +19,6 @@ const staticNavLinks = [
   { href: '/voluntarios', label: 'Voluntarios' },
   { href: '/reglas', label: 'Reglas' },
   { href: '/logistica', label: 'Logística' },
-  { href: '/patrocinadores', label: 'Patrocinadores' },
 ];
 
 const endNavLinks = [
