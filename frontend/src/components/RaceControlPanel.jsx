@@ -133,8 +133,8 @@ export default function RaceControlPanel({ embedded = false }) {
     const token = localStorage.getItem('admin_token');
     try {
       const [statsRes, participantsRes, followersRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats?race_code=${raceCode}`),
+        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants?race_code=${raceCode}`),
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/followers-count`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
