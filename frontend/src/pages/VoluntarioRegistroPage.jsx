@@ -1,0 +1,770 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
+  Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
+  Loader2, Info, Users, Clipboard
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Badge } from '../components/ui/badge';
+import { toast } from 'sonner';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Form steps for volunteers (simplified from athlete registration)
+const STEPS = [
+  { id: 'verify', title: 'Verificación', icon: Mail },
+  { id: 'personal', title: 'Datos Personales', icon: User },
+  { id: 'experience', title: 'Experiencia', icon: Clipboard },
+  { id: 'medical', title: 'Info Médica', icon: Heart },
+  { id: 'emergency', title: 'Emergencia', icon: Shield },
+  { id: 'preferences', title: 'Preferencias', icon: Shirt },
+];
+
+export default function VoluntarioRegistroPage() {
+  const navigate = useNavigate();
+  const { config, raceName } = useRaceConfig();
+  
+  // Current step
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  // Email verification
+  const [email, setEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sessionToken, setSessionToken] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  
+  // State for showing "already registered" message
+  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  
+  // Form data
+  const [formData, setFormData] = useState({
+    // Personal
+    nombre: '',
+    apellidos: '',
+    fecha_nacimiento: '',
+    sexo: '',
+    nacionalidad: '',
+    telefono: '',
+    ciudad_residencia: '',
+    
+    // Experience
+    experiencia_voluntariado: 'No',
+    experiencia_voluntariado_detalle: '',
+    areas_interes: '',
+    disponibilidad: '',
+    
+    // Medical
+    tipo_sangre: '',
+    condicion_medica: 'No',
+    condicion_medica_detalle: '',
+    alergias: 'No',
+    alergias_detalle: '',
+    
+    // Emergency
+    contacto_emergencia_nombre: '',
+    contacto_emergencia_relacion: '',
+    contacto_emergencia_telefono: '',
+    
+    // Preferences
+    talla_camiseta: '',
+    como_se_entero: '',
+    comentarios: '',
+  });
+  
+  // Submission
+  const [submitting, setSubmitting] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
+
+  const sendVerificationCode = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error('Por favor ingresa un email válido');
+      return;
+    }
+    
+    setEmailAlreadyRegistered(false);
+    setSendingCode(true);
+    
+    // Use XMLHttpRequest to avoid body stream issues
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}/api/volunteer-registration/send-verification`, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    
+    xhr.onload = function() {
+      setSendingCode(false);
+      let data;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (e) {
+        data = { detail: xhr.responseText };
+      }
+      
+      if (xhr.status === 200) {
+        setCodeSent(true);
+        toast.success('Código enviado a tu correo');
+      } else {
+        const errorMessage = data.detail || 'Error enviando código';
+        
+        if (errorMessage.includes('ya está registrado')) {
+          setEmailAlreadyRegistered(true);
+          toast.info('Este correo ya está registrado como voluntario');
+        } else {
+          toast.error(errorMessage);
+        }
+      }
+    };
+    
+    xhr.onerror = function() {
+      setSendingCode(false);
+      toast.error('Error de conexión. Intenta de nuevo.');
+    };
+    
+    xhr.send(JSON.stringify({ email }));
+  };
+
+  const verifyCode = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      toast.error('Ingresa el código de 6 dígitos');
+      return;
+    }
+    
+    setVerifying(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/verify-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: verificationCode })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setEmailVerified(true);
+        setSessionToken(data.session_token);
+        setCurrentStep(1);
+        toast.success('Email verificado correctamente');
+      } else {
+        toast.error(data.detail || 'Código inválido');
+      }
+    } catch (error) {
+      toast.error('Error verificando código');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const validateStep = () => {
+    switch (currentStep) {
+      case 1: // Personal
+        if (!formData.nombre || !formData.apellidos || !formData.fecha_nacimiento || 
+            !formData.sexo || !formData.telefono || !formData.ciudad_residencia) {
+          toast.error('Completa todos los campos obligatorios');
+          return false;
+        }
+        break;
+      case 2: // Experience
+        if (!formData.experiencia_voluntariado || !formData.disponibilidad) {
+          toast.error('Completa todos los campos obligatorios');
+          return false;
+        }
+        break;
+      case 4: // Emergency
+        if (!formData.contacto_emergencia_nombre || !formData.contacto_emergencia_telefono) {
+          toast.error('Completa la información de contacto de emergencia');
+          return false;
+        }
+        break;
+    }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep()) {
+      setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
+    
+    setSubmitting(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/volunteer-registration/register?email=${encodeURIComponent(email)}&session_token=${sessionToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setRegistrationComplete(true);
+        toast.success('¡Registro completado!');
+      } else {
+        toast.error(data.detail || 'Error en el registro');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Registration complete screen
+  if (registrationComplete) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+        <div className="container mx-auto px-4 py-12">
+          <Card className="max-w-2xl mx-auto text-center">
+            <CardContent className="p-8 space-y-6">
+              <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-12 h-12 text-green-600" />
+              </div>
+              
+              <h2 className="text-3xl font-bold text-green-700">
+                ¡Gracias por Registrarte como Voluntario!
+              </h2>
+              
+              <p className="text-muted-foreground">
+                Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información sobre las tareas y horarios.
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-blue-800 mb-2">📋 Próximos Pasos</h3>
+                <ul className="text-sm text-blue-700 space-y-2">
+                  <li>• Recibirás un correo de confirmación con los detalles de tu registro.</li>
+                  <li>• Antes del evento, te enviaremos información sobre tu asignación.</li>
+                  <li>• El día del evento, preséntate en el área de voluntarios.</li>
+                </ul>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/">
+                  <Button variant="outline">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Volver al Inicio
+                  </Button>
+                </Link>
+                <Link to="/voluntarios">
+                  <Button>
+                    <Users className="w-4 h-4 mr-2" />
+                    Ver Sección Voluntarios
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
+            Registro de Voluntarios
+          </h1>
+          <p className="text-center text-purple-100 mb-4">
+            {raceName || 'Backyard Ultra Santo Domingo'}
+          </p>
+          {config?.code && (
+            <div className="flex justify-center">
+              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
+                {config.code}
+              </Badge>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      {currentStep === 0 && (
+        <div className="container mx-auto px-4 mt-6">
+          <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-bold text-blue-900 mb-3">💪 ¡Únete al Equipo de Voluntarios!</h2>
+              <div className="space-y-3 text-sm text-blue-800">
+                <p>
+                  Los voluntarios son fundamentales para el éxito del evento. Sin su apoyo, 
+                  no sería posible ofrecer una experiencia de calidad a los atletas.
+                </p>
+                <p>
+                  Como voluntario, podrás participar en diferentes áreas: hidratación, 
+                  registro, control de vueltas, asistencia médica, logística y más.
+                </p>
+                <p className="text-blue-600 italic">
+                  ⚠️ Completa el formulario para registrarte. Te contactaremos con más detalles.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Progress Steps */}
+      <div className="container mx-auto px-4 mt-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
+            {STEPS.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = index === currentStep;
+              const isCompleted = index < currentStep;
+              
+              return (
+                <div key={step.id} className="flex flex-col items-center min-w-[80px]">
+                  <div className={`
+                    w-10 h-10 rounded-full flex items-center justify-center transition-all
+                    ${isCompleted ? 'bg-green-500 text-white' : 
+                      isActive ? 'bg-primary text-white' : 
+                      'bg-gray-200 text-gray-500'}
+                  `}>
+                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                  </div>
+                  <span className={`text-xs mt-2 text-center ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                    {step.title}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Form Content */}
+      <div className="container mx-auto px-4 pb-12">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {React.createElement(STEPS[currentStep].icon, { className: "w-5 h-5" })}
+              {STEPS[currentStep].title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            
+            {/* Step 0: Email Verification */}
+            {currentStep === 0 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo Electrónico *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailAlreadyRegistered(false);
+                    }}
+                    placeholder="tu@email.com"
+                    disabled={codeSent}
+                    data-testid="volunteer-email-input"
+                  />
+                </div>
+
+                {!codeSent ? (
+                  <>
+                    <Button 
+                      onClick={sendVerificationCode} 
+                      disabled={sendingCode}
+                      className="w-full"
+                      data-testid="volunteer-send-code-btn"
+                    >
+                      {sendingCode ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                      ) : (
+                        'Enviar Código de Verificación'
+                      )}
+                    </Button>
+                    
+                    {emailAlreadyRegistered && (
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-800">Este correo ya está registrado</p>
+                            <p className="text-sm text-amber-700 mt-1">
+                              Ya tienes un registro como voluntario para este evento.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="code">Código de Verificación *</Label>
+                      <Input
+                        id="code"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="123456"
+                        maxLength={6}
+                        data-testid="volunteer-code-input"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Revisa tu correo (incluyendo spam) para el código de 6 dígitos
+                      </p>
+                    </div>
+                    
+                    <Button 
+                      onClick={verifyCode} 
+                      disabled={verifying}
+                      className="w-full"
+                      data-testid="volunteer-verify-btn"
+                    >
+                      {verifying ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
+                      ) : (
+                        'Verificar Código'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 1: Personal Data */}
+            {currentStep === 1 && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nombre *</Label>
+                  <Input
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange('nombre', e.target.value)}
+                    placeholder="Tu nombre"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Apellidos *</Label>
+                  <Input
+                    value={formData.apellidos}
+                    onChange={(e) => handleInputChange('apellidos', e.target.value)}
+                    placeholder="Tus apellidos"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha de Nacimiento *</Label>
+                  <Input
+                    type="date"
+                    value={formData.fecha_nacimiento}
+                    onChange={(e) => handleInputChange('fecha_nacimiento', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sexo *</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.sexo}
+                    onChange={(e) => handleInputChange('sexo', e.target.value)}
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nacionalidad</Label>
+                  <Input
+                    value={formData.nacionalidad}
+                    onChange={(e) => handleInputChange('nacionalidad', e.target.value)}
+                    placeholder="Ej: Dominicana"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono *</Label>
+                  <Input
+                    value={formData.telefono}
+                    onChange={(e) => handleInputChange('telefono', e.target.value)}
+                    placeholder="Ej: 809-555-1234"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label>Ciudad de Residencia *</Label>
+                  <Input
+                    value={formData.ciudad_residencia}
+                    onChange={(e) => handleInputChange('ciudad_residencia', e.target.value)}
+                    placeholder="Ej: Santo Domingo"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Experience */}
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>¿Tienes experiencia dando asistencia en actividades deportivas? *</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.experiencia_voluntariado}
+                    onChange={(e) => handleInputChange('experiencia_voluntariado', e.target.value)}
+                  >
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+                
+                {formData.experiencia_voluntariado === 'Sí' && (
+                  <div className="space-y-2">
+                    <Label>Cuéntanos sobre tu experiencia</Label>
+                    <textarea
+                      className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background"
+                      value={formData.experiencia_voluntariado_detalle}
+                      onChange={(e) => handleInputChange('experiencia_voluntariado_detalle', e.target.value)}
+                      placeholder="Describe brevemente tu experiencia previa..."
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>Áreas de Interés</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.areas_interes}
+                    onChange={(e) => handleInputChange('areas_interes', e.target.value)}
+                  >
+                    <option value="">Seleccionar área de interés</option>
+                    <option value="Hidratación">Hidratación / Avituallamiento</option>
+                    <option value="Registro">Registro y Check-in</option>
+                    <option value="Control de Vueltas">Control de Vueltas</option>
+                    <option value="Asistencia Médica">Asistencia Médica</option>
+                    <option value="Logística">Logística General</option>
+                    <option value="Fotografía">Fotografía / Redes Sociales</option>
+                    <option value="Cualquiera">Cualquier área disponible</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Disponibilidad *</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.disponibilidad}
+                    onChange={(e) => handleInputChange('disponibilidad', e.target.value)}
+                  >
+                    <option value="">Seleccionar disponibilidad</option>
+                    <option value="Día Completo">Día Completo (6:00 AM - 10:00 PM)</option>
+                    <option value="Mañana">Mañana (6:00 AM - 2:00 PM)</option>
+                    <option value="Tarde">Tarde (2:00 PM - 10:00 PM)</option>
+                    <option value="Noche">Noche (10:00 PM - 6:00 AM)</option>
+                    <option value="Flexible">Horario Flexible</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Medical Info */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Tipo de Sangre</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.tipo_sangre}
+                    onChange={(e) => handleInputChange('tipo_sangre', e.target.value)}
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="No sé">No sé</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>¿Tienes alguna condición médica?</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.condicion_medica}
+                    onChange={(e) => handleInputChange('condicion_medica', e.target.value)}
+                  >
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+                
+                {formData.condicion_medica === 'Sí' && (
+                  <div className="space-y-2">
+                    <Label>Detalle de la condición médica</Label>
+                    <textarea
+                      className="w-full min-h-[80px] px-3 py-2 rounded-md border border-input bg-background"
+                      value={formData.condicion_medica_detalle}
+                      onChange={(e) => handleInputChange('condicion_medica_detalle', e.target.value)}
+                      placeholder="Describe tu condición médica..."
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label>¿Tienes alergias?</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.alergias}
+                    onChange={(e) => handleInputChange('alergias', e.target.value)}
+                  >
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+                
+                {formData.alergias === 'Sí' && (
+                  <div className="space-y-2">
+                    <Label>Detalle de alergias</Label>
+                    <textarea
+                      className="w-full min-h-[80px] px-3 py-2 rounded-md border border-input bg-background"
+                      value={formData.alergias_detalle}
+                      onChange={(e) => handleInputChange('alergias_detalle', e.target.value)}
+                      placeholder="Lista tus alergias..."
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Emergency Contact */}
+            {currentStep === 4 && (
+              <div className="space-y-6">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm text-amber-800">
+                    <AlertCircle className="w-4 h-4 inline mr-2" />
+                    Esta información solo será utilizada en caso de emergencia.
+                  </p>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nombre del Contacto *</Label>
+                    <Input
+                      value={formData.contacto_emergencia_nombre}
+                      onChange={(e) => handleInputChange('contacto_emergencia_nombre', e.target.value)}
+                      placeholder="Nombre completo"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Relación</Label>
+                    <Input
+                      value={formData.contacto_emergencia_relacion}
+                      onChange={(e) => handleInputChange('contacto_emergencia_relacion', e.target.value)}
+                      placeholder="Ej: Familiar, Amigo"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Teléfono de Emergencia *</Label>
+                    <Input
+                      value={formData.contacto_emergencia_telefono}
+                      onChange={(e) => handleInputChange('contacto_emergencia_telefono', e.target.value)}
+                      placeholder="Ej: 809-555-1234"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Preferences */}
+            {currentStep === 5 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Talla de Camiseta</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.talla_camiseta}
+                    onChange={(e) => handleInputChange('talla_camiseta', e.target.value)}
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="XS">XS</option>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="XXL">XXL</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>¿Cómo te enteraste del evento?</Label>
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                    value={formData.como_se_entero}
+                    onChange={(e) => handleInputChange('como_se_entero', e.target.value)}
+                  >
+                    <option value="">Seleccionar</option>
+                    <option value="Redes Sociales">Redes Sociales</option>
+                    <option value="Amigo/Conocido">Amigo o Conocido</option>
+                    <option value="Club de Running">Club de Running</option>
+                    <option value="Página Web">Página Web</option>
+                    <option value="Participé como atleta">Participé como atleta</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Comentarios Adicionales</Label>
+                  <textarea
+                    className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background"
+                    value={formData.comentarios}
+                    onChange={(e) => handleInputChange('comentarios', e.target.value)}
+                    placeholder="¿Algo más que quieras compartir con nosotros?"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            {currentStep > 0 && (
+              <div className="flex justify-between pt-4 border-t">
+                <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Anterior
+                </Button>
+                
+                {currentStep < STEPS.length - 1 ? (
+                  <Button onClick={nextStep}>
+                    Siguiente
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Completar Registro
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
