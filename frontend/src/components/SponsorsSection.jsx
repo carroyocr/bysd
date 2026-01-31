@@ -3,8 +3,10 @@ import { ExternalLink, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function SponsorsSection() {
+  const { raceName } = useRaceConfig();
   const sponsors = [
     {
       name: 'AGESS',
@@ -166,7 +168,7 @@ export default function SponsorsSection() {
                 </div>
                 <div className="space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
-                    El Backyard Ultra Santo Domingo 2026 es posible gracias al apoyo de marcas e instituciones líderes en sus respectivos sectores, que creen en el deporte, la resiliencia y el poder de la comunidad.
+                    El {raceName} es posible gracias al apoyo de marcas e instituciones líderes en sus respectivos sectores, que creen en el deporte, la resiliencia y el poder de la comunidad.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
                     Cada patrocinador aporta experiencia, calidad y compromiso, haciendo posible que atletas locales e internacionales vivan una competencia segura, bien organizada y al nivel de un evento de clase mundial. Sin su apoyo, nada de esto sería posible.
