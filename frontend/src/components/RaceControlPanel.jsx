@@ -6,11 +6,10 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import SurveyResultsSection from './SurveyResultsSection';
-
-// Race start date: January 24, 2026 at 9:00 AM (Dominican Republic time)
-const RACE_START_DATE = new Date('2026-01-24T09:00:00-04:00');
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function RaceControlPanel({ embedded = false }) {
+  const { raceName, getRaceStartDate } = useRaceConfig();
   const [currentLap, setCurrentLap] = useState(1);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -698,7 +697,7 @@ export default function RaceControlPanel({ embedded = false }) {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Panel de Control de Carrera</h1>
-            <p className="text-muted-foreground mt-1">Backyard Ultra Santo Domingo 2026</p>
+            <p className="text-muted-foreground mt-1">{raceName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
