@@ -202,48 +202,60 @@ async def get_participants(
     if not active_race_code:
         active_race_code = await get_active_race_code(database)
     
+    # Determine data source based on race code
+    # BYSD-2026 (and other legacy races) use the old participants collection
+    LEGACY_RACE_CODES = ["BYSD-2026"]  # Add more legacy race codes here if needed
+    
     participants = []
     
-    # Try registrations collection first
-    if active_race_code:
-        # Build query for registrations - only race participants (not pre_registered)
-        query = {
-            "race_code": active_race_code,
-            "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
-            "bib": {"$ne": None}  # Must have BIB assigned
-        }
-        
+    if active_race_code in LEGACY_RACE_CODES:
+        # Use legacy participants collection for historical races
+        query = {}
         if status and status in ["active", "retired", "dns", "winner", "honor"]:
             query["status"] = status
         
-        registrations = await database.registrations.find(
-            query,
-            {"_id": 0, "edit_token": 0}
-        ).to_list(1000)
-        
-        # Map registrations to participant format
-        for reg in registrations:
-            participants.append({
-                "bib": str(reg.get("bib")).zfill(3) if reg.get("bib") else None,
-                "nombre": reg.get("nombre"),
-                "apellidos": reg.get("apellidos"),
-                "nacionalidad": reg.get("nacionalidad", "DOM"),
-                "status": reg.get("status", "active"),
-                "laps_completed": reg.get("laps_completed", 0),
-                "total_km": reg.get("total_km", 0.0),
-                "retired_at_lap": reg.get("retired_at_lap"),
-                "email": reg.get("email"),
-                "personalizacion_camiseta": reg.get("personalizacion_camiseta"),
-                "talla_camiseta": reg.get("talla_camiseta")
-            })
-    
-    # Fallback to old participants collection if no registrations found
-    if not participants:
-        query = {}
-        if status and status in ["active", "retired"]:
-            query["status"] = status
-        
         participants = await database.participants.find(query, {"_id": 0}).to_list(1000)
+    else:
+        # Try registrations collection first for new races
+        if active_race_code:
+            # Build query for registrations - only race participants (not pre_registered)
+            query = {
+                "race_code": active_race_code,
+                "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
+                "bib": {"$ne": None}  # Must have BIB assigned
+            }
+            
+            if status and status in ["active", "retired", "dns", "winner", "honor"]:
+                query["status"] = status
+            
+            registrations = await database.registrations.find(
+                query,
+                {"_id": 0, "edit_token": 0}
+            ).to_list(1000)
+            
+            # Map registrations to participant format
+            for reg in registrations:
+                participants.append({
+                    "bib": str(reg.get("bib")).zfill(3) if reg.get("bib") else None,
+                    "nombre": reg.get("nombre"),
+                    "apellidos": reg.get("apellidos"),
+                    "nacionalidad": reg.get("nacionalidad", "DOM"),
+                    "status": reg.get("status", "active"),
+                    "laps_completed": reg.get("laps_completed", 0),
+                    "total_km": reg.get("total_km", 0.0),
+                    "retired_at_lap": reg.get("retired_at_lap"),
+                    "email": reg.get("email"),
+                    "personalizacion_camiseta": reg.get("personalizacion_camiseta"),
+                    "talla_camiseta": reg.get("talla_camiseta")
+                })
+        
+        # Fallback to old participants collection if no registrations found
+        if not participants:
+            query = {}
+            if status and status in ["active", "retired"]:
+                query["status"] = status
+            
+            participants = await database.participants.find(query, {"_id": 0}).to_list(1000)
     
     # Filter by search term
     if search:
