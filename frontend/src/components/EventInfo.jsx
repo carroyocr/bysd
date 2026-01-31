@@ -1,14 +1,17 @@
 import React from 'react';
 import { MapPin, Clock, Calendar, Users } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function EventInfo() {
+  const { getShortDate, raceName, raceLocation } = useRaceConfig();
+  
   const infoCards = [
     {
       icon: <Calendar className="w-8 h-8 text-primary" />,
       title: 'Fecha y Hora',
       details: [
-        'Sábado 24 de Enero, 2026',
+        getShortDate(),
         'Check-in: 6:00 AM - 7:30 AM',
         'Primera vuelta: 8:00 AM en punto',
       ],
@@ -18,9 +21,9 @@ export default function EventInfo() {
       title: 'Ubicación',
       details: [
         'Hotel Caribbean Adventure',
-        'Sierra Prieta, Santo Domingo',
-        'República Dominicana',
-      ],
+        raceLocation,
+        '',
+      ].filter(Boolean),
       link: 'https://maps.app.goo.gl/BrntZd7xFPcrmDTe7',
     },
     {
@@ -53,7 +56,7 @@ export default function EventInfo() {
               Información del Evento
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Todo lo que necesitas saber sobre el Backyard Ultra Santo Domingo 2026
+              Todo lo que necesitas saber sobre el {raceName}
             </p>
           </div>
 
