@@ -951,44 +951,67 @@ async def subscribe_to_notifications(
     if not request.athletes_bibs:
         raise HTTPException(status_code=400, detail="Debe seleccionar al menos un atleta para seguir")
     
-    # Check if subscription already exists for this email
-    existing = await database.email_subscriptions.find_one({"email": request.email})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Check if subscription already exists for this email and race
+    existing = await database.email_subscriptions.find_one({
+        "email": request.email,
+        "race_code": active_race_code
+    })
     
     is_new_subscription = existing is None
     
     if existing:
         # Update existing subscription
         await database.email_subscriptions.update_one(
-            {"email": request.email},
+            {"email": request.email, "race_code": active_race_code},
             {
                 "$set": {
                     "athletes_bibs": request.athletes_bibs,
                     "notify_every_lap": request.notify_every_lap,
                     "notify_on_finish": request.notify_on_finish,
                     "active": True,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
         subscription_id = str(existing.get("_id"))
         message = "Suscripción actualizada exitosamente"
     else:
-        # Create new subscription
-        subscription = EmailSubscription(
-            email=request.email,
-            athletes_bibs=request.athletes_bibs,
-            notify_every_lap=request.notify_every_lap,
-            notify_on_finish=request.notify_on_finish
-        )
-        result = await database.email_subscriptions.insert_one(subscription.dict())
+        # Create new subscription with race_code
+        subscription_data = {
+            "email": request.email,
+            "athletes_bibs": request.athletes_bibs,
+            "notify_every_lap": request.notify_every_lap,
+            "notify_on_finish": request.notify_on_finish,
+            "race_code": active_race_code,
+            "active": True,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        result = await database.email_subscriptions.insert_one(subscription_data)
         subscription_id = str(result.inserted_id)
         message = "Suscripción creada exitosamente"
     
-    # Get full athlete data for confirmation (including laps and km)
-    athletes = await database.participants.find(
-        {"bib": {"$in": request.athletes_bibs}},
-        {"_id": 0}
-    ).to_list(100)
+    # Get full athlete data for confirmation - check registrations first
+    athletes = []
+    if active_race_code:
+        for bib in request.athletes_bibs:
+            athlete = await database.registrations.find_one(
+                {"race_code": active_race_code, "bib": int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None},
+                {"_id": 0, "edit_token": 0, "bib": 1, "nombre": 1, "apellidos": 1, "nacionalidad": 1, "laps_completed": 1, "total_km": 1}
+            )
+            if athlete:
+                athlete["bib"] = bib  # Keep original BIB format
+                athletes.append(athlete)
+    
+    # Fallback to participants
+    if not athletes:
+        athletes = await database.participants.find(
+            {"bib": {"$in": request.athletes_bibs}},
+            {"_id": 0}
+        ).to_list(100)
     
     # Only send confirmation email for NEW subscriptions
     if is_new_subscription:
