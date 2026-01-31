@@ -545,15 +545,22 @@ export default function LiveDashboard({ raceCode }) {
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
             Resultados
           </h1>
-          <p className="text-center text-purple-100 mb-4">
-            {raceName}
+          <p className="text-center text-purple-100 mb-1">
+            {getDisplayRaceName()}
           </p>
+          {displayRaceCode && (
+            <p className="text-center text-purple-200 text-sm mb-4">
+              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
+                {displayRaceCode}
+              </Badge>
+            </p>
+          )}
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-purple-200">
               Última actualización: {lastUpdate.toLocaleTimeString('es-DO')}
             </p>
             {cheerCount > 0 && (
-              <Link to="/comunidad">
+              <Link to={displayRaceCode ? `/comunidad/${displayRaceCode.toLowerCase()}` : "/comunidad"}>
                 <Button
                   variant="outline"
                   size="sm"
