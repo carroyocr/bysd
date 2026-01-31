@@ -201,12 +201,21 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Gestión de Pre-Registros en Admin** (31 Enero 2026)
+  - Nueva pestaña "Pre-Registros" en panel de administración
+  - Ver/editar información completa de participantes pre-registrados
+  - Asignar números de BIB a participantes
+  - Cambiar estado y estado de pago
+  - Estadísticas: Total, Masculino, Femenino, Pagados, Próximo BIB
+  - Distribución de tallas de camiseta
+  - Búsqueda, filtros y exportar CSV
 - [x] **Refactor Paramétrico** - Sistema de configuración de carreras desde admin panel
   - Backend: `/api/race-config/` endpoints (crear, leer, actualizar, activar)
   - Frontend: `RaceConfigContext` para valores dinámicos globales
   - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
 ### 🔴 P1 - Próximas Tareas
+- [ ] Filtrado de datos por race_code en backend (participantes, mensajes, resultados)
 - [ ] Notificación UI cuando un fan sube de nivel de badge
 - [ ] Filtros mejorados en página Comunidad (por atleta o fan)
 - [ ] Limpieza de código: Remover integración abandonada de Twitter/X
@@ -236,13 +245,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - `/app/tests/test_race_winner.py`
   - `/app/tests/test_new_features.py`
   - `/app/backend/tests/test_surveys.py`
-  - `/app/backend/tests/test_race_config.py` (nuevo)
+  - `/app/backend/tests/test_race_config.py`
+  - `/app/backend/tests/test_pre_registration_admin.py` (nuevo)
 - **Reportes**: 
   - `/app/test_reports/iteration_1.json`
   - `/app/test_reports/iteration_2.json`
   - `/app/test_reports/iteration_3.json`
-  - `/app/test_reports/iteration_4.json` (nuevo - refactor paramétrico)
-- **Cobertura**: 64/64 tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_4.json`
+  - `/app/test_reports/iteration_5.json` (nuevo - gestión pre-registros)
+- **Cobertura**: 85/85 tests backend (100%), UI tests completos (100%)
 
 ---
 
