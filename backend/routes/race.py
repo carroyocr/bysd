@@ -289,7 +289,24 @@ async def mark_retired(
 ):
     from server import db as database
     
-    participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Try registrations first
+    participant = None
+    use_registrations = False
+    
+    if active_race_code:
+        participant = await database.registrations.find_one(
+            {"race_code": active_race_code, "bib": int(request.bib.lstrip('0')) if request.bib.lstrip('0').isdigit() else None},
+            {"_id": 0, "edit_token": 0}
+        )
+        if participant:
+            use_registrations = True
+    
+    # Fallback to participants collection
+    if not participant:
+        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
     
     if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
@@ -305,16 +322,28 @@ async def mark_retired(
     current_km = participant.get("total_km", 0.0)
     
     # Update participant status only (no lap increment)
-    await database.participants.update_one(
-        {"bib": request.bib},
-        {
-            "$set": {
-                "status": "retired",
-                "retired_at_lap": request.retired_at_lap,
-                "updated_at": datetime.utcnow()
+    if use_registrations:
+        await database.registrations.update_one(
+            {"race_code": active_race_code, "email": participant.get("email")},
+            {
+                "$set": {
+                    "status": "retired",
+                    "retired_at_lap": request.retired_at_lap,
+                    "updated_at": datetime.now(timezone.utc)
+                }
             }
-        }
-    )
+        )
+    else:
+        await database.participants.update_one(
+            {"bib": request.bib},
+            {
+                "$set": {
+                    "status": "retired",
+                    "retired_at_lap": request.retired_at_lap,
+                    "updated_at": datetime.now(timezone.utc)
+                }
+            }
+        )
     
     # Send DNF notifications in background
     import asyncio
