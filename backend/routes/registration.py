@@ -538,6 +538,146 @@ async def check_email_availability(email: str, race_code: str):
     }
 
 
+class AccessRequest(BaseModel):
+    email: EmailStr
+    race_code: Optional[str] = None
+
+
+class AccessVerify(BaseModel):
+    email: EmailStr
+    code: str
+
+
+@router.post("/request-access")
+async def request_access(request: AccessRequest):
+    """Request access to edit registration via email verification"""
+    email = request.email.lower()
+    
+    # Find registration by email
+    query = {"email": email}
+    if request.race_code:
+        query["race_code"] = request.race_code.upper()
+    
+    registration = await registrations_collection.find_one(query)
+    
+    if not registration:
+        # Don't reveal if email exists - send generic message
+        return {"message": "Si el correo está registrado, recibirás un código de verificación", "sent": True}
+    
+    # Generate verification code
+    code = generate_verification_code()
+    expires_at = datetime.now(timezone.utc).timestamp() + (15 * 60)  # 15 minutes
+    
+    # Store verification token for access
+    await verification_tokens_collection.update_one(
+        {"email": email, "type": "access"},
+        {
+            "$set": {
+                "code": code,
+                "expires_at": expires_at,
+                "type": "access",
+                "race_code": registration.get("race_code"),
+                "created_at": datetime.now(timezone.utc)
+            }
+        },
+        upsert=True
+    )
+    
+    # Send verification email
+    try:
+        from services.runner_email_service import send_email
+        
+        nombre = registration.get('nombre', 'Participante')
+        race_code = registration.get('race_code', '')
+        
+        subject = f"Código de Acceso - {race_code}"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; border-radius: 10px; text-align: center;">
+                <h1 style="color: white; margin: 0;">Acceso a tu Pre Registro</h1>
+            </div>
+            
+            <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
+                <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
+                
+                <p style="color: #4b5563; font-size: 16px;">
+                    Has solicitado acceso para editar tu pre registro. Ingresa el siguiente código para continuar:
+                </p>
+                
+                <div style="background: white; border: 2px solid #7c3aed; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0;">
+                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #7c3aed;">{code}</span>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 14px;">
+                    Este código expira en 15 minutos. Si no solicitaste este acceso, puedes ignorar este correo.
+                </p>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                
+                <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                    © Backyard Ultra Santo Domingo
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        await send_email(email, subject, html_content)
+    except Exception as e:
+        print(f"Error sending access code email: {e}")
+        raise HTTPException(status_code=500, detail="Error enviando el código de verificación")
+    
+    return {"message": "Código de verificación enviado", "sent": True}
+
+
+@router.post("/verify-access")
+async def verify_access(request: AccessVerify):
+    """Verify access code and return edit token"""
+    email = request.email.lower()
+    
+    # Find verification token
+    token_doc = await verification_tokens_collection.find_one({
+        "email": email,
+        "type": "access"
+    })
+    
+    if not token_doc:
+        raise HTTPException(status_code=400, detail="No se encontró solicitud de acceso")
+    
+    # Check if expired
+    if datetime.now(timezone.utc).timestamp() > token_doc["expires_at"]:
+        raise HTTPException(status_code=400, detail="El código ha expirado. Solicita uno nuevo.")
+    
+    # Verify code
+    if token_doc["code"] != request.code:
+        raise HTTPException(status_code=400, detail="Código incorrecto")
+    
+    # Find registration
+    registration = await registrations_collection.find_one({"email": email})
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    # Generate edit_token if it doesn't exist
+    edit_token = registration.get("edit_token")
+    if not edit_token:
+        edit_token = generate_edit_token()
+        await registrations_collection.update_one(
+            {"email": email},
+            {"$set": {"edit_token": edit_token}}
+        )
+    
+    # Clean up verification token
+    await verification_tokens_collection.delete_one({"email": email, "type": "access"})
+    
+    return {
+        "message": "Acceso verificado",
+        "edit_token": edit_token,
+        "race_code": registration.get("race_code")
+    }
+
+
 @router.get("/resend-edit-link")
 async def resend_edit_link(email: str):
     """Resend edit link to email"""
@@ -547,11 +687,20 @@ async def resend_edit_link(email: str):
         # Don't reveal if email exists or not
         return {"message": "Si el correo está registrado, recibirás un enlace de edición"}
     
+    # Generate edit_token if it doesn't exist
+    edit_token = registration.get("edit_token")
+    if not edit_token:
+        edit_token = generate_edit_token()
+        await registrations_collection.update_one(
+            {"email": email.lower()},
+            {"$set": {"edit_token": edit_token}}
+        )
+    
     try:
         await send_confirmation_email(
             registration["email"],
             registration,
-            registration["edit_token"]
+            edit_token
         )
     except Exception as e:
         print(f"Error resending edit link: {e}")
