@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,7 +8,13 @@ import { Badge } from '../components/ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function ComunidadPage() {
-  const { raceName } = useRaceConfig();
+  const { raceCode } = useParams();
+  const { raceName, config } = useRaceConfig();
+  
+  // Determine which race to show - from URL param or active race
+  const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
+  const [raceInfo, setRaceInfo] = useState(null);
+  
   // Active tab: 'messages', 'athletes', 'fans'
   const [activeTab, setActiveTab] = useState('messages');
   
@@ -50,6 +56,30 @@ export default function ComunidadPage() {
   
   // Filter for messages
   const [messageFilter, setMessageFilter] = useState('');
+
+  // Fetch race info if viewing a specific race
+  useEffect(() => {
+    const fetchRaceInfo = async () => {
+      if (displayRaceCode) {
+        try {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/${displayRaceCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            setRaceInfo(data);
+          }
+        } catch (error) {
+          console.error('Error fetching race info:', error);
+        }
+      }
+    };
+    fetchRaceInfo();
+  }, [displayRaceCode]);
+
+  // Get display name for the race
+  const getDisplayRaceName = () => {
+    if (raceInfo) return raceInfo.name;
+    return raceName;
+  };
 
   const loadMessages = useCallback(async (page = 1) => {
     setLoadingMessages(true);
