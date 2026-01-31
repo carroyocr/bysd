@@ -288,6 +288,27 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - ❌ Twitter/X descartado: Requiere plan pagado ($100/mes)
 
 ### 31 Enero 2026
+- ✅ **Gestión de Pre-Registros en Panel Admin (P0)**:
+  - **Nueva pestaña "Pre-Registros" en `/admin`**:
+    - Ver lista de todos los pre-registrados para la carrera activa
+    - Estadísticas: Total, Masculino, Femenino, Pagados, Próximo BIB disponible
+    - Distribución de tallas de camiseta
+    - Tabla con BIB, Nombre, Email, Talla, Estado, Pago, Acciones
+    - Expandir fila para ver detalles completos del participante
+    - Editar información: nombre, talla, estado, pago, asignar BIB
+    - Búsqueda por nombre, email o BIB
+    - Filtro por estado (pre_registered, registered, confirmed, active)
+    - Exportar a CSV
+  - **Backend - Nuevos endpoints admin (`backend/routes/registration.py`)**:
+    - `GET /api/registration/admin/registration/{email}` - Obtener registro individual
+    - `PUT /api/registration/admin/registration/{email}` - Actualizar registro (incluye asignar BIB)
+    - `DELETE /api/registration/admin/registration/{email}` - Eliminar registro
+    - `GET /api/registration/admin/next-bib/{race_code}` - Obtener próximo BIB disponible
+  - **Frontend - Nuevo componente**:
+    - `PreRegistrationManagement.jsx` - Gestión completa de pre-registros
+  - **Panel de Admin actualizado**: Ahora tiene 4 pestañas (Panel de Control, Pre-Registros, Encuestas, Carrera Activa)
+  - **Tests**: 21 tests de backend (100% coverage)
+  
 - ✅ **Refactor Paramétrico de la Aplicación (P0)**:
   - **Backend - Configuración de Carrera (`backend/routes/race_config.py`)**:
     - `GET /api/race-config/active` - Obtener carrera activa
