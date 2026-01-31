@@ -183,7 +183,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     race_code = registration.get('race_code', '')
     
     # Build edit URL - use the correct route
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://race-config.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
+    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://runner-portal-1.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
     subject = f"¡Pre Registro Confirmado! - {race_code}"
     html_content = f"""
@@ -248,7 +248,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
                     <li>Cuatro (4) meses antes del evento, enviaremos un correo con las instrucciones para realizar el pago.</li>
                     <li>El costo de la carrera será de <strong>RD$3,500</strong>.</li>
                     <li>Tendrás un plazo de treinta (30) días para completar el pago.</li>
-                    <li>Si el pago no se realiza en ese período, el prerregistro será desestimado.</li>
+                    <li>Si el pago no se realiza en ese período, el pre registro será desestimado.</li>
                 </ul>
             </div>
             

@@ -1,97 +1,100 @@
 <analysis>**original_problem_statement:**
-The user initially requested several post-race updates, including UI changes and a new survey system. This evolved into a series of iterative feature additions and UI tweaks based on user feedback. The final and most significant request is a major architectural refactor to make the entire application parametric, allowing an administrator to configure and launch new editions of the race (e.g., BYSD-2027) from an admin panel without requiring code changes.
+The user initially requested post-race UI updates, a survey system, and certificate generation. This evolved into a major architectural refactor to make the application parametric, allowing an administrator to configure and launch new editions of the race (e.g., BYSD-2027) from an admin panel without requiring code changes.
+
+Subsequently, the user requested a complete participant pre-registration system, moving away from a Google Form.
 
 PRODUCT REQUIREMENTS:
-1.  **Race Completion UI:** Hide race-in-progress elements (countdown, Current Lap card), rename Seguimiento (Tracking) to Resultados (Results).
-2.  **New Survey System:** Create a new Encuesta page with three distinct forms (Athletes, Volunteers, Spectators). Store responses in the database and create an admin view for results. Allow for anonymous submissions.
-3.  **Participant Management:**
-    *   Add a feature for admins to edit a runner's data (name, nationality).
-    *   Add a feature for admins to manually mark the last remaining runner as the Winner.
-    *   Add a new participant status: Invitada de Honor (Guest of Honor).
-4.  **Certificate Generation:**
-    *   Generate individual printable certificates for all DNF participants and the Winner from a master PDF file.
-    *   Provide an option for users to view the certificate as a PDF in the browser and download it as a high-resolution PNG image for social media.
-    *   DNS (Did Not Start) participants should not have access to certificates.
-5.  **Parametric Refactor (Major Task):**
-    *   Create a new Carrera Activa admin page to manage race-specific settings: Name, Date, Start Time, Location, and Logo.
-    *   Reorganize the admin area into separate pages/tabs: Race Control, Survey Results, and Active Race Config.
-    *   Replace all hardcoded values throughout the codebase (race name, date, etc.) with variables pulled from the new active race configuration.
-    *   Modify the main navigation so that pages like Patrocinadores, Resultados, and Comunidad are nested under the current race edition (e.g., ).
-    *   Tag race data (laps, participants) and survey results with the corresponding race edition name.
+1.  **Parametric Refactor (Mostly Complete):**
+    *   Create an Carrera Activa admin page to manage race-specific settings (Name, Date, Logo).
+    *   Reorganize the admin area into tabs: Race Control, Survey Results, and Active Race Config.
+    *   Replace hardcoded values (race name, date) with variables from the active race configuration.
+    *   Modify main navigation so that Patrocinadores, Resultados, and Comunidad are nested under the current race edition (e.g., ).
+2.  **Pre-Registration System (New Feature):**
+    *   Create a new page for participants to pre-register.
+    *   The form should capture the same information as a provided Google Form link.
+    *   Include fields for t-shirt/bib name customization and a high-resolution photo upload.
+    *   Implement an email verification mechanism.
+    *   Send a confirmation email upon registration.
+    *   The registration should be associated with the currently active race.
+    *   The system should allow users to edit their information later using a secure link or an email-based code verification.
+    *   The process is a pre-registration, not a final registration. BIB numbers should not be assigned automatically. An informational banner explaining the process and cost is required.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-A full-stack race management application. All initial requests regarding post-race UI updates, the complete survey system (including anonymous submissions), and the certificate generation (PDF view + HD image download) have been implemented and tested. The application now also includes an Invitada de Honor status for participants.
+The application has undergone a significant parametric refactor. The frontend is now almost fully dynamic, pulling race configuration (name, date, etc.) from a backend endpoint. The main navigation features dropdown menus for Patrocinadores, Resultados, and Comunidad, which are dynamically populated with links to past and present race editions (e.g., ).
 
-The agent has just started the major parametric refactoring task. It has created the foundational files for the new, reorganized admin section (), the race configuration panel (), and the corresponding backend route file (). The main application route in  has been updated to point  to the new .
+A complete, multi-step pre-registration system has been built from scratch. It includes a new page (), backend logic for handling data, email verification, user authentication via a temporary code for editing their data, and photo uploads. The concept was changed from Registration to Pre-Registration per user request, removing automatic BIB assignment and adding a detailed informational banner.
+
+The agent was last working on a final UI tweak to the navigation menu font size.
 
 **Last working item**:
-- **Last item agent was working:** The agent was scaffolding the new admin interface and backend structure for the Carrera Activa (Active Race) configuration panel. This is the first step in the major parametric refactor.
+- **Last item agent was working:** Adjusting the navigation menu's CSS to reduce the font size. The user requested this to prevent the Pre Registro button from wrapping onto two lines.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** both
-    - **Backend:** Use  to test the new race configuration endpoints as they are created.
-    - **Frontend:** Use the screenshot tool to verify the new tabbed admin layout and the Carrera Activa form. Once the full refactor is complete, a full regression test using the  will be necessary.
+- **Which testing method agent to use?** frontend testing agent. A simple screenshot of the home page is sufficient to verify that the navigation bar text and buttons are correctly aligned and sized.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: (P0 - HIGHEST PRIORITY)** Complete the parametric application refactor.
-  - **Description:** This is a large, multi-part task to make the application configurable for future race editions from an admin panel.
-  - **Attempted fixes:** The initial file structure has been created: , , and . The main admin route in  has been updated.
+- **Issue 1: (P0 - HIGHEST PRIORITY)** Finalize and verify the navigation menu font size change.
+  - **Description:** The user wants the font size of the navigation menu items reduced to  so the Pre Registro button fits on a single line.
+  - **Attempted fixes:** The agent ran several  commands on  to change  to  and adjust padding.
   - **Next debug checklist:**
-    1.  **Backend ():**
-        *   Define Pydantic models for race configuration.
-        *   Create  endpoint to save/update the active race configuration (name, date, time, logo URL, etc.).
-        *   Implement file upload logic for the race logo, storing it in a static directory.
-        *   Create  endpoint to fetch the current active race configuration for the frontend.
-    2.  **Frontend ():**
-        *   Build the form with inputs for Name, Date, Time, Location, and a file uploader for the logo.
-        *   Implement state management and API calls to fetch and save the race configuration.
-    3.  **Frontend (Global Refactor):**
-        *   Create a context or service to provide the active race configuration data globally.
-        *   Systematically search the entire frontend codebase for hardcoded strings (Backyard Ultra Santo Domingo 2026, race date, etc.) and replace them with dynamic values from the new config.
-    4.  **Admin Panel Reorganization:**
-        *   Integrate  and the modified  as tabs within the new .
-        *   Add a button/mechanism on the Race Control and Survey Results pages to tag the current data with the active race edition's name.
-    5.  **Navigation Refactor ():**
-        *   Implement the logic to create nested menu items for Resultados, Comunidad, and Patrocinadores based on the race edition (e.g., ).
-  - **Why fix this issue and what will be achieved with the fix?** This is the user's primary goal: to make the application reusable for future races without developer intervention, turning it into a parametric platform.
+    1.  Take a screenshot of the main page () to visually confirm if the navigation bar appears as requested.
+    2.  If the button still wraps, inspect  again. Check for any other CSS classes related to padding, margin, or font size that might be affecting the layout.
+    3.  Confirm the fix and inform the user.
+  - **Why fix this issue and what will be achieved with the fix?** It is a direct UI/UX request from the user to improve the application's visual presentation.
   - **Status:** IN PROGRESS
   - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Both.
-  - **Blocked on other issue:** No.
+  - **Should Test frontend/backend/both after fix?** Frontend
+  - **Blocked on other issue:** None.
+
+- **Issue 2: (P1)** Data is shared across all race editions.
+  - **Description:** Although the UI correctly navigates to separate pages for each race edition (e.g., ), the backend currently serves the same global data (participants, cheer messages, results) for all of them. The data is not being filtered by .
+  - **Attempted fixes:** None. This was identified by the agent as the logical next step after completing the frontend routing.
+  - **Next debug checklist:**
+    1.  **Database Schema:** Add a  field to the  and  collections in MongoDB. New pre-registrations already include this field. Existing data may need a migration script.
+    2.  **Backend API ():** Modify endpoints like  and  to accept a  parameter and use it to filter the MongoDB queries.
+    3.  **Frontend (, ):** Verify that these components are passing the  from the URL parameter to their API calls to fetch filtered data.
+    4.  **Admin Panel ():** Update the admin panel to display and manage participants associated with the currently active race edition, instead of all participants globally.
+  - **Why fix this issue and what will be achieved with the fix?** This is the final and most critical part of the parametric refactor. It will ensure data integrity and make the separation between race editions functional, not just cosmetic.
+  - **Status:** NOT STARTED
+  - **Is recurring issue?** N
+  - **Should Test frontend/backend/both after fix?** Both
+  - **Blocked on other issue:** No. This should be the next major task after confirming the UI fix from Issue 1.
 
 **In progress Task List**:
-- **Task 1: (P0)** Complete the parametric application refactor (same as Issue 1).
-  - **Where to resume:** Flesh out the  component with the form UI and implement the corresponding backend endpoints in .
-  - **What will be achieved with this?** A fully functional admin panel for managing race editions.
+- **Task 1: (P0)** Finalize and verify navigation menu UI. (Same as Issue 1).
+  - **Where to resume:** Take a screenshot of the application's homepage to verify the visual changes in .
+  - **What will be achieved with this?** A visually polished navigation bar that meets the user's specific request.
   - **Status:** IN PROGRESS
-  - **Should Test frontend/backend/both after fix?** Both.
+  - **Should Test frontend/backend/both after fix?** Frontend.
   - **Blocked on something:** No.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-  - **(P1)** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
-  - **(P2)** Add filters to the Comunidad page cheer message feed by athlete or fan.
+    - **(P1)** Implement backend data filtering by  for participants, results, and messages (This is the same as Issue 2).
 - **Future Tasks:**
-  - **(P3)** Remove the unused Twitter/X integration code (, ).
-  - **(P4)** Optimize the 27MB  file to reduce its size and improve loading times.
+    - **(P2)** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
+    - **(P3)** Add filters to the Comunidad page cheer message feed by athlete or fan.
+    - **(P4)** Remove the unused Twitter/X integration code (, ).
+    - **(P5)** Optimize the 27MB  file to reduce its size.
 
 **Completed work in this session**
-- **Survey System:** Fully implemented with forms for Athletes, Volunteers, and Spectators, an admin results view, and an anonymous submission option.
-- **Certificate Generation System:** Implemented a feature allowing users to view a PDF certificate or download a high-resolution PNG image. This included processing user-provided PDFs, creating backend endpoints, and adding a dropdown menu to the frontend.
-- **Production Deployment Fix:** Added missing  and  dependencies to  to fix a production issue with certificate generation.
-- **New Participant Status Invitada de Honor:** Added the new status to the backend data model and integrated it across the frontend UI (admin panel, results page filters, and status badges).
-- **Admin Panel Enhancements:**
-  - Added a feature to manually mark a participant as the Winner.
-  - Added a modal to edit a runner's data (name, nationality).
+- **Parametric Refactor (Frontend):**
+  - Created a global  to manage the active race's data.
+  - Refactored all relevant frontend components to use dynamic data from the context instead of hardcoded values.
+  - Implemented dynamic dropdown menus in the navigation for Patrocinadores, Resultados, and Comunidad, populated with all available race editions.
+  - Created dynamic routes (, etc.) to display pages for specific race editions.
+- **Participant Pre-Registration System (New Feature):**
+  - Built a complete multi-step pre-registration page () with email verification, a detailed form, and photo upload capabilities.
+  - Created all necessary backend endpoints () to handle the pre-registration flow, including sending verification codes and confirmation emails.
+  - Implemented a secure way for users to return and edit their pre-registration data using a code sent to their email.
 - **UI/UX Improvements:**
-  - Renamed Seguimiento to Resultados and removed blinking effect.
-  - Removed Current Lap card from the Results page as the race is over.
-  - Refined survey UI by removing redundant labels and adding mobile-specific titles.
-  - Fixed the main navigation bar to have a non-transparent background for better visibility.
-- **Parametric Refactor Kick-off:** Created the initial file structure for the new tabbed admin interface and race configuration system.
+  - Improved the Admin Panel UX for archiving and creating new races.
+  - Fixed an admin login redirection bug.
+  - Restructured the home page and main navigation based on user feedback, removing the Participants button from the hero and adding a prominent Pre Registro button.
+  - Removed the Participants list from the Corredores page.
 
 **Earlier issues found/mentioned but not fixed**
 - The abandoned Twitter integration code (, ) remains in the codebase.
@@ -104,94 +107,86 @@ The agent has just started the major parametric refactoring task. It has created
 
 
 **Key Technical Concepts**
-- **Frontend:** React, , Tailwind CSS, , .
-- **Backend:** FastAPI, Pydantic, Motor (async MongoDB driver).
-- **Database:** MongoDB.
-- **Image/PDF Processing:**  (fitz) and  for converting PDF pages to high-resolution PNG images.
+- **React Context API:** Used for global state management of the active race configuration.
+- **Parametric Routing:** Using  with URL parameters () to render dynamic content for different race editions.
+- **Async File Uploads:** Using  on the backend for participant photo uploads.
+- **Email Service ():** Used for sending verification codes and pre-registration confirmation emails.
 
 **key DB schema**
-- **race_config (new):** 
-- **surveys:** 
-- **participants:** 
+- ** (new):** 
+- **:** 
 
 **changes in tech stack**
-- **Added Dependencies:**  and  were installed and added to  for certificate-to-image conversion.
+- **Added Dependency:**  was installed and added to  for asynchronous file handling.
 
 **All files of reference**
-- **New Files (Parametric Refactor):**
+- **Last Modified:** 
+- **New Feature Files:**
+  - 
+  - 
+- **Core Refactor Files:**
+  - 
+  - 
+- **Files for Next Task (Issue 2):**
   - 
   - 
   - 
-- **New Files (Features):**
-  - 
-  - 
-  - All certificate PDFs under 
-- **Heavily Modified Files:**
-  -  (new endpoints for edit, winner, honor, certificates)
-  -  (new participant status honor)
-  -  (new buttons, modals, and status badges)
-  -  (UI changes, certificate download button)
-  -  (menu renaming, style changes)
-  -  (added new dependencies)
-  -  (updated admin route)
 
 **Areas that need refactoring**:
-- The main goal of the current task is a large-scale refactor to make the app parametric.
--  remains extremely large (over 1500 lines) and complex. It should be broken down into smaller, more manageable components (e.g., ParticipantTable, EditParticipantModal).
--  contains the logic and JSX for all three survey forms. It could be split into sub-components for better organization.
+-  remains a very large component that could be broken down.
+- The most urgent refactor is to implement data filtering by  in the backend APIs to complete the parametric architecture (see Issue 2).
 
 **key api endpoints**
--  (to be created)
--  (to be created)
-- 
-- 
-- 
-- 
-- 
--  (serves PDF inline)
--  (serves PNG for download)
-- 
+- **New Registration Endpoints:**
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+- **Race Config Endpoints:**
+    - 
+    - 
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
-- **Top Priority:** The primary focus is completing the large parametric refactoring task. The foundation has been laid, but the core logic (saving/retrieving config, replacing hardcoded values) is yet to be implemented.
-- **New Admin Structure:** The admin section is no longer a single page. It is now a tabbed interface controlled by .
-- **Certificate Files:** The generated PDF certificates are located in . These files must be included in any deployment.
-- **Admin Credentials:**  / 
+- **Top Priority:**
+    1.  Confirm the navigation menu font size fix (Issue 1) requested by the user.
+    2.  Tackle the most critical pending task: filtering all race-related data (participants, results, messages) by  on the backend to complete the parametric refactor (Issue 2).
 
 **documents and test reports created in this job**
 - 
-- All certificate files located under 
+- The agent updated  multiple times.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asks why their credits are decreasing without active development.
-9.  **Agent:** Explains credit consumption (deployed apps, agent work) and advises how to check usage.
-8.  **User:** Initiates a major refactoring request to make the application parametric for future race editions. Details the requirements for an Active Race admin panel, reorganizing the admin UI, and making content (race name, date, logo) dynamic.
-7.  **Agent:** Asks clarifying questions about the refactor (logo handling, sponsor/results data).
-6.  **User:** Provides answers to the agent's questions, giving the green light to proceed as the agent sees fit.
-5.  **Agent:** Lays out a phased implementation plan and begins work by creating the new backend and frontend scaffolding for the race configuration system.
-4. **User:** Requests to include an additional category in the participant classification: Invitada de Honor.
-3. **User:** Reports that the certificates had an error and provides new, corrected files.
-2. **User:** Requests that certificates open in a new browser tab for viewing instead of direct download, with an option to download if desired.
-1. **User:** Requests an additional feature for certificates: the ability to download them as a high-resolution image for social media.
+- **10.** vamos a crear una nueva pagina para que los participantes se puedan inscribir... (User requests a new registration page).
+- **9.** Encuesta pasalo para acesos rápidos. Elimina el botón de Participantes 2027 del Home y agrega un botón que lleve también a la inscripción. (User requests UI changes: move Survey link, replace Participants button with Registration button).
+- **8.** El botón de editar, que se incluye en el correo de confirmación de inscripción no está funcionando... (User reports the edit link from the confirmation email is broken and requests to change Registration to Pre-registration, remove auto-BIB, and add a large informational text block).
+- **7.** El link de editar registro que llega al correo no está funcionando. Igual sería bueno agregar un link para que la persona pueda ingresar con su correo y enviando código de validación. (User reports the edit link is still not working and requests an alternative login method via email code).
+- **6.** Bajale un punto a la fuente del menú para los botones para que se acomeden de mejor forma y que el botón de Pre Registro se vea en una sola linea y no en dos. (User requests to reduce the navigation menu font size).
+- **5.** hay que hacer lo mismo con patrocinadores (User requests to add the race edition dropdown menu to the Sponsors link).
+- **4.** Cree la nueva carrera, pero no crear los subniveles en el menú... (User reports that the navigation menu isn't showing sub-menus for the different race editions).
+- **3.** Debería haber una lógica que me permita archivar la carrera y crear una nueva. (User requests a clearer workflow for archiving an old race and creating a new one).
+- **2.** creo que el link de admin no fue actualizado. Estoy entrando desde Enlaces Rápidos. (User reports the admin link in the footer is not working as expected after login).
+- **1.** Los cambios en la página de administrativo. (User reports not seeing the new admin page layout).
 
 **Project Health Check:**
-- **Broken:** None.
+- **Broken:** The data layer is inconsistent with the new parametric UI. Backend endpoints serve global data for all race editions, which is incorrect.
 - **Mocked:** None.
 
 **3rd Party Integrations**
-- **Gmail SMTP:** For sending emails.
+- **Gmail SMTP:** For sending verification and confirmation emails via .
 - : For the runner's guide PDF.
 - : For JWTs.
 - : For password hashing.
-- : For scheduled emails.
+- : For scheduled tasks.
 - ** / :** For PDF-to-image conversion for certificates.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES
+- **Testing agent used after significant changes:** YES, but this was before the pre-registration system and other recent major changes were implemented. A new full regression test is advisable after the next phase of work.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
-- **Known regressions:** None.
+- **Known regressions:** The data served to the frontend is not correctly filtered by race edition, which is a functional regression from the user's expectation of a parametric system.
 
 **Credentials to test flow:**
 - **Admin Panel URL:** 
@@ -199,4 +194,4 @@ The agent has just started the major parametric refactoring task. It has created
 - **Password:** 
 
 **What agent forgot to execute**
-- The agent is in the middle of a large, user-requested refactoring task. No items have been forgotten, but the main task is incomplete. The next steps are clearly defined: build the UI and backend logic for the Carrera Activa configuration panel.</analysis>
+- The agent has not forgotten anything. It correctly identified that the backend data needs to be filtered by  as the next major step but prioritized completing the UI/UX changes requested by the user first. The agent is in the middle of the final UI tweak.</analysis>

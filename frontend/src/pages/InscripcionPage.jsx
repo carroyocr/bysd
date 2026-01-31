@@ -1188,10 +1188,10 @@ export default function InscripcionPage() {
         <div className="container mx-auto px-4 mt-6">
           <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
             <CardContent className="p-6">
-              <h2 className="text-xl font-bold text-blue-900 mb-3">📋 Prerregistro Abierto</h2>
+              <h2 className="text-xl font-bold text-blue-900 mb-3">📋 Pre registro Abierto</h2>
               <div className="space-y-3 text-sm text-blue-800">
                 <p>
-                  El prerregistro al evento ya se encuentra abierto.
+                  El pre registro al evento ya se encuentra abierto.
                   <strong> Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
                 </p>
                 <p>
@@ -1204,7 +1204,7 @@ export default function InscripcionPage() {
                   A partir de la recepción de ese correo, el participante contará con un plazo de <strong>treinta (30) días</strong> para completar el pago correspondiente.
                 </p>
                 <p>
-                  Si el pago no se realiza dentro de ese período, el prerregistro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
+                  Si el pago no se realiza dentro de ese período, el pre registro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
                 </p>
                 <p className="text-blue-600 italic">
                   ⚠️ Te recomendamos estar atento a tu correo electrónico y verificar también la carpeta de spam.
