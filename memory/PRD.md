@@ -294,6 +294,10 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - [x] **Feature: Edición de Registro de Voluntarios** (01 Febrero 2026)
   - Voluntarios pueden editar su postulación usando un link único enviado por email
   - El link contiene un token seguro de 32 caracteres (`?token=xxx`)
+  - **Nuevo botón "Editar mi Postulación"** en la página de Voluntarios
+    - Abre un modal para solicitar el link de edición
+    - El usuario ingresa su email y recibe el link por correo
+    - Backend: Nuevo endpoint `POST /api/volunteer-registration/request-edit-link`
   - En modo edición:
     - Título cambia a "Editar Postulación"
     - Barra de progreso muestra 6 pasos (sin Verificación)
