@@ -149,8 +149,8 @@ export default function VolunteersSection() {
             </p>
           </div>
 
-        {/* Volunteer Registration CTA */}
-        <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium mb-8">
+          {/* Volunteer Registration CTA */}
+          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium">
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-start gap-4">
