@@ -912,6 +912,21 @@ async def get_next_bib(race_code: str):
 
 
 
+@router.put("/admin/remove-bib/{email}")
+async def remove_bib_assignment(email: str, race_code: str):
+    """Remove BIB assignment from an athlete"""
+    result = await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"$unset": {"bib": ""}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    return {"message": "Asignación de BIB eliminada", "email": email}
+
+
+
 # ============== PAYMENT REMINDER & RECEIPT ==============
 
 RECEIPTS_UPLOAD_DIR = "/app/backend/uploads/receipts"
