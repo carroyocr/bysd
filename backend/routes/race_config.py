@@ -528,3 +528,179 @@ async def get_race_manuals(code: str, db=Depends(lambda: None)):
         "race_code": code
     }
 
+
+
+# ============== MANUAL NOTIFICATIONS ==============
+
+@router.get("/notify-runners-count/{code}")
+async def get_runners_count_for_notification(
+    code: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Get count of active runners who will receive the manual notification"""
+    from server import db as database
+    
+    # Count active athletes for this race
+    count = await database.registrations.count_documents({
+        "race_code": code,
+        "status": "active"
+    })
+    
+    return {"count": count, "race_code": code}
+
+
+@router.get("/notify-volunteers-count/{code}")
+async def get_volunteers_count_for_notification(
+    code: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Get count of registered volunteers who will receive the manual notification"""
+    from server import db as database
+    
+    # Count registered volunteers for this race
+    count = await database.volunteer_registrations.count_documents({
+        "race_code": code
+    })
+    
+    return {"count": count, "race_code": code}
+
+
+@router.post("/notify-runners-manual/{code}")
+async def notify_runners_manual_available(
+    code: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Send email notification to all active runners that the manual is available"""
+    from server import db as database
+    from services.email_service import send_manual_notification_email
+    
+    # Get race config to verify manual exists
+    race = await database.race_configurations.find_one({"code": code})
+    if not race:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    manual_url = race.get("manual_runners_url")
+    if not manual_url:
+        raise HTTPException(status_code=400, detail="No hay manual de corredores configurado para esta carrera")
+    
+    # Get all active athletes for this race
+    athletes = await database.registrations.find(
+        {"race_code": code, "status": "active"},
+        {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+    ).to_list(1000)
+    
+    if not athletes:
+        raise HTTPException(status_code=400, detail="No hay atletas activos registrados para esta carrera")
+    
+    # Build URLs
+    frontend_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+    view_url = f"{frontend_url}/corredores"
+    download_url = f"{frontend_url}{manual_url}"
+    race_name = race.get("name", "Backyard Ultra Santo Domingo")
+    
+    # Send emails
+    sent_count = 0
+    failed_emails = []
+    
+    for athlete in athletes:
+        email = athlete.get("email")
+        if not email:
+            continue
+            
+        nombre = f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip()
+        if not nombre:
+            nombre = "Corredor"
+        
+        success = await send_manual_notification_email(
+            to_email=email,
+            recipient_name=nombre,
+            manual_type="runners",
+            race_name=race_name,
+            view_url=view_url,
+            download_url=download_url
+        )
+        
+        if success:
+            sent_count += 1
+        else:
+            failed_emails.append(email)
+    
+    return {
+        "message": f"Notificación enviada a {sent_count} corredores",
+        "sent_count": sent_count,
+        "failed_count": len(failed_emails),
+        "total_athletes": len(athletes)
+    }
+
+
+@router.post("/notify-volunteers-manual/{code}")
+async def notify_volunteers_manual_available(
+    code: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Send email notification to all registered volunteers that the manual is available"""
+    from server import db as database
+    from services.email_service import send_manual_notification_email
+    
+    # Get race config to verify manual exists
+    race = await database.race_configurations.find_one({"code": code})
+    if not race:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    manual_url = race.get("manual_volunteers_url")
+    if not manual_url:
+        raise HTTPException(status_code=400, detail="No hay manual de voluntarios configurado para esta carrera")
+    
+    # Get all registered volunteers for this race
+    volunteers = await database.volunteer_registrations.find(
+        {"race_code": code},
+        {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+    ).to_list(1000)
+    
+    if not volunteers:
+        raise HTTPException(status_code=400, detail="No hay voluntarios registrados para esta carrera")
+    
+    # Build URLs
+    frontend_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+    view_url = f"{frontend_url}/voluntarios"
+    download_url = f"{frontend_url}{manual_url}"
+    race_name = race.get("name", "Backyard Ultra Santo Domingo")
+    
+    # Send emails
+    sent_count = 0
+    failed_emails = []
+    
+    for volunteer in volunteers:
+        email = volunteer.get("email")
+        if not email:
+            continue
+            
+        nombre = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+        if not nombre:
+            nombre = "Voluntario"
+        
+        success = await send_manual_notification_email(
+            to_email=email,
+            recipient_name=nombre,
+            manual_type="volunteers",
+            race_name=race_name,
+            view_url=view_url,
+            download_url=download_url
+        )
+        
+        if success:
+            sent_count += 1
+        else:
+            failed_emails.append(email)
+    
+    return {
+        "message": f"Notificación enviada a {sent_count} voluntarios",
+        "sent_count": sent_count,
+        "failed_count": len(failed_emails),
+        "total_volunteers": len(volunteers)
+    }
+
