@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Calendar, Search, X, Check, Trash2, Heart, UserPlus, Edit2, Mail, Loader2 } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Heart, UserPlus, Edit2, Mail, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -9,186 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
 
 export default function VolunteersSection() {
-  // State for assignments tab
-  const [slots, setSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [filterName, setFilterName] = useState('');
-  const [filterPosition, setFilterPosition] = useState('');
-  const [filterShift, setFilterShift] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [positions, setPositions] = useState([]);
-  const [shifts, setShifts] = useState([]);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showUnassignModal, setShowUnassignModal] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState(null);
-  
   // State for edit link modal
   const [showEditLinkModal, setShowEditLinkModal] = useState(false);
   const [editLinkEmail, setEditLinkEmail] = useState('');
   const [sendingEditLink, setSendingEditLink] = useState(false);
-
-  // Load slots data
-  const loadSlots = async () => {
-    setLoadingSlots(true);
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/slots`);
-      if (response.ok) {
-        const data = await response.json();
-        setSlots(data);
-      }
-    } catch (error) {
-      console.error('Error loading slots:', error);
-    } finally {
-      setLoadingSlots(false);
-    }
-  };
-
-  // Load filter options
-  const loadFilterOptions = async () => {
-    try {
-      const [posRes, shiftRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/positions`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/shifts`)
-      ]);
-      if (posRes.ok) setPositions(await posRes.json());
-      if (shiftRes.ok) setShifts(await shiftRes.json());
-    } catch (error) {
-      console.error('Error loading filter options:', error);
-    }
-  };
-
-  useEffect(() => {
-    loadSlots();
-    loadFilterOptions();
-  }, []);
-
-  // Filter slots
-  const filteredSlots = slots.filter(slot => {
-    const matchesName = !filterName || 
-      slot.puesto.toLowerCase().includes(filterName.toLowerCase()) ||
-      (slot.nombre_asignado && slot.nombre_asignado.toLowerCase().includes(filterName.toLowerCase()));
-    const matchesPosition = !filterPosition || slot.puesto === filterPosition;
-    const matchesShift = !filterShift || slot.turno === filterShift;
-    const matchesStatus = !filterStatus || 
-      (filterStatus === 'asignado' && slot.email_asignado) ||
-      (filterStatus === 'disponible' && !slot.email_asignado);
-    return matchesName && matchesPosition && matchesShift && matchesStatus;
-  });
-
-  // Handle assign
-  const handleAssign = async () => {
-    if (!emailInput.trim() || !selectedSlot) return;
-    
-    setActionLoading(true);
-    setActionMessage(null);
-    
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/assign/${selectedSlot.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
-      });
-      
-      const status = res.status;
-      
-      if (status >= 200 && status < 300) {
-        const data = await res.json().catch(() => ({}));
-        setActionMessage({ type: 'success', text: data.message || 'Asignación exitosa' });
-        loadSlots();
-        setTimeout(() => {
-          setShowAssignModal(false);
-          setEmailInput('');
-          setActionMessage(null);
-        }, 2000);
-      } else {
-        // Try to get error from custom header first (more reliable)
-        const headerError = res.headers.get('X-Error-Detail');
-        let errorMsg = headerError || 'Error al realizar la asignación';
-        
-        // Fallback to body if header not available
-        if (!headerError) {
-          try {
-            const data = await res.json();
-            errorMsg = data.detail || errorMsg;
-          } catch (e) {
-            // Use default error message
-          }
-        }
-        setActionMessage({ type: 'error', text: errorMsg });
-      }
-    } catch (error) {
-      console.error('Error en asignación:', error);
-      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Handle unassign
-  const handleUnassign = async () => {
-    if (!emailInput.trim() || !selectedSlot) return;
-    
-    setActionLoading(true);
-    setActionMessage(null);
-    
-    try {
-      const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteers/unassign/${selectedSlot.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput.trim().toLowerCase() })
-      });
-      
-      const status = res.status;
-      
-      if (status >= 200 && status < 300) {
-        const data = await res.json().catch(() => ({}));
-        setActionMessage({ type: 'success', text: data.message || 'Asignación eliminada' });
-        loadSlots();
-        setTimeout(() => {
-          setShowUnassignModal(false);
-          setEmailInput('');
-          setActionMessage(null);
-        }, 2000);
-      } else {
-        // Try to get error from custom header first (more reliable)
-        const headerError = res.headers.get('X-Error-Detail');
-        let errorMsg = headerError || 'Error al eliminar la asignación';
-        
-        // Fallback to body if header not available
-        if (!headerError) {
-          try {
-            const data = await res.json();
-            errorMsg = data.detail || errorMsg;
-          } catch (e) {
-            // Use default error message
-          }
-        }
-        setActionMessage({ type: 'error', text: errorMsg });
-      }
-    } catch (error) {
-      console.error('Error en desasignación:', error);
-      setActionMessage({ type: 'error', text: 'Error de conexión. Intenta de nuevo.' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openAssignModal = (slot) => {
-    setSelectedSlot(slot);
-    setEmailInput('');
-    setActionMessage(null);
-    setShowAssignModal(true);
-  };
-
-  const openUnassignModal = (slot) => {
-    setSelectedSlot(slot);
-    setEmailInput('');
-    setActionMessage(null);
-    setShowUnassignModal(true);
-  };
 
   // Handle request edit link
   const handleRequestEditLink = async () => {
@@ -221,20 +45,6 @@ export default function VolunteersSection() {
     } finally {
       setSendingEditLink(false);
     }
-  };
-
-  const formatTime = (time) => {
-    if (!time) return '';
-    const parts = time.split(':');
-    if (parts.length >= 2) {
-      let hour = parseInt(parts[0], 10);
-      const minutes = parts[1];
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      hour = hour % 12;
-      if (hour === 0) hour = 12;
-      return `${hour}:${minutes} ${ampm}`;
-    }
-    return time;
   };
 
   const volunteerRoles = [
@@ -288,724 +98,235 @@ export default function VolunteersSection() {
 
   const importantRules = [
     'Puntualidad en todos los turnos',
-    'Usar la camiseta oficial de Staff para identificación',
-    'Comunicación vía WhatsApp (Grupo Voluntarios Backyard 2026)',
-    'No consumir alcohol durante el evento',
-    'No abandonar el puesto sin previo aviso',
-    'Mantener actitud positiva y respetuosa',
-    'No ofrecer medicamentos o diagnósticos a atletas',
-  ];
-
-  const emergencyProtocol = [
-    {
-      type: 'Emergencias Médicas',
-      actions: [
-        'Activar protocolo inmediatamente',
-        'No mover al atleta a menos que haya peligro inmediato',
-        'Llamar al equipo médico',
-        'Mantener alejados a otros atletas',
-        'No ofrecer medicamentos ni diagnósticos',
-        'Notificar al Coordinador General',
-      ],
-      signals: [
-        'Desorientación',
-        'Mareos',
-        'Dificultad respiratoria',
-        'Desmayo',
-        'Vómito continuo',
-        'Dolor de pecho',
-        'Calambres severos',
-        'Convulsiones',
-        'Sangrado abundante',
-        'Señales de golpe de calor',
-      ],
-    },
-    {
-      type: 'Golpe de Calor',
-      signals: [
-        'Atleta deja de sudar',
-        'Confusión',
-        'Náuseas intensas',
-        'Piel caliente',
-        'Movimientos lentos o tambaleantes',
-      ],
-      actions: [
-        'Guiar a la sombra',
-        'Quitar peso',
-        'Ofrecer aire/ventilación manual',
-        'Llamar al equipo médico',
-        'No dar grandes cantidades de agua de una vez',
-      ],
-    },
+    'Portar identificación del evento',
+    'Hidratación y alimentación personal',
+    'Mantener comunicación con coordinadores',
+    'Respetar tiempos de descanso',
   ];
 
   return (
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-12">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Sección Voluntarios
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Guía completa para el equipo de voluntarios del evento
-            </p>
-          </div>
+    <section className="min-h-screen bg-gradient-to-b from-background to-accent/5 pt-20">
+      <div className="container mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <Badge variant="secondary" className="mb-4">
+            <ClipboardCheck className="w-3 h-3 mr-1" />
+            Equipo de Voluntarios
+          </Badge>
+          <h1 className="font-display text-4xl md:text-5xl text-foreground mb-4">
+            Voluntarios
+          </h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
+            Únete a nuestro equipo de voluntarios y sé parte fundamental de esta experiencia única
+          </p>
+        </div>
 
-          {/* Volunteer Registration CTA */}
-          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                    <Heart className="w-7 h-7 text-pink-600" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">¡Únete al Equipo!</h3>
-                    <p className="text-muted-foreground">
-                      ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
-                    </p>
-                  </div>
+        {/* Volunteer Registration CTA */}
+        <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium mb-8">
+          <CardContent className="p-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-7 h-7 text-pink-600" />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-                  <Link to="/voluntarios/registro">
-                    <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
-                      <UserPlus className="w-5 h-5 mr-2" />
-                      Postular como Voluntario
-                    </Button>
-                  </Link>
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    onClick={() => setShowEditLinkModal(true)}
-                    className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
-                    data-testid="edit-volunteer-btn"
-                  >
-                    <Edit2 className="w-5 h-5 mr-2" />
-                    Editar mi Postulación
-                  </Button>
+                <div className="space-y-2">
+                  <h3 className="font-display text-2xl text-foreground">¡Únete al Equipo!</h3>
+                  <p className="text-muted-foreground">
+                    ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Download Manual */}
-          <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
-            <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <Download className="w-7 h-7 text-accent" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-display text-2xl text-foreground">Manual de Voluntarios</h3>
-                    <p className="text-muted-foreground">
-                      Consulta el manual completo con todas las instrucciones, roles y protocolos para voluntarios
-                    </p>
-                  </div>
-                </div>
-                <a
-                  href="/manual-voluntarios.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-shrink-0"
+              <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+                <Link to="/voluntarios/registro">
+                  <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Postular como Voluntario
+                  </Button>
+                </Link>
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => setShowEditLinkModal(true)}
+                  className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
+                  data-testid="edit-volunteer-btn"
                 >
-                  <Button size="lg" className="bg-accent hover:bg-primary text-accent-foreground shadow-medium hover:shadow-strong transition-all duration-300">
-                    <Download className="w-5 h-5 mr-2" />
-                    Ver Manual PDF
-                  </Button>
-                </a>
+                  <Edit2 className="w-5 h-5 mr-2" />
+                  Editar mi Postulación
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="roles" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1">
-              <TabsTrigger value="roles" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
-                <ClipboardCheck className="w-4 h-4 mr-2" />
-                Roles
-              </TabsTrigger>
-              <TabsTrigger value="assignments" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
-                <Calendar className="w-4 h-4 mr-2" />
-                Asignación
-              </TabsTrigger>
-              <TabsTrigger value="rules" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
-                <Shirt className="w-4 h-4 mr-2" />
-                Reglas
-              </TabsTrigger>
-              <TabsTrigger value="emergency" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
-                <Phone className="w-4 h-4 mr-2" />
-                Emergencias
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Roles Tab */}
-            <TabsContent value="roles" className="space-y-6 mt-6">
-              <Card className="border-border shadow-soft">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Roles y Responsabilidades</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Los voluntarios son cruciales para logística, seguridad, hidratación, control de vueltas y orden general
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4">
-                    {volunteerRoles.map((role, index) => (
-                      <Card
-                        key={index}
-                        className={`${
-                          role.critical
-                            ? 'border-primary/30 bg-primary/5'
-                            : 'border-border bg-card'
-                        } shadow-soft hover-lift`}
-                      >
-                        <CardContent className="p-5 space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <h4 className="font-bold text-foreground">{role.title}</h4>
-                            {role.critical && (
-                              <Badge variant="destructive" className="text-xs">
-                                Crítico
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{role.description}</p>
-                          <div className="pt-2">
-                            <p className="text-xs font-semibold text-muted-foreground mb-2">Requisitos:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {role.requirements.map((req, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
-                                  {req}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Assignments Tab */}
-            <TabsContent value="assignments" className="space-y-6 mt-6">
-              <Card className="border-border shadow-soft">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Asignación de Turnos</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Consulta los turnos disponibles y asígnate a un espacio usando tu correo electrónico registrado
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {/* Filters */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar por nombre o posición..."
-                        value={filterName}
-                        onChange={(e) => setFilterName(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                    <select
-                      value={filterPosition}
-                      onChange={(e) => setFilterPosition(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Todas las posiciones</option>
-                      {positions.map((pos, idx) => (
-                        <option key={idx} value={pos}>{pos}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={filterShift}
-                      onChange={(e) => setFilterShift(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Todos los turnos</option>
-                      {shifts.map((shift, idx) => (
-                        <option key={idx} value={shift}>Turno {shift}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value)}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">Todos los estados</option>
-                      <option value="asignado">Asignados</option>
-                      <option value="disponible">Disponibles</option>
-                    </select>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="bg-muted/30 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-foreground">{slots.length}</p>
-                      <p className="text-xs text-muted-foreground">Total Espacios</p>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-green-600">{slots.filter(s => s.email_asignado).length}</p>
-                      <p className="text-xs text-green-700">Asignados</p>
-                    </div>
-                    <div className="bg-amber-50 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-amber-600">{slots.filter(s => !s.email_asignado).length}</p>
-                      <p className="text-xs text-amber-700">Disponibles</p>
-                    </div>
-                  </div>
-
-                  {/* Slots Grid - Card based for responsiveness */}
-                  {loadingSlots ? (
-                    <div className="text-center py-12">
-                      <Calendar className="w-12 h-12 text-muted-foreground animate-pulse mx-auto mb-4" />
-                      <p className="text-muted-foreground">Cargando asignaciones...</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {filteredSlots.map((slot) => (
-                        <div 
-                          key={slot.id} 
-                          className={`p-4 rounded-lg border ${
-                            slot.email_asignado 
-                              ? 'bg-white border-green-200' 
-                              : 'bg-amber-50/50 border-amber-200'
-                          }`}
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-semibold text-foreground truncate">{slot.puesto}</p>
-                                <Badge variant="outline" className="font-mono text-xs flex-shrink-0">
-                                  {slot.turno}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {slot.dia} • {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-between sm:justify-end gap-3">
-                              <div className="min-w-0">
-                                {slot.nombre_asignado ? (
-                                  <div className="flex items-center gap-1">
-                                    <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                    <span className="text-green-700 font-medium text-sm truncate max-w-[150px]">
-                                      {slot.nombre_asignado}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-amber-600 italic text-sm">Disponible</span>
-                                )}
-                              </div>
-                              {slot.email_asignado ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-red-300 text-red-600 hover:bg-red-50 flex-shrink-0"
-                                  onClick={() => openUnassignModal(slot)}
-                                >
-                                  <Trash2 className="w-3 h-3 mr-1" />
-                                  Eliminar
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  className="bg-primary hover:bg-accent flex-shrink-0"
-                                  onClick={() => openAssignModal(slot)}
-                                >
-                                  <Check className="w-3 h-3 mr-1" />
-                                  Asignarme
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {filteredSlots.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No se encontraron espacios con los filtros seleccionados
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Rules Tab */}
-            <TabsContent value="rules" className="space-y-6 mt-6">
-              <Card className="border-border shadow-soft">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Reglas Generales para Voluntarios</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {importantRules.map((rule, index) => (
-                      <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-xs font-bold text-primary">{index + 1}</span>
-                        </div>
-                        <p className="text-foreground">{rule}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card className="border-border shadow-soft">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shirt className="w-5 h-5 text-primary" />
-                      Indumentaria Recomendada
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Camiseta oficial de Staff (obligatorio)
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Pantalones/shorts deportivos cómodos
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Chaqueta ligera o suéter para temperaturas frescas
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Gorra para protección solar
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Zapatos deportivos con buen amortiguamiento
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Linterna frontal (especialmente turnos nocturnos)
-                      </li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border shadow-soft">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="w-5 h-5 text-primary" />
-                      Beneficios del Voluntario
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Ticket de comida para desayuno, almuerzo o cena según turno
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Camiseta oficial del evento
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Opción de acampar en área designada
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Experiencia única en evento deportivo internacional
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Certificado de participación como voluntario
-                      </li>
-                    </ul>
-                  </CardContent>
-                </Card>
+        {/* Manual Download */}
+        <Card className="mb-8 border-border shadow-soft">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-display text-2xl text-foreground">Manual de Voluntarios</h3>
+                <p className="text-muted-foreground text-sm">
+                  Guía completa para el equipo de voluntarios del evento
+                </p>
               </div>
-            </TabsContent>
+              <a href="/manual-corredores.pdf" download className="flex-shrink-0">
+                <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
+                  <Download className="w-4 h-4 mr-2" />
+                  Descargar Manual
+                </Button>
+              </a>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Emergency Tab */}
-            <TabsContent value="emergency" className="space-y-6 mt-6">
-              <Card className="border-destructive/30 bg-destructive/5 shadow-medium">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <AlertCircle className="w-6 h-6 text-destructive" />
-                    Protocolo de Emergencias
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    <strong className="text-foreground">Regla Principal:</strong> Mantener la calma, reportar rápidamente
-                    y no actuar fuera de su rol. El objetivo es proteger, no resolver problemas de forma independiente.
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {emergencyProtocol.map((protocol, index) => (
-                    <div key={index} className="space-y-4">
-                      <h4 className="font-bold text-lg text-foreground">{protocol.type}</h4>
-                      
-                      {protocol.signals && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-semibold text-muted-foreground">Señales de Alerta:</p>
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="roles" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1">
+            <TabsTrigger value="roles" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              Roles
+            </TabsTrigger>
+            <TabsTrigger value="rules" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
+              <Shirt className="w-4 h-4 mr-2" />
+              Reglas
+            </TabsTrigger>
+            <TabsTrigger value="emergency" className="data-[state=active]:bg-card data-[state=active]:text-foreground">
+              <Phone className="w-4 h-4 mr-2" />
+              Emergencias
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Roles Tab */}
+          <TabsContent value="roles" className="space-y-6 mt-6">
+            <Card className="border-border shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-2xl">Roles y Responsabilidades</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Los voluntarios son cruciales para logística, seguridad, hidratación, control de vueltas y orden general
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4">
+                  {volunteerRoles.map((role, index) => (
+                    <Card
+                      key={index}
+                      className={`${
+                        role.critical
+                          ? 'border-primary/30 bg-primary/5'
+                          : 'border-border bg-card'
+                      } shadow-soft hover-lift`}
+                    >
+                      <CardContent className="p-5 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="font-bold text-foreground">{role.title}</h4>
+                          {role.critical && (
+                            <Badge variant="destructive" className="text-xs">
+                              Crítico
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{role.description}</p>
+                        <div className="pt-2">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Requisitos:</p>
                           <div className="flex flex-wrap gap-2">
-                            {protocol.signals.map((signal, idx) => (
-                              <Badge key={idx} variant="destructive" className="text-xs">
-                                {signal}
+                            {role.requirements.map((req, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                {req}
                               </Badge>
                             ))}
                           </div>
                         </div>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold text-muted-foreground">Acciones del Voluntario:</p>
-                        <ul className="space-y-2">
-                          {protocol.actions.map((action, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-foreground">
-                              <span className="w-1.5 h-1.5 rounded-full bg-destructive mt-2 flex-shrink-0"></span>
-                              {action}
-                            </li>
-                          ))}
-                        </ul>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Rules Tab */}
+          <TabsContent value="rules" className="space-y-6 mt-6">
+            <Card className="border-border shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-2xl">Reglas Importantes</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Lineamientos que todo voluntario debe seguir
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {importantRules.map((rule, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-primary">{index + 1}</span>
                       </div>
-                      
-                      {index < emergencyProtocol.length - 1 && <div className="border-t border-border pt-4"></div>}
+                      <p className="text-foreground">{rule}</p>
                     </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
 
-              <Card className="border-border shadow-soft">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Phone className="w-5 h-5 text-primary" />
-                    Comunicación y Reportes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="font-semibold text-foreground">Formato para Reportar Situaciones:</p>
-                    <div className="bg-muted/50 p-4 rounded-lg border border-border">
-                      <p className="text-sm font-mono text-muted-foreground">
-                        [Tipo de evento] + [Ubicación] + [Acción necesaria]
+                <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-800 dark:text-amber-200">Código de Vestimenta</h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        Se proporcionará camiseta oficial del evento. Usar calzado cómodo y cerrado. 
+                        Protección solar recomendada.
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <p className="font-semibold text-foreground">Para Emergencias:</p>
-                    <div className="bg-destructive/10 p-4 rounded-lg border border-destructive/30">
-                      <p className="text-sm font-semibold text-foreground">
-                        Iniciar mensajes con &quot;URGENTE&quot;
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Emergency Tab */}
+          <TabsContent value="emergency" className="space-y-6 mt-6">
+            <Card className="border-border shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-2xl">Protocolos de Emergencia</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Información crítica para situaciones de emergencia
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                    <CardContent className="p-4">
+                      <h4 className="font-bold text-red-800 dark:text-red-200 mb-2">Emergencia Médica</h4>
+                      <p className="text-sm text-red-700 dark:text-red-300">
+                        1. Mantén la calma<br />
+                        2. Notifica al coordinador más cercano<br />
+                        3. No muevas al afectado<br />
+                        4. Despeja el área
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Ejemplo: &quot;URGENTE – Atleta caído en zona de carpas – solicita médico.&quot;
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
+                    <CardContent className="p-4">
+                      <h4 className="font-bold text-blue-800 dark:text-blue-200 mb-2">Contactos de Emergencia</h4>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Director del Evento: Por confirmar<br />
+                        Coordinador Médico: Por confirmar<br />
+                        Emergencias: 911
                       </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="font-semibold text-foreground">Reglas de Comunicación:</p>
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Usar formato breve y concreto
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        No conversaciones largas en el grupo
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        No enviar notas de voz de más de 10 segundos
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Durante turnos nocturnos, mensajes aún más cortos
-                      </li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-semibold text-foreground mb-2">Punto de Encuentro</h4>
+                  <p className="text-sm text-muted-foreground">
+                    En caso de evacuación, el punto de encuentro será comunicado durante la reunión 
+                    previa al evento. Mantente siempre atento a las instrucciones del staff.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Assign Modal */}
-      {showAssignModal && selectedSlot && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-strong">
-            <CardHeader className="border-b">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>Asignarse al Turno</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {selectedSlot.puesto}
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowAssignModal(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Turno</p>
-                      <p className="font-semibold">{selectedSlot.turno}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Fecha</p>
-                      <p className="font-semibold">{selectedSlot.dia}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-muted-foreground">Horario</p>
-                      <p className="font-semibold">{formatTime(selectedSlot.hora_inicio)} - {formatTime(selectedSlot.hora_fin)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Confirma tu correo electrónico
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    autoFocus
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Debe coincidir con el correo registrado como voluntario
-                  </p>
-                </div>
-
-                {actionMessage && (
-                  <div className={`p-3 rounded-lg text-sm ${
-                    actionMessage.type === 'success' 
-                      ? 'bg-green-50 text-green-800 border border-green-200' 
-                      : 'bg-red-50 text-red-800 border border-red-200'
-                  }`}>
-                    {actionMessage.text}
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowAssignModal(false)}
-                    disabled={actionLoading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-primary"
-                    onClick={handleAssign}
-                    disabled={!emailInput.trim() || actionLoading}
-                  >
-                    {actionLoading ? 'Procesando...' : 'Confirmar Asignación'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Unassign Modal */}
-      {showUnassignModal && selectedSlot && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-strong border-red-200">
-            <CardHeader className="border-b border-red-100 bg-red-50/50">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-red-900">Eliminar Asignación</CardTitle>
-                  <p className="text-sm text-red-700 mt-1">
-                    {selectedSlot.puesto}
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowUnassignModal(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-muted/30 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Turno</p>
-                      <p className="font-semibold">{selectedSlot.turno}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Fecha</p>
-                      <p className="font-semibold">{selectedSlot.dia}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Horario</p>
-                      <p className="font-semibold">{formatTime(selectedSlot.hora_inicio)} - {formatTime(selectedSlot.hora_fin)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Asignado a</p>
-                      <p className="font-semibold text-green-700">{selectedSlot.nombre_asignado}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Confirma tu correo electrónico para eliminar
-                  </label>
-                  <Input
-                    type="email"
-                    placeholder="tu@email.com"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    autoFocus
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Solo el voluntario asignado puede eliminar su asignación
-                  </p>
-                </div>
-
-                {actionMessage && (
-                  <div className={`p-3 rounded-lg text-sm ${
-                    actionMessage.type === 'success' 
-                      ? 'bg-green-50 text-green-800 border border-green-200' 
-                      : 'bg-red-50 text-red-800 border border-red-200'
-                  }`}>
-                    {actionMessage.text}
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowUnassignModal(false)}
-                    disabled={actionLoading}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                    onClick={handleUnassign}
-                    disabled={!emailInput.trim() || actionLoading}
-                  >
-                    {actionLoading ? 'Procesando...' : 'Eliminar Asignación'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Edit Link Modal */}
       {showEditLinkModal && (
