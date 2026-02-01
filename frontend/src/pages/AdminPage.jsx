@@ -64,7 +64,7 @@ export default function AdminPage() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
             <TabsTrigger value="control" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Control</span>
@@ -74,6 +74,11 @@ export default function AdminPage() {
               <UserPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Pre-Registros</span>
               <span className="sm:hidden">Registros</span>
+            </TabsTrigger>
+            <TabsTrigger value="volunteers" className="flex items-center gap-2">
+              <CalendarClock className="w-4 h-4" />
+              <span className="hidden sm:inline">Voluntarios</span>
+              <span className="sm:hidden">Volunt.</span>
             </TabsTrigger>
             <TabsTrigger value="sponsors" className="flex items-center gap-2">
               <Building2 className="w-4 h-4" />
