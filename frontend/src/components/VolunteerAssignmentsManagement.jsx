@@ -158,6 +158,34 @@ export default function VolunteerAssignmentsManagement() {
     }
   };
 
+  // Handle delete volunteer
+  const handleDeleteVolunteer = async () => {
+    if (!selectedVolunteer) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast.success('Voluntario eliminado correctamente');
+        setShowDeleteVolunteerModal(false);
+        setSelectedVolunteer(null);
+        setExpandedVolunteer(null);
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al eliminar voluntario');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Open add modal
   const openAddModal = (volunteer) => {
     setSelectedVolunteer(volunteer);
@@ -171,6 +199,12 @@ export default function VolunteerAssignmentsManagement() {
     const slotInfo = getSlotInfo(slotId);
     setSelectedSlotToRemove(slotInfo);
     setShowRemoveModal(true);
+  };
+
+  // Open delete volunteer modal
+  const openDeleteVolunteerModal = (volunteer) => {
+    setSelectedVolunteer(volunteer);
+    setShowDeleteVolunteerModal(true);
   };
 
   // Statistics
