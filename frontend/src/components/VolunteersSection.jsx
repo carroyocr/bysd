@@ -190,6 +190,39 @@ export default function VolunteersSection() {
     setShowUnassignModal(true);
   };
 
+  // Handle request edit link
+  const handleRequestEditLink = async () => {
+    if (!editLinkEmail.trim() || !editLinkEmail.includes('@')) {
+      toast.error('Por favor ingresa un email válido');
+      return;
+    }
+    
+    setSendingEditLink(true);
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteer-registration/request-edit-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: editLinkEmail.trim().toLowerCase() })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success('¡Link de edición enviado a tu correo!');
+        setShowEditLinkModal(false);
+        setEditLinkEmail('');
+      } else {
+        toast.error(data.detail || 'Error al enviar el link');
+      }
+    } catch (error) {
+      console.error('Error requesting edit link:', error);
+      toast.error('Error de conexión. Intenta de nuevo.');
+    } finally {
+      setSendingEditLink(false);
+    }
+  };
+
   const formatTime = (time) => {
     if (!time) return '';
     const parts = time.split(':');
