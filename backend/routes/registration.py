@@ -251,7 +251,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
                 </p>
                 <ul style="color: #1e40af; font-size: 14px; padding-left: 20px; margin-top: 10px;">
                     <li>Cuatro (4) meses antes del evento, enviaremos un correo con las instrucciones para realizar el pago.</li>
-                    <li>El costo de la carrera será de <strong>RD$3,500</strong>.</li>
+                    <li>El costo de la carrera será de <strong>RD${formatted_cost}</strong>.</li>
                     <li>Tendrás un plazo de treinta (30) días para completar el pago.</li>
                     <li>Si el pago no se realiza en ese período, el pre registro será desestimado.</li>
                 </ul>
