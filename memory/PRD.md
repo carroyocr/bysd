@@ -292,6 +292,25 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Notificaciones de Manual Disponible por Email** (01 Febrero 2026)
+  - **Nuevos botones en Panel Admin > Carrera > Manuales**:
+    - "Notificar Corredores (X)" - Envía email a atletas activos informando que la Guía del Corredor está disponible
+    - "Notificar Voluntarios (X)" - Envía email a voluntarios registrados informando que el Manual de Voluntarios está disponible
+    - Los botones muestran el conteo de destinatarios
+    - Solo aparecen cuando hay manual cargado
+    - Confirmación antes de enviar con cantidad de destinatarios
+  - **Template de Email profesional**:
+    - Logo del evento y diseño consistente
+    - Descripción del contenido del manual
+    - Botón CTA "Ver Guía del Corredor" / "Ver Manual de Voluntarios"
+    - Link de descarga directa del PDF
+  - **Backend - Nuevos endpoints** (`backend/routes/race_config.py`):
+    - `GET /api/race-config/notify-runners-count/{code}` - Conteo de atletas activos
+    - `GET /api/race-config/notify-volunteers-count/{code}` - Conteo de voluntarios
+    - `POST /api/race-config/notify-runners-manual/{code}` - Enviar notificación a corredores
+    - `POST /api/race-config/notify-volunteers-manual/{code}` - Enviar notificación a voluntarios
+  - **Tests**: 11/11 tests backend (100%), código frontend verificado
+
 - [x] **Feature: Gestión de Manuales y Datos de Pago** (01 Febrero 2026)
   - **Panel Admin - Pestaña Carrera**:
     - Nueva sección "Datos para Recibir Pagos" con 5 campos: Nombre de Cuenta, ID/Cédula, Banco, Tipo de Cuenta, Número de Cuenta
