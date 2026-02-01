@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
-  Loader2, Info, Users, Clipboard
+  Loader2, Info, Users, Clipboard, Clock, Check
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -15,11 +15,12 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Form steps for volunteers (simplified from athlete registration)
+// Form steps for volunteers
 const STEPS = [
   { id: 'verify', title: 'Verificación', icon: Mail },
   { id: 'personal', title: 'Datos Personales', icon: User },
   { id: 'experience', title: 'Experiencia', icon: Clipboard },
+  { id: 'slots', title: 'Turnos', icon: Calendar },
   { id: 'medical', title: 'Info Médica', icon: Heart },
   { id: 'emergency', title: 'Emergencia', icon: Shield },
   { id: 'preferences', title: 'Preferencias', icon: Shirt },
@@ -44,6 +45,11 @@ export default function VoluntarioRegistroPage() {
   // State for showing "already registered" message
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   
+  // Available slots data
+  const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [] });
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
+  
   // Form data
   const [formData, setFormData] = useState({
     // Personal
@@ -58,8 +64,6 @@ export default function VoluntarioRegistroPage() {
     // Experience
     experiencia_voluntariado: 'No',
     experiencia_voluntariado_detalle: '',
-    areas_interes: '',
-    disponibilidad: '',
     
     // Medical
     tipo_sangre: '',
@@ -83,6 +87,101 @@ export default function VoluntarioRegistroPage() {
   const [submitting, setSubmitting] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
 
+  // Load available slots when entering step 3 (slots)
+  useEffect(() => {
+    if (currentStep === 3) {
+      loadAvailableSlots();
+    }
+  }, [currentStep]);
+
+  const loadAvailableSlots = async () => {
+    setLoadingSlots(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/available-slots`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableSlots(data);
+      }
+    } catch (error) {
+      console.error('Error loading slots:', error);
+      toast.error('Error cargando turnos disponibles');
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Check if two time slots conflict
+  const slotsConflict = (slot1, slot2) => {
+    // Find the slots in availableSlots
+    let s1Info = null, s2Info = null;
+    
+    for (const pos of availableSlots.positions) {
+      for (const turno of pos.turnos) {
+        for (const slot of turno.slots) {
+          if (slot.id === slot1) s1Info = { ...slot, turno: turno.turno };
+          if (slot.id === slot2) s2Info = { ...slot, turno: turno.turno };
+        }
+      }
+    }
+    
+    if (!s1Info || !s2Info) return false;
+    
+    // Convert times to comparable format
+    const parseTime = (timeStr) => {
+      if (!timeStr) return 0;
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+    
+    const start1 = parseTime(s1Info.hora_inicio);
+    const end1 = parseTime(s1Info.hora_fin);
+    const start2 = parseTime(s2Info.hora_inicio);
+    const end2 = parseTime(s2Info.hora_fin);
+    
+    // Check overlap
+    return !(end1 <= start2 || end2 <= start1);
+  };
+
+  // Toggle slot selection
+  const toggleSlot = (slotId, slotInfo) => {
+    if (selectedSlots.includes(slotId)) {
+      // Remove slot
+      setSelectedSlots(prev => prev.filter(id => id !== slotId));
+    } else {
+      // Check for conflicts with already selected slots
+      const conflicts = selectedSlots.filter(existingId => slotsConflict(existingId, slotId));
+      
+      if (conflicts.length > 0) {
+        toast.error('Este turno tiene conflicto de horario con otro turno seleccionado');
+        return;
+      }
+      
+      // Add slot
+      setSelectedSlots(prev => [...prev, slotId]);
+    }
+  };
+
+  // Get selected slots info for display
+  const getSelectedSlotsInfo = () => {
+    const info = [];
+    for (const pos of availableSlots.positions) {
+      for (const turno of pos.turnos) {
+        for (const slot of turno.slots) {
+          if (selectedSlots.includes(slot.id)) {
+            info.push({
+              id: slot.id,
+              puesto: pos.puesto,
+              turno: turno.turno,
+              hora_inicio: turno.hora_inicio,
+              hora_fin: turno.hora_fin
+            });
+          }
+        }
+      }
+    }
+    return info;
+  };
+
   const sendVerificationCode = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
@@ -92,7 +191,6 @@ export default function VoluntarioRegistroPage() {
     setEmailAlreadyRegistered(false);
     setSendingCode(true);
     
-    // Use XMLHttpRequest to avoid body stream issues
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}/api/volunteer-registration/send-verification`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -174,12 +272,18 @@ export default function VoluntarioRegistroPage() {
         }
         break;
       case 2: // Experience
-        if (!formData.experiencia_voluntariado || !formData.disponibilidad) {
-          toast.error('Completa todos los campos obligatorios');
+        if (!formData.experiencia_voluntariado) {
+          toast.error('Indica si tienes experiencia');
           return false;
         }
         break;
-      case 4: // Emergency
+      case 3: // Slots
+        if (selectedSlots.length === 0) {
+          toast.error('Selecciona al menos un turno de interés');
+          return false;
+        }
+        break;
+      case 5: // Emergency
         if (!formData.contacto_emergencia_nombre || !formData.contacto_emergencia_telefono) {
           toast.error('Completa la información de contacto de emergencia');
           return false;
@@ -204,12 +308,17 @@ export default function VoluntarioRegistroPage() {
     
     setSubmitting(true);
     try {
+      const submitData = {
+        ...formData,
+        slots_interes: selectedSlots
+      };
+      
       const response = await fetch(
         `${API_URL}/api/volunteer-registration/register?email=${encodeURIComponent(email)}&session_token=${sessionToken}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify(submitData)
         }
       );
       
@@ -230,6 +339,8 @@ export default function VoluntarioRegistroPage() {
 
   // Registration complete screen
   if (registrationComplete) {
+    const selectedInfo = getSelectedSlotsInfo();
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
         <div className="container mx-auto px-4 py-12">
@@ -244,17 +355,21 @@ export default function VoluntarioRegistroPage() {
               </h2>
               
               <p className="text-muted-foreground">
-                Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información sobre las tareas y horarios.
+                Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
               </p>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                <h3 className="font-semibold text-blue-800 mb-2">📋 Próximos Pasos</h3>
-                <ul className="text-sm text-blue-700 space-y-2">
-                  <li>• Recibirás un correo de confirmación con los detalles de tu registro.</li>
-                  <li>• Antes del evento, te enviaremos información sobre tu asignación.</li>
-                  <li>• El día del evento, preséntate en el área de voluntarios.</li>
-                </ul>
-              </div>
+              {selectedInfo.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Seleccionados</h3>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    {selectedInfo.map(slot => (
+                      <li key={slot.id}>
+                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} ({slot.hora_inicio} - {slot.hora_fin})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/">
@@ -310,11 +425,7 @@ export default function VoluntarioRegistroPage() {
                   no sería posible ofrecer una experiencia de calidad a los atletas.
                 </p>
                 <p>
-                  Como voluntario, podrás participar en diferentes áreas: hidratación, 
-                  registro, control de vueltas, asistencia médica, logística y más.
-                </p>
-                <p className="text-blue-600 italic">
-                  ⚠️ Completa el formulario para registrarte. Te contactaremos con más detalles.
+                  Podrás seleccionar las posiciones y turnos de tu interés según la disponibilidad.
                 </p>
               </div>
             </CardContent>
@@ -332,7 +443,7 @@ export default function VoluntarioRegistroPage() {
               const isCompleted = index < currentStep;
               
               return (
-                <div key={step.id} className="flex flex-col items-center min-w-[80px]">
+                <div key={step.id} className="flex flex-col items-center min-w-[70px]">
                   <div className={`
                     w-10 h-10 rounded-full flex items-center justify-center transition-all
                     ${isCompleted ? 'bg-green-500 text-white' : 
@@ -537,45 +648,113 @@ export default function VoluntarioRegistroPage() {
                     />
                   </div>
                 )}
-                
-                <div className="space-y-2">
-                  <Label>Áreas de Interés</Label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={formData.areas_interes}
-                    onChange={(e) => handleInputChange('areas_interes', e.target.value)}
-                  >
-                    <option value="">Seleccionar área de interés</option>
-                    <option value="Hidratación">Hidratación / Avituallamiento</option>
-                    <option value="Registro">Registro y Check-in</option>
-                    <option value="Control de Vueltas">Control de Vueltas</option>
-                    <option value="Asistencia Médica">Asistencia Médica</option>
-                    <option value="Logística">Logística General</option>
-                    <option value="Fotografía">Fotografía / Redes Sociales</option>
-                    <option value="Cualquiera">Cualquier área disponible</option>
-                  </select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Disponibilidad *</Label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={formData.disponibilidad}
-                    onChange={(e) => handleInputChange('disponibilidad', e.target.value)}
-                  >
-                    <option value="">Seleccionar disponibilidad</option>
-                    <option value="Día Completo">Día Completo (6:00 AM - 10:00 PM)</option>
-                    <option value="Mañana">Mañana (6:00 AM - 2:00 PM)</option>
-                    <option value="Tarde">Tarde (2:00 PM - 10:00 PM)</option>
-                    <option value="Noche">Noche (10:00 PM - 6:00 AM)</option>
-                    <option value="Flexible">Horario Flexible</option>
-                  </select>
-                </div>
               </div>
             )}
 
-            {/* Step 3: Medical Info */}
+            {/* Step 3: Slots Selection */}
             {currentStep === 3 && (
+              <div className="space-y-6">
+                {loadingSlots ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <span className="ml-3 text-muted-foreground">Cargando turnos disponibles...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-800">
+                        <Info className="w-4 h-4 inline mr-2" />
+                        Selecciona los turnos de tu interés. Puedes elegir varios siempre que no choquen entre sí.
+                        {selectedSlots.length > 0 && (
+                          <span className="font-semibold"> ({selectedSlots.length} seleccionado{selectedSlots.length > 1 ? 's' : ''})</span>
+                        )}
+                      </p>
+                    </div>
+                    
+                    {availableSlots.positions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No hay turnos disponibles en este momento.
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {availableSlots.positions.map((position) => (
+                          <Card key={position.puesto} className="border-border">
+                            <CardHeader className="py-3 px-4 bg-muted/50">
+                              <CardTitle className="text-base font-semibold">{position.puesto}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                {position.turnos.map((turno) => (
+                                  turno.slots.map((slot) => {
+                                    const isSelected = selectedSlots.includes(slot.id);
+                                    const wouldConflict = !isSelected && selectedSlots.some(
+                                      existingId => slotsConflict(existingId, slot.id)
+                                    );
+                                    
+                                    return (
+                                      <div
+                                        key={slot.id}
+                                        onClick={() => !wouldConflict && toggleSlot(slot.id, { ...slot, turno: turno.turno, puesto: position.puesto })}
+                                        className={`
+                                          relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                          ${isSelected 
+                                            ? 'border-primary bg-primary/10' 
+                                            : wouldConflict
+                                              ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                                              : 'border-gray-200 hover:border-primary/50 hover:bg-primary/5'
+                                          }
+                                        `}
+                                      >
+                                        {isSelected && (
+                                          <div className="absolute top-2 right-2">
+                                            <Check className="w-5 h-5 text-primary" />
+                                          </div>
+                                        )}
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <Badge variant={isSelected ? "default" : "outline"} className="text-xs">
+                                            Turno {turno.turno}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                          <Clock className="w-3 h-3" />
+                                          <span>{turno.hora_inicio} - {turno.hora_fin}</span>
+                                        </div>
+                                        {wouldConflict && (
+                                          <p className="text-xs text-red-500 mt-1">Conflicto de horario</p>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Selected slots summary */}
+                    {selectedSlots.length > 0 && (
+                      <Card className="bg-green-50 border-green-200">
+                        <CardContent className="p-4">
+                          <h4 className="font-semibold text-green-800 mb-2">Turnos Seleccionados:</h4>
+                          <ul className="text-sm text-green-700 space-y-1">
+                            {getSelectedSlotsInfo().map(slot => (
+                              <li key={slot.id}>
+                                • {slot.puesto} - Turno {slot.turno} ({slot.hora_inicio} - {slot.hora_fin})
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Medical Info */}
+            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Tipo de Sangre</Label>
@@ -647,8 +826,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 4: Emergency Contact */}
-            {currentStep === 4 && (
+            {/* Step 5: Emergency Contact */}
+            {currentStep === 5 && (
               <div className="space-y-6">
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <p className="text-sm text-amber-800">
@@ -686,8 +865,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 5: Preferences */}
-            {currentStep === 5 && (
+            {/* Step 6: Preferences */}
+            {currentStep === 6 && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Talla de Camiseta</Label>
