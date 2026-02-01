@@ -1219,12 +1219,6 @@ export default function InscripcionPage() {
                     Volver al Inicio
                   </Button>
                 </Link>
-                <Link to="/corredores">
-                  <Button>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Ver Guía del Corredor
-                  </Button>
-                </Link>
               </div>
             </CardContent>
           </Card>
