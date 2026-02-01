@@ -433,6 +433,8 @@ export default function VolunteersSection() {
           </Card>
         </div>
       )}
+        </div>
+      </div>
     </section>
   );
 }
