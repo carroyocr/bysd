@@ -53,10 +53,45 @@ export default function VolunteerConfigManagement() {
   
   // Clearing assignments
   const [clearing, setClearing] = useState(false);
+  
+  // Race date for display
+  const [raceDate, setRaceDate] = useState(null);
 
   useEffect(() => {
     loadPositions();
+    loadRaceDate();
   }, []);
+
+  const loadRaceDate = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/race-config/active`);
+      if (response.ok) {
+        const data = await response.json();
+        setRaceDate(data.date);
+      }
+    } catch (error) {
+      console.error('Error loading race date:', error);
+    }
+  };
+
+  // Calculate the date for a shift based on its start time
+  const getShiftDate = (horaInicio) => {
+    if (!raceDate || !horaInicio) return '';
+    
+    const [hours] = horaInicio.split(':').map(Number);
+    const baseDate = new Date(raceDate + 'T00:00:00');
+    
+    // If shift starts between midnight and 8am, it's likely day 2
+    if (hours >= 0 && hours < 8) {
+      baseDate.setDate(baseDate.getDate() + 1);
+    }
+    
+    return baseDate.toLocaleDateString('es-DO', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  };
 
   const loadPositions = async () => {
     setLoading(true);
