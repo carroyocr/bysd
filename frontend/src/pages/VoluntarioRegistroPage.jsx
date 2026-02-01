@@ -762,8 +762,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 1: Personal Data */}
-            {currentStep === 1 && (
+            {/* Step: Personal Data */}
+            {currentStepId === 'personal' && (
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Nombre *</Label>
