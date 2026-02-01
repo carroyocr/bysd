@@ -761,6 +761,20 @@ export default function PreRegistrationManagement() {
                   <><Hash className="w-4 h-4 mr-2" /> Asignar BIBs ({eligibleForBibCount})</>
                 )}
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRemoveAllBibs}
+                disabled={removingAllBibs || athletesWithBibCount === 0}
+                className="border-red-400 text-red-700 hover:bg-red-50"
+                data-testid="remove-all-bibs-btn"
+              >
+                {removingAllBibs ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Eliminando...</>
+                ) : (
+                  <><Trash2 className="w-4 h-4 mr-2" /> Quitar BIBs ({athletesWithBibCount})</>
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={exportToCSV}>
                 <Download className="w-4 h-4 mr-2" />
                 Exportar CSV
