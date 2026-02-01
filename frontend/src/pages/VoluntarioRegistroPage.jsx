@@ -1036,8 +1036,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 5: Emergency Contact */}
-            {currentStep === 5 && (
+            {/* Step: Emergency Contact */}
+            {currentStepId === 'emergency' && (
               <div className="space-y-6">
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <p className="text-sm text-amber-800">
@@ -1075,8 +1075,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 6: Preferences */}
-            {currentStep === 6 && (
+            {/* Step: Preferences */}
+            {currentStepId === 'preferences' && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Talla de Camiseta</Label>
