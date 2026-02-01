@@ -488,6 +488,13 @@ export default function VoluntarioRegistroPage() {
                 Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
               </p>
               
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-amber-800 mb-2">📧 Revisa tu Correo</h3>
+                <p className="text-sm text-amber-700">
+                  Te enviamos un correo de confirmación con un enlace para editar tu postulación si lo necesitas.
+                </p>
+              </div>
+              
               {selectedInfo.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
                   <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Seleccionados</h3>
@@ -521,6 +528,73 @@ export default function VoluntarioRegistroPage() {
       </div>
     );
   }
+  
+  // Update complete screen
+  if (updateComplete) {
+    const selectedInfo = getSelectedSlotsInfo();
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+        <div className="container mx-auto px-4 py-12">
+          <Card className="max-w-2xl mx-auto text-center">
+            <CardContent className="p-8 space-y-6">
+              <div className="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                <Edit2 className="w-12 h-12 text-blue-600" />
+              </div>
+              
+              <h2 className="text-3xl font-bold text-blue-700">
+                ¡Postulación Actualizada!
+              </h2>
+              
+              <p className="text-muted-foreground">
+                Tus cambios han sido guardados correctamente.
+              </p>
+              
+              {selectedInfo.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Actualizados</h3>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    {selectedInfo.map(slot => (
+                      <li key={slot.id}>
+                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} | {getShiftDate(slot.hora_inicio)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/">
+                  <Button variant="outline">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Volver al Inicio
+                  </Button>
+                </Link>
+                <Link to="/voluntarios">
+                  <Button>
+                    <Users className="w-4 h-4 mr-2" />
+                    Ver Sección Voluntarios
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
+  // Loading state for edit mode
+  if (loadingExisting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando tu postulación...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
@@ -528,7 +602,7 @@ export default function VoluntarioRegistroPage() {
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
-            Registro de Voluntarios
+            {editMode ? 'Editar Postulación' : 'Registro de Voluntarios'}
           </h1>
           <p className="text-center text-purple-100 mb-4">
             {raceName || 'Backyard Ultra Santo Domingo'}
