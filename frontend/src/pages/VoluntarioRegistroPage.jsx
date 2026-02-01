@@ -193,6 +193,9 @@ export default function VoluntarioRegistroPage() {
   // Get the steps based on mode
   const activeSteps = editMode ? EDIT_STEPS : STEPS;
   
+  // Get current step ID for conditional rendering
+  const currentStepId = activeSteps[currentStep]?.id || '';
+  
   // Get the actual step index for slots (different in edit mode)
   const getSlotsStepIndex = () => editMode ? 2 : 3;
 
