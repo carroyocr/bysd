@@ -315,7 +315,7 @@ async def register_volunteer(
         from services.email_service import send_email
         import os
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://eventadmin-6.preview.emergentagent.com')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://multi-event-portal.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
         html_content = f"""
@@ -456,7 +456,7 @@ async def request_edit_link(request: EditLinkRequest):
         from services.email_service import send_email
         import os
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://eventadmin-6.preview.emergentagent.com')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://multi-event-portal.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         nombre = registration.get("nombre", "Voluntario")
         
