@@ -57,6 +57,10 @@ async def get_available_slots():
     """Get all available (unassigned) volunteer slots grouped by position and shift"""
     from server import db
     
+    # Get active race for the event date
+    active_race = await db.race_configurations.find_one({"is_active": True})
+    race_date = active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
+    
     # Get all slots from the correct collection
     slots = await db.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
     
@@ -125,7 +129,8 @@ async def get_available_slots():
     
     return {
         "positions": positions_list,
-        "shifts_info": list(shifts_info.values())
+        "shifts_info": list(shifts_info.values()),
+        "race_date": race_date
     }
 
 
