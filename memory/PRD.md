@@ -413,7 +413,8 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - `/app/test_reports/iteration_8.json` (nuevo - edición voluntarios)
   - `/app/test_reports/iteration_9.json` (nuevo - manuales y datos de pago)
   - `/app/test_reports/iteration_10.json` (nuevo - notificaciones de manual)
-- **Cobertura**: 96/96 tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_11.json` (nuevo - recordatorio pago y comprobantes)
+- **Cobertura**: 109/109 tests backend (100%), UI tests completos (100%)
 
 ---
 
