@@ -73,8 +73,8 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="registrations" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Pre-Registros</span>
-              <span className="sm:hidden">Registros</span>
+              <span className="hidden sm:inline">Atletas</span>
+              <span className="sm:hidden">Atletas</span>
             </TabsTrigger>
             <TabsTrigger value="volunteers" className="flex items-center gap-2">
               <CalendarClock className="w-4 h-4" />
