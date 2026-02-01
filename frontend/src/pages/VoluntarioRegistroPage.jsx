@@ -381,19 +381,19 @@ export default function VoluntarioRegistroPage() {
           return false;
         }
         break;
-      case 2: // Experience
+      case editMode ? 1 : 2: // Experience
         if (!formData.experiencia_voluntariado) {
           toast.error('Indica si tienes experiencia');
           return false;
         }
         break;
-      case 3: // Slots
+      case editMode ? 2 : 3: // Slots
         if (selectedSlots.length === 0) {
           toast.error('Selecciona al menos un turno de interés');
           return false;
         }
         break;
-      case 5: // Emergency
+      case editMode ? 4 : 5: // Emergency
         if (!formData.contacto_emergencia_nombre || !formData.contacto_emergencia_telefono) {
           toast.error('Completa la información de contacto de emergencia');
           return false;
@@ -405,12 +405,12 @@ export default function VoluntarioRegistroPage() {
 
   const nextStep = () => {
     if (validateStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+      setCurrentStep(prev => Math.min(prev + 1, activeSteps.length - 1));
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep(prev => Math.max(prev - 1, editMode ? 0 : 1));
   };
 
   const handleSubmit = async () => {
@@ -423,20 +423,40 @@ export default function VoluntarioRegistroPage() {
         slots_interes: selectedSlots
       };
       
-      const response = await fetch(
-        `${API_URL}/api/volunteer-registration/register?email=${encodeURIComponent(email)}&session_token=${sessionToken}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(submitData)
-        }
-      );
+      let response;
+      
+      if (editMode && editToken) {
+        // Update existing registration
+        response = await fetch(
+          `${API_URL}/api/volunteer-registration/update/${editToken}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData)
+          }
+        );
+      } else {
+        // Create new registration
+        response = await fetch(
+          `${API_URL}/api/volunteer-registration/register?email=${encodeURIComponent(email)}&session_token=${sessionToken}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(submitData)
+          }
+        );
+      }
       
       const data = await response.json();
       
       if (response.ok) {
-        setRegistrationComplete(true);
-        toast.success('¡Registro completado!');
+        if (editMode) {
+          setUpdateComplete(true);
+          toast.success('¡Postulación actualizada!');
+        } else {
+          setRegistrationComplete(true);
+          toast.success('¡Registro completado!');
+        }
       } else {
         toast.error(data.detail || 'Error en el registro');
       }
