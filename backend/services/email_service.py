@@ -80,7 +80,7 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
         <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff;">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 24px 16px; text-align: center;">
-                <img src="https://race-dashboard-12.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
+                <img src="https://eventadmin-6.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
                 <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
             </div>

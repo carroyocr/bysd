@@ -1,96 +1,105 @@
 <analysis>**original_problem_statement:**
 The user's overall goal is to transform a single-event race portal into a multi-event, parametric platform managed from an admin panel.
 
-Initial requests included UI updates, a survey system, and certificate generation. This evolved into a major refactor to allow an administrator to create and manage different race editions (e.g., BYSD-2027) without code changes.
+During this session, the user's requests focused on building a comprehensive volunteer management system and adding more dynamic controls to the admin panel.
 
-During this session, the user requested several major features to build upon the new parametric architecture:
-1.  **Participant Management:** Create a new section in the admin panel to manage pre-registered participants, including editing their information and assigning a BIB number.
-2.  **Race Control Integration:** The main Race Control panel should use the data from the pre-registration system ( collection) for the active race, only showing participants marked as active.
-3.  **Race-Specific Admin Actions:** All dangerous admin buttons (Reset Database, Send Emails, Reset Cheers) must be modified to only affect the *currently active race*, preserving data from past races.
-4.  **Legacy Data Compatibility:** Implement a solution to display results for a previous, completed race (BYSD-2026) whose data exists in an older database schema (the  collection).
-5.  **Comunidad Page Integration:** The Comunidad (Community) page must also be filtered to show cheer messages and leaderboards specific to the selected race edition.
-6.  **Sponsor Management:** Create a full CRUD system in the admin panel for managing sponsors. This system should allow adding, editing, and deleting sponsors (name, description, Instagram, logo) for new races, while keeping the hardcoded sponsors for the legacy BYSD-2026 race.
+1.  **Bug Fix - Sponsor Deletion:** Fix a bug where deleting a sponsor from the admin panel would only soft delete it, leaving it visible in an inactive state on the UI. The user required a hard delete to remove it completely.
+2.  **Bug Fix - Pre-Registration UX:** Improve the user experience on the pre-registration form. When a user tries to register with an email that already exists, instead of a generic connection error, the UI should display a specific message and provide a button to access the existing registration.
+3.  **Feature - Dynamic Race Configuration:** Add fields to the Active Race admin panel to control the Registration Cost and Edition Number. These values must dynamically update on the pre-registration page and the homepage's hero section, respectively.
+4.  **Feature - Volunteer Management System (Phase 1):**
+    *   Make the race schedule on the Runners page dynamic, based on the active race date.
+    *   Create a new registration form for volunteers, recycling the athlete registration form but removing runner-specific fields and adding a question about experience in sports events.
+    *   Add a link/button on the Volunteers section to direct users to the new volunteer registration form.
+5.  **Bug Fix - Volunteer Email System:**
+    *   Fix an error in the volunteer email verification system caused by an incorrect expiration time calculation.
+    *   Fix an issue where confirmation emails with the verification code were not being sent at all.
+6.  **Feature - Volunteer Management System (Phase 2):**
+    *   Enhance the volunteer registration form to dynamically fetch and display available positions and shifts from the database.
+    *   Allow users to select multiple shifts, preventing the selection of conflicting (overlapping) time slots.
+7.  **Feature - Volunteer Management System (Phase 3):**
+    *   Create a new Volunteers tab in the main admin panel to manage volunteer positions and shifts (full CRUD).
+    *   Add a button to this new panel to clear all existing volunteer assignments from shifts.
+8.  **Feature - Time Formatting:** Update the time display format across the new volunteer admin panel and the public registration form to be a 12-hour format (e.g., 8:00 PM) and include the specific date (e.g., Sat, Jan 23).
+9.  **Feature - Volunteer Edit Flow:** Add functionality for volunteers to edit their application after submitting. This includes sending a confirmation email with a unique edit link and creating a button on the page for users to access and edit their existing application.
 
 **User's preferred language**: Spanish. The user exclusively communicates in Spanish. The next agent MUST respond in Spanish.
 
 **what currently exists?**
-The application is now a fully functional, parametric race management platform. The frontend and backend correctly handle data segregation between different race editions.
+The application is a parametric race management platform with a feature-rich admin panel. The core systems for managing race editions, pre-registered participants, and sponsors are in place.
 
-Key systems in place:
-1.  **Parametric Architecture:** The backend filters almost all data (participants, results, cheers, sponsors) by . The frontend uses dynamic routes () and a  to display data for the selected race.
-2.  **Dual Data Source:** The system intelligently serves data for new races (e.g., BYSD-2027) from the new  collection, while serving data for the legacy  race from the old  collection. This provides backward compatibility.
-3.  **Admin Panel:** The admin panel is feature-rich, with tabs for:
-    *   **Race Control:** Live management of the active race (tracking laps, DNF, etc.), now powered by the  collection.
-    *   **Pre-Registros:** A full CRUD interface to manage pre-registered users, assign BIBs, and change their status.
-    *   **Patrocinadores:** A full CRUD interface to manage sponsors for new races, including logo uploads.
-    *   **Race Config:** Creating and archiving race editions.
-    *   **Survey Results:** Viewing survey data.
-4.  **Static File Serving:** A dedicated route () has been set up in the backend to handle serving uploaded files (like sponsor logos), correctly resolving ingress and CORS issues in the preview environment.
+A comprehensive volunteer management system has been implemented:
+1.  **Admin Volunteer Management:** A new Voluntarios tab in the admin panel allows full CRUD operations for creating, editing, and deleting volunteer positions and their associated shifts (including start/end times and number of slots). It also features a button to clear all volunteer assignments.
+2.  **Public Volunteer Registration:** A new registration page () allows users to sign up as volunteers. The form is a multi-step process that dynamically fetches available, non-conflicting shifts from the backend, allowing users to select their preferred slots.
+3.  **Dynamic Data Integration:** The Runners page schedule, homepage Edition Number, and pre-registration Cost are all dynamically controlled from the admin panel.
+4.  **Time Formatting:** All volunteer shift times are displayed in a user-friendly 12-hour format with AM/PM and include the specific date of the shift.
 
 **Last working item**:
-- **Last item agent was working:** Fixing the sponsor logo upload and display functionality. The initial implementation was blocked by a combination of frontend click propagation issues, backend file sanitization, and, most importantly, the preview environment's ingress routing. The fix involved changing the static file serving path from  to  and ensuring the backend and frontend constructed the full image URL correctly.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y (Tested with curl, file system checks, and multiple screenshots confirming the logo now displays correctly on both the admin and public pages.)
-- **Which testing method agent to use?** frontend testing agent. Ask the user to verify the sponsor logo upload and display functionality. If it still fails, the testing agent can perform a full E2E test of the sponsor management feature.
+- **Last item agent was working:** Implementing the feature to allow volunteers to edit their registration after submission. The agent was adding the backend logic to generate and email an , creating endpoints to fetch and update data using this token, and refactoring the frontend page  to handle an edit mode.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** frontend testing agent. The full E2E flow needs to be tested: submitting the form, receiving the email (simulated), clicking the edit link, seeing the form pre-filled with data, changing the data, submitting the update, and verifying the changes in the database.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: (P0 - HIGHEST PRIORITY)** Verify the fix for sponsor logo uploads.
-  - **Description:** The user reported that the logo upload for sponsors was not working. The agent identified and fixed multiple issues related to file path routing and URL construction.
+- **Issue 1: (P0 - HIGHEST PRIORITY)** The Edit Volunteer Registration feature is incomplete.
+  - **Description:** The user requested a way for volunteers to edit their application via an email link. The agent started implementation but did not finish.
   - **Attempted fixes:**
-    1.  Simplified the frontend  component to ensure click propagation to the hidden file input.
-    2.  Mounted a static file directory in  using FastAPI's .
-    3.  Sanitized filenames on the backend to remove special characters.
-    4.  **Crucially, changed the serving path from  to  to work with the Kubernetes ingress, which routes all  prefixed paths to the backend.**
-    5.  Updated frontend components to construct the full image URL using the backend URL environment variable.
+    - Backend  was modified to generate an  upon successful registration and to include new endpoints (, ).
+    - Frontend  was being refactored to include an edit mode triggered by a token in the URL,  to fetch existing data, and modified submission logic.
   - **Next debug checklist:**
-    1.  Confirm with the user that the logo upload feature is now working as expected.
-    2.  If the user still reports issues, take a screenshot of the browser's developer console network tab while attempting an upload to check for any new errors.
-    3.  Use the testing agent to run a full E2E test on the Patrocinadores feature in the admin panel.
-  - **Why fix this issue and what will be achieved with the fix?** This is the final step in completing the user-requested sponsor management feature.
-  - **Status:** USER VERIFICATION PENDING
+    1.  Resume work in .
+    2.  Finalize the  hook to correctly fetch and populate the form with a volunteer's existing data when an  is present.
+    3.  Ensure the  function correctly calls the  endpoint when in edit mode.
+    4.  Implement a new Update Successful confirmation screen.
+    5.  Verify that the confirmation email template in  correctly includes the generated edit link.
+    6.  Perform a full E2E test.
+  - **Why fix this issue and what will be achieved with the fix?** This is the final part of the user's latest request for the volunteer management system.
+  - **Status:** IN PROGRESS
   - **Is recurring issue?** N
-  - **Should Test frontend/backend/both after fix?** Frontend
+  - **Should Test frontend/backend/both after fix?** Both
   - **Blocked on other issue:** None.
 
 **In progress Task List**:
-- None.
+- **Task 1: (P0 - HIGHEST PRIORITY)** Complete the Edit Volunteer Registration feature.
+  - **Where to resume:** . The agent was in the middle of modifying the component's state management and step rendering logic to accommodate the new edit mode.
+  - **What will be achieved with this?** Volunteers will receive a confirmation email with a unique, secure link to modify their submitted information (personal data, selected shifts, etc.).
+  - **Status:** IN PROGRESS
+  - **Should Test frontend/backend/both after fix?** Both
+  - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **(P1)** Implement a UI notification (e.g., a toast) when a fan levels up their badge. (Mentioned in previous finish summary, UI/UX enhancement).
-    - **(P2)** Add filters to the Comunidad page cheer message feed (e.g., by athlete or fan).
+  - **(P1)** Implement a UI notification (e.g., a toast) when a fan levels up their badge.
+  - **(P2)** Add filters to the Comunidad page cheer message feed (e.g., by athlete or fan).
+  - **(P2)** Create a view in the admin panel to see a list of registered volunteers and potentially assign them to shifts.
+
 - **Future Tasks:**
-    - **(P3)** Remove the unused Twitter/X integration code (, ).
-    - **(P4)** Optimize the 27MB  file to reduce its size.
-    - **(P5)** Refactor  which is a large component.
+  - **(P3)** Remove the unused Twitter/X integration code (, ).
+  - **(P4)** Optimize the 27MB  file to reduce its size.
+  - **(P5)** Refactor the large  component.
 
 **Completed work in this session**
-- **Pre-Registration Admin Management:**
-  - Created a new Pre-Registros tab in the admin panel.
-  - Implemented backend endpoints () and a frontend UI to list, search, filter, edit, and assign BIBs to pre-registered users.
-- **Race Control & Data Integration:**
-  - Refactored all  backend endpoints () to read from the  collection instead of the legacy  collection.
-  - Data is now filtered by the active  and the participant's .
-- **Race-Specific Admin Actions:**
-  - Modified the Reset Database, Reset Cheers, Reset Subscriptions, and Send Runner Emails buttons to be race-specific, operating only on the active . This prevents accidental data deletion from past races.
-- **Legacy Data Compatibility:**
-  - Implemented a dual-source logic in the backend. API calls for  now read from the old  collection, while all other races read from .
-  - This makes historical data for the completed race visible on the public results page ().
-- **Comunidad Page Filtering:**
-  - The Community page () and its associated API endpoints now correctly filter cheer messages and leaderboards by .
-- **Sponsor Management System:**
-  - Created a new  collection and associated backend CRUD endpoints ().
-  - Built a new Patrocinadores tab in the admin panel for full management of sponsors for new races.
-  - Implemented a logo upload feature.
-  - The public sponsors page () now shows dynamic data for new races and hardcoded data for the legacy  race.
-- **Bug Fixes & UI Polish:**
-  - Fixed a  issue causing navigation dropdowns to appear behind other page content.
-  - Fixed the sponsor logo upload functionality by changing the static file serving path to  to resolve ingress routing issues.
+- **Sponsor Deletion Bug Fix:** Changed the sponsor delete functionality from a soft delete to a hard delete, ensuring sponsors are completely removed from the UI and database as requested.
+- **Pre-Registration UX Improvement:** Fixed the pre-registration form to correctly handle existing emails. It now shows a user-friendly message and a button to access the existing registration instead of a generic connection error.
+- **Dynamic Race Config:** Implemented fields in the admin panel for Registration Cost and Edition Number, and connected them to the frontend to display these values dynamically.
+- **Volunteer Registration System:**
+  - Created a new multi-step public registration form for volunteers.
+  - Built backend endpoints to support volunteer registration, verification, and fetching of available shifts.
+  - Made the form dynamically load available, non-conflicting shifts for users to select.
+- **Volunteer Admin Panel:**
+  - Created a full CRUD management system in a new Voluntarios admin tab for creating/editing/deleting volunteer positions and shifts.
+  - Added a Clear Assignments button to reset all volunteer shift assignments.
+- **Volunteer System Bug Fixes:**
+  - Fixed a server crash caused by an incorrect  calculation for verification code expiration.
+  - Fixed a bug where volunteer verification emails were not being sent by implementing the missing  function.
+- **UI/UX Enhancements:**
+  - Updated the display of all shift times to a user-friendly 12-hour AM/PM format, which also shows the correct date, handling overnight shifts properly.
+  - Made the schedule date on the runners' page dynamic based on the active race.
 
 **Earlier issues found/mentioned but not fixed**
 - The abandoned Twitter integration code (, ) remains in the codebase.
 - The large (27MB)  file is not optimized.
+-  is a large component that could be refactored.
 
 **Known issue recurrence from previous fork**
 - None.
@@ -99,84 +108,76 @@ Key systems in place:
 
 
 **Key Technical Concepts**
-- **React Context API:** For global state management of the active race configuration.
-- **Parametric Routing:** Using  with URL parameters ().
-- **Dual Data Architecture:** Conditionally querying different MongoDB collections ( vs. ) based on the  to support legacy data.
-- **FastAPI Static File Serving:** Using  to serve uploaded images. The serving path is prefixed with  to ensure correct routing through the Kubernetes ingress.
-- **Async File Uploads:** Using  on the backend for sponsor logo uploads.
+- **Bypassing Fetch Interceptors:** When a platform script () interfered with error handling by pre-reading the response body, the agent successfully worked around it by creating a new, clean  instance to handle the specific API call.
+- **Dynamic Form Generation:** The volunteer registration form fetches available shifts from an API and renders them as selectable options, including logic to prevent selection of conflicting time slots.
+- **Token-Based Edit Flow:** Using a secure, randomly generated token passed in the URL to allow users to access and edit their specific data entries.
+- **Correct Datetime Math:** Replaced faulty manual time addition () with Python's  to prevent  and ensure correct expiration time calculation.
 
 **key DB schema**
-- **:**  (extended with race-tracking fields).
-- **:** .
-- ** (new):** .
-- **:**  (extended).
-- **:**  (extended).
+- ** (new):** 
+- ** (new):** 
+- **:** This collection was pre-existing but is now managed via the new admin panel and used by the volunteer registration form. .
+- ** (new):** 
+- **:** Extended with  and .
 
 **changes in tech stack**
-- No new dependencies were added, but the method for serving static files was fundamentally changed to accommodate the preview environment's architecture.
+- No new packages were added, but existing services ( for email) were utilized more broadly.
 
 **All files of reference**
-- **Sponsor Feature:**
+- **Volunteer System:**
   -  (New)
   -  (New)
-  -  (Modified)
-- **Data Integration & Legacy Support:**
-  -  (Heavily Modified)
-  -  (Modified)
-  -  (Modified)
-  -  (Modified)
-  -  (Modified)
-- **Admin Panel:**
-  -  (Modified)
+  -  (New & Heavily Modified)
   -  (New)
-  -  (Modified)
-- **Core Backend:**
-  -  (Modified for new router and static files)
+- **Admin Panel & Config:**
+  -  (Modified for new tab)
+  -  (Modified for new fields)
+  -  (Modified for new fields)
+- **Bug Fixes:**
+  -  (Modified for hard-delete)
+  -  (Modified for UX error handling)
+  -  (Modified to add generic send function)
 
 **Areas that need refactoring**:
--  has been identified as a very large component that could be broken down.
--  has grown very large and complex due to handling both new and legacy logic. It could be split into smaller, more focused files.
+-  remains a large component.
+-  is becoming very large and complex due to handling multiple steps, view mode, and edit mode. It could be broken down into smaller sub-components for each step.
 
 **key api endpoints**
-- **Sponsors:**
+- **Volunteer Config (Admin):**
   - 
   - 
-- **Static Files:**
-  -  (New serving path for all uploaded content)
-- **Admin Registration:**
-  - 
-- **Race Data (now race-code aware):**
+- **Volunteer Registration (Public):**
   - 
   - 
-- **Cheers Data (now race-code aware):**
+  - 
+  - 
+- **Volunteer Edit Flow (Public):**
+  - 
   - 
 
 **Critical Info for New Agent**
 - **Language:** You **MUST** communicate in **Spanish**.
-- **Top Priority:** Confirm with the user that the sponsor logo upload fix works.
-- **Data Architecture:** Be aware of the dual-data system. New races use . The hardcoded  race uses . This logic is primarily in .
-- **Static Files:** All uploaded files (e.g., sponsor logos) MUST be served via the  path configured in . Do not use a generic  path, as it will be intercepted by the frontend router in the preview environment.
+- **Top Priority:** Complete the Edit Volunteer Registration feature. Resume work in .
+- **Fetch Interceptor Issue:** Be aware that a platform script can intercept  responses. If you encounter a body stream already read error when handling API error responses, the solution is to use a new, clean  instance for that specific call to bypass the interceptor.
+- **Database for Testing:** When running local scripts or debugging, ensure you are connected to the correct database name, which was identified as  in this session.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
 -  (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **la carga del logo parece no estar funcionando.** (The logo upload isn't working.) -> Agent investigated and deployed a fix. Status: USER VERIFICATION PENDING.
-2.  **vamos a agregar el menú de administración una opción para darle mantenimiento a los patrocinadores...** (Request to add sponsor management to the admin panel.) -> Agent implemented this feature completely. Status: COMPLETED.
-3.  **los botones del menú en la versión desktop se sobreponen uno con el control...** (Desktop menu dropdowns are overlapping content.) -> Agent fixed the . Status: COMPLETED.
-4.  **El nuevo panel de Comunidad debe asociarse a la carrera que esté activa...** (The Community page must be associated with the active race.) -> Agent implemented filtering by . Status: COMPLETED.
-5.  **Tengo un problema, en producción ya hay una carrera terminada... Prefiero la opción 2.** (Problem: There's a finished race in production. User prefers a dual-compatibility solution.) -> Agent implemented the legacy data fallback. Status: COMPLETED.
-6.  **Asocia los botones de Envia Correo Corredores... a los Atletas pre registrados...** (Associate admin buttons with active, pre-registered athletes.) -> Agent made the admin actions race-specific. Status: COMPLETED.
-7.  **En el panel de control aún están los resultados de la encuesta. Eliminalos...** (The survey results are still on the control panel. Remove them.) -> Agent removed the section. Status: COMPLETED.
-8.  **Ahora modifica el panel de control para que utilice la información de los atletas que se han pre registraron...** (Modify the control panel to use data from pre-registered athletes.) -> Agent integrated the Race Control panel with the  collection. Status: COMPLETED.
-9.  **En el panel de Administrativo incluye una nueva página que permita editar la información del participante prerregistrado...** (In the Admin panel, include a new page to edit pre-registered participant info.) -> Agent built the Pre-registration management page. Status: COMPLETED.
-10. **Initial  confirmation was skipped** as the user immediately provided a new, high-priority feature request (En el panel de Administrativo...).
+1.  **Agrega un correo electrónico de confirmación que incluya además un link para que se puede editar la postulación...** (Add a confirmation email with an edit link...). -> **Status: IN PROGRESS**.
+2.  **Modifiquemos el formato de hora para que se muestre en formato de 12 horas...** (Let's modify the time format to 12-hour...). -> **Status: COMPLETED**.
+3.  **Incluye un botón para limpiar la asignación de turnos.** (Include a button to clear the shift assignments.) -> **Status: COMPLETED**.
+4.  **Vamos a agregar en el panel de administración una cejilla para crear las posiciones, turnos...** (Let's add a tab in the admin panel to create positions, shifts...). -> **Status: COMPLETED**.
+5.  **Vamos a modificar el formulario para incluir las áreas de interés y horarios según las posiciones y turnos...** (Let's modify the form to include areas of interest and schedules according to positions and shifts...). -> **Status: COMPLETED**.
+6.  **No estoy recibiendo el correo de confirmación con el código** (I'm not receiving the confirmation email...). -> **Status: COMPLETED** (Bug fix).
+7.  **El modulo de postulación de voluntarios está dando error la hora de intentar validar el correo.** (The volunteer application module is giving an error...). -> **Status: COMPLETED** (Bug fix).
+8.  **Hay que actualizar la fecha del cronograma según la fecha del evento que está activa...** (Update the schedule date... create a volunteer registration form...). -> **Status: COMPLETED**.
+9.  **Agrega en el Panel de Administracion... el costo de la inscripción, e incluye ese valor como variable...** (Add the registration cost to the admin panel...). -> **Status: COMPLETED**.
+10. **si trato de preregistrarme con un correo que ya se inscribió da un error de conexión...** (If I try to pre-register with an email that's already registered, it gives a connection error...). -> **Status: COMPLETED** (Bug fix).
 
 **Project Health Check:**
-- **Broken:** None. The major data inconsistency issue from the previous fork has been resolved.
+- **Broken:** None.
 - **Mocked:** None.
 
 **3rd Party Integrations**
@@ -188,10 +189,10 @@ Key systems in place:
 - ** / :** For PDF-to-image conversion for certificates.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The agent correctly used the testing subagent after completing the Pre-registration admin, Race Control integration, and Admin Buttons features.
+- **Testing agent used after significant changes:** NO. Agent performed extensive and effective manual testing using  for the backend and  tool for the frontend.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None.
-- **Known regressions:** None. The previous regression (data not filtered by race) has been fixed.
+- **Known regressions:** None.
 
 **Credentials to test flow:**
 - **Admin Panel URL:** 
@@ -199,4 +200,4 @@ Key systems in place:
 - **Password:** 
 
 **What agent forgot to execute**
-- The initial task from the last handoff (adjusting navigation menu font size) was not explicitly confirmed as complete. However, subsequent screenshots show the Pre Registro button fitting on one line, so the issue appears to be resolved as a side effect of other UI work. It's a minor point that doesn't require further action unless the user brings it up again.</analysis>
+- The agent has been very thorough and has not forgotten any user requests during this session. All tasks have been addressed sequentially.</analysis>

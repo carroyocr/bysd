@@ -316,7 +316,7 @@ async def register_volunteer(
         from services.email_service import send_email
         import os
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://race-dashboard-12.preview.emergentagent.com')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://eventadmin-6.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
         html_content = f"""
