@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,12 +8,27 @@ import {
   Search, Users, UserCheck, UserX, Edit, Trash2, Save, X, 
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
-  Send, Loader2, CreditCard, FileImage
+  Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Calculate experience score (50% years experience, 50% max distance)
+const calculateExperienceScore = (registration) => {
+  const yearsExp = registration.anos_experiencia || 0;
+  const maxDistance = registration.maxima_distancia_km || 0;
+  
+  // Normalize years experience (0-20 years -> 0-100)
+  const normalizedYears = Math.min(yearsExp / 20, 1) * 100;
+  
+  // Normalize max distance (0-200 km -> 0-100)
+  const normalizedDistance = Math.min(maxDistance / 200, 1) * 100;
+  
+  // 50/50 weighted score
+  return (normalizedYears * 0.5) + (normalizedDistance * 0.5);
+};
 
 export default function PreRegistrationManagement() {
   const { raceCode, loading: configLoading } = useRaceConfig();
@@ -30,6 +45,8 @@ export default function PreRegistrationManagement() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [activeAthletesCount, setActiveAthletesCount] = useState(0);
   const [pendingReceipts, setPendingReceipts] = useState([]);
+  const [sortByExperience, setSortByExperience] = useState(false);
+  const [removingBib, setRemovingBib] = useState(null);
 
   const token = localStorage.getItem('admin_token');
 
