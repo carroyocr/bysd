@@ -168,16 +168,76 @@ export default function PreRegistrationManagement() {
     }
   };
 
-  const filteredRegistrations = registrations.filter(reg => {
-    const matchesSearch = 
-      `${reg.nombre} ${reg.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (reg.bib && reg.bib.toString().includes(searchTerm));
+  const handleRemoveBib = async (email) => {
+    const confirmed = window.confirm(
+      `¿Eliminar la asignación de BIB para ${email}?\n\nEsto dejará al atleta sin número asignado.`
+    );
     
-    const matchesFilter = filterStatus === 'all' || reg.status === filterStatus;
+    if (!confirmed) return;
     
-    return matchesSearch && matchesFilter;
-  });
+    setRemovingBib(email);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/registration/admin/remove-bib/${email}?race_code=${raceCode}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al eliminar asignación');
+      }
+      
+      toast.success('Asignación de BIB eliminada');
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setRemovingBib(null);
+    }
+  };
+
+  // Filter and optionally sort by experience
+  const filteredRegistrations = useMemo(() => {
+    let result = registrations.filter(reg => {
+      const matchesSearch = 
+        `${reg.nombre} ${reg.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        reg.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (reg.bib && reg.bib.toString().includes(searchTerm));
+      
+      const matchesFilter = filterStatus === 'all' || reg.status === filterStatus;
+      
+      return matchesSearch && matchesFilter;
+    });
+    
+    // Sort by experience if enabled (only for active + paid athletes)
+    if (sortByExperience) {
+      result = result
+        .map(reg => ({
+          ...reg,
+          experienceScore: calculateExperienceScore(reg)
+        }))
+        .sort((a, b) => {
+          // Active + paid athletes with higher experience first
+          const aQualified = a.status === 'active' && a.payment_status === 'paid';
+          const bQualified = b.status === 'active' && b.payment_status === 'paid';
+          
+          if (aQualified && !bQualified) return -1;
+          if (!aQualified && bQualified) return 1;
+          if (aQualified && bQualified) {
+            return b.experienceScore - a.experienceScore;
+          }
+          return 0;
+        });
+    }
+    
+    return result;
+  }, [registrations, searchTerm, filterStatus, sortByExperience]);
 
   const startEditing = (reg) => {
     setEditingEmail(reg.email);
