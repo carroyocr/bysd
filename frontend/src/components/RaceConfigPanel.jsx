@@ -7,7 +7,7 @@ import { Badge } from './ui/badge';
 import { 
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
-  DollarSign, Hash
+  DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +20,7 @@ export default function RaceConfigPanel() {
   const [saving, setSaving] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingManual, setUploadingManual] = useState(null); // 'runners' or 'volunteers'
   const [archiveOnCreate, setArchiveOnCreate] = useState(true);
   
   // Form state for creating new race
@@ -40,7 +41,13 @@ export default function RaceConfigPanel() {
     start_time: '',
     location: '',
     registration_cost: 3500,
-    edition_number: 1
+    edition_number: 1,
+    // Payment info
+    payment_account_name: '',
+    payment_account_id: '',
+    payment_bank_name: '',
+    payment_account_type: '',
+    payment_account_number: ''
   });
 
   const token = localStorage.getItem('admin_token');
