@@ -7,7 +7,8 @@ import { Badge } from './ui/badge';
 import { 
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
-  DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2
+  DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
+  Mail, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -22,6 +23,8 @@ export default function RaceConfigPanel() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingManual, setUploadingManual] = useState(null); // 'runners' or 'volunteers'
   const [archiveOnCreate, setArchiveOnCreate] = useState(true);
+  const [sendingNotification, setSendingNotification] = useState(null); // 'runners' or 'volunteers'
+  const [notificationCounts, setNotificationCounts] = useState({ runners: 0, volunteers: 0 });
   
   // Form state for creating new race
   const [newRace, setNewRace] = useState({
