@@ -629,13 +629,31 @@ export default function PreRegistrationManagement() {
           <CardTitle className="text-lg flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Pre-Registros ({filteredRegistrations.length})
+              Atletas ({filteredRegistrations.length})
             </span>
-            <Button variant="outline" size="sm" onClick={exportToCSV}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant={sortByExperience ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setSortByExperience(!sortByExperience)}
+                className={sortByExperience ? "bg-purple-600 hover:bg-purple-700" : ""}
+                data-testid="sort-by-experience-btn"
+              >
+                <Award className="w-4 h-4 mr-2" />
+                {sortByExperience ? "Ordenado por Exp." : "Ordenar por Experiencia"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportToCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
           </CardTitle>
+          {sortByExperience && (
+            <CardDescription className="text-purple-600 mt-2">
+              <TrendingUp className="w-4 h-4 inline mr-1" />
+              Mostrando atletas activos con pago completado ordenados por nivel de experiencia (50% años + 50% distancia máxima)
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-4">
