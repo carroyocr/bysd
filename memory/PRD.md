@@ -201,6 +201,14 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Feature: Selección de Turnos en Registro de Voluntarios** (01 Febrero 2026)
+  - Nuevo paso "Turnos" en el formulario de voluntarios
+  - Muestra posiciones y turnos disponibles agrupados dinámicamente desde la base de datos
+  - Permite selección múltiple de turnos siempre que no haya conflicto de horarios
+  - Validación de conflictos: si el usuario intenta seleccionar turnos que se solapan, muestra error
+  - Resumen visual de turnos seleccionados antes de enviar
+  - Backend: Nuevo endpoint `/api/volunteer-registration/available-slots`
+  - 7 posiciones disponibles con turnos de 4 horas cada uno (A-G)
 - [x] **Feature: Registro de Voluntarios** (31 Enero 2026)
   - Nuevo formulario de registro para voluntarios (/voluntarios/registro)
   - Formulario simplificado: sin foto, con pregunta sobre experiencia en eventos deportivos
