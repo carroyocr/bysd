@@ -27,6 +27,9 @@ export default function PreRegistrationManagement() {
   const [saving, setSaving] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [nextBib, setNextBib] = useState(1);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [activeAthletesCount, setActiveAthletesCount] = useState(0);
+  const [pendingReceipts, setPendingReceipts] = useState([]);
 
   const token = localStorage.getItem('admin_token');
 
