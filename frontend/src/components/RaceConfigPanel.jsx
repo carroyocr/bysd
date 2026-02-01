@@ -84,11 +84,85 @@ export default function RaceConfigPanel() {
         payment_account_type: activeData.payment_account_type || '',
         payment_account_number: activeData.payment_account_number || ''
       });
+      
+      // Load notification counts if race has manuals
+      if (activeData.code && !activeData.is_default) {
+        loadNotificationCounts(activeData.code);
+      }
     } catch (error) {
       console.error('Error loading race config:', error);
       toast.error('Error al cargar la configuración');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadNotificationCounts = async (code) => {
+    try {
+      const [runnersRes, volunteersRes] = await Promise.all([
+        fetch(`${API_URL}/api/race-config/notify-runners-count/${code}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/api/race-config/notify-volunteers-count/${code}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ]);
+      
+      const runnersData = await runnersRes.json();
+      const volunteersData = await volunteersRes.json();
+      
+      setNotificationCounts({
+        runners: runnersData.count || 0,
+        volunteers: volunteersData.count || 0
+      });
+    } catch (error) {
+      console.error('Error loading notification counts:', error);
+    }
+  };
+
+  const handleSendManualNotification = async (type) => {
+    if (!activeRace?.code) return;
+    
+    const count = type === 'runners' ? notificationCounts.runners : notificationCounts.volunteers;
+    const recipientType = type === 'runners' ? 'corredores activos' : 'voluntarios registrados';
+    
+    if (count === 0) {
+      toast.error(`No hay ${recipientType} para notificar`);
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `¿Enviar notificación de manual disponible a ${count} ${recipientType}?\n\nEsta acción enviará un correo a cada uno informándoles que el manual ya está disponible.`
+    );
+    
+    if (!confirmed) return;
+    
+    setSendingNotification(type);
+    try {
+      const endpoint = type === 'runners' 
+        ? `/api/race-config/notify-runners-manual/${activeRace.code}`
+        : `/api/race-config/notify-volunteers-manual/${activeRace.code}`;
+      
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al enviar notificaciones');
+      }
+      
+      toast.success(`${data.message}`, {
+        description: data.failed_count > 0 ? `${data.failed_count} envíos fallaron` : undefined
+      });
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSendingNotification(null);
     }
   };
 
