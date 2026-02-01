@@ -1198,7 +1198,7 @@ async def submit_payment_receipt(
     
     # Update registration with payment receipt info
     receipt_info = {
-        "image_path": f"/uploads/receipts/{filename}",
+        "image_path": f"/api/uploads/receipts/{filename}",
         "payment_date": payment_date,
         "bank_origin": bank_origin,
         "transfer_number": transfer_number,
