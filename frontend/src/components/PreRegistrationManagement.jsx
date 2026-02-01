@@ -7,7 +7,8 @@ import { Badge } from './ui/badge';
 import { 
   Search, Users, UserCheck, UserX, Edit, Trash2, Save, X, 
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
-  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download
+  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
+  Send, Loader2, CreditCard, FileImage
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
