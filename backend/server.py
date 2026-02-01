@@ -23,15 +23,15 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
+# Mount receipts upload directory (must be before general uploads mount)
+RECEIPTS_DIR = ROOT_DIR / "uploads" / "receipts"
+RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads/receipts", StaticFiles(directory=str(RECEIPTS_DIR)), name="receipts")
+
 # Mount static files directory - use /api/uploads to ensure routing through backend
 STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=str(STATIC_DIR / "uploads")), name="uploads")
-
-# Mount receipts upload directory
-RECEIPTS_DIR = ROOT_DIR / "uploads" / "receipts"
-RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads/receipts", StaticFiles(directory=str(RECEIPTS_DIR)), name="receipts")
 
 # Startup event to create database indexes
 @app.on_event("startup")
