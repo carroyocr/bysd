@@ -88,7 +88,7 @@ async def send_verification(request: VerificationRequest):
         "email": email,
         "code": code,
         "created_at": datetime.now(timezone.utc),
-        "expires_at": datetime.now(timezone.utc).replace(minute=datetime.now().minute + 30)
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=30)
     })
     
     # Send email
