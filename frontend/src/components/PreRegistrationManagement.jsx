@@ -38,10 +38,12 @@ export default function PreRegistrationManagement() {
     
     setLoading(true);
     try {
-      const [regsRes, statsRes, bibRes] = await Promise.all([
+      const [regsRes, statsRes, bibRes, countRes, receiptsRes] = await Promise.all([
         fetch(`${API_URL}/api/registration/admin/list/${raceCode}`),
         fetch(`${API_URL}/api/registration/admin/stats/${raceCode}`),
-        fetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`)
+        fetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`),
+        fetch(`${API_URL}/api/registration/admin/active-athletes-count/${raceCode}`),
+        fetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`)
       ]);
       
       if (regsRes.ok) {
@@ -57,6 +59,16 @@ export default function PreRegistrationManagement() {
       if (bibRes.ok) {
         const data = await bibRes.json();
         setNextBib(data.next_bib);
+      }
+      
+      if (countRes.ok) {
+        const data = await countRes.json();
+        setActiveAthletesCount(data.count || 0);
+      }
+      
+      if (receiptsRes.ok) {
+        const data = await receiptsRes.json();
+        setPendingReceipts(data.registrations || []);
       }
     } catch (error) {
       console.error('Error loading registrations:', error);
