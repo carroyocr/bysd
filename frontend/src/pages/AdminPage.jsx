@@ -105,6 +105,10 @@ export default function AdminPage() {
             <PreRegistrationManagement />
           </TabsContent>
 
+          <TabsContent value="volunteers">
+            <VolunteerConfigManagement />
+          </TabsContent>
+
           <TabsContent value="sponsors">
             <SponsorsManagement />
           </TabsContent>
