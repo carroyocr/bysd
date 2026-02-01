@@ -213,6 +213,74 @@ export default function RaceConfigPanel() {
     }
   };
 
+  const handleManualUpload = async (e, manualType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!activeRace?.code || activeRace.is_default) {
+      toast.error('Primero debe crear una carrera');
+      return;
+    }
+    
+    if (file.type !== 'application/pdf') {
+      toast.error('Solo se permiten archivos PDF');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setUploadingManual(manualType);
+    try {
+      const response = await fetch(`${API_URL}/api/race-config/upload-manual/${activeRace.code}/${manualType}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al subir el manual');
+      }
+      
+      toast.success(`Manual de ${manualType === 'runners' ? 'corredores' : 'voluntarios'} subido exitosamente`);
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setUploadingManual(null);
+    }
+  };
+
+  const handleDeleteManual = async (manualType) => {
+    if (!activeRace?.code) return;
+    
+    if (!confirm(`¿Estás seguro de eliminar el manual de ${manualType === 'runners' ? 'corredores' : 'voluntarios'}?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/api/race-config/delete-manual/${activeRace.code}/${manualType}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al eliminar el manual');
+      }
+      
+      toast.success('Manual eliminado');
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const handleActivateRace = async (code) => {
     setSaving(true);
     try {
