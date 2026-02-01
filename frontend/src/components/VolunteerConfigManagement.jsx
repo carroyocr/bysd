@@ -41,6 +41,9 @@ export default function VolunteerConfigManagement() {
   
   // Expanded positions
   const [expandedPositions, setExpandedPositions] = useState({});
+  
+  // Clearing assignments
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     loadPositions();
