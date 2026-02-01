@@ -203,6 +203,65 @@ export default function PreRegistrationManagement() {
     }
   };
 
+  // Count eligible athletes for auto-assignment
+  const eligibleForBibCount = useMemo(() => {
+    return registrations.filter(r => r.status === 'active' && r.payment_status === 'paid').length;
+  }, [registrations]);
+
+  const handleAutoAssignBibs = async () => {
+    if (eligibleForBibCount === 0) {
+      toast.error('No hay atletas activos con pago completado para asignar BIB');
+      return;
+    }
+    
+    const startBib = prompt(
+      `Se asignarán BIBs a ${eligibleForBibCount} atletas activos con pago completado, ordenados por nivel de experiencia.\n\n¿Desde qué número de BIB desea iniciar?`,
+      '1'
+    );
+    
+    if (!startBib) return;
+    
+    const startBibNum = parseInt(startBib);
+    if (isNaN(startBibNum) || startBibNum < 1) {
+      toast.error('Por favor ingrese un número válido');
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `¿Confirma asignar BIBs del ${startBibNum} al ${startBibNum + eligibleForBibCount - 1} según el indicador de experiencia?\n\nEsto sobrescribirá cualquier BIB existente para estos atletas.`
+    );
+    
+    if (!confirmed) return;
+    
+    setAutoAssigningBibs(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/registration/admin/auto-assign-bibs/${raceCode}?start_bib=${startBibNum}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al asignar BIBs');
+      }
+      
+      toast.success(data.message, {
+        description: `BIBs ${data.start_bib} - ${data.end_bib} asignados por experiencia`
+      });
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setAutoAssigningBibs(false);
+    }
+  };
+
   // Filter and optionally sort by experience
   const filteredRegistrations = useMemo(() => {
     let result = registrations.filter(reg => {
