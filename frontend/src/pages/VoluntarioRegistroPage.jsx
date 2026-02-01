@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
-  Loader2, Info, Users, Clipboard, Clock, Check
+  Loader2, Info, Users, Clipboard, Clock, Check, Edit2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -35,9 +35,25 @@ const STEPS = [
   { id: 'preferences', title: 'Preferencias', icon: Shirt },
 ];
 
+// Edit mode steps (skip verification)
+const EDIT_STEPS = [
+  { id: 'personal', title: 'Datos Personales', icon: User },
+  { id: 'experience', title: 'Experiencia', icon: Clipboard },
+  { id: 'slots', title: 'Turnos', icon: Calendar },
+  { id: 'medical', title: 'Info Médica', icon: Heart },
+  { id: 'emergency', title: 'Emergencia', icon: Shield },
+  { id: 'preferences', title: 'Preferencias', icon: Shirt },
+];
+
 export default function VoluntarioRegistroPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { config, raceName } = useRaceConfig();
+  
+  // Edit mode
+  const [editMode, setEditMode] = useState(false);
+  const [editToken, setEditToken] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   
   // Current step
   const [currentStep, setCurrentStep] = useState(0);
@@ -58,6 +74,63 @@ export default function VoluntarioRegistroPage() {
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
+  
+  // Check for edit token in URL
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      setEditToken(token);
+      setEditMode(true);
+      loadExistingRegistration(token);
+    }
+  }, [searchParams]);
+  
+  const loadExistingRegistration = async (token) => {
+    setLoadingExisting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/by-token/${token}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEmail(data.email || '');
+        setFormData({
+          nombre: data.nombre || '',
+          apellidos: data.apellidos || '',
+          fecha_nacimiento: data.fecha_nacimiento || '',
+          sexo: data.sexo || '',
+          nacionalidad: data.nacionalidad || '',
+          telefono: data.telefono || '',
+          ciudad_residencia: data.ciudad_residencia || '',
+          experiencia_voluntariado: data.experiencia_voluntariado || 'No',
+          experiencia_voluntariado_detalle: data.experiencia_voluntariado_detalle || '',
+          tipo_sangre: data.tipo_sangre || '',
+          condicion_medica: data.condicion_medica || 'No',
+          condicion_medica_detalle: data.condicion_medica_detalle || '',
+          alergias: data.alergias || 'No',
+          alergias_detalle: data.alergias_detalle || '',
+          contacto_emergencia_nombre: data.contacto_emergencia_nombre || '',
+          contacto_emergencia_relacion: data.contacto_emergencia_relacion || '',
+          contacto_emergencia_telefono: data.contacto_emergencia_telefono || '',
+          talla_camiseta: data.talla_camiseta || '',
+          como_se_entero: data.como_se_entero || '',
+          comentarios: data.comentarios || '',
+        });
+        setSelectedSlots(data.slots_interes || []);
+        setEmailVerified(true);
+        toast.success('Datos cargados correctamente');
+      } else {
+        toast.error('Token inválido o expirado');
+        setEditMode(false);
+        setEditToken(null);
+      }
+    } catch (error) {
+      console.error('Error loading registration:', error);
+      toast.error('Error cargando datos');
+      setEditMode(false);
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
   
   // Calculate the date for a shift based on its start time
   const getShiftDate = (horaInicio) => {
