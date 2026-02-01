@@ -243,10 +243,12 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     
     email = request.email.strip().lower()
     
-    # Verify volunteer exists
+    # Verify volunteer exists (check both collections)
     volunteer = await database.volunteers.find_one({"email": email})
     if not volunteer:
-        # Use JSONResponse with custom header for error detail (P1 fix)
+        volunteer = await database.volunteer_registrations.find_one({"email": email})
+    
+    if not volunteer:
         return JSONResponse(
             status_code=400,
             content={"detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."},
@@ -269,13 +271,17 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             headers={"X-Error-Detail": "Este espacio ya está asignado a otro voluntario"}
         )
     
+    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+    
     # Assign volunteer
     await database.volunteer_assignments.update_one(
         {"id": slot_id},
-        {"$set": {"email_asignado": email, "updated_at": datetime.utcnow()}}
+        {"$set": {
+            "email_asignado": email, 
+            "nombre_asignado": volunteer_name,
+            "updated_at": datetime.utcnow()
+        }}
     )
-    
-    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
     
     # Schedule reminder for this new assignment
     try:
@@ -288,6 +294,92 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     except Exception as e:
         # Don't fail the assignment if scheduler fails
         print(f"Warning: Could not schedule reminder for slot {slot_id}: {e}")
+    
+    # Send confirmation email
+    try:
+        from services.email_service import send_email
+        import os
+        
+        # Format time
+        hora_inicio = slot.get("hora_inicio", "")
+        hora_fin = slot.get("hora_fin", "")
+        
+        def format_time_12h(time_str):
+            if not time_str or ':' not in time_str:
+                return time_str
+            parts = time_str.split(':')
+            hour = int(parts[0])
+            minutes = parts[1]
+            ampm = 'PM' if hour >= 12 else 'AM'
+            hour = hour % 12
+            if hour == 0:
+                hour = 12
+            return f"{hour}:{minutes} {ampm}"
+        
+        hora_inicio_fmt = format_time_12h(hora_inicio)
+        hora_fin_fmt = format_time_12h(hora_fin)
+        puesto = slot.get("puesto", "")
+        turno = slot.get("turno", "")
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #7c3aed;">🏃 Backyard Ultra Santo Domingo</h1>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+                <h2 style="margin: 0 0 10px 0;">✅ ¡Tu Turno ha sido Confirmado!</h2>
+                <p style="margin: 0; opacity: 0.9;">Tu asignación como voluntario ha sido aprobada</p>
+            </div>
+            
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <p style="color: #64748b; margin-top: 0;">Hola <strong>{volunteer_name}</strong>,</p>
+                <p style="color: #64748b;">
+                    Nos complace informarte que tu solicitud de voluntariado ha sido confirmada. 
+                    A continuación los detalles de tu asignación:
+                </p>
+            </div>
+            
+            <div style="background: #f0fdf4; border: 2px solid #22c55e; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h3 style="color: #166534; margin-top: 0;">📋 Detalles de tu Asignación</h3>
+                <table style="width: 100%; color: #166534;">
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Posición:</td>
+                        <td style="padding: 8px 0;">{puesto}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Turno:</td>
+                        <td style="padding: 8px 0;">{turno}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Horario:</td>
+                        <td style="padding: 8px 0;">{hora_inicio_fmt} - {hora_fin_fmt}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="color: #92400e; font-size: 14px; margin: 0;">
+                    <strong>📌 Recuerda:</strong> Preséntate puntualmente en el punto de encuentro. 
+                    Recibirás más información conforme se acerque la fecha del evento.
+                </p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; text-align: center;">
+                ¡Gracias por ser parte del equipo de voluntarios! 💪<br>
+                Tu apoyo es fundamental para el éxito del evento.
+            </p>
+        </div>
+        """
+        
+        await send_email(
+            to_email=email,
+            subject="✅ ¡Tu Turno de Voluntario ha sido Confirmado! - BYSD",
+            html_content=html_content
+        )
+        print(f"Assignment confirmation email sent to {email}")
+    except Exception as e:
+        print(f"Warning: Could not send confirmation email to {email}: {e}")
     
     return {
         "message": f"¡Asignación exitosa! {volunteer_name} ha sido asignado/a al turno.",
