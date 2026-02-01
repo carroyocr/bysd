@@ -196,15 +196,29 @@ export default function VolunteersSection() {
               <div>
                 <h3 className="font-display text-2xl text-foreground">Manual de Voluntarios</h3>
                 <p className="text-muted-foreground text-sm">
-                  Guía completa para el equipo de voluntarios del evento
+                  {manualUrl 
+                    ? 'Guía completa para el equipo de voluntarios del evento'
+                    : 'El manual estará disponible próximamente'}
                 </p>
               </div>
-              <a href="/manual-corredores.pdf" download className="flex-shrink-0">
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
-                  <Download className="w-4 h-4 mr-2" />
-                  Descargar Manual
+              {loadingManual ? (
+                <Button variant="outline" disabled>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cargando...
                 </Button>
-              </a>
+              ) : manualUrl ? (
+                <a href={`${API_URL}${manualUrl}`} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
+                  <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
+                    <Download className="w-4 h-4 mr-2" />
+                    Descargar Manual
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="outline" disabled className="text-muted-foreground">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Próximamente
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
