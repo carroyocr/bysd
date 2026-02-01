@@ -504,7 +504,202 @@ export default function RaceConfigPanel() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3">
+              {/* Payment Information Section */}
+              <div className="pt-6 border-t">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-green-600" />
+                  Datos para Recibir Pagos
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Nombre de la Cuenta
+                    </Label>
+                    <Input
+                      value={editForm.payment_account_name}
+                      onChange={(e) => setEditForm({...editForm, payment_account_name: e.target.value})}
+                      placeholder="Nombre del titular"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Identificación (Cédula/RNC)</Label>
+                    <Input
+                      value={editForm.payment_account_id}
+                      onChange={(e) => setEditForm({...editForm, payment_account_id: e.target.value})}
+                      placeholder="000-0000000-0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      Nombre del Banco
+                    </Label>
+                    <Input
+                      value={editForm.payment_bank_name}
+                      onChange={(e) => setEditForm({...editForm, payment_bank_name: e.target.value})}
+                      placeholder="Ej: Banco Popular"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de Cuenta</Label>
+                    <select
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                      value={editForm.payment_account_type}
+                      onChange={(e) => setEditForm({...editForm, payment_account_type: e.target.value})}
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Ahorro">Cuenta de Ahorro</option>
+                      <option value="Corriente">Cuenta Corriente</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Número de Cuenta</Label>
+                    <Input
+                      value={editForm.payment_account_number}
+                      onChange={(e) => setEditForm({...editForm, payment_account_number: e.target.value})}
+                      placeholder="Número de cuenta bancaria"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Manuals Section */}
+              <div className="pt-6 border-t">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  Manuales del Evento
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Runners Manual */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Manual de Corredores</h4>
+                      {activeRace?.manual_runners_url ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">No cargado</Badge>
+                      )}
+                    </div>
+                    
+                    {activeRace?.manual_runners_url && (
+                      <a 
+                        href={`${API_URL}${activeRace.manual_runners_url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Ver manual actual
+                      </a>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={(e) => handleManualUpload(e, 'runners')}
+                          disabled={uploadingManual === 'runners'}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full"
+                          disabled={uploadingManual === 'runners'}
+                          onClick={(e) => e.currentTarget.parentElement.querySelector('input').click()}
+                        >
+                          {uploadingManual === 'runners' ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Subiendo...</>
+                          ) : (
+                            <><Upload className="w-4 h-4 mr-2" /> {activeRace?.manual_runners_url ? 'Reemplazar' : 'Subir PDF'}</>
+                          )}
+                        </Button>
+                      </label>
+                      {activeRace?.manual_runners_url && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteManual('runners')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Volunteers Manual */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Manual de Voluntarios</h4>
+                      {activeRace?.manual_volunteers_url ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">No cargado</Badge>
+                      )}
+                    </div>
+                    
+                    {activeRace?.manual_volunteers_url && (
+                      <a 
+                        href={`${API_URL}${activeRace.manual_volunteers_url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Ver manual actual
+                      </a>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={(e) => handleManualUpload(e, 'volunteers')}
+                          disabled={uploadingManual === 'volunteers'}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="w-full"
+                          disabled={uploadingManual === 'volunteers'}
+                          onClick={(e) => e.currentTarget.parentElement.querySelector('input').click()}
+                        >
+                          {uploadingManual === 'volunteers' ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Subiendo...</>
+                          ) : (
+                            <><Upload className="w-4 h-4 mr-2" /> {activeRace?.manual_volunteers_url ? 'Reemplazar' : 'Subir PDF'}</>
+                          )}
+                        </Button>
+                      </label>
+                      {activeRace?.manual_volunteers_url && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteManual('volunteers')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button onClick={handleUpdateRace} disabled={saving}>
                   {saving ? (
                     <RotateCw className="w-4 h-4 mr-2 animate-spin" />
