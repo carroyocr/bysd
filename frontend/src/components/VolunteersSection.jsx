@@ -368,12 +368,24 @@ export default function VolunteersSection() {
                     </p>
                   </div>
                 </div>
-                <Link to="/voluntarios/registro" className="flex-shrink-0">
-                  <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300">
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Postular como Voluntario
+                <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+                  <Link to="/voluntarios/registro">
+                    <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Postular como Voluntario
+                    </Button>
+                  </Link>
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    onClick={() => setShowEditLinkModal(true)}
+                    className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
+                    data-testid="edit-volunteer-btn"
+                  >
+                    <Edit2 className="w-5 h-5 mr-2" />
+                    Editar mi Postulación
                   </Button>
-                </Link>
+                </div>
               </div>
             </CardContent>
           </Card>
