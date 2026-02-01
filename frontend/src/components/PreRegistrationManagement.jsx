@@ -690,13 +690,14 @@ export default function PreRegistrationManagement() {
                   <th className="text-left py-3 px-2">Nombre</th>
                   <th className="text-left py-3 px-2 hidden md:table-cell">Email</th>
                   <th className="text-left py-3 px-2 hidden lg:table-cell">Talla</th>
+                  <th className="text-center py-3 px-2 hidden lg:table-cell">Exp.</th>
                   <th className="text-left py-3 px-2">Estado</th>
                   <th className="text-left py-3 px-2">Pago</th>
                   <th className="text-right py-3 px-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRegistrations.map((reg) => (
+                {filteredRegistrations.map((reg, index) => (
                   <React.Fragment key={reg.email}>
                     <tr className={`border-b hover:bg-muted/50 ${expandedRow === reg.email ? 'bg-muted/30' : ''}`}>
                       <td className="py-3 px-2">
@@ -720,9 +721,27 @@ export default function PreRegistrationManagement() {
                             </Button>
                           </div>
                         ) : (
-                          <span className={`font-mono ${reg.bib ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                            {reg.bib || '—'}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`font-mono ${reg.bib ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                              {reg.bib || '—'}
+                            </span>
+                            {reg.bib && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRemoveBib(reg.email)}
+                                disabled={removingBib === reg.email}
+                                title="Eliminar asignación de BIB"
+                              >
+                                {removingBib === reg.email ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <X className="w-3 h-3" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="py-3 px-2">
@@ -745,6 +764,11 @@ export default function PreRegistrationManagement() {
                           <div>
                             <span className="font-medium">{reg.nombre} {reg.apellidos}</span>
                             <span className="block text-xs text-muted-foreground md:hidden">{reg.email}</span>
+                            {sortByExperience && index < 10 && reg.status === 'active' && reg.payment_status === 'paid' && (
+                              <Badge variant="outline" className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-300">
+                                #{index + 1}
+                              </Badge>
+                            )}
                           </div>
                         )}
                       </td>
