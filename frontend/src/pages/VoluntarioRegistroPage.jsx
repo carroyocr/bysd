@@ -510,12 +510,6 @@ export default function VoluntarioRegistroPage() {
                     Volver al Inicio
                   </Button>
                 </Link>
-                <Link to="/voluntarios">
-                  <Button>
-                    <Users className="w-4 h-4 mr-2" />
-                    Ver Sección Voluntarios
-                  </Button>
-                </Link>
               </div>
             </CardContent>
           </Card>
