@@ -221,19 +221,17 @@ export default function VoluntarioRegistroPage() {
 
   // Check if two time slots conflict
   const slotsConflict = (slot1, slot2) => {
-    // Find the slots in availableSlots
-    let s1Info = null, s2Info = null;
+    // Find the turnos in availableSlots
+    let t1Info = null, t2Info = null;
     
     for (const pos of availableSlots.positions) {
       for (const turno of pos.turnos) {
-        for (const slot of turno.slots) {
-          if (slot.id === slot1) s1Info = { ...slot, turno: turno.turno };
-          if (slot.id === slot2) s2Info = { ...slot, turno: turno.turno };
-        }
+        if (turno.slot_id === slot1) t1Info = { ...turno };
+        if (turno.slot_id === slot2) t2Info = { ...turno };
       }
     }
     
-    if (!s1Info || !s2Info) return false;
+    if (!t1Info || !t2Info) return false;
     
     // Convert times to comparable format
     const parseTime = (timeStr) => {
@@ -242,17 +240,17 @@ export default function VoluntarioRegistroPage() {
       return h * 60 + m;
     };
     
-    const start1 = parseTime(s1Info.hora_inicio);
-    const end1 = parseTime(s1Info.hora_fin);
-    const start2 = parseTime(s2Info.hora_inicio);
-    const end2 = parseTime(s2Info.hora_fin);
+    const start1 = parseTime(t1Info.hora_inicio);
+    const end1 = parseTime(t1Info.hora_fin);
+    const start2 = parseTime(t2Info.hora_inicio);
+    const end2 = parseTime(t2Info.hora_fin);
     
     // Check overlap
     return !(end1 <= start2 || end2 <= start1);
   };
 
   // Toggle slot selection
-  const toggleSlot = (slotId, slotInfo) => {
+  const toggleSlot = (slotId, turnoInfo) => {
     if (selectedSlots.includes(slotId)) {
       // Remove slot
       setSelectedSlots(prev => prev.filter(id => id !== slotId));
@@ -275,16 +273,14 @@ export default function VoluntarioRegistroPage() {
     const info = [];
     for (const pos of availableSlots.positions) {
       for (const turno of pos.turnos) {
-        for (const slot of turno.slots) {
-          if (selectedSlots.includes(slot.id)) {
-            info.push({
-              id: slot.id,
-              puesto: pos.puesto,
-              turno: turno.turno,
-              hora_inicio: turno.hora_inicio,
-              hora_fin: turno.hora_fin
-            });
-          }
+        if (selectedSlots.includes(turno.slot_id)) {
+          info.push({
+            id: turno.slot_id,
+            puesto: pos.puesto,
+            turno: turno.turno,
+            hora_inicio: turno.hora_inicio,
+            hora_fin: turno.hora_fin
+          });
         }
       }
     }
