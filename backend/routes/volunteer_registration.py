@@ -417,6 +417,96 @@ async def update_volunteer_registration(token: str, data: VolunteerRegistrationD
     return {"message": "Registro actualizado exitosamente"}
 
 
+class EditLinkRequest(BaseModel):
+    email: EmailStr
+
+
+@router.post("/request-edit-link")
+async def request_edit_link(request: EditLinkRequest):
+    """Request an edit link to be sent to the volunteer's email"""
+    from server import db
+    
+    email = request.email.lower()
+    
+    # Get active race
+    active_race = await db.race_configurations.find_one({"is_active": True})
+    race_code = active_race["code"] if active_race else "BYSD-2027"
+    
+    # Find the registration
+    registration = await db.volunteer_registrations.find_one({
+        "email": email,
+        "race_code": race_code
+    })
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="No encontramos un registro con este correo electrónico")
+    
+    # Get the edit token
+    edit_token = registration.get("edit_token")
+    
+    if not edit_token:
+        # Generate a new edit token if it doesn't exist
+        edit_token = generate_edit_token()
+        await db.volunteer_registrations.update_one(
+            {"email": email, "race_code": race_code},
+            {"$set": {"edit_token": edit_token}}
+        )
+    
+    # Send email with edit link
+    try:
+        from services.email_service import send_email
+        import os
+        
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://eventadmin-6.preview.emergentagent.com')
+        edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
+        nombre = registration.get("nombre", "Voluntario")
+        
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #7c3aed;">🏃 Backyard Ultra Santo Domingo</h1>
+            </div>
+            
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <h2 style="color: #334155; margin-top: 0;">📝 Link para Editar tu Postulación</h2>
+                <p style="color: #64748b;">Hola <strong>{nombre}</strong>,</p>
+                <p style="color: #64748b;">
+                    Recibimos tu solicitud para editar tu postulación como voluntario. 
+                    Haz clic en el siguiente botón para acceder a tu formulario:
+                </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{edit_url}" style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                    Editar Mi Postulación
+                </a>
+            </div>
+            
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="color: #92400e; font-size: 14px; margin: 0;">
+                    <strong>⚠️ Importante:</strong> Este link es personal y único. No lo compartas con nadie.
+                </p>
+            </div>
+            
+            <p style="color: #666; font-size: 14px; text-align: center;">
+                ¡Gracias por ser parte del equipo de voluntarios! 💪
+            </p>
+        </div>
+        """
+        
+        await send_email(
+            to_email=email,
+            subject="📝 Link para Editar tu Postulación - BYSD",
+            html_content=html_content
+        )
+        print(f"Edit link email sent to {email}")
+    except Exception as e:
+        print(f"Error sending edit link email: {e}")
+        # Continue anyway - the link was generated
+    
+    return {"message": "Link de edición enviado a tu correo"}
+
+
 @router.get("/admin/registrations")
 async def get_volunteer_registrations(race_code: Optional[str] = None):
     """Get all volunteer registrations for admin"""
