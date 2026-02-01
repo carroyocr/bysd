@@ -588,9 +588,12 @@ export default function VolunteerConfigManagement() {
                       {position.turnos?.map((turno, idx) => (
                         <div key={idx} className="flex items-center gap-4 p-2 bg-muted/30 rounded">
                           <Badge>{turno.turno}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {getShiftDate(turno.hora_inicio)}
+                          </span>
                           <span className="text-sm">
                             <Clock className="w-3 h-3 inline mr-1" />
-                            {turno.hora_inicio} - {turno.hora_fin}
+                            {formatTime12h(turno.hora_inicio)} - {formatTime12h(turno.hora_fin)}
                           </span>
                           <span className="text-sm text-muted-foreground">
                             <Users className="w-3 h-3 inline mr-1" />
