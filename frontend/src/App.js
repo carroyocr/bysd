@@ -68,6 +68,8 @@ export default function App() {
                     {/* Pre Registro routes */}
                     <Route path="/pre-registro" element={<InscripcionPage />} />
                     <Route path="/pre-registro/editar" element={<InscripcionPage />} />
+                    {/* Payment Receipt Upload */}
+                    <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
                     {/* Legacy routes - redirect */}
