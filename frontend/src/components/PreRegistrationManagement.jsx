@@ -47,6 +47,7 @@ export default function PreRegistrationManagement() {
   const [pendingReceipts, setPendingReceipts] = useState([]);
   const [sortByExperience, setSortByExperience] = useState(false);
   const [removingBib, setRemovingBib] = useState(null);
+  const [autoAssigningBibs, setAutoAssigningBibs] = useState(false);
 
   const token = localStorage.getItem('admin_token');
 
