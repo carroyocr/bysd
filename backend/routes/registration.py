@@ -922,6 +922,22 @@ async def remove_bib_assignment(email: str, race_code: str):
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    return {"message": "Asignación de BIB eliminada", "email": email}
+
+
+@router.delete("/admin/remove-all-bibs/{race_code}")
+async def remove_all_bib_assignments(race_code: str):
+    """Remove all BIB assignments for a race"""
+    result = await registrations_collection.update_many(
+        {"race_code": race_code, "bib": {"$exists": True}},
+        {"$unset": {"bib": ""}}
+    )
+    
+    return {
+        "message": f"Se eliminaron {result.modified_count} asignaciones de BIB",
+        "removed_count": result.modified_count
+    }
 
 
 @router.post("/admin/auto-assign-bibs/{race_code}")
