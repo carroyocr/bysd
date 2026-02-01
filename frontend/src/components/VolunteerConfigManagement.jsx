@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Trash2, Edit2, Save, X, Clock, Users, AlertCircle, 
-  Loader2, Download, RefreshCw, ChevronDown, ChevronUp
+  Loader2, Download, RefreshCw, ChevronDown, ChevronUp, RotateCcw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
