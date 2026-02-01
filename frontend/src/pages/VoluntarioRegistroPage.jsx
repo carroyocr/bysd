@@ -963,8 +963,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 4: Medical Info */}
-            {currentStep === 4 && (
+            {/* Step: Medical Info */}
+            {currentStepId === 'medical' && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Tipo de Sangre</Label>
