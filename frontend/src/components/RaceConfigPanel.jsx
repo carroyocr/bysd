@@ -77,6 +77,7 @@ export default function RaceConfigPanel() {
         date: activeData.date || '',
         start_time: activeData.start_time || '',
         location: activeData.location || '',
+        timezone_gmt: activeData.timezone_gmt || 'GMT-4',
         registration_cost: activeData.registration_cost || 3500,
         edition_number: activeData.edition_number || 1,
         // Payment info
