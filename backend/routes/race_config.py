@@ -418,3 +418,113 @@ async def get_archived_sponsors(code: str, db=Depends(lambda: None)):
     ).to_list(100)
     
     return {"sponsors": sponsors, "race_code": code}
+
+
+# ============== MANUAL UPLOADS ==============
+
+@router.post("/upload-manual/{code}/{manual_type}")
+async def upload_manual(
+    code: str,
+    manual_type: str,  # "runners" or "volunteers"
+    file: UploadFile = File(...),
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Upload a manual (PDF) for a race - runners or volunteers"""
+    from server import db as database
+    
+    if manual_type not in ["runners", "volunteers"]:
+        raise HTTPException(status_code=400, detail="Tipo de manual inválido. Use 'runners' o 'volunteers'")
+    
+    existing = await database.race_configurations.find_one({"code": code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    # Validate file type
+    allowed_types = ["application/pdf"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF")
+    
+    # Generate filename
+    filename = f"manual_{manual_type}_{code}.pdf"
+    filepath = MANUALS_DIR / filename
+    
+    # Save file
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Update database with manual URL
+    manual_url = f"/api/race-config/manual/{filename}"
+    field_name = f"manual_{manual_type}_url"
+    
+    await database.race_configurations.update_one(
+        {"code": code},
+        {"$set": {field_name: manual_url, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {
+        "message": f"Manual de {'corredores' if manual_type == 'runners' else 'voluntarios'} subido exitosamente",
+        "manual_url": manual_url
+    }
+
+
+@router.delete("/delete-manual/{code}/{manual_type}")
+async def delete_manual(
+    code: str,
+    manual_type: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """Delete a manual for a race"""
+    from server import db as database
+    
+    if manual_type not in ["runners", "volunteers"]:
+        raise HTTPException(status_code=400, detail="Tipo de manual inválido")
+    
+    existing = await database.race_configurations.find_one({"code": code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    # Delete file if exists
+    filename = f"manual_{manual_type}_{code}.pdf"
+    filepath = MANUALS_DIR / filename
+    
+    if filepath.exists():
+        os.remove(filepath)
+    
+    # Remove URL from database
+    field_name = f"manual_{manual_type}_url"
+    await database.race_configurations.update_one(
+        {"code": code},
+        {"$unset": {field_name: ""}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": f"Manual de {'corredores' if manual_type == 'runners' else 'voluntarios'} eliminado"}
+
+
+@router.get("/manual/{filename}")
+async def get_manual(filename: str):
+    """Serve a manual PDF file"""
+    filepath = MANUALS_DIR / filename
+    
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Manual no encontrado")
+    
+    return FileResponse(filepath, media_type="application/pdf")
+
+
+@router.get("/manuals/{code}")
+async def get_race_manuals(code: str, db=Depends(lambda: None)):
+    """Get manual URLs for a specific race"""
+    from server import db as database
+    
+    race = await database.race_configurations.find_one({"code": code}, {"_id": 0})
+    if not race:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    return {
+        "runners_manual": race.get("manual_runners_url"),
+        "volunteers_manual": race.get("manual_volunteers_url"),
+        "race_code": code
+    }
+
