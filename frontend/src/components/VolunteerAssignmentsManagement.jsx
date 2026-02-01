@@ -242,16 +242,6 @@ export default function VolunteerAssignmentsManagement() {
           </CardContent>
         </Card>
       </div>
-            <div className="text-sm text-green-600">Con Asignaciones</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-purple-700">{totalAssignments}</div>
-            <div className="text-sm text-purple-600">Turnos Asignados</div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Search and Refresh */}
       <Card>
