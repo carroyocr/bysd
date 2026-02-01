@@ -55,9 +55,29 @@ export default function VoluntarioRegistroPage() {
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
   
   // Available slots data
-  const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [] });
+  const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
+  
+  // Calculate the date for a shift based on its start time
+  const getShiftDate = (horaInicio) => {
+    const raceDate = availableSlots.race_date || config?.date;
+    if (!raceDate || !horaInicio) return '';
+    
+    const [hours] = horaInicio.split(':').map(Number);
+    const baseDate = new Date(raceDate + 'T00:00:00');
+    
+    // If shift starts between midnight and 8am, it's likely day 2
+    if (hours >= 0 && hours < 8) {
+      baseDate.setDate(baseDate.getDate() + 1);
+    }
+    
+    return baseDate.toLocaleDateString('es-DO', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  };
   
   // Form data
   const [formData, setFormData] = useState({
