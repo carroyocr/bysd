@@ -12,6 +12,15 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Helper function to convert 24h time to 12h format with AM/PM
+const formatTime12h = (time24) => {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
 // Default shift templates
 const DEFAULT_SHIFTS = [
   { turno: "A", hora_inicio: "08:00", hora_fin: "12:00", slots_count: 2 },
