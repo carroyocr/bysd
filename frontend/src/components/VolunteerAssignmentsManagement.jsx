@@ -65,11 +65,10 @@ export default function VolunteerAssignmentsManagement() {
     setActionMessage(null);
     
     try {
-      const response = await fetch(`${API_URL}/api/volunteer/assign`, {
+      const response = await fetch(`${API_URL}/api/volunteers/assign/${selectedSlot.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          slot_id: selectedSlot.id,
           email: emailInput.trim().toLowerCase()
         })
       });
