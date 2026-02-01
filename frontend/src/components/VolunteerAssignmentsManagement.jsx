@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Check, Trash2, Users, Calendar, RefreshCw, Filter } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Filter, Clock, MapPin, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -9,37 +9,40 @@ import { toast } from 'sonner';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function VolunteerAssignmentsManagement() {
-  const [slots, setSlots] = useState([]);
+  const [volunteers, setVolunteers] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filterName, setFilterName] = useState('');
-  const [filterPosition, setFilterPosition] = useState('');
-  const [filterShift, setFilterShift] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [positions, setPositions] = useState([]);
-  const [shifts, setShifts] = useState([]);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showUnassignModal, setShowUnassignModal] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedVolunteer, setExpandedVolunteer] = useState(null);
+  
+  // Modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [selectedVolunteer, setSelectedVolunteer] = useState(null);
+  const [selectedSlotToRemove, setSelectedSlotToRemove] = useState(null);
+  const [selectedSlotToAdd, setSelectedSlotToAdd] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState(null);
 
-  // Load slots data
-  const loadSlots = async () => {
+  // Load data
+  const loadData = async () => {
     setLoading(true);
     try {
-      const [slotsRes, posRes] = await Promise.all([
-        fetch(`${API_URL}/api/volunteers/slots`),
-        fetch(`${API_URL}/api/volunteer-config/positions`)
+      const [volunteersRes, slotsRes] = await Promise.all([
+        fetch(`${API_URL}/api/volunteer-registration/admin/registrations`),
+        fetch(`${API_URL}/api/volunteers/slots`)
       ]);
-      if (slotsRes.ok) setSlots(await slotsRes.json());
-      if (posRes.ok) {
-        const posData = await posRes.json();
-        // Handle both array and {positions: []} formats
-        setPositions(Array.isArray(posData) ? posData : posData.positions || []);
+      
+      if (volunteersRes.ok) {
+        const data = await volunteersRes.json();
+        setVolunteers(data.registrations || data || []);
+      }
+      
+      if (slotsRes.ok) {
+        const slotsData = await slotsRes.json();
+        setAvailableSlots(slotsData || []);
       }
     } catch (error) {
-      console.error('Error loading slots:', error);
+      console.error('Error loading data:', error);
       toast.error('Error cargando datos');
     } finally {
       setLoading(false);
@@ -47,105 +50,10 @@ export default function VolunteerAssignmentsManagement() {
   };
 
   useEffect(() => {
-    loadSlots();
+    loadData();
   }, []);
 
-  // Extract unique shifts from slots
-  useEffect(() => {
-    if (slots.length > 0) {
-      const uniqueShifts = [...new Set(slots.map(s => s.turno))].sort();
-      setShifts(uniqueShifts);
-    }
-  }, [slots]);
-
-  const handleAssign = async () => {
-    if (!selectedSlot || !emailInput.trim()) return;
-    
-    setActionLoading(true);
-    setActionMessage(null);
-    
-    try {
-      const response = await fetch(`${API_URL}/api/volunteers/assign/${selectedSlot.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: emailInput.trim().toLowerCase()
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success('Voluntario asignado correctamente');
-        setShowAssignModal(false);
-        setEmailInput('');
-        loadSlots();
-      } else {
-        const errorMsg = data.detail || 'Error al asignar';
-        toast.error(errorMsg);
-        setActionMessage({ type: 'error', text: errorMsg });
-      }
-    } catch (error) {
-      console.error('Error assigning:', error);
-      const errorMsg = 'Error de conexión';
-      toast.error(errorMsg);
-      setActionMessage({ type: 'error', text: errorMsg });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleUnassign = async () => {
-    if (!selectedSlot || !emailInput.trim()) return;
-    
-    setActionLoading(true);
-    setActionMessage(null);
-    
-    try {
-      const response = await fetch(`${API_URL}/api/volunteers/unassign/${selectedSlot.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: emailInput.trim().toLowerCase()
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success('Asignación eliminada correctamente');
-        setShowUnassignModal(false);
-        setEmailInput('');
-        loadSlots();
-      } else {
-        const errorMsg = data.detail || 'Error al eliminar asignación';
-        toast.error(errorMsg);
-        setActionMessage({ type: 'error', text: errorMsg });
-      }
-    } catch (error) {
-      console.error('Error unassigning:', error);
-      const errorMsg = 'Error de conexión';
-      toast.error(errorMsg);
-      setActionMessage({ type: 'error', text: errorMsg });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openAssignModal = (slot) => {
-    setSelectedSlot(slot);
-    setEmailInput('');
-    setActionMessage(null);
-    setShowAssignModal(true);
-  };
-
-  const openUnassignModal = (slot) => {
-    setSelectedSlot(slot);
-    setEmailInput('');
-    setActionMessage(null);
-    setShowUnassignModal(true);
-  };
-
+  // Format time to 12h
   const formatTime = (time) => {
     if (!time) return '';
     if (time.includes(':')) {
@@ -160,24 +68,117 @@ export default function VolunteerAssignmentsManagement() {
     return time;
   };
 
-  // Filter slots
-  const filteredSlots = slots.filter(slot => {
-    const matchesName = !filterName || 
-      (slot.nombre_asignado && slot.nombre_asignado.toLowerCase().includes(filterName.toLowerCase())) ||
-      (slot.email_asignado && slot.email_asignado.toLowerCase().includes(filterName.toLowerCase()));
-    const matchesPosition = !filterPosition || slot.puesto === filterPosition;
-    const matchesShift = !filterShift || slot.turno === filterShift;
-    const matchesStatus = !filterStatus || 
-      (filterStatus === 'assigned' && slot.email_asignado) ||
-      (filterStatus === 'available' && !slot.email_asignado);
-    
-    return matchesName && matchesPosition && matchesShift && matchesStatus;
+  // Get slot info by ID
+  const getSlotInfo = (slotId) => {
+    return availableSlots.find(s => s.id === slotId);
+  };
+
+  // Get available slots for adding (not assigned to anyone)
+  const getAvailableSlotsForVolunteer = () => {
+    return availableSlots.filter(slot => !slot.email_asignado);
+  };
+
+  // Group available slots by position
+  const groupSlotsByPosition = (slots) => {
+    const grouped = {};
+    slots.forEach(slot => {
+      if (!grouped[slot.puesto]) {
+        grouped[slot.puesto] = [];
+      }
+      grouped[slot.puesto].push(slot);
+    });
+    return grouped;
+  };
+
+  // Filter volunteers
+  const filteredVolunteers = volunteers.filter(v => {
+    const term = searchTerm.toLowerCase();
+    return !searchTerm || 
+      (v.nombre && v.nombre.toLowerCase().includes(term)) ||
+      (v.apellidos && v.apellidos.toLowerCase().includes(term)) ||
+      (v.email && v.email.toLowerCase().includes(term));
   });
 
+  // Handle add assignment
+  const handleAddAssignment = async () => {
+    if (!selectedVolunteer || !selectedSlotToAdd) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteers/assign/${selectedSlotToAdd.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: selectedVolunteer.email })
+      });
+      
+      if (response.ok) {
+        toast.success('Turno asignado correctamente');
+        setShowAddModal(false);
+        setSelectedSlotToAdd(null);
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al asignar turno');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle remove assignment
+  const handleRemoveAssignment = async () => {
+    if (!selectedVolunteer || !selectedSlotToRemove) return;
+    
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteers/unassign/${selectedSlotToRemove.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: selectedVolunteer.email })
+      });
+      
+      if (response.ok) {
+        toast.success('Asignación eliminada');
+        setShowRemoveModal(false);
+        setSelectedSlotToRemove(null);
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al eliminar asignación');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Open add modal
+  const openAddModal = (volunteer) => {
+    setSelectedVolunteer(volunteer);
+    setSelectedSlotToAdd(null);
+    setShowAddModal(true);
+  };
+
+  // Open remove modal
+  const openRemoveModal = (volunteer, slotId) => {
+    setSelectedVolunteer(volunteer);
+    const slotInfo = getSlotInfo(slotId);
+    setSelectedSlotToRemove(slotInfo);
+    setShowRemoveModal(true);
+  };
+
   // Statistics
-  const totalSlots = slots.length;
-  const assignedSlots = slots.filter(s => s.email_asignado).length;
-  const availableSlots = totalSlots - assignedSlots;
+  const totalVolunteers = volunteers.length;
+  const volunteersWithAssignments = volunteers.filter(v => 
+    (v.slots_interes && v.slots_interes.length > 0) || 
+    availableSlots.some(s => s.email_asignado === v.email)
+  ).length;
+  const totalAssignments = availableSlots.filter(s => s.email_asignado).length;
 
   return (
     <div className="space-y-6">
@@ -185,226 +186,281 @@ export default function VolunteerAssignmentsManagement() {
       <div className="grid grid-cols-3 gap-4">
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-blue-700">{totalSlots}</div>
-            <div className="text-sm text-blue-600">Total Espacios</div>
+            <div className="text-3xl font-bold text-blue-700">{totalVolunteers}</div>
+            <div className="text-sm text-blue-600">Voluntarios Registrados</div>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-green-700">{assignedSlots}</div>
-            <div className="text-sm text-green-600">Asignados</div>
+            <div className="text-3xl font-bold text-green-700">{volunteersWithAssignments}</div>
+            <div className="text-sm text-green-600">Con Asignaciones</div>
           </CardContent>
         </Card>
-        <Card className="bg-amber-50 border-amber-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-amber-700">{availableSlots}</div>
-            <div className="text-sm text-amber-600">Disponibles</div>
+            <div className="text-3xl font-bold text-purple-700">{totalAssignments}</div>
+            <div className="text-sm text-purple-600">Turnos Asignados</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Search and Refresh */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtros
+              <Users className="w-5 h-5" />
+              Voluntarios Registrados
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadSlots} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Actualizar
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre o email..."
-                value={filterName}
-                onChange={(e) => setFilterName(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <select
-              className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-              value={filterPosition}
-              onChange={(e) => setFilterPosition(e.target.value)}
-            >
-              <option value="">Todas las posiciones</option>
-              {positions.map((pos, idx) => (
-                <option key={pos._id || pos.nombre || idx} value={pos.nombre || pos.name}>
-                  {pos.nombre || pos.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-              value={filterShift}
-              onChange={(e) => setFilterShift(e.target.value)}
-            >
-              <option value="">Todos los turnos</option>
-              {shifts.map((shift) => (
-                <option key={shift} value={shift}>Turno {shift}</option>
-              ))}
-            </select>
-            <select
-              className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="">Todos los estados</option>
-              <option value="assigned">Asignados</option>
-              <option value="available">Disponibles</option>
-            </select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre o email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Slots Table */}
+      {/* Volunteers List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Asignaciones de Voluntarios
-            <Badge variant="secondary" className="ml-2">{filteredSlots.length} resultados</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-          ) : filteredSlots.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No se encontraron resultados</div>
+          ) : filteredVolunteers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'No se encontraron voluntarios' : 'No hay voluntarios registrados'}
+            </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-3 font-medium">Posición</th>
-                    <th className="text-left p-3 font-medium">Turno</th>
-                    <th className="text-left p-3 font-medium">Horario</th>
-                    <th className="text-left p-3 font-medium">Estado</th>
-                    <th className="text-left p-3 font-medium">Voluntario</th>
-                    <th className="text-center p-3 font-medium">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSlots.map((slot) => (
-                    <tr key={slot.id} className="border-b hover:bg-muted/30">
-                      <td className="p-3">{slot.puesto}</td>
-                      <td className="p-3">
-                        <Badge variant="outline">Turno {slot.turno}</Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
-                      </td>
-                      <td className="p-3">
-                        {slot.email_asignado ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            <Check className="w-3 h-3 mr-1" />
-                            Asignado
-                          </Badge>
+            <div className="divide-y">
+              {filteredVolunteers.map((volunteer) => {
+                const isExpanded = expandedVolunteer === volunteer.email;
+                const assignedSlots = availableSlots.filter(s => s.email_asignado === volunteer.email);
+                
+                return (
+                  <div key={volunteer.email} className="hover:bg-muted/30">
+                    {/* Volunteer Header */}
+                    <div 
+                      className="p-4 flex items-center justify-between cursor-pointer"
+                      onClick={() => setExpandedVolunteer(isExpanded ? null : volunteer.email)}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-semibold">
+                            {volunteer.nombre?.[0]}{volunteer.apellidos?.[0]}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-medium">{volunteer.nombre} {volunteer.apellidos}</div>
+                          <div className="text-sm text-muted-foreground">{volunteer.email}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant={assignedSlots.length > 0 ? "default" : "secondary"}>
+                          {assignedSlots.length} turno{assignedSlots.length !== 1 ? 's' : ''} asignado{assignedSlots.length !== 1 ? 's' : ''}
+                        </Badge>
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
                         ) : (
-                          <Badge variant="secondary">Disponible</Badge>
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         )}
-                      </td>
-                      <td className="p-3">
-                        {slot.email_asignado ? (
-                          <div>
-                            <div className="font-medium">{slot.nombre_asignado || '-'}</div>
-                            <div className="text-xs text-muted-foreground">{slot.email_asignado}</div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Content */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 bg-muted/20">
+                        <div className="ml-14 space-y-4">
+                          {/* Contact Info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm py-3 border-b">
+                            <div>
+                              <span className="text-muted-foreground">Teléfono:</span>
+                              <div className="font-medium">{volunteer.telefono || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Ciudad:</span>
+                              <div className="font-medium">{volunteer.ciudad_residencia || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Experiencia:</span>
+                              <div className="font-medium">{volunteer.experiencia_voluntariado || '-'}</div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Talla:</span>
+                              <div className="font-medium">{volunteer.talla_camiseta || '-'}</div>
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {slot.email_asignado ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => openUnassignModal(slot)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Eliminar
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                            onClick={() => openAssignModal(slot)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Asignar
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+                          {/* Assigned Shifts */}
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-sm">Turnos Asignados</h4>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openAddModal(volunteer);
+                                }}
+                              >
+                                <Plus className="w-4 h-4 mr-1" />
+                                Agregar Turno
+                              </Button>
+                            </div>
+                            
+                            {assignedSlots.length === 0 ? (
+                              <p className="text-sm text-muted-foreground italic">
+                                No tiene turnos asignados actualmente
+                              </p>
+                            ) : (
+                              <div className="grid gap-2">
+                                {assignedSlots.map((slot) => (
+                                  <div 
+                                    key={slot.id}
+                                    className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+                                        <MapPin className="w-4 h-4 text-primary" />
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-sm">{slot.puesto}</div>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                          <Badge variant="outline" className="text-xs">
+                                            Turno {slot.turno}
+                                          </Badge>
+                                          <span className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openRemoveModal(volunteer, slot.id);
+                                      }}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Interest Slots (from registration) */}
+                          {volunteer.slots_interes && volunteer.slots_interes.length > 0 && (
+                            <div className="pt-3 border-t">
+                              <h4 className="font-semibold text-sm mb-2 text-muted-foreground">
+                                Turnos de Interés (del registro)
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {volunteer.slots_interes.map((slotId) => {
+                                  const slotInfo = getSlotInfo(slotId);
+                                  return (
+                                    <Badge key={slotId} variant="outline" className="text-xs">
+                                      {slotInfo ? `${slotInfo.puesto} - Turno ${slotInfo.turno}` : `Slot #${slotId}`}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Assign Modal */}
-      {showAssignModal && selectedSlot && (
+      {/* Add Assignment Modal */}
+      {showAddModal && selectedVolunteer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Check className="w-5 h-5 text-green-600" />
-                Asignar Voluntario
-              </CardTitle>
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-green-600" />
+                  Agregar Turno a {selectedVolunteer.nombre}
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowAddModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg text-sm">
-                <div><strong>Posición:</strong> {selectedSlot.puesto}</div>
-                <div><strong>Turno:</strong> {selectedSlot.turno}</div>
-                <div><strong>Horario:</strong> {formatTime(selectedSlot.hora_inicio)} - {formatTime(selectedSlot.hora_fin)}</div>
-              </div>
+            <CardContent className="flex-1 overflow-y-auto space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Selecciona un turno disponible para asignar a este voluntario:
+              </p>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Email del Voluntario</label>
-                <Input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="voluntario@email.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  El email debe estar registrado en el sistema de voluntarios
+              {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer())).length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  No hay turnos disponibles para asignar
                 </p>
-              </div>
-
-              {actionMessage && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  actionMessage.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                }`}>
-                  {actionMessage.text}
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer())).map(([position, slots]) => (
+                    <div key={position}>
+                      <h4 className="font-semibold text-sm mb-2">{position}</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {slots.map((slot) => (
+                          <div
+                            key={slot.id}
+                            onClick={() => setSelectedSlotToAdd(slot)}
+                            className={`
+                              p-3 rounded-lg border-2 cursor-pointer transition-all text-sm
+                              ${selectedSlotToAdd?.id === slot.id 
+                                ? 'border-primary bg-primary/10' 
+                                : 'border-gray-200 hover:border-primary/50'}
+                            `}
+                          >
+                            <Badge variant="outline" className="text-xs mb-1">
+                              Turno {slot.turno}
+                            </Badge>
+                            <div className="text-xs text-muted-foreground">
+                              {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4 border-t">
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setShowAssignModal(false)}
+                  onClick={() => setShowAddModal(false)}
                   disabled={actionLoading}
                 >
                   Cancelar
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={handleAssign}
-                  disabled={!emailInput.trim() || actionLoading}
+                  onClick={handleAddAssignment}
+                  disabled={!selectedSlotToAdd || actionLoading}
                 >
-                  {actionLoading ? 'Asignando...' : 'Asignar'}
+                  {actionLoading ? 'Asignando...' : 'Asignar Turno'}
                 </Button>
               </div>
             </CardContent>
@@ -412,8 +468,8 @@ export default function VolunteerAssignmentsManagement() {
         </div>
       )}
 
-      {/* Unassign Modal */}
-      {showUnassignModal && selectedSlot && (
+      {/* Remove Assignment Modal */}
+      {showRemoveModal && selectedVolunteer && selectedSlotToRemove && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
@@ -423,49 +479,35 @@ export default function VolunteerAssignmentsManagement() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg text-sm">
-                <div><strong>Posición:</strong> {selectedSlot.puesto}</div>
-                <div><strong>Turno:</strong> {selectedSlot.turno}</div>
-                <div><strong>Asignado a:</strong> {selectedSlot.email_asignado}</div>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                ¿Estás seguro de que deseas eliminar esta asignación?
+              </p>
               
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                Para eliminar esta asignación, confirma ingresando el email del voluntario asignado.
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Confirmar Email</label>
-                <Input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Ingresa el email para confirmar"
-                />
-              </div>
-
-              {actionMessage && (
-                <div className={`p-3 rounded-lg text-sm ${
-                  actionMessage.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-                }`}>
-                  {actionMessage.text}
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="font-medium">{selectedVolunteer.nombre} {selectedVolunteer.apellidos}</div>
+                <div className="text-sm text-muted-foreground mt-2">
+                  <strong>Posición:</strong> {selectedSlotToRemove.puesto}
                 </div>
-              )}
+                <div className="text-sm text-muted-foreground">
+                  <strong>Turno:</strong> {selectedSlotToRemove.turno} ({formatTime(selectedSlotToRemove.hora_inicio)} - {formatTime(selectedSlotToRemove.hora_fin)})
+                </div>
+              </div>
 
               <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setShowUnassignModal(false)}
+                  onClick={() => setShowRemoveModal(false)}
                   disabled={actionLoading}
                 >
                   Cancelar
                 </Button>
                 <Button
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                  onClick={handleUnassign}
-                  disabled={!emailInput.trim() || actionLoading}
+                  onClick={handleRemoveAssignment}
+                  disabled={actionLoading}
                 >
-                  {actionLoading ? 'Procesando...' : 'Eliminar Asignación'}
+                  {actionLoading ? 'Eliminando...' : 'Eliminar'}
                 </Button>
               </div>
             </CardContent>
