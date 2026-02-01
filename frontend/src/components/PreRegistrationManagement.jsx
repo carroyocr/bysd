@@ -392,6 +392,139 @@ export default function PreRegistrationManagement() {
         </div>
       )}
 
+      {/* Payment Reminder & Pending Receipts Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Payment Reminder Card */}
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-orange-800">
+              <CreditCard className="w-4 h-4" />
+              Recordatorio de Pago
+            </CardTitle>
+            <CardDescription className="text-orange-600">
+              Envía un correo a los atletas activos con pago pendiente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-orange-800">{activeAthletesCount}</p>
+                <p className="text-xs text-orange-600">Atletas con pago pendiente</p>
+              </div>
+              <Button
+                variant="outline"
+                className="border-orange-400 text-orange-700 hover:bg-orange-100"
+                onClick={handleSendPaymentReminder}
+                disabled={sendingReminder || activeAthletesCount === 0}
+                data-testid="send-payment-reminder-btn"
+              >
+                {sendingReminder ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                ) : (
+                  <><Send className="w-4 h-4 mr-2" /> Enviar Recordatorio</>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pending Receipts Card */}
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-blue-800">
+              <FileImage className="w-4 h-4" />
+              Comprobantes Pendientes
+            </CardTitle>
+            <CardDescription className="text-blue-600">
+              Comprobantes de pago esperando revisión
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-blue-800">{pendingReceipts.length}</p>
+                <p className="text-xs text-blue-600">Por revisar</p>
+              </div>
+              {pendingReceipts.length > 0 && (
+                <Badge className="bg-blue-500">{pendingReceipts.length} nuevo(s)</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pending Receipts List */}
+      {pendingReceipts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileImage className="w-5 h-5 text-blue-500" />
+              Comprobantes de Pago Pendientes ({pendingReceipts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingReceipts.map((reg) => (
+                <div key={reg.email} className="border rounded-lg p-4 bg-white">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold">{reg.nombre} {reg.apellidos}</p>
+                      <p className="text-sm text-muted-foreground">{reg.email}</p>
+                      <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                        <Badge variant="outline">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          {reg.payment_receipt?.payment_date}
+                        </Badge>
+                        <Badge variant="outline">
+                          {reg.payment_receipt?.bank_origin}
+                        </Badge>
+                        {reg.payment_receipt?.transfer_number && (
+                          <Badge variant="outline">
+                            Ref: {reg.payment_receipt.transfer_number}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {reg.payment_receipt?.image_path && (
+                        <a
+                          href={`${API_URL}${reg.payment_receipt.image_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileImage className="w-4 h-4" />
+                          Ver Comprobante
+                        </a>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600"
+                          onClick={() => handleReviewReceipt(reg.email, true)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Aprobar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => handleReviewReceipt(reg.email, false)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Rechazar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* T-shirt Distribution */}
       {stats?.talla_distribution && Object.keys(stats.talla_distribution).length > 0 && (
         <Card>
