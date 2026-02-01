@@ -773,7 +773,7 @@ export default function VoluntarioRegistroPage() {
                           <ul className="text-sm text-green-700 space-y-1">
                             {getSelectedSlotsInfo().map(slot => (
                               <li key={slot.id}>
-                                • {slot.puesto} - Turno {slot.turno} ({slot.hora_inicio} - {slot.hora_fin})
+                                • {slot.puesto} - Turno {slot.turno} | {getShiftDate(slot.hora_inicio)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
                               </li>
                             ))}
                           </ul>
