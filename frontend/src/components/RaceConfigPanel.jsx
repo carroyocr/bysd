@@ -73,7 +73,13 @@ export default function RaceConfigPanel() {
         start_time: activeData.start_time || '',
         location: activeData.location || '',
         registration_cost: activeData.registration_cost || 3500,
-        edition_number: activeData.edition_number || 1
+        edition_number: activeData.edition_number || 1,
+        // Payment info
+        payment_account_name: activeData.payment_account_name || '',
+        payment_account_id: activeData.payment_account_id || '',
+        payment_bank_name: activeData.payment_bank_name || '',
+        payment_account_type: activeData.payment_account_type || '',
+        payment_account_number: activeData.payment_account_number || ''
       });
     } catch (error) {
       console.error('Error loading race config:', error);
