@@ -280,6 +280,8 @@ export default function VolunteerAssignmentsManagement() {
               {filteredVolunteers.map((volunteer) => {
                 const isExpanded = expandedVolunteer === volunteer.email;
                 const assignedSlots = availableSlots.filter(s => s.email_asignado === volunteer.email);
+                const interestSlots = volunteer.slots_interes || [];
+                const totalSlots = assignedSlots.length + interestSlots.length;
                 
                 return (
                   <div key={volunteer.email} className="hover:bg-muted/30">
@@ -300,9 +302,19 @@ export default function VolunteerAssignmentsManagement() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant={assignedSlots.length > 0 ? "default" : "secondary"}>
-                          {assignedSlots.length} turno{assignedSlots.length !== 1 ? 's' : ''} asignado{assignedSlots.length !== 1 ? 's' : ''}
-                        </Badge>
+                        {assignedSlots.length > 0 && (
+                          <Badge variant="default">
+                            {assignedSlots.length} asignado{assignedSlots.length !== 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {interestSlots.length > 0 && (
+                          <Badge variant="outline">
+                            {interestSlots.length} de interés
+                          </Badge>
+                        )}
+                        {totalSlots === 0 && (
+                          <Badge variant="secondary">Sin turnos</Badge>
+                        )}
                         {isExpanded ? (
                           <ChevronDown className="w-5 h-5 text-muted-foreground" />
                         ) : (
