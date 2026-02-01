@@ -733,14 +733,6 @@ export default function RaceControlPanel({ embedded = false }) {
               <Trash2 className="w-4 h-4 mr-2" />
               Reiniciar BD
             </Button>
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Cerrar Sesión
-            </Button>
           </div>
         </div>
 
