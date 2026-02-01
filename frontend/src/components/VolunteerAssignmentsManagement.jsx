@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Filter, Clock, MapPin, ChevronDown, ChevronRight, X, UserX } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -19,6 +19,7 @@ export default function VolunteerAssignmentsManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [showDeleteVolunteerModal, setShowDeleteVolunteerModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedVolunteer, setSelectedVolunteer] = useState(null);
   const [selectedSlotToRemove, setSelectedSlotToRemove] = useState(null);
   const [selectedSlotToAdd, setSelectedSlotToAdd] = useState(null);
