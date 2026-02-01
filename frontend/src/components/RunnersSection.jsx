@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon, BookOpen, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,9 +8,37 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import PDFFlipViewer from './PDFFlipViewer';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
 export default function RunnersSection() {
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const { config, getFormattedDate } = useRaceConfig();
+  const [manualUrl, setManualUrl] = useState(null);
+  const [loadingManual, setLoadingManual] = useState(true);
+
+  // Load manual URL for active race
+  useEffect(() => {
+    const loadManual = async () => {
+      if (!config?.code) {
+        setLoadingManual(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/manuals/${config.code}`);
+        if (response.ok) {
+          const data = await response.json();
+          setManualUrl(data.runners_manual);
+        }
+      } catch (error) {
+        console.error('Error loading manual:', error);
+      } finally {
+        setLoadingManual(false);
+      }
+    };
+    
+    loadManual();
+  }, [config?.code]);
   
   const mandatoryEquipment = [
     'Linterna frontal con batería suficiente para al menos 8 horas',
