@@ -789,6 +789,23 @@ export default function RaceConfigPanel() {
                         </Button>
                       )}
                     </div>
+                    
+                    {/* Notify Volunteers Button */}
+                    {activeRace?.manual_volunteers_url && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                        onClick={() => handleSendManualNotification('volunteers')}
+                        disabled={sendingNotification === 'volunteers' || notificationCounts.volunteers === 0}
+                      >
+                        {sendingNotification === 'volunteers' ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                        ) : (
+                          <><Mail className="w-4 h-4 mr-2" /> Notificar Voluntarios ({notificationCounts.volunteers})</>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
