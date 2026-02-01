@@ -188,13 +188,21 @@ export default function VoluntarioRegistroPage() {
   // Submission
   const [submitting, setSubmitting] = useState(false);
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [updateComplete, setUpdateComplete] = useState(false);
+  
+  // Get the steps based on mode
+  const activeSteps = editMode ? EDIT_STEPS : STEPS;
+  
+  // Get the actual step index for slots (different in edit mode)
+  const getSlotsStepIndex = () => editMode ? 2 : 3;
 
-  // Load available slots when entering step 3 (slots)
+  // Load available slots when entering slots step
   useEffect(() => {
-    if (currentStep === 3) {
+    const slotsIndex = getSlotsStepIndex();
+    if (currentStep === slotsIndex) {
       loadAvailableSlots();
     }
-  }, [currentStep]);
+  }, [currentStep, editMode]);
 
   const loadAvailableSlots = async () => {
     setLoadingSlots(true);
