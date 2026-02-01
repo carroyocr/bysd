@@ -256,13 +256,8 @@ async def get_participants(
                     "talla_camiseta": reg.get("talla_camiseta")
                 })
         
-        # Fallback to old participants collection if no registrations found
-        if not participants:
-            query = {}
-            if status and status in ["active", "retired"]:
-                query["status"] = status
-            
-            participants = await database.participants.find(query, {"_id": 0}).to_list(1000)
+        # NO fallback for new races - if no eligible participants, return empty list
+        # The fallback to old participants collection should ONLY happen for legacy races
     
     # Filter by search term
     if search:
