@@ -83,6 +83,30 @@ export default function VolunteerConfigManagement() {
     }
   };
 
+  const clearAssignments = async () => {
+    if (!window.confirm('⚠️ ¿Estás seguro de limpiar TODAS las asignaciones de voluntarios?\n\nEsta acción liberará todos los slots asignados y no se puede deshacer.')) {
+      return;
+    }
+    
+    setClearing(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-config/clear-assignments`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.detail || 'Error limpiando asignaciones');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const handleCreatePosition = async () => {
     if (!newPosition.nombre.trim()) {
       toast.error('El nombre de la posición es requerido');
