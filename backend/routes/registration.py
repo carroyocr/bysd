@@ -182,6 +182,11 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     apellidos = registration.get('apellidos', '')
     race_code = registration.get('race_code', '')
     
+    # Get registration cost from race configuration
+    race_config = await db["race_configurations"].find_one({"code": race_code})
+    registration_cost = race_config.get("registration_cost", 3500) if race_config else 3500
+    formatted_cost = f"{registration_cost:,.0f}".replace(",", ",")
+    
     # Build edit URL - use the correct route
     edit_url = f"{os.environ.get('FRONTEND_URL', 'https://multi-event-portal.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
