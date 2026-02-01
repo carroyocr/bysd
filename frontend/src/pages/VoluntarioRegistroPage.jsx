@@ -743,10 +743,13 @@ export default function VoluntarioRegistroPage() {
                                           <Badge variant={isSelected ? "default" : "outline"} className="text-xs">
                                             Turno {turno.turno}
                                           </Badge>
+                                          <span className="text-xs text-muted-foreground">
+                                            {getShiftDate(turno.hora_inicio)}
+                                          </span>
                                         </div>
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                           <Clock className="w-3 h-3" />
-                                          <span>{turno.hora_inicio} - {turno.hora_fin}</span>
+                                          <span>{formatTime12h(turno.hora_inicio)} - {formatTime12h(turno.hora_fin)}</span>
                                         </div>
                                         {wouldConflict && (
                                           <p className="text-xs text-red-500 mt-1">Conflicto de horario</p>
