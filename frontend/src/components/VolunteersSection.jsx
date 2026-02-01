@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Calendar, Search, X, Check, Trash2, Heart, UserPlus } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Calendar, Search, X, Check, Trash2, Heart, UserPlus, Edit2, Mail, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { toast } from 'sonner';
 
 export default function VolunteersSection() {
   // State for assignments tab
@@ -23,6 +24,11 @@ export default function VolunteersSection() {
   const [emailInput, setEmailInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
+  
+  // State for edit link modal
+  const [showEditLinkModal, setShowEditLinkModal] = useState(false);
+  const [editLinkEmail, setEditLinkEmail] = useState('');
+  const [sendingEditLink, setSendingEditLink] = useState(false);
 
   // Load slots data
   const loadSlots = async () => {
