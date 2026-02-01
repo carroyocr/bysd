@@ -1446,6 +1446,25 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         }
     )
     
+    # If approved, create automatic income record
+    if approved:
+        try:
+            from routes.finances import create_payment_income
+            
+            # Get registration cost from race config
+            race_config = await db["race_configurations"].find_one({"code": race_code})
+            registration_cost = race_config.get("registration_cost", 3500) if race_config else 3500
+            
+            nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+            await create_payment_income(
+                email=email.lower(),
+                nombre=nombre,
+                monto=registration_cost,
+                race_code=race_code
+            )
+        except Exception as e:
+            print(f"Error creating income record: {e}")
+    
     # Send notification email to athlete
     try:
         from services.email_service import send_email
