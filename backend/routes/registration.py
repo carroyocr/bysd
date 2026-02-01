@@ -909,3 +909,515 @@ async def get_next_bib(race_code: str):
         return {"next_bib": 1}
     
     return {"next_bib": result[0]["max_bib"] + 1}
+
+
+
+# ============== PAYMENT REMINDER & RECEIPT ==============
+
+RECEIPTS_UPLOAD_DIR = "/app/backend/uploads/receipts"
+os.makedirs(RECEIPTS_UPLOAD_DIR, exist_ok=True)
+
+
+class PaymentReceiptSubmission(BaseModel):
+    """Model for payment receipt submission"""
+    payment_date: str  # YYYY-MM-DD
+    bank_origin: str  # Name of the bank where payment was made
+    transfer_number: Optional[str] = None  # Optional transfer/reference number
+
+
+@router.get("/admin/active-athletes-count/{race_code}")
+async def get_active_athletes_count(race_code: str):
+    """Get count of active athletes who need payment reminder"""
+    count = await registrations_collection.count_documents({
+        "race_code": race_code,
+        "status": "active",
+        "payment_status": "pending"
+    })
+    
+    return {"count": count, "race_code": race_code}
+
+
+@router.post("/admin/send-payment-reminder/{race_code}")
+async def send_payment_reminder(race_code: str):
+    """Send payment reminder email to all active athletes with pending payment"""
+    from services.email_service import send_email
+    
+    # Get race config for payment info
+    race_config = await db["race_configurations"].find_one({"code": race_code})
+    if not race_config:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    # Get all active athletes with pending payment
+    athletes = await registrations_collection.find(
+        {
+            "race_code": race_code,
+            "status": "active",
+            "payment_status": "pending"
+        },
+        {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1, "edit_token": 1}
+    ).to_list(1000)
+    
+    if not athletes:
+        raise HTTPException(status_code=400, detail="No hay atletas activos con pago pendiente")
+    
+    # Build payment info from race config
+    payment_info = {
+        "account_name": race_config.get("payment_account_name", "No configurado"),
+        "account_id": race_config.get("payment_account_id", ""),
+        "bank_name": race_config.get("payment_bank_name", "No configurado"),
+        "account_type": race_config.get("payment_account_type", ""),
+        "account_number": race_config.get("payment_account_number", "No configurado"),
+        "amount": race_config.get("registration_cost", 3500)
+    }
+    
+    frontend_url = os.environ.get("FRONTEND_URL", "https://multi-event-portal.preview.emergentagent.com")
+    race_name = race_config.get("name", "Backyard Ultra Santo Domingo")
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for athlete in athletes:
+        email = athlete.get("email")
+        if not email:
+            continue
+        
+        nombre = f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip() or "Corredor"
+        edit_token = athlete.get("edit_token", "")
+        
+        # Build upload receipt URL
+        upload_url = f"{frontend_url}/subir-comprobante?token={edit_token}"
+        
+        # Generate email HTML
+        html_content = generate_payment_reminder_email(
+            nombre=nombre,
+            race_name=race_name,
+            payment_info=payment_info,
+            upload_url=upload_url
+        )
+        
+        subject = f"📋 Recordatorio de Pago - {race_name}"
+        
+        try:
+            success = await send_email(email, subject, html_content)
+            if success:
+                sent_count += 1
+            else:
+                failed_count += 1
+        except Exception as e:
+            print(f"Error sending payment reminder to {email}: {e}")
+            failed_count += 1
+    
+    return {
+        "message": f"Recordatorio enviado a {sent_count} atletas",
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "total_athletes": len(athletes)
+    }
+
+
+def generate_payment_reminder_email(nombre: str, race_name: str, payment_info: dict, upload_url: str) -> str:
+    """Generate HTML email for payment reminder"""
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 32px 24px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO</p>
+            </div>
+            
+            <!-- Alert Banner -->
+            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 24px; margin: 0;">
+                <p style="margin: 0; color: #92400e; font-size: 16px; font-weight: 600;">
+                    ⏰ Recordatorio: Tienes 30 días para completar tu pago
+                </p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 32px 24px;">
+                <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6;">
+                    Hola <strong>{nombre}</strong>,
+                </p>
+                
+                <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
+                    Te recordamos que tu pre-registro para <strong>{race_name}</strong> está activo y tienes un plazo de <strong>30 días</strong> para completar el pago y confirmar tu participación.
+                </p>
+                
+                <!-- Payment Info Box -->
+                <div style="background-color: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #86efac;">
+                    <h3 style="margin: 0 0 16px 0; color: #166534; font-size: 16px; font-weight: 600;">
+                        💳 Datos para realizar el pago
+                    </h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #4b5563; width: 40%;">Monto:</td>
+                            <td style="padding: 8px 0; color: #166534; font-weight: bold; font-size: 18px;">RD$ {payment_info['amount']:,.0f}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #4b5563;">Banco:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_info['bank_name']}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #4b5563;">Tipo de Cuenta:</td>
+                            <td style="padding: 8px 0; color: #1f2937;">{payment_info['account_type']}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #4b5563;">Número de Cuenta:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-family: monospace; font-size: 15px;">{payment_info['account_number']}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #4b5563;">A nombre de:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_info['account_name']}</td>
+                        </tr>
+                        {f'<tr><td style="padding: 8px 0; color: #4b5563;">Cédula/RNC:</td><td style="padding: 8px 0; color: #1f2937;">{payment_info["account_id"]}</td></tr>' if payment_info.get('account_id') else ''}
+                    </table>
+                </div>
+                
+                <!-- Instructions -->
+                <div style="background-color: #eff6ff; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #93c5fd;">
+                    <h4 style="margin: 0 0 12px 0; color: #1e40af; font-size: 15px;">
+                        📝 Pasos para confirmar tu inscripción:
+                    </h4>
+                    <ol style="margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px; line-height: 1.8;">
+                        <li>Realiza la transferencia o depósito por el monto indicado</li>
+                        <li>Toma una foto o captura de pantalla del comprobante</li>
+                        <li>Haz clic en el botón de abajo para subir tu comprobante</li>
+                        <li>Completa los datos del pago (fecha, banco, número de transferencia)</li>
+                    </ol>
+                </div>
+                
+                <!-- CTA Button -->
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="{upload_url}" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600;">
+                        📤 Subir Comprobante de Pago
+                    </a>
+                </div>
+                
+                <!-- Warning Notice -->
+                <div style="background-color: #fef2f2; border-radius: 12px; padding: 16px 20px; border-left: 4px solid #ef4444;">
+                    <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
+                        <strong>⚠️ Importante:</strong> Si el pago no se realiza dentro de los 30 días, tu pre-registro será desestimado y perderás tu cupo.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #1f2937; padding: 24px; text-align: center;">
+                <p style="color: #f97316; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
+                    {race_name}
+                </p>
+                <p style="color: #9ca3af; margin: 0 0 12px 0; font-size: 13px;">
+                    ¡Nos vemos en la línea de salida!
+                </p>
+                <p style="color: #6b7280; margin: 0; font-size: 12px;">
+                    Si tienes preguntas, contáctanos a través de nuestras redes sociales.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+
+@router.get("/payment-info/{token}")
+async def get_payment_info_for_athlete(token: str):
+    """Get payment info and registration data for receipt upload"""
+    # Find registration by token
+    registration = await registrations_collection.find_one(
+        {"edit_token": token},
+        {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "race_code": 1, 
+         "payment_status": 1, "payment_receipt": 1}
+    )
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    # Get race config for payment info
+    race_config = await db["race_configurations"].find_one(
+        {"code": registration.get("race_code")},
+        {"_id": 0, "name": 1, "payment_account_name": 1, "payment_account_id": 1,
+         "payment_bank_name": 1, "payment_account_type": 1, "payment_account_number": 1,
+         "registration_cost": 1}
+    )
+    
+    return {
+        "registration": registration,
+        "race_config": race_config or {}
+    }
+
+
+@router.post("/submit-payment-receipt/{token}")
+async def submit_payment_receipt(
+    token: str,
+    payment_date: str = Form(...),
+    bank_origin: str = Form(...),
+    transfer_number: Optional[str] = Form(None),
+    receipt_image: UploadFile = File(...)
+):
+    """Submit payment receipt with image and details"""
+    # Find registration by token
+    registration = await registrations_collection.find_one({"edit_token": token})
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]
+    if receipt_image.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato no válido. Use JPG, PNG, WebP o PDF."
+        )
+    
+    # Read and validate file size
+    content = await receipt_image.read()
+    file_size = len(content)
+    max_size = 10 * 1024 * 1024  # 10MB
+    
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El archivo es demasiado grande (máximo 10MB). Tu archivo tiene {file_size / 1024 / 1024:.2f}MB."
+        )
+    
+    # Generate filename
+    ext = receipt_image.filename.split(".")[-1] if "." in receipt_image.filename else "jpg"
+    filename = f"receipt_{registration['race_code']}_{registration['email'].replace('@', '_')}_{secrets.token_hex(6)}.{ext}"
+    filepath = os.path.join(RECEIPTS_UPLOAD_DIR, filename)
+    
+    # Save file
+    async with aiofiles.open(filepath, 'wb') as f:
+        await f.write(content)
+    
+    # Update registration with payment receipt info
+    receipt_info = {
+        "image_path": f"/uploads/receipts/{filename}",
+        "payment_date": payment_date,
+        "bank_origin": bank_origin,
+        "transfer_number": transfer_number,
+        "submitted_at": datetime.now(timezone.utc),
+        "status": "pending_review"  # pending_review, approved, rejected
+    }
+    
+    await registrations_collection.update_one(
+        {"edit_token": token},
+        {
+            "$set": {
+                "payment_receipt": receipt_info,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Send confirmation email to athlete
+    try:
+        from services.email_service import send_email
+        
+        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+        email = registration.get("email")
+        
+        subject = "Comprobante de Pago Recibido - Backyard Ultra Santo Domingo"
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px; text-align: center;">
+                <h1 style="color: white; margin: 0;">✅ Comprobante Recibido</h1>
+            </div>
+            
+            <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
+                <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
+                
+                <p style="color: #4b5563; font-size: 16px;">
+                    Hemos recibido tu comprobante de pago con los siguientes detalles:
+                </p>
+                
+                <div style="background: white; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Fecha de pago:</td>
+                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_date}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #6b7280;">Banco origen:</td>
+                            <td style="padding: 8px 0; color: #1f2937;">{bank_origin}</td>
+                        </tr>
+                        {f'<tr><td style="padding: 8px 0; color: #6b7280;">No. Transferencia:</td><td style="padding: 8px 0; color: #1f2937;">{transfer_number}</td></tr>' if transfer_number else ''}
+                    </table>
+                </div>
+                
+                <div style="background: #fef3c7; border-radius: 10px; padding: 15px; margin: 20px 0;">
+                    <p style="color: #92400e; margin: 0; font-size: 14px;">
+                        <strong>📋 Estado:</strong> En revisión. Te notificaremos una vez que tu pago sea confirmado.
+                    </p>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                
+                <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                    © Backyard Ultra Santo Domingo
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        await send_email(email, subject, html_content)
+    except Exception as e:
+        print(f"Error sending receipt confirmation email: {e}")
+    
+    return {
+        "message": "Comprobante de pago recibido exitosamente",
+        "status": "pending_review"
+    }
+
+
+@router.get("/admin/pending-receipts/{race_code}")
+async def get_pending_receipts(race_code: str):
+    """Get all registrations with pending payment receipts"""
+    registrations = await registrations_collection.find(
+        {
+            "race_code": race_code,
+            "payment_receipt": {"$exists": True},
+            "payment_receipt.status": "pending_review"
+        },
+        {"_id": 0, "edit_token": 0}
+    ).to_list(100)
+    
+    # Convert datetime objects
+    for reg in registrations:
+        if reg.get("created_at"):
+            reg["created_at"] = reg["created_at"].isoformat()
+        if reg.get("updated_at"):
+            reg["updated_at"] = reg["updated_at"].isoformat()
+        if reg.get("payment_receipt", {}).get("submitted_at"):
+            reg["payment_receipt"]["submitted_at"] = reg["payment_receipt"]["submitted_at"].isoformat()
+    
+    return {
+        "race_code": race_code,
+        "count": len(registrations),
+        "registrations": registrations
+    }
+
+
+@router.put("/admin/review-receipt/{email}")
+async def review_payment_receipt(email: str, race_code: str, approved: bool):
+    """Approve or reject a payment receipt"""
+    registration = await registrations_collection.find_one({
+        "email": email.lower(),
+        "race_code": race_code
+    })
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    if not registration.get("payment_receipt"):
+        raise HTTPException(status_code=400, detail="No hay comprobante de pago para revisar")
+    
+    new_status = "approved" if approved else "rejected"
+    payment_status = "paid" if approved else "pending"
+    
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {
+            "$set": {
+                "payment_receipt.status": new_status,
+                "payment_receipt.reviewed_at": datetime.now(timezone.utc),
+                "payment_status": payment_status,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Send notification email to athlete
+    try:
+        from services.email_service import send_email
+        
+        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+        
+        if approved:
+            subject = "✅ Pago Confirmado - Backyard Ultra Santo Domingo"
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">🎉 ¡Pago Confirmado!</h1>
+                </div>
+                
+                <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
+                    <h2 style="color: #1f2937;">¡Felicidades {nombre}!</h2>
+                    
+                    <p style="color: #4b5563; font-size: 16px;">
+                        Tu pago ha sido verificado y confirmado. <strong>¡Ya eres un participante oficial!</strong>
+                    </p>
+                    
+                    <div style="background: #ecfdf5; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center; border: 2px solid #10b981;">
+                        <p style="color: #065f46; margin: 0; font-size: 18px; font-weight: bold;">
+                            ✓ Inscripción Completa
+                        </p>
+                    </div>
+                    
+                    <p style="color: #4b5563; font-size: 14px;">
+                        Próximamente recibirás más información sobre el evento, incluyendo la guía del corredor y detalles logísticos.
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                    
+                    <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                        © Backyard Ultra Santo Domingo<br>
+                        ¡Nos vemos en la línea de salida!
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+        else:
+            subject = "⚠️ Comprobante de Pago Rechazado - Backyard Ultra Santo Domingo"
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 10px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">⚠️ Comprobante Rechazado</h1>
+                </div>
+                
+                <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
+                    <h2 style="color: #1f2937;">Hola {nombre}</h2>
+                    
+                    <p style="color: #4b5563; font-size: 16px;">
+                        Lamentablemente, no pudimos verificar tu comprobante de pago. Esto puede deberse a:
+                    </p>
+                    
+                    <ul style="color: #4b5563; font-size: 14px;">
+                        <li>La imagen no es legible o está incompleta</li>
+                        <li>El monto no coincide con el costo de inscripción</li>
+                        <li>Los datos de la cuenta destino no son correctos</li>
+                    </ul>
+                    
+                    <p style="color: #4b5563; font-size: 16px;">
+                        Por favor, verifica la información y vuelve a subir tu comprobante.
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+                    
+                    <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                        Si tienes dudas, contáctanos a través de nuestras redes sociales.
+                    </p>
+                </div>
+            </body>
+            </html>
+            """
+        
+        await send_email(email, subject, html_content)
+    except Exception as e:
+        print(f"Error sending receipt review email: {e}")
+    
+    return {
+        "message": f"Comprobante {'aprobado' if approved else 'rechazado'}",
+        "payment_status": payment_status
+    }
