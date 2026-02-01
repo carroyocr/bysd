@@ -376,27 +376,27 @@ export default function VoluntarioRegistroPage() {
   };
 
   const validateStep = () => {
-    switch (currentStep) {
-      case 1: // Personal
+    switch (currentStepId) {
+      case 'personal':
         if (!formData.nombre || !formData.apellidos || !formData.fecha_nacimiento || 
             !formData.sexo || !formData.telefono || !formData.ciudad_residencia) {
           toast.error('Completa todos los campos obligatorios');
           return false;
         }
         break;
-      case editMode ? 1 : 2: // Experience
+      case 'experience':
         if (!formData.experiencia_voluntariado) {
           toast.error('Indica si tienes experiencia');
           return false;
         }
         break;
-      case editMode ? 2 : 3: // Slots
+      case 'slots':
         if (selectedSlots.length === 0) {
           toast.error('Selecciona al menos un turno de interés');
           return false;
         }
         break;
-      case editMode ? 4 : 5: // Emergency
+      case 'emergency':
         if (!formData.contacto_emergencia_nombre || !formData.contacto_emergencia_telefono) {
           toast.error('Completa la información de contacto de emergencia');
           return false;
@@ -413,7 +413,7 @@ export default function VoluntarioRegistroPage() {
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, editMode ? 0 : 1));
+    setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
   const handleSubmit = async () => {
