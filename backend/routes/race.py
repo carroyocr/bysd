@@ -218,11 +218,12 @@ async def get_participants(
     else:
         # Try registrations collection first for new races
         if active_race_code:
-            # Build query for registrations - only race participants (not pre_registered)
+            # Build query for registrations - only active, paid participants with BIB
             query = {
                 "race_code": active_race_code,
                 "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
-                "bib": {"$ne": None}  # Must have BIB assigned
+                "payment_status": "paid",  # Must have completed payment
+                "bib": {"$exists": True, "$ne": None}  # Must have BIB assigned
             }
             
             if status and status in ["active", "retired", "dns", "winner", "honor"]:
