@@ -292,6 +292,29 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Sistema de Recordatorio de Pago y Carga de Comprobante** (01 Febrero 2026)
+  - **Panel Admin - Pre-Registro**:
+    - Botón "Enviar Recordatorio" para notificar atletas activos con pago pendiente (30 días plazo)
+    - Sección "Comprobantes Pendientes" mostrando uploads de atletas esperando revisión
+    - Botones para aprobar/rechazar comprobantes con notificación automática por email
+    - Muestra conteo de atletas con pago pendiente y comprobantes por revisar
+  - **Nueva página `/subir-comprobante`**:
+    - Accesible con token único enviado en el email de recordatorio
+    - Muestra datos de cuenta para el pago (banco, número, a nombre de, monto)
+    - Formulario: fecha de pago, banco de origen, número de transferencia (opcional)
+    - Upload de imagen del comprobante (JPG, PNG, WebP, PDF)
+  - **Emails automatizados**:
+    - Recordatorio de pago con datos de cuenta y enlace para subir comprobante
+    - Confirmación cuando se recibe un comprobante
+    - Notificación de aprobación/rechazo del comprobante
+  - **Tests**: 13/13 tests backend (100%), frontend verificado
+
+- [x] **Feature: Zona Horaria GMT en Configuración de Carrera** (01 Febrero 2026)
+  - Campo dropdown en Panel Admin > Carrera > "Zona Horaria (GMT)"
+  - Opciones desde GMT-12 hasta GMT+2
+  - Default: GMT-4 (República Dominicana)
+  - Usado para el control de vueltas en tiempo oficial
+
 - [x] **Feature: Notificaciones de Manual Disponible por Email** (01 Febrero 2026)
   - **Nuevos botones en Panel Admin > Carrera > Manuales**:
     - "Notificar Corredores (X)" - Envía email a atletas activos informando que la Guía del Corredor está disponible
