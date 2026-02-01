@@ -57,8 +57,8 @@ async def get_available_slots():
     """Get all available (unassigned) volunteer slots grouped by position and shift"""
     from server import db
     
-    # Get all slots
-    slots = await db.volunteer_slots.find({}, {"_id": 0}).to_list(1000)
+    # Get all slots from the correct collection
+    slots = await db.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
     
     # Group by position
     positions = {}
