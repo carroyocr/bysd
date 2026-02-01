@@ -9,9 +9,12 @@ from pathlib import Path
 
 router = APIRouter(prefix="/api/race-config", tags=["race-config"])
 
-# Directory for uploaded logos
+# Directory for uploaded logos and manuals
 LOGOS_DIR = Path(__file__).parent.parent / "static" / "logos"
 LOGOS_DIR.mkdir(parents=True, exist_ok=True)
+
+MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
+MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
 # JWT verification (reuse from race.py)
 import jwt
@@ -28,6 +31,14 @@ async def verify_token(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="Token expirado")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
+
+
+class PaymentInfoModel(BaseModel):
+    account_name: Optional[str] = None
+    account_id: Optional[str] = None  # Identificación/Cédula
+    bank_name: Optional[str] = None
+    account_type: Optional[str] = None  # Ahorro, Corriente
+    account_number: Optional[str] = None
 
 
 class RaceConfigCreate(BaseModel):
@@ -49,6 +60,12 @@ class RaceConfigUpdate(BaseModel):
     logo_url: Optional[str] = None
     registration_cost: Optional[float] = None
     edition_number: Optional[int] = None
+    # Payment info
+    payment_account_name: Optional[str] = None
+    payment_account_id: Optional[str] = None
+    payment_bank_name: Optional[str] = None
+    payment_account_type: Optional[str] = None
+    payment_account_number: Optional[str] = None
 
 
 @router.get("/active")
