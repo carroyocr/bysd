@@ -47,6 +47,7 @@ class RaceConfigCreate(BaseModel):
     date: str  # e.g., "2026-01-24"
     start_time: str  # e.g., "09:00"
     location: str  # e.g., "Parque del Este, Santo Domingo"
+    timezone_gmt: str = "GMT-4"  # e.g., "GMT-4" for Dominican Republic
     is_active: bool = True
     registration_cost: float = 3500.0  # Cost in local currency (RD$)
     edition_number: int = 1  # Edition number (1 = Primera, 2 = Segunda, etc.)
@@ -60,6 +61,7 @@ class RaceConfigUpdate(BaseModel):
     logo_url: Optional[str] = None
     registration_cost: Optional[float] = None
     edition_number: Optional[int] = None
+    timezone_gmt: Optional[str] = None  # e.g., "GMT-4"
     # Payment info
     payment_account_name: Optional[str] = None
     payment_account_id: Optional[str] = None
