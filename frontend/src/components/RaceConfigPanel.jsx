@@ -33,6 +33,7 @@ export default function RaceConfigPanel() {
     date: '',
     start_time: '09:00',
     location: '',
+    timezone_gmt: 'GMT-4',
     registration_cost: 3500,
     edition_number: 1
   });
@@ -43,6 +44,7 @@ export default function RaceConfigPanel() {
     date: '',
     start_time: '',
     location: '',
+    timezone_gmt: 'GMT-4',
     registration_cost: 3500,
     edition_number: 1,
     // Payment info
