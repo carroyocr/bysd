@@ -267,3 +267,175 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
     except Exception as e:
         print(f"Error sending email to {to_email}: {str(e)}")
         return False
+
+
+def get_manual_notification_template(
+    recipient_name: str,
+    manual_type: str,  # "runners" or "volunteers"
+    race_name: str,
+    view_url: str,
+    download_url: str
+) -> str:
+    """Generate HTML email template for manual availability notification"""
+    
+    base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+    logo_url = f"{base_url}/icon-bu.png"
+    
+    if manual_type == "runners":
+        title = "Guía del Corredor Disponible"
+        icon = "📖"
+        description = "La guía oficial del corredor ya está disponible. En ella encontrarás toda la información que necesitas para prepararte para el evento."
+        button_text = "Ver Guía del Corredor"
+        content_items = [
+            "Información sobre el circuito y la ruta",
+            "Equipo obligatorio y recomendado",
+            "Horarios y puntos de hidratación",
+            "Reglas de la competencia",
+            "Protocolos de seguridad"
+        ]
+    else:
+        title = "Manual de Voluntarios Disponible"
+        icon = "📋"
+        description = "El manual oficial para voluntarios ya está disponible. Contiene toda la información que necesitas para tu participación como parte del staff."
+        button_text = "Ver Manual de Voluntarios"
+        content_items = [
+            "Descripción de roles y responsabilidades",
+            "Horarios y turnos de trabajo",
+            "Protocolos de comunicación",
+            "Información de emergencias",
+            "Código de vestimenta y lineamientos"
+        ]
+    
+    # Build content list HTML
+    content_list = ""
+    for item in content_items:
+        content_list += f'<li style="padding: 4px 0; color: #4b5563;">{item}</li>'
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 32px 24px; text-align: center;">
+                <img src="{logo_url}" alt="Backyard Ultra" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; border: 3px solid rgba(255,255,255,0.3);">
+                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO</p>
+            </div>
+            
+            <!-- Announcement Banner -->
+            <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 24px; margin: 0;">
+                <p style="margin: 0; color: #065f46; font-size: 16px; font-weight: 600;">
+                    {icon} ¡{title}!
+                </p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 32px 24px;">
+                <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6;">
+                    Hola <strong>{recipient_name}</strong>,
+                </p>
+                
+                <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
+                    {description}
+                </p>
+                
+                <!-- Content Summary Box -->
+                <div style="background-color: #fafaf9; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+                    <p style="margin: 0 0 12px 0; color: #1f2937; font-size: 15px; font-weight: 600;">
+                        En este documento encontrarás:
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
+                        {content_list}
+                    </ul>
+                </div>
+                
+                <!-- CTA Buttons -->
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="{view_url}" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; margin-bottom: 12px;">
+                        {button_text}
+                    </a>
+                    <p style="margin: 16px 0 0 0;">
+                        <a href="{download_url}" style="color: #ea580c; font-size: 14px; text-decoration: underline;">
+                            Descargar PDF directamente
+                        </a>
+                    </p>
+                </div>
+                
+                <!-- Important Notice -->
+                <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px 20px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                        <strong>💡 Recomendación:</strong> Te sugerimos leer este documento con anticipación para estar preparado el día del evento.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #1f2937; padding: 24px; text-align: center;">
+                <p style="color: #f97316; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
+                    {race_name}
+                </p>
+                <p style="color: #9ca3af; margin: 0 0 12px 0; font-size: 13px;">
+                    ¡Nos vemos en la línea de salida!
+                </p>
+                <p style="color: #6b7280; margin: 0; font-size: 12px;">
+                    Este correo fue enviado porque estás registrado para el evento.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+
+async def send_manual_notification_email(
+    to_email: str,
+    recipient_name: str,
+    manual_type: str,
+    race_name: str,
+    view_url: str,
+    download_url: str
+) -> bool:
+    """Send manual availability notification email"""
+    
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        print("Gmail credentials not configured")
+        return False
+    
+    try:
+        if manual_type == "runners":
+            subject = f"📖 La Guía del Corredor ya está disponible - {race_name}"
+        else:
+            subject = f"📋 El Manual de Voluntarios ya está disponible - {race_name}"
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+        msg['To'] = to_email
+        
+        html_content = get_manual_notification_template(
+            recipient_name=recipient_name,
+            manual_type=manual_type,
+            race_name=race_name,
+            view_url=view_url,
+            download_url=download_url
+        )
+        
+        part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(part)
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        
+        print(f"Manual notification email sent to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"Error sending manual notification to {to_email}: {str(e)}")
+        return False
