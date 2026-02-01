@@ -1124,27 +1124,31 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Navigation Buttons */}
-            {currentStep > 0 && (
+            {/* Navigation Buttons - show after verification in normal mode or always in edit mode */}
+            {(editMode || currentStepId !== 'verify') && (
               <div className="flex justify-between pt-4 border-t">
-                <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+                <Button 
+                  variant="outline" 
+                  onClick={prevStep} 
+                  disabled={currentStep === 0}
+                >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Anterior
                 </Button>
                 
-                {currentStep < STEPS.length - 1 ? (
+                {currentStep < activeSteps.length - 1 ? (
                   <Button onClick={nextStep}>
                     Siguiente
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button onClick={handleSubmit} disabled={submitting}>
+                  <Button onClick={handleSubmit} disabled={submitting} data-testid="volunteer-submit-btn">
                     {submitting ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4 mr-2" />
-                        Completar Registro
+                        {editMode ? 'Guardar Cambios' : 'Completar Registro'}
                       </>
                     )}
                   </Button>
