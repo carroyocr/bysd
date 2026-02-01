@@ -236,8 +236,10 @@ export default function VolunteerAssignmentsManagement() {
               onChange={(e) => setFilterPosition(e.target.value)}
             >
               <option value="">Todas las posiciones</option>
-              {positions.map((pos) => (
-                <option key={pos._id || pos.name} value={pos.name}>{pos.name}</option>
+              {positions.map((pos, idx) => (
+                <option key={pos._id || pos.nombre || idx} value={pos.nombre || pos.name}>
+                  {pos.nombre || pos.name}
+                </option>
               ))}
             </select>
             <select
