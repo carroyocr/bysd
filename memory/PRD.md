@@ -336,13 +336,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - `/app/tests/test_new_features.py`
   - `/app/backend/tests/test_surveys.py`
   - `/app/backend/tests/test_race_config.py`
-  - `/app/backend/tests/test_pre_registration_admin.py` (nuevo)
+  - `/app/backend/tests/test_pre_registration_admin.py`
+  - `/app/backend/tests/test_volunteer_edit_mode.py` (nuevo)
 - **Reportes**: 
   - `/app/test_reports/iteration_1.json`
   - `/app/test_reports/iteration_2.json`
   - `/app/test_reports/iteration_3.json`
   - `/app/test_reports/iteration_4.json`
-  - `/app/test_reports/iteration_5.json` (nuevo - gestión pre-registros)
+  - `/app/test_reports/iteration_5.json`
+  - `/app/test_reports/iteration_8.json` (nuevo - edición voluntarios)
 - **Cobertura**: 85/85 tests backend (100%), UI tests completos (100%)
 
 ---
