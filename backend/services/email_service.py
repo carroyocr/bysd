@@ -238,3 +238,32 @@ async def send_finish_notifications(db, athlete_bib: str, is_winner: bool = Fals
             athletes_data=[athlete],
             subscription_id=str(sub.get("_id", ""))
         )
+
+
+
+async def send_email(to_email: str, subject: str, html_content: str) -> bool:
+    """Send a simple HTML email using Gmail SMTP"""
+    
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        print("Gmail credentials not configured")
+        return False
+    
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+        msg['To'] = to_email
+        
+        part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(part)
+        
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+        
+        print(f"Email sent to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"Error sending email to {to_email}: {str(e)}")
+        return False
