@@ -883,51 +883,52 @@ export default function VoluntarioRegistroPage() {
                             </CardHeader>
                             <CardContent className="p-4">
                               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                {position.turnos.map((turno) => (
-                                  turno.slots.map((slot) => {
-                                    const isSelected = selectedSlots.includes(slot.id);
-                                    const wouldConflict = !isSelected && selectedSlots.some(
-                                      existingId => slotsConflict(existingId, slot.id)
-                                    );
-                                    
-                                    return (
-                                      <div
-                                        key={slot.id}
-                                        onClick={() => !wouldConflict && toggleSlot(slot.id, { ...slot, turno: turno.turno, puesto: position.puesto })}
-                                        className={`
-                                          relative p-3 rounded-lg border-2 cursor-pointer transition-all
-                                          ${isSelected 
-                                            ? 'border-primary bg-primary/10' 
-                                            : wouldConflict
-                                              ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
-                                              : 'border-gray-200 hover:border-primary/50 hover:bg-primary/5'
-                                          }
-                                        `}
-                                      >
-                                        {isSelected && (
-                                          <div className="absolute top-2 right-2">
-                                            <Check className="w-5 h-5 text-primary" />
-                                          </div>
-                                        )}
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <Badge variant={isSelected ? "default" : "outline"} className="text-xs">
-                                            Turno {turno.turno}
-                                          </Badge>
-                                          <span className="text-xs text-muted-foreground">
-                                            {getShiftDate(turno.hora_inicio)}
-                                          </span>
+                                {position.turnos.map((turno) => {
+                                  const isSelected = selectedSlots.includes(turno.slot_id);
+                                  const wouldConflict = !isSelected && selectedSlots.some(
+                                    existingId => slotsConflict(existingId, turno.slot_id)
+                                  );
+                                  
+                                  return (
+                                    <div
+                                      key={turno.slot_id}
+                                      onClick={() => !wouldConflict && toggleSlot(turno.slot_id, turno)}
+                                      className={`
+                                        relative p-3 rounded-lg border-2 cursor-pointer transition-all
+                                        ${isSelected 
+                                          ? 'border-primary bg-primary/10' 
+                                          : wouldConflict
+                                            ? 'border-gray-200 bg-gray-100 opacity-50 cursor-not-allowed'
+                                            : 'border-gray-200 hover:border-primary/50 hover:bg-primary/5'
+                                        }
+                                      `}
+                                    >
+                                      {isSelected && (
+                                        <div className="absolute top-2 right-2">
+                                          <Check className="w-5 h-5 text-primary" />
                                         </div>
-                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                          <Clock className="w-3 h-3" />
-                                          <span>{formatTime12h(turno.hora_inicio)} - {formatTime12h(turno.hora_fin)}</span>
-                                        </div>
-                                        {wouldConflict && (
-                                          <p className="text-xs text-red-500 mt-1">Conflicto de horario</p>
-                                        )}
+                                      )}
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant={isSelected ? "default" : "outline"} className="text-xs">
+                                          Turno {turno.turno}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {getShiftDate(turno.hora_inicio)}
+                                        </span>
                                       </div>
-                                    );
-                                  })
-                                ))}
+                                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <Clock className="w-3 h-3" />
+                                        <span>{formatTime12h(turno.hora_inicio)} - {formatTime12h(turno.hora_fin)}</span>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        {turno.available_count} de {turno.total_count} espacios disponibles
+                                      </div>
+                                      {wouldConflict && (
+                                        <p className="text-xs text-red-500 mt-1">Conflicto de horario</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </CardContent>
                           </Card>
