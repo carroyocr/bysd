@@ -291,6 +291,24 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
 ### 🟢 Completado Recientemente
+
+- [x] **Feature: Gestión de Manuales y Datos de Pago** (01 Febrero 2026)
+  - **Panel Admin - Pestaña Carrera**:
+    - Nueva sección "Datos para Recibir Pagos" con 5 campos: Nombre de Cuenta, ID/Cédula, Banco, Tipo de Cuenta, Número de Cuenta
+    - Nueva sección "Manuales del Evento" para subir/eliminar PDFs de Corredores y Voluntarios
+    - Badges visuales indicando estado del manual (Cargado/No cargado)
+    - Botones para ver, reemplazar y eliminar manuales
+  - **Páginas Públicas**:
+    - `/corredores`: Botones "Ver Guía" y "Descargar" dinámicos (habilitados si hay manual)
+    - `/voluntarios`: Botón "Descargar Manual" dinámico (habilitado si hay manual)
+    - Mensaje "Próximamente" cuando no hay manual configurado
+  - **Backend - Nuevos endpoints** (`backend/routes/race_config.py`):
+    - `POST /api/race-config/upload-manual/{code}/{manual_type}` - Subir manual PDF
+    - `DELETE /api/race-config/delete-manual/{code}/{manual_type}` - Eliminar manual
+    - `GET /api/race-config/manual/{filename}` - Servir archivo PDF
+    - `GET /api/race-config/manuals/{code}` - Obtener URLs de manuales
+  - **Tests**: 100% backend, 100% frontend (iteration_9.json)
+
 - [x] **Feature: Edición de Registro de Voluntarios** (01 Febrero 2026)
   - Voluntarios pueden editar su postulación usando un link único enviado por email
   - El link contiene un token seguro de 32 caracteres (`?token=xxx`)
