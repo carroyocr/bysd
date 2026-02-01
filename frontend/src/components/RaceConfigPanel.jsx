@@ -538,8 +538,37 @@ export default function RaceConfigPanel() {
                     onChange={(e) => setEditForm({...editForm, start_time: e.target.value})}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Zona Horaria (GMT)
+                  </Label>
+                  <select
+                    value={editForm.timezone_gmt}
+                    onChange={(e) => setEditForm({...editForm, timezone_gmt: e.target.value})}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  >
+                    <option value="GMT-12">GMT-12</option>
+                    <option value="GMT-11">GMT-11</option>
+                    <option value="GMT-10">GMT-10 (Hawái)</option>
+                    <option value="GMT-9">GMT-9 (Alaska)</option>
+                    <option value="GMT-8">GMT-8 (Pacífico)</option>
+                    <option value="GMT-7">GMT-7 (Montaña)</option>
+                    <option value="GMT-6">GMT-6 (Central)</option>
+                    <option value="GMT-5">GMT-5 (Este USA)</option>
+                    <option value="GMT-4">GMT-4 (Rep. Dominicana)</option>
+                    <option value="GMT-3">GMT-3 (Argentina)</option>
+                    <option value="GMT-2">GMT-2</option>
+                    <option value="GMT-1">GMT-1</option>
+                    <option value="GMT+0">GMT+0 (Londres)</option>
+                    <option value="GMT+1">GMT+1 (Europa Central)</option>
+                    <option value="GMT+2">GMT+2</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">Horario oficial para el control de vueltas</p>
+                </div>
                 
-                <div className="md:col-span-2 space-y-2">
+                <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
                     Ubicación
