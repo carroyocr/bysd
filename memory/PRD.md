@@ -290,7 +290,22 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Frontend: `RaceConfigContext` para valores dinámicos globales
   - Componentes actualizados: Navigation, Hero, Footer, LiveDashboard, etc.
 
+### 🟢 Completado Recientemente
+- [x] **Feature: Edición de Registro de Voluntarios** (01 Febrero 2026)
+  - Voluntarios pueden editar su postulación usando un link único enviado por email
+  - El link contiene un token seguro de 32 caracteres (`?token=xxx`)
+  - En modo edición:
+    - Título cambia a "Editar Postulación"
+    - Barra de progreso muestra 6 pasos (sin Verificación)
+    - Formulario pre-cargado con datos existentes
+    - Botón "Guardar Cambios" en lugar de "Completar Registro"
+  - Pantalla de confirmación específica para actualización
+  - Backend: Endpoints `GET /api/volunteer-registration/by-token/{token}` y `PUT /api/volunteer-registration/update/{token}`
+  - Email de confirmación incluye link de edición automáticamente
+  - Tests: 100% backend (9/9), 100% frontend UI
+
 ### 🔴 P1 - Próximas Tareas
+- [ ] Vista en admin para ver lista de voluntarios registrados
 - [ ] Notificación UI cuando un fan sube de nivel de badge
 - [ ] Filtros mejorados en página Comunidad (por atleta o fan)
 - [ ] Limpieza de código: Remover integración abandonada de Twitter/X
