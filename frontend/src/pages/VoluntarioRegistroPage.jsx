@@ -680,8 +680,8 @@ export default function VoluntarioRegistroPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             
-            {/* Step 0: Email Verification */}
-            {currentStep === 0 && (
+            {/* Step: Email Verification - only in normal mode */}
+            {currentStepId === 'verify' && !editMode && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico *</Label>
