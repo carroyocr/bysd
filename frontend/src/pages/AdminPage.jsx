@@ -78,8 +78,8 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="volunteers" className="flex items-center gap-2">
               <CalendarClock className="w-4 h-4" />
-              <span className="hidden sm:inline">Voluntarios</span>
-              <span className="sm:hidden">Volunt.</span>
+              <span className="hidden sm:inline">Turnos y Posiciones</span>
+              <span className="sm:hidden">Turnos</span>
             </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4" />
