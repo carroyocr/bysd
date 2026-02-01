@@ -300,6 +300,10 @@ app.include_router(volunteer_registration_router, prefix="/api")
 from routes.volunteer_config import router as volunteer_config_router
 app.include_router(volunteer_config_router, prefix="/api")
 
+# Include finances routes
+from routes.finances import router as finances_router
+app.include_router(finances_router, prefix="/api/finances")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
