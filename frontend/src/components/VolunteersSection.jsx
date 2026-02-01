@@ -136,21 +136,18 @@ export default function VolunteersSection() {
   ];
 
   return (
-    <section className="min-h-screen bg-gradient-to-b from-background to-accent/5 pt-20">
-      <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <Badge variant="secondary" className="mb-4">
-            <ClipboardCheck className="w-3 h-3 mr-1" />
-            Equipo de Voluntarios
-          </Badge>
-          <h1 className="font-display text-4xl md:text-5xl text-foreground mb-4">
-            Voluntarios
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-            Únete a nuestro equipo de voluntarios y sé parte fundamental de esta experiencia única
-          </p>
-        </div>
+    <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
+      <div className="container mx-auto px-4">
+        <div className="max-w-6xl mx-auto space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
+              Sección Voluntarios
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Únete a nuestro equipo y sé parte fundamental de esta experiencia única
+            </p>
+          </div>
 
         {/* Volunteer Registration CTA */}
         <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium mb-8">
