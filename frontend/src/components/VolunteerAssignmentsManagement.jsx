@@ -209,25 +209,39 @@ export default function VolunteerAssignmentsManagement() {
 
   // Statistics
   const totalVolunteers = volunteers.length;
-  const volunteersWithAssignments = volunteers.filter(v => 
-    (v.slots_interes && v.slots_interes.length > 0) || 
-    availableSlots.some(s => s.email_asignado === v.email)
-  ).length;
-  const totalAssignments = availableSlots.filter(s => s.email_asignado).length;
+  const totalFormalAssignments = availableSlots.filter(s => s.email_asignado).length;
+  const totalInterestSlots = volunteers.reduce((sum, v) => sum + (v.slots_interes?.length || 0), 0);
+  const volunteersWithInterest = volunteers.filter(v => v.slots_interes && v.slots_interes.length > 0).length;
 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold text-blue-700">{totalVolunteers}</div>
-            <div className="text-sm text-blue-600">Voluntarios Registrados</div>
+            <div className="text-sm text-blue-600">Voluntarios</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold text-amber-700">{volunteersWithInterest}</div>
+            <div className="text-sm text-amber-600">Con Turnos de Interés</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <div className="text-3xl font-bold text-purple-700">{totalInterestSlots}</div>
+            <div className="text-sm text-purple-600">Turnos de Interés</div>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4 text-center">
-            <div className="text-3xl font-bold text-green-700">{volunteersWithAssignments}</div>
+            <div className="text-3xl font-bold text-green-700">{totalFormalAssignments}</div>
+            <div className="text-sm text-green-600">Asignaciones Formales</div>
+          </CardContent>
+        </Card>
+      </div>
             <div className="text-sm text-green-600">Con Asignaciones</div>
           </CardContent>
         </Card>
