@@ -641,7 +641,7 @@ export default function VoluntarioRegistroPage() {
       <div className="container mx-auto px-4 mt-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-            {STEPS.map((step, index) => {
+            {activeSteps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === currentStep;
               const isCompleted = index < currentStep;
