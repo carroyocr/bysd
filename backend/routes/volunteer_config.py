@@ -135,6 +135,28 @@ async def regenerate_all_slots():
     return {"message": f"Slots regenerados: {total_slots} creados"}
 
 
+@router.post("/clear-assignments")
+async def clear_all_assignments():
+    """Clear all volunteer assignments from slots"""
+    from server import db
+    
+    # Count current assignments
+    assigned_count = await db.volunteer_assignments.count_documents({
+        "email_asignado": {"$nin": [None, ""]}
+    })
+    
+    # Clear all assignments
+    result = await db.volunteer_assignments.update_many(
+        {},
+        {"$set": {"email_asignado": None, "nombre_asignado": None}}
+    )
+    
+    return {
+        "message": f"Asignaciones limpiadas: {assigned_count} slots liberados",
+        "slots_cleared": assigned_count
+    }
+
+
 @router.get("/shifts-template")
 async def get_shifts_template():
     """Get default shift templates"""
