@@ -1,18 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Heart, UserPlus, Edit2, Mail, Loader2 } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Heart, UserPlus, Edit2, Mail, Loader2, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function VolunteersSection() {
+  const { config } = useRaceConfig();
+  
   // State for edit link modal
   const [showEditLinkModal, setShowEditLinkModal] = useState(false);
   const [editLinkEmail, setEditLinkEmail] = useState('');
   const [sendingEditLink, setSendingEditLink] = useState(false);
+  const [manualUrl, setManualUrl] = useState(null);
+  const [loadingManual, setLoadingManual] = useState(true);
+
+  // Load manual URL for active race
+  useEffect(() => {
+    const loadManual = async () => {
+      if (!config?.code) {
+        setLoadingManual(false);
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/manuals/${config.code}`);
+        if (response.ok) {
+          const data = await response.json();
+          setManualUrl(data.volunteers_manual);
+        }
+      } catch (error) {
+        console.error('Error loading manual:', error);
+      } finally {
+        setLoadingManual(false);
+      }
+    };
+    
+    loadManual();
+  }, [config?.code]);
 
   // Handle request edit link
   const handleRequestEditLink = async () => {
@@ -24,7 +55,7 @@ export default function VolunteersSection() {
     setSendingEditLink(true);
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/volunteer-registration/request-edit-link`, {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/request-edit-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: editLinkEmail.trim().toLowerCase() })
