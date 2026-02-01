@@ -790,6 +790,21 @@ export default function PreRegistrationManagement() {
                           <Badge variant="outline">{reg.talla_camiseta}</Badge>
                         )}
                       </td>
+                      {/* Experience Score Column */}
+                      <td className="py-3 px-2 hidden lg:table-cell text-center">
+                        {reg.status === 'active' && reg.payment_status === 'paid' ? (
+                          <div className="flex flex-col items-center">
+                            <span className="font-bold text-purple-700">
+                              {Math.round(reg.experienceScore || calculateExperienceScore(reg))}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {reg.anos_experiencia || 0}a / {reg.maxima_distancia_km || 0}km
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
                       <td className="py-3 px-2">
                         {editingEmail === reg.email ? (
                           <select
