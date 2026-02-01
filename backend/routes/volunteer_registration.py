@@ -54,7 +54,7 @@ class VolunteerRegistrationData(BaseModel):
 
 @router.get("/available-slots")
 async def get_available_slots():
-    """Get all available (unassigned) volunteer slots grouped by position and shift"""
+    """Get available volunteer slots grouped by position and shift (one per turno)"""
     from server import db
     
     # Get active race for the event date
@@ -64,7 +64,7 @@ async def get_available_slots():
     # Get all slots from the correct collection
     slots = await db.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
     
-    # Group by position
+    # Group by position and turno
     positions = {}
     shifts_info = {}
     
@@ -91,22 +91,21 @@ async def get_available_slots():
         
         if turno not in positions[puesto]["turnos"]:
             positions[puesto]["turnos"][turno] = {
-                "slots": [],
+                "first_available_slot_id": None,
                 "available_count": 0,
-                "total_count": 0
+                "total_count": 0,
+                "hora_inicio": slot.get("hora_inicio"),
+                "hora_fin": slot.get("hora_fin")
             }
         
         positions[puesto]["turnos"][turno]["total_count"] += 1
         if is_available:
             positions[puesto]["turnos"][turno]["available_count"] += 1
-            positions[puesto]["turnos"][turno]["slots"].append({
-                "id": slot.get("id"),
-                "slot_number": slot.get("slot"),
-                "hora_inicio": slot.get("hora_inicio"),
-                "hora_fin": slot.get("hora_fin")
-            })
+            # Keep track of first available slot ID
+            if positions[puesto]["turnos"][turno]["first_available_slot_id"] is None:
+                positions[puesto]["turnos"][turno]["first_available_slot_id"] = slot.get("id")
     
-    # Convert to list format
+    # Convert to list format - ONE entry per turno (not per slot)
     positions_list = []
     for puesto, data in sorted(positions.items()):
         turnos_list = []
@@ -114,11 +113,11 @@ async def get_available_slots():
             if turno_data["available_count"] > 0:  # Only include shifts with available slots
                 turnos_list.append({
                     "turno": turno,
-                    "hora_inicio": shifts_info[turno]["hora_inicio"],
-                    "hora_fin": shifts_info[turno]["hora_fin"],
+                    "hora_inicio": turno_data["hora_inicio"],
+                    "hora_fin": turno_data["hora_fin"],
                     "available_count": turno_data["available_count"],
                     "total_count": turno_data["total_count"],
-                    "slots": turno_data["slots"]
+                    "slot_id": turno_data["first_available_slot_id"]  # Single slot ID for selection
                 })
         
         if turnos_list:  # Only include positions with available shifts
