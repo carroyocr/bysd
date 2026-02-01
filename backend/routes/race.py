@@ -101,8 +101,14 @@ async def get_race_stats(
     else:
         # Try registrations collection first for new races
         if active_race_code:
+            # Only get athletes who are active, paid, and have BIB
             registrations = await database.registrations.find(
-                {"race_code": active_race_code, "status": {"$in": ["active", "retired", "dns", "winner", "honor"]}},
+                {
+                    "race_code": active_race_code, 
+                    "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
+                    "payment_status": "paid",
+                    "bib": {"$exists": True, "$ne": None}
+                },
                 {"_id": 0, "edit_token": 0}
             ).to_list(1000)
             
