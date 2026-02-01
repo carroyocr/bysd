@@ -263,6 +263,50 @@ export default function PreRegistrationManagement() {
     }
   };
 
+  // Count athletes with BIB assigned
+  const athletesWithBibCount = useMemo(() => {
+    return registrations.filter(r => r.bib).length;
+  }, [registrations]);
+
+  const handleRemoveAllBibs = async () => {
+    if (athletesWithBibCount === 0) {
+      toast.error('No hay atletas con BIB asignado');
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `¿Está seguro de eliminar TODAS las asignaciones de BIB?\n\nEsta acción eliminará el número de BIB de ${athletesWithBibCount} atleta(s).`
+    );
+    
+    if (!confirmed) return;
+    
+    setRemovingAllBibs(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/registration/admin/remove-all-bibs/${raceCode}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al eliminar asignaciones');
+      }
+      
+      toast.success(data.message);
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setRemovingAllBibs(false);
+    }
+  };
+
   // Filter and optionally sort by experience
   const filteredRegistrations = useMemo(() => {
     let result = registrations.filter(reg => {
