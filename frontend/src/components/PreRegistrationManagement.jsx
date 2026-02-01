@@ -702,6 +702,20 @@ export default function PreRegistrationManagement() {
                 <Award className="w-4 h-4 mr-2" />
                 {sortByExperience ? "Ordenado por Exp." : "Ordenar por Experiencia"}
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAutoAssignBibs}
+                disabled={autoAssigningBibs || eligibleForBibCount === 0}
+                className="border-green-400 text-green-700 hover:bg-green-50"
+                data-testid="auto-assign-bibs-btn"
+              >
+                {autoAssigningBibs ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Asignando...</>
+                ) : (
+                  <><Hash className="w-4 h-4 mr-2" /> Asignar BIBs ({eligibleForBibCount})</>
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={exportToCSV}>
                 <Download className="w-4 h-4 mr-2" />
                 Exportar CSV
