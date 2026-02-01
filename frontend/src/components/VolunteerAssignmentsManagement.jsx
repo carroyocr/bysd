@@ -489,19 +489,82 @@ export default function VolunteerAssignmentsManagement() {
                             )}
                           </div>
 
-                          {/* Interest Slots (from registration) */}
+                          {/* Interest Slots (from registration) - Pending confirmation */}
                           {volunteer.slots_interes && volunteer.slots_interes.length > 0 && (
                             <div className="pt-3 border-t">
-                              <h4 className="font-semibold text-sm mb-2 text-muted-foreground">
-                                Turnos de Interés (del registro)
-                              </h4>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-sm text-amber-700">
+                                  Turnos Pendientes de Confirmación
+                                </h4>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openConfirmModal(volunteer);
+                                  }}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Confirmar Todos
+                                </Button>
+                              </div>
+                              <div className="grid gap-2">
                                 {volunteer.slots_interes.map((slotId) => {
                                   const slotInfo = getSlotInfo(slotId);
+                                  const isAlreadyAssigned = slotInfo?.email_asignado;
+                                  
                                   return (
-                                    <Badge key={slotId} variant="outline" className="text-xs">
-                                      {slotInfo ? `${slotInfo.puesto} - Turno ${slotInfo.turno}` : `Slot #${slotId}`}
-                                    </Badge>
+                                    <div 
+                                      key={slotId}
+                                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                                        isAlreadyAssigned 
+                                          ? 'bg-gray-50 border-gray-200' 
+                                          : 'bg-amber-50 border-amber-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded flex items-center justify-center ${
+                                          isAlreadyAssigned ? 'bg-gray-200' : 'bg-amber-200'
+                                        }`}>
+                                          <Clock className={`w-4 h-4 ${isAlreadyAssigned ? 'text-gray-500' : 'text-amber-700'}`} />
+                                        </div>
+                                        <div>
+                                          <div className="font-medium text-sm">
+                                            {slotInfo ? slotInfo.puesto : `Slot #${slotId}`}
+                                          </div>
+                                          {slotInfo && (
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                              <Badge variant="outline" className="text-xs">
+                                                Turno {slotInfo.turno}
+                                              </Badge>
+                                              <span>
+                                                {formatTime(slotInfo.hora_inicio)} - {formatTime(slotInfo.hora_fin)}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {isAlreadyAssigned && (
+                                            <span className="text-xs text-red-500">
+                                              (Ya asignado a otro voluntario)
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {!isAlreadyAssigned && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-green-600 border-green-300 hover:bg-green-50"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleConfirmSingleSlot(volunteer, slotId);
+                                          }}
+                                          disabled={actionLoading}
+                                        >
+                                          <CheckCircle className="w-4 h-4 mr-1" />
+                                          Confirmar
+                                        </Button>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
