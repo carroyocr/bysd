@@ -1006,6 +1006,70 @@ export default function VolunteersSection() {
           </Card>
         </div>
       )}
+
+      {/* Edit Link Modal */}
+      {showEditLinkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-pink-600" />
+                Editar mi Postulación
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Ingresa el correo electrónico con el que te registraste como voluntario. 
+                Te enviaremos un link para editar tu postulación.
+              </p>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Correo Electrónico</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    value={editLinkEmail}
+                    onChange={(e) => setEditLinkEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    className="pl-10"
+                    data-testid="edit-link-email-input"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowEditLinkModal(false);
+                    setEditLinkEmail('');
+                  }}
+                  disabled={sendingEditLink}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white"
+                  onClick={handleRequestEditLink}
+                  disabled={!editLinkEmail.trim() || sendingEditLink}
+                  data-testid="send-edit-link-btn"
+                >
+                  {sendingEditLink ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar Link de Edición'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </section>
   );
 }
