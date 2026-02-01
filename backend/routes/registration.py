@@ -1163,31 +1163,31 @@ def generate_payment_reminder_email(nombre: str, race_name: str, payment_info: d
                 
                 <!-- Payment Info Box -->
                 <div style="background-color: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #86efac;">
-                    <h3 style="margin: 0 0 16px 0; color: #166534; font-size: 16px; font-weight: 600;">
+                    <h3 style="margin: 0 0 16px 0; color: #166534; font-size: 16px; font-weight: 600; font-family: Arial, Helvetica, sans-serif;">
                         💳 Datos para realizar el pago
                     </h3>
-                    <table style="width: 100%; border-collapse: collapse;">
+                    <table style="width: 100%; border-collapse: collapse; font-family: Arial, Helvetica, sans-serif;">
                         <tr>
-                            <td style="padding: 8px 0; color: #4b5563; width: 40%;">Monto:</td>
-                            <td style="padding: 8px 0; color: #166534; font-weight: bold; font-size: 18px;">RD$ {payment_info['amount']:,.0f}</td>
+                            <td style="padding: 10px 0; color: #4b5563; width: 40%; font-size: 14px; vertical-align: top;">Monto:</td>
+                            <td style="padding: 10px 0; color: #166534; font-weight: bold; font-size: 20px;">RD$ {payment_info['amount']:,.0f}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px 0; color: #4b5563;">Banco:</td>
-                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_info['bank_name']}</td>
+                            <td style="padding: 10px 0; color: #4b5563; font-size: 14px; vertical-align: top;">Banco:</td>
+                            <td style="padding: 10px 0; color: #1f2937; font-size: 15px; font-weight: 600;">{payment_info['bank_name']}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px 0; color: #4b5563;">Tipo de Cuenta:</td>
-                            <td style="padding: 8px 0; color: #1f2937;">{payment_info['account_type']}</td>
+                            <td style="padding: 10px 0; color: #4b5563; font-size: 14px; vertical-align: top;">Tipo de Cuenta:</td>
+                            <td style="padding: 10px 0; color: #1f2937; font-size: 15px;">{payment_info['account_type']}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px 0; color: #4b5563;">Número de Cuenta:</td>
-                            <td style="padding: 8px 0; color: #1f2937; font-family: monospace; font-size: 15px;">{payment_info['account_number']}</td>
+                            <td style="padding: 10px 0; color: #4b5563; font-size: 14px; vertical-align: top;">Número de Cuenta:</td>
+                            <td style="padding: 10px 0; color: #1f2937; font-size: 15px; font-weight: 600; letter-spacing: 1px;">{payment_info['account_number']}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px 0; color: #4b5563;">A nombre de:</td>
-                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_info['account_name']}</td>
+                            <td style="padding: 10px 0; color: #4b5563; font-size: 14px; vertical-align: top;">A nombre de:</td>
+                            <td style="padding: 10px 0; color: #1f2937; font-size: 15px; font-weight: 600;">{payment_info['account_name']}</td>
                         </tr>
-                        {f'<tr><td style="padding: 8px 0; color: #4b5563;">Cédula/RNC:</td><td style="padding: 8px 0; color: #1f2937;">{payment_info["account_id"]}</td></tr>' if payment_info.get('account_id') else ''}
+                        {f'<tr><td style="padding: 10px 0; color: #4b5563; font-size: 14px; vertical-align: top;">Cédula/RNC:</td><td style="padding: 10px 0; color: #1f2937; font-size: 15px;">{payment_info["account_id"]}</td></tr>' if payment_info.get('account_id') else ''}
                     </table>
                 </div>
                 
