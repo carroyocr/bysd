@@ -772,6 +772,54 @@ export default function VolunteerAssignmentsManagement() {
           </Card>
         </div>
       )}
+
+      {/* Confirm All Interest Slots Modal */}
+      {showConfirmModal && selectedVolunteer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                Confirmar Turnos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                ¿Confirmar todos los turnos de interés de este voluntario?
+              </p>
+              
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="font-medium">{selectedVolunteer.nombre} {selectedVolunteer.apellidos}</div>
+                <div className="text-sm text-muted-foreground mt-2">
+                  <strong>Turnos a confirmar:</strong> {selectedVolunteer.slots_interes?.length || 0}
+                </div>
+              </div>
+
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                Los turnos serán asignados formalmente a este voluntario.
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={actionLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleConfirmInterestSlots}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Confirmando...' : 'Confirmar Todos'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
