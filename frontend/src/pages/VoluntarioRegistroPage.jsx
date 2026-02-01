@@ -620,8 +620,8 @@ export default function VoluntarioRegistroPage() {
         </div>
       </div>
 
-      {/* Info Banner */}
-      {currentStep === 0 && (
+      {/* Info Banner - only show on verify step in normal mode */}
+      {currentStepId === 'verify' && !editMode && (
         <div className="container mx-auto px-4 mt-6">
           <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
             <CardContent className="p-6">
