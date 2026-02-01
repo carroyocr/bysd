@@ -565,6 +565,58 @@ export default function VolunteerAssignmentsManagement() {
           </Card>
         </div>
       )}
+
+      {/* Delete Volunteer Modal */}
+      {showDeleteVolunteerModal && selectedVolunteer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" />
+                Eliminar Voluntario
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">
+                  <strong>⚠️ Advertencia:</strong> Esta acción eliminará permanentemente el registro del voluntario 
+                  y todas sus asignaciones de turnos.
+                </p>
+              </div>
+              
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="font-medium">{selectedVolunteer.nombre} {selectedVolunteer.apellidos}</div>
+                <div className="text-sm text-muted-foreground">{selectedVolunteer.email}</div>
+                {selectedVolunteer.telefono && (
+                  <div className="text-sm text-muted-foreground">{selectedVolunteer.telefono}</div>
+                )}
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                ¿Estás seguro de que deseas eliminar este voluntario?
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteVolunteerModal(false)}
+                  disabled={actionLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={handleDeleteVolunteer}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Eliminando...' : 'Eliminar Voluntario'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
