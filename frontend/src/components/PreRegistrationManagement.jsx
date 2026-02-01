@@ -82,6 +82,75 @@ export default function PreRegistrationManagement() {
     loadData();
   }, [loadData]);
 
+  const handleSendPaymentReminder = async () => {
+    if (activeAthletesCount === 0) {
+      toast.error('No hay atletas activos con pago pendiente');
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `¿Enviar recordatorio de pago a ${activeAthletesCount} atletas activos con pago pendiente?\n\nEl correo incluirá los datos de la cuenta para el pago y un enlace para subir el comprobante.`
+    );
+    
+    if (!confirmed) return;
+    
+    setSendingReminder(true);
+    try {
+      const response = await fetch(`${API_URL}/api/registration/admin/send-payment-reminder/${raceCode}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al enviar recordatorios');
+      }
+      
+      toast.success(data.message, {
+        description: data.failed_count > 0 ? `${data.failed_count} envíos fallaron` : undefined
+      });
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  const handleReviewReceipt = async (email, approved) => {
+    const action = approved ? 'aprobar' : 'rechazar';
+    const confirmed = window.confirm(
+      `¿Deseas ${action} el comprobante de pago de ${email}?`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const response = await fetch(
+        `${API_URL}/api/registration/admin/review-receipt/${email}?race_code=${raceCode}&approved=${approved}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al revisar el comprobante');
+      }
+      
+      toast.success(data.message);
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const filteredRegistrations = registrations.filter(reg => {
     const matchesSearch = 
       `${reg.nombre} ${reg.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
