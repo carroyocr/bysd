@@ -671,8 +671,8 @@ export default function VoluntarioRegistroPage() {
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {React.createElement(STEPS[currentStep].icon, { className: "w-5 h-5" })}
-              {STEPS[currentStep].title}
+              {React.createElement(activeSteps[currentStep]?.icon || User, { className: "w-5 h-5" })}
+              {activeSteps[currentStep]?.title || 'Datos'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
