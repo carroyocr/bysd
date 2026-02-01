@@ -327,7 +327,6 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Tests: 100% backend (9/9), 100% frontend UI
 
 ### 🔴 P1 - Próximas Tareas
-- [ ] Vista en admin para ver lista de voluntarios registrados
 - [ ] Notificación UI cuando un fan sube de nivel de badge
 - [ ] Filtros mejorados en página Comunidad (por atleta o fan)
 - [ ] Limpieza de código: Remover integración abandonada de Twitter/X
@@ -336,10 +335,13 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
   - Remover variables de entorno relacionadas
 
 ### 🟠 P2 - Mejoras Sugeridas
+- [ ] Optimizar/eliminar archivo PDF obsoleto `manual-corredores.pdf` del directorio /public (27MB)
+- [ ] Refactorizar componentes grandes:
+  - `RaceConfigPanel.jsx` - Separar secciones en subcomponentes
+  - `VolunteerAssignmentsManagement.jsx` - Separar lógica
+  - `VoluntarioRegistroPage.jsx` - Dividir pasos en componentes
 - [ ] Mover datos de patrocinadores a archivo JSON externo
 - [ ] Extraer lista de participantes a archivo CSV/JSON separado
-- [ ] Optimizar PDF del manual (actualmente 27MB)
-- [ ] Refactorizar VolunteersSection.jsx (700+ líneas) en componentes más pequeños
 
 ### 🟡 P3 - Mejoras Opcionales
 - [ ] Historial detallado de vueltas (laps_log ya existe pero no tiene UI)
