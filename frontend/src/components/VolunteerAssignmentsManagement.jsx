@@ -33,7 +33,11 @@ export default function VolunteerAssignmentsManagement() {
         fetch(`${API_URL}/api/volunteer-config/positions`)
       ]);
       if (slotsRes.ok) setSlots(await slotsRes.json());
-      if (posRes.ok) setPositions(await posRes.json());
+      if (posRes.ok) {
+        const posData = await posRes.json();
+        // Handle both array and {positions: []} formats
+        setPositions(Array.isArray(posData) ? posData : posData.positions || []);
+      }
     } catch (error) {
       console.error('Error loading slots:', error);
       toast.error('Error cargando datos');
