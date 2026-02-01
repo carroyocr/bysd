@@ -829,8 +829,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 2: Experience */}
-            {currentStep === 2 && (
+            {/* Step: Experience */}
+            {currentStepId === 'experience' && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>¿Tienes experiencia dando asistencia en actividades deportivas? *</Label>
@@ -858,8 +858,8 @@ export default function VoluntarioRegistroPage() {
               </div>
             )}
 
-            {/* Step 3: Slots Selection */}
-            {currentStep === 3 && (
+            {/* Step: Slots Selection */}
+            {currentStepId === 'slots' && (
               <div className="space-y-6">
                 {loadingSlots ? (
                   <div className="flex items-center justify-center py-12">
