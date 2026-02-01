@@ -472,11 +472,24 @@ export default function InscripcionPage() {
           setRegistrationComplete(true);
           toast.success('¡Pre registro completado!');
         } else {
-          toast.error(data.detail || 'Error en el pre registro');
+          // Handle validation errors from Pydantic (detail can be array or string)
+          let errorMessage = 'Error en el pre registro';
+          if (data.detail) {
+            if (Array.isArray(data.detail)) {
+              // Pydantic validation error - show first error
+              const firstError = data.detail[0];
+              const field = firstError.loc?.slice(-1)[0] || 'campo';
+              errorMessage = `Campo "${field}": ${firstError.msg}`;
+            } else {
+              errorMessage = data.detail;
+            }
+          }
+          toast.error(errorMessage);
         }
       }
     } catch (error) {
-      toast.error('Error de conexión');
+      console.error('Registration error:', error);
+      toast.error('Error de conexión. Intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
