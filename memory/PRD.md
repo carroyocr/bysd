@@ -201,6 +201,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+- [x] **Feature: Panel Admin para Configuración de Voluntarios** (01 Febrero 2026)
+  - Nueva pestaña "Voluntarios" en el panel de administración
+  - CRUD completo para posiciones: crear, editar, eliminar
+  - Cada posición puede tener múltiples turnos configurables
+  - Cada turno tiene: letra identificadora (A-G), hora inicio, hora fin, número de slots
+  - Botón "Importar Existentes" para migrar datos de la configuración anterior
+  - Estadísticas en tiempo real: posiciones, turnos totales, slots configurados
+  - Backend: Endpoints `/api/volunteer-config/*`
+  - El formulario de registro de voluntarios usa esta configuración dinámica
 - [x] **Feature: Selección de Turnos en Registro de Voluntarios** (01 Febrero 2026)
   - Nuevo paso "Turnos" en el formulario de voluntarios
   - Muestra posiciones y turnos disponibles agrupados dinámicamente desde la base de datos
