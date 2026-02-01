@@ -29,7 +29,7 @@ export default function VolunteerAssignmentsManagement() {
     setLoading(true);
     try {
       const [slotsRes, posRes] = await Promise.all([
-        fetch(`${API_URL}/api/volunteer/slots`),
+        fetch(`${API_URL}/api/volunteers/slots`),
         fetch(`${API_URL}/api/volunteer-config/positions`)
       ]);
       if (slotsRes.ok) setSlots(await slotsRes.json());
