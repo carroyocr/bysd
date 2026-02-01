@@ -133,7 +133,7 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-0.5">
+          <div className="hidden lg:flex items-center gap-1">
             {staticNavLinks.map((link) => (
               <Link
                 key={link.href}
