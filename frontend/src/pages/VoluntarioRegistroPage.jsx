@@ -195,17 +195,13 @@ export default function VoluntarioRegistroPage() {
   
   // Get current step ID for conditional rendering
   const currentStepId = activeSteps[currentStep]?.id || '';
-  
-  // Get the actual step index for slots (different in edit mode)
-  const getSlotsStepIndex = () => editMode ? 2 : 3;
 
   // Load available slots when entering slots step
   useEffect(() => {
-    const slotsIndex = getSlotsStepIndex();
-    if (currentStep === slotsIndex) {
+    if (currentStepId === 'slots') {
       loadAvailableSlots();
     }
-  }, [currentStep, editMode]);
+  }, [currentStepId]);
 
   const loadAvailableSlots = async () => {
     setLoadingSlots(true);
