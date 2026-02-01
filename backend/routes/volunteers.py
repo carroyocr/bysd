@@ -283,6 +283,12 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
         }}
     )
     
+    # Remove slot from slots_interes in volunteer_registrations (if it was an interest slot being confirmed)
+    await database.volunteer_registrations.update_one(
+        {"email": email},
+        {"$pull": {"slots_interes": slot_id}}
+    )
+    
     # Schedule reminder for this new assignment
     try:
         from services.volunteer_scheduler import schedule_single_reminder
