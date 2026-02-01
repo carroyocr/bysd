@@ -125,9 +125,7 @@ async def get_race_stats(
                     "retired_at_lap": reg.get("retired_at_lap")
                 })
         
-        # Fallback to old participants collection if no registrations found
-        if not participants:
-            participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
+        # NO fallback for new races - only legacy races use old participants collection
     
     # Filter out participants without BIB for stats calculation
     participants_with_bib = [p for p in participants if p.get("bib")]
