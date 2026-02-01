@@ -922,6 +922,81 @@ async def remove_bib_assignment(email: str, race_code: str):
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+
+@router.post("/admin/auto-assign-bibs/{race_code}")
+async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
+    """Auto-assign BIB numbers to active+paid athletes based on experience score"""
+    
+    # Get all active athletes with paid status
+    athletes = await registrations_collection.find(
+        {
+            "race_code": race_code,
+            "status": "active",
+            "payment_status": "paid"
+        }
+    ).to_list(1000)
+    
+    if not athletes:
+        raise HTTPException(status_code=400, detail="No hay atletas activos con pago completado")
+    
+    # Calculate experience score for each athlete
+    def calculate_experience_score(reg):
+        years_exp = reg.get("anos_experiencia", 0) or 0
+        max_distance = reg.get("maxima_distancia_km", 0) or 0
+        
+        # Normalize years experience (0-20 years -> 0-100)
+        normalized_years = min(years_exp / 20, 1) * 100
+        
+        # Normalize max distance (0-200 km -> 0-100)
+        normalized_distance = min(max_distance / 200, 1) * 100
+        
+        # 50/50 weighted score
+        return (normalized_years * 0.5) + (normalized_distance * 0.5)
+    
+    # Sort athletes by experience score (highest first)
+    athletes_with_score = [
+        {
+            "email": a["email"],
+            "nombre": f"{a.get('nombre', '')} {a.get('apellidos', '')}".strip(),
+            "score": calculate_experience_score(a),
+            "anos_experiencia": a.get("anos_experiencia", 0),
+            "maxima_distancia_km": a.get("maxima_distancia_km", 0)
+        }
+        for a in athletes
+    ]
+    athletes_with_score.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Assign BIBs in order
+    assigned_count = 0
+    assignments = []
+    
+    for i, athlete in enumerate(athletes_with_score):
+        bib_number = start_bib + i
+        
+        result = await registrations_collection.update_one(
+            {"email": athlete["email"], "race_code": race_code},
+            {"$set": {"bib": bib_number}}
+        )
+        
+        if result.modified_count > 0 or result.matched_count > 0:
+            assigned_count += 1
+            assignments.append({
+                "bib": bib_number,
+                "nombre": athlete["nombre"],
+                "email": athlete["email"],
+                "score": round(athlete["score"], 1),
+                "experiencia": f"{athlete['anos_experiencia']}a / {athlete['maxima_distancia_km']}km"
+            })
+    
+    return {
+        "message": f"BIBs asignados automáticamente a {assigned_count} atletas",
+        "assigned_count": assigned_count,
+        "start_bib": start_bib,
+        "end_bib": start_bib + assigned_count - 1,
+        "assignments": assignments
+    }
+
     
     return {"message": "Asignación de BIB eliminada", "email": email}
 
