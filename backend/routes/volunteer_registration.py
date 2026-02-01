@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from datetime import datetime, timezone, timedelta
 import random
 import string
@@ -30,8 +30,9 @@ class VolunteerRegistrationData(BaseModel):
     # Experience
     experiencia_voluntariado: Literal["Sí", "No"]
     experiencia_voluntariado_detalle: Optional[str] = None
-    areas_interes: Optional[str] = None  # Areas of interest for volunteering
-    disponibilidad: Optional[str] = None  # Availability (full day, morning, afternoon, night)
+    
+    # Slot preferences - list of slot IDs the volunteer is interested in
+    slots_interes: Optional[List[int]] = None
     
     # Medical
     tipo_sangre: Optional[str] = None
@@ -49,6 +50,83 @@ class VolunteerRegistrationData(BaseModel):
     talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL"]] = None
     como_se_entero: Optional[str] = None
     comentarios: Optional[str] = None
+
+
+@router.get("/available-slots")
+async def get_available_slots():
+    """Get all available (unassigned) volunteer slots grouped by position and shift"""
+    from server import db
+    
+    # Get all slots
+    slots = await db.volunteer_slots.find({}, {"_id": 0}).to_list(1000)
+    
+    # Group by position
+    positions = {}
+    shifts_info = {}
+    
+    for slot in slots:
+        puesto = slot.get("puesto", "")
+        turno = slot.get("turno", "")
+        is_available = not slot.get("email_asignado")
+        
+        # Build shift info
+        if turno not in shifts_info:
+            shifts_info[turno] = {
+                "turno": turno,
+                "hora_inicio": slot.get("hora_inicio", ""),
+                "hora_fin": slot.get("hora_fin", ""),
+                "dia": slot.get("dia", "")
+            }
+        
+        # Build position info
+        if puesto not in positions:
+            positions[puesto] = {
+                "puesto": puesto,
+                "turnos": {}
+            }
+        
+        if turno not in positions[puesto]["turnos"]:
+            positions[puesto]["turnos"][turno] = {
+                "slots": [],
+                "available_count": 0,
+                "total_count": 0
+            }
+        
+        positions[puesto]["turnos"][turno]["total_count"] += 1
+        if is_available:
+            positions[puesto]["turnos"][turno]["available_count"] += 1
+            positions[puesto]["turnos"][turno]["slots"].append({
+                "id": slot.get("id"),
+                "slot_number": slot.get("slot"),
+                "hora_inicio": slot.get("hora_inicio"),
+                "hora_fin": slot.get("hora_fin")
+            })
+    
+    # Convert to list format
+    positions_list = []
+    for puesto, data in sorted(positions.items()):
+        turnos_list = []
+        for turno, turno_data in sorted(data["turnos"].items()):
+            if turno_data["available_count"] > 0:  # Only include shifts with available slots
+                turnos_list.append({
+                    "turno": turno,
+                    "hora_inicio": shifts_info[turno]["hora_inicio"],
+                    "hora_fin": shifts_info[turno]["hora_fin"],
+                    "available_count": turno_data["available_count"],
+                    "total_count": turno_data["total_count"],
+                    "slots": turno_data["slots"]
+                })
+        
+        if turnos_list:  # Only include positions with available shifts
+            positions_list.append({
+                "puesto": puesto,
+                "turnos": turnos_list
+            })
+    
+    return {
+        "positions": positions_list,
+        "shifts_info": list(shifts_info.values())
+    }
 
 
 def generate_verification_code():
