@@ -328,18 +328,31 @@ export default function VolunteerConfigManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Configuración de Voluntarios</h2>
           <p className="text-muted-foreground">Administra las posiciones y turnos disponibles</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {positions.length === 0 && (
             <Button variant="outline" onClick={importFromExisting}>
               <Download className="w-4 h-4 mr-2" />
               Importar Existentes
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            onClick={clearAssignments}
+            disabled={clearing}
+            className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+          >
+            {clearing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4 mr-2" />
+            )}
+            Limpiar Asignaciones
+          </Button>
           <Button onClick={() => setShowNewForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nueva Posición
