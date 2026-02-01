@@ -524,6 +524,45 @@ async def get_volunteer_registrations(race_code: Optional[str] = None):
     return {"registrations": registrations, "count": len(registrations)}
 
 
+@router.delete("/admin/registrations/{email}")
+async def delete_volunteer_registration(email: str, race_code: Optional[str] = None):
+    """Delete a volunteer registration (admin only)"""
+    from server import db
+    
+    email = email.lower()
+    
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+    
+    # Check if volunteer exists
+    existing = await db.volunteer_registrations.find_one({
+        "email": email,
+        "race_code": race_code
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+    
+    # Remove any assignments for this volunteer
+    await db.volunteer_assignments.update_many(
+        {"email_asignado": email},
+        {"$set": {"email_asignado": None, "nombre_asignado": None}}
+    )
+    
+    # Delete the registration
+    await db.volunteer_registrations.delete_one({
+        "email": email,
+        "race_code": race_code
+    })
+    
+    # Clean up related data
+    await db.volunteer_verification_tokens.delete_many({"email": email})
+    await db.volunteer_sessions.delete_many({"email": email})
+    
+    return {"message": "Voluntario eliminado correctamente"}
+
+
 @router.get("/check/{email}")
 async def check_volunteer_registration(email: str, race_code: Optional[str] = None):
     """Check if email is already registered as volunteer"""
