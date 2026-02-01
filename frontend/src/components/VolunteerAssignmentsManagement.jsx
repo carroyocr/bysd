@@ -415,6 +415,22 @@ export default function VolunteerAssignmentsManagement() {
                               </div>
                             </div>
                           )}
+
+                          {/* Delete Volunteer Button */}
+                          <div className="pt-4 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteVolunteerModal(volunteer);
+                              }}
+                            >
+                              <UserX className="w-4 h-4 mr-2" />
+                              Eliminar Voluntario
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
