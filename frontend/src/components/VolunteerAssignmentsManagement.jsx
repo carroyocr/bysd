@@ -187,6 +187,75 @@ export default function VolunteerAssignmentsManagement() {
     }
   };
 
+  // Handle confirm interest slots (convert to formal assignments)
+  const handleConfirmInterestSlots = async () => {
+    if (!selectedVolunteer || !selectedVolunteer.slots_interes?.length) return;
+    
+    setActionLoading(true);
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+      for (const slotId of selectedVolunteer.slots_interes) {
+        try {
+          const response = await fetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: selectedVolunteer.email })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} turno${successCount !== 1 ? 's' : ''} confirmado${successCount !== 1 ? 's' : ''}`);
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} turno${errorCount !== 1 ? 's' : ''} no pudieron ser asignados`);
+      }
+      
+      setShowConfirmModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Confirm single interest slot
+  const handleConfirmSingleSlot = async (volunteer, slotId) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: volunteer.email })
+      });
+      
+      if (response.ok) {
+        toast.success('Turno confirmado');
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al confirmar turno');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Open add modal
   const openAddModal = (volunteer) => {
     setSelectedVolunteer(volunteer);
@@ -206,6 +275,12 @@ export default function VolunteerAssignmentsManagement() {
   const openDeleteVolunteerModal = (volunteer) => {
     setSelectedVolunteer(volunteer);
     setShowDeleteVolunteerModal(true);
+  };
+
+  // Open confirm modal
+  const openConfirmModal = (volunteer) => {
+    setSelectedVolunteer(volunteer);
+    setShowConfirmModal(true);
   };
 
   // Statistics
