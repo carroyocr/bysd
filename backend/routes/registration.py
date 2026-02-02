@@ -1179,59 +1179,28 @@ async def submit_payment_receipt(
         }
     )
     
-    # Send confirmation email to athlete
+    # Send confirmation email to athlete using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_athlete_data
+        )
         
-        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
-        email = registration.get("email")
+        race_config = await db["race_configurations"].find_one({"code": registration.get('race_code', '')})
         
-        subject = "Comprobante de Pago Recibido - Backyard Ultra Santo Domingo"
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px; text-align: center;">
-                <h1 style="color: white; margin: 0;">✅ Comprobante Recibido</h1>
-            </div>
-            
-            <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-                <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
-                
-                <p style="color: #4b5563; font-size: 16px;">
-                    Hemos recibido tu comprobante de pago con los siguientes detalles:
-                </p>
-                
-                <div style="background: white; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
-                    <table style="width: 100%;">
-                        <tr>
-                            <td style="padding: 8px 0; color: #6b7280;">Fecha de pago:</td>
-                            <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{payment_date}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: #6b7280;">Banco origen:</td>
-                            <td style="padding: 8px 0; color: #1f2937;">{bank_origin}</td>
-                        </tr>
-                        {f'<tr><td style="padding: 8px 0; color: #6b7280;">No. Transferencia:</td><td style="padding: 8px 0; color: #1f2937;">{transfer_number}</td></tr>' if transfer_number else ''}
-                    </table>
-                </div>
-                
-                <div style="background: #fef3c7; border-radius: 10px; padding: 15px; margin: 20px 0;">
-                    <p style="color: #92400e; margin: 0; font-size: 14px;">
-                        <strong>📋 Estado:</strong> En revisión. Te notificaremos una vez que tu pago sea confirmado.
-                    </p>
-                </div>
-                
-                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                
-                <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                    © Backyard Ultra Santo Domingo
-                </p>
-            </div>
-        </body>
-        </html>
-        """
+        merge_data = {
+            **build_race_data(race_config),
+            **build_athlete_data(registration),
+            "payment_date": payment_date,
+            "bank_origin": bank_origin,
+            "transfer_number": transfer_number or "N/A",
+        }
         
-        await send_email(email, subject, html_content)
+        await send_email_with_template(
+            db=db,
+            template_id="payment_receipt_received",
+            to_email=registration.get("email"),
+            data=merge_data
+        )
     except Exception as e:
         print(f"Error sending receipt confirmation email: {e}")
     
