@@ -167,6 +167,14 @@ export default function FinancesManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Presupuesto</h2>
+          <p className="text-muted-foreground">Control de ingresos y gastos del evento</p>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-green-50 border-green-200">
