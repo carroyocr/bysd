@@ -1403,6 +1403,7 @@ async def get_cheer_messages(
     page: int = 1,
     athlete_bib: Optional[str] = None,
     race_code: Optional[str] = Query(None, description="Race code to filter by"),
+    include_legacy: bool = Query(False, description="Include messages without race_code"),
     db=Depends(lambda: None)
 ):
     """Get cheer messages with pagination (most recent first)"""
@@ -1416,15 +1417,21 @@ async def get_cheer_messages(
     # Determine data source based on race code
     LEGACY_RACE_CODES = ["BYSD-2026"]
     
-    # Build query - include messages with matching race_code OR messages without race_code (legacy)
+    # Build query - by default only show messages for the active race
     query = {}
     if active_race_code:
-        query["$or"] = [
-            {"race_code": active_race_code},
-            {"race_code": {"$exists": False}},
-            {"race_code": None},
-            {"race_code": ""}
-        ]
+        if include_legacy:
+            # Include legacy messages only if explicitly requested
+            query["$or"] = [
+                {"race_code": active_race_code},
+                {"race_code": {"$exists": False}},
+                {"race_code": None},
+                {"race_code": ""}
+            ]
+        else:
+            # Only show messages for the active race
+            query["race_code"] = active_race_code
+    
     if athlete_bib:
         if "$or" in query:
             query = {"$and": [{"$or": query["$or"]}, {"athlete_bib": athlete_bib}]}
