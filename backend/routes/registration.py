@@ -516,47 +516,28 @@ async def request_access(request: AccessRequest):
         upsert=True
     )
     
-    # Send verification email
+    # Send verification email using template system
     try:
-        from services.runner_email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_athlete_data, build_general_data
+        )
         
-        nombre = registration.get('nombre', 'Participante')
         race_code = registration.get('race_code', '')
+        race_config = await db["race_configurations"].find_one({"code": race_code})
         
-        subject = f"Código de Acceso - {race_code}"
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; border-radius: 10px; text-align: center;">
-                <h1 style="color: white; margin: 0;">Acceso a tu Pre Registro</h1>
-            </div>
-            
-            <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-                <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
-                
-                <p style="color: #4b5563; font-size: 16px;">
-                    Has solicitado acceso para editar tu pre registro. Ingresa el siguiente código para continuar:
-                </p>
-                
-                <div style="background: white; border: 2px solid #7c3aed; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0;">
-                    <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #7c3aed;">{code}</span>
-                </div>
-                
-                <p style="color: #6b7280; font-size: 14px;">
-                    Este código expira en 15 minutos. Si no solicitaste este acceso, puedes ignorar este correo.
-                </p>
-                
-                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                
-                <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                    © Backyard Ultra Santo Domingo
-                </p>
-            </div>
-        </body>
-        </html>
-        """
+        # Build merge data
+        merge_data = {
+            **build_race_data(race_config),
+            **build_athlete_data(registration),
+            **build_general_data(verification_code=code),
+        }
         
-        await send_email(email, subject, html_content)
+        await send_email_with_template(
+            db=db,
+            template_id="athlete_edit_code",
+            to_email=email,
+            data=merge_data
+        )
     except Exception as e:
         print(f"Error sending access code email: {e}")
         raise HTTPException(status_code=500, detail="Error enviando el código de verificación")
