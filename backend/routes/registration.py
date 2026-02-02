@@ -932,7 +932,7 @@ async def get_next_bib(race_code: str):
 
 @router.post("/cancel/{token}")
 async def cancel_registration(token: str, cancellation: CancellationRequest):
-    """Cancel an athlete registration"""
+    """Cancel and delete an athlete registration"""
     registration = await registrations_collection.find_one({"edit_token": token})
     
     if not registration:
@@ -942,26 +942,17 @@ async def cancel_registration(token: str, cancellation: CancellationRequest):
     if cancellation.reason == "Otra razón" and cancellation.other_reason:
         reason_text = f"Otra razón: {cancellation.other_reason}"
     
-    # Update registration status to cancelled
-    await registrations_collection.update_one(
-        {"edit_token": token},
-        {
-            "$set": {
-                "status": "cancelled",
-                "cancellation_reason": reason_text,
-                "cancelled_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
-    )
+    # Store data for email before deletion
+    nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+    email = registration.get("email")
+    race_code = registration.get("race_code", "")
+    
+    # Delete the registration completely
+    await registrations_collection.delete_one({"edit_token": token})
     
     # Send cancellation confirmation email
     try:
         from services.email_service import send_email
-        
-        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
-        email = registration.get("email")
-        race_code = registration.get("race_code", "")
         
         subject = f"Confirmación de Cancelación - {race_code}"
         html_content = f"""
@@ -983,7 +974,7 @@ async def cancel_registration(token: str, cancellation: CancellationRequest):
                     </p>
                     
                     <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px; line-height: 1.6;">
-                        Confirmamos que tu registro para <strong>{race_code}</strong> ha sido cancelado.
+                        Confirmamos que tu registro para <strong>{race_code}</strong> ha sido cancelado y eliminado de nuestro sistema.
                     </p>
                     
                     <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
@@ -1012,7 +1003,7 @@ async def cancel_registration(token: str, cancellation: CancellationRequest):
     except Exception as e:
         print(f"Error sending cancellation email: {e}")
     
-    return {"message": "Registro cancelado exitosamente"}
+    return {"message": "Registro cancelado y eliminado exitosamente"}
 
 
 @router.put("/admin/remove-bib/{email}")
