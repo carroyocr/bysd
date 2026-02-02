@@ -60,14 +60,25 @@ async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
     if not bcrypt.checkpw(credentials.password.encode('utf-8'), admin["password"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     
-    # Create JWT token
+    # Get user permissions (admin user has all permissions)
+    is_admin = credentials.username.lower() == "admin"
+    permissions = admin.get("permissions", [])
+    
+    # Create JWT token with permissions
     token_data = {
         "username": credentials.username,
+        "is_admin": is_admin,
+        "permissions": permissions if not is_admin else ["all"],
         "exp": datetime.utcnow() + timedelta(hours=12)
     }
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
     
-    return {"token": token, "username": credentials.username}
+    return {
+        "token": token, 
+        "username": credentials.username,
+        "is_admin": is_admin,
+        "permissions": permissions if not is_admin else ["all"]
+    }
 
 @router.get("/stats")
 async def get_race_stats(
