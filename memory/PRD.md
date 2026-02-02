@@ -1,20 +1,22 @@
-# Backyard Ultra Santo Domingo 2026 - Product Requirements Document
+# Backyard Ultra Santo Domingo - Product Requirements Document
 
 ## Información General
 - **Proyecto**: Sistema de tracking en vivo para carrera Backyard Ultra
-- **Evento**: Santo Domingo 2026
+- **Evento**: Santo Domingo 2026/2027
 - **Fecha de Creación**: Enero 2026
-- **Última Actualización**: 26 Enero 2026
+- **Última Actualización**: 02 Febrero 2026
 
 ## Descripción del Producto
 Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso de una carrera Backyard Ultra. Incluye:
 - Sitio informativo del evento
-- Panel de administración seguro
+- Panel de administración seguro con control de permisos
 - Dashboard público con estadísticas en vivo
 - Sistema de detección automática del ganador
 - Botones para compartir en redes sociales
 - Sistema de notificaciones por email
 - Sistema de mensajes de ánimo (cheer messages)
+- Sistema de códigos QR para control de vueltas
+- Archivado automático de datos de carreras anteriores
 
 ## Stack Tecnológico
 - **Frontend**: React, Tailwind CSS, Shadcn/UI
@@ -22,7 +24,15 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 - **Base de Datos**: MongoDB
 - **Autenticación**: JWT con bcrypt
 - **Email**: smtplib (Gmail SMTP)
+- **QR Codes**: qrcode (Python)
 - **Dependencias adicionales**: react-pdf (visor de PDF)
+
+## Sistema de Carreras Múltiples
+El sistema soporta múltiples carreras con aislamiento de datos:
+- **Carrera Activa**: Los endpoints por defecto operan sobre la carrera activa
+- **Carreras Archivadas**: Los datos de carreras anteriores se preservan en colecciones separadas
+- **Colecciones de Archivo**: `archived_participants`, `archived_cheer_messages`, `archived_sponsors`
+- **API de Datos Archivados**: `/api/race-config/archived/{code}/participants`, `/api/race-config/archived/{code}/cheers`
 
 ---
 
