@@ -53,13 +53,19 @@ export default function ScanConfirmPage() {
         : `${API_URL}/api/qr-scan/athlete/${bib}`;
       
       const response = await fetch(url);
+      const responseText = await response.text();
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Error al cargar datos del atleta');
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error('Error al procesar respuesta del servidor');
       }
       
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al cargar datos del atleta');
+      }
+      
       setAthlete(data);
       setTimeRemaining(data.time_remaining_seconds || 0);
       
