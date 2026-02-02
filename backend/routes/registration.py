@@ -148,44 +148,27 @@ def generate_edit_token():
 
 
 async def send_verification_email(email: str, code: str, nombre: str):
-    """Send verification email using the existing email service"""
-    from services.runner_email_service import send_email
+    """Send verification email using the template system"""
+    from services.template_email_service import (
+        send_email_with_template, build_race_data, build_general_data
+    )
     
-    subject = "Verificación de Email - Backyard Ultra Santo Domingo"
-    html_content = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; border-radius: 10px; text-align: center;">
-            <h1 style="color: white; margin: 0;">Backyard Ultra Santo Domingo</h1>
-        </div>
-        
-        <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
-            
-            <p style="color: #4b5563; font-size: 16px;">
-                Gracias por iniciar tu inscripción. Para continuar, por favor verifica tu correo electrónico 
-                ingresando el siguiente código:
-            </p>
-            
-            <div style="background: white; border: 2px solid #7c3aed; border-radius: 10px; padding: 20px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #7c3aed;">{code}</span>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px;">
-                Este código expira en 15 minutos. Si no solicitaste esta verificación, puedes ignorar este correo.
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            
-            <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                © Backyard Ultra Santo Domingo
-            </p>
-        </div>
-    </body>
-    </html>
-    """
+    # Get active race config
+    race_config = await db["race_configurations"].find_one({"is_active": True})
     
-    await send_email(email, subject, html_content)
+    # Build merge data
+    merge_data = {
+        **build_race_data(race_config),
+        **build_general_data(verification_code=code),
+        "athlete_nombre": nombre,
+    }
+    
+    await send_email_with_template(
+        db=db,
+        template_id="email_verification",
+        to_email=email,
+        data=merge_data
+    )
 
 
 async def send_confirmation_email(email: str, registration: dict, edit_token: str):
