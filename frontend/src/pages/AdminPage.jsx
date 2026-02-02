@@ -16,11 +16,27 @@ import FinancesManagement from '../components/FinancesManagement';
 import QRScannerPanel from '../components/QRScannerPanel';
 import UserManagement from '../components/UserManagement';
 
+// Map of tab IDs to permission IDs
+const TAB_PERMISSIONS = {
+  'control': 'control',
+  'scanner': 'scanner',
+  'registrations': 'athletes',
+  'finances': 'finances',
+  'volunteers': 'volunteers',
+  'assignments': 'volunteers', // Same permission as volunteers
+  'sponsors': 'sponsors',
+  'surveys': 'surveys',
+  'config': 'config',
+  'users': 'users'
+};
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'control');
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [activeTab, setActiveTab] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
@@ -28,19 +44,56 @@ export default function AdminPage() {
       navigate('/admin/login');
     } else {
       setIsAuthenticated(true);
+      
+      // Load permissions from localStorage
+      const isAdminUser = localStorage.getItem('admin_is_admin') === 'true';
+      setIsAdmin(isAdminUser);
+      
+      try {
+        const permissions = JSON.parse(localStorage.getItem('admin_permissions') || '[]');
+        setUserPermissions(permissions);
+        
+        // Set initial tab based on permissions
+        const requestedTab = searchParams.get('tab') || 'control';
+        if (isAdminUser || permissions.includes('all') || permissions.includes(TAB_PERMISSIONS[requestedTab])) {
+          setActiveTab(requestedTab);
+        } else {
+          // Find first allowed tab
+          const firstAllowedTab = Object.keys(TAB_PERMISSIONS).find(tab => 
+            permissions.includes(TAB_PERMISSIONS[tab])
+          );
+          setActiveTab(firstAllowedTab || 'control');
+        }
+      } catch (e) {
+        setUserPermissions([]);
+        setActiveTab('control');
+      }
     }
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   useEffect(() => {
-    setSearchParams({ tab: activeTab });
+    if (activeTab) {
+      setSearchParams({ tab: activeTab });
+    }
   }, [activeTab, setSearchParams]);
+
+  // Check if user has access to a specific tab
+  const hasAccess = (tabId) => {
+    if (isAdmin) return true;
+    if (userPermissions.includes('all')) return true;
+    const requiredPermission = TAB_PERMISSIONS[tabId];
+    return userPermissions.includes(requiredPermission);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_username');
+    localStorage.removeItem('admin_is_admin');
+    localStorage.removeItem('admin_permissions');
     navigate('/admin/login');
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !activeTab) {
     return null;
   }
 
