@@ -75,6 +75,9 @@ export default function App() {
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
                     {/* Cancel Registration */}
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
+                    {/* QR Scanner for race control */}
+                    <Route path="/scan" element={<QRScannerPage />} />
+                    <Route path="/scan/confirmar" element={<ScanConfirmPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
                     {/* Legacy routes - redirect */}
