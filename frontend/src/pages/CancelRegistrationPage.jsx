@@ -232,8 +232,9 @@ export default function CancelRegistrationPage() {
                 <div>
                   <h4 className="font-medium text-amber-800">Atención</h4>
                   <p className="text-sm text-amber-700 mt-1">
-                    Esta acción no se puede deshacer. Si cancelas tu {isVolunteer ? 'postulación' : 'inscripción'}, 
-                    perderás tu lugar y tendrás que volver a registrarte si cambias de opinión.
+                    Esta acción no se puede deshacer. Tu {isVolunteer ? 'postulación' : 'inscripción'} será 
+                    <strong> eliminada permanentemente</strong> del sistema. Si deseas participar en el futuro, 
+                    tendrás que volver a registrarte desde cero.
                   </p>
                 </div>
               </div>
