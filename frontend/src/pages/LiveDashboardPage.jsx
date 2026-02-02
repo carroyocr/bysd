@@ -1,9 +1,72 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { AlertTriangle, Home } from 'lucide-react';
 import LiveDashboard from '../components/LiveDashboard';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
 
 export default function LiveDashboardPage() {
   const { raceCode } = useParams();
+  const [visibility, setVisibility] = useState({ loading: true, enabled: true, raceName: '' });
+  
+  useEffect(() => {
+    const checkVisibility = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/page-visibility`);
+        if (response.ok) {
+          const data = await response.json();
+          setVisibility({
+            loading: false,
+            enabled: data.show_tracking_page,
+            raceName: data.race_name
+          });
+        } else {
+          setVisibility({ loading: false, enabled: true, raceName: '' });
+        }
+      } catch (error) {
+        console.error('Error checking page visibility:', error);
+        setVisibility({ loading: false, enabled: true, raceName: '' });
+      }
+    };
+    checkVisibility();
+  }, []);
+  
+  if (visibility.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="animate-pulse text-gray-500">Cargando...</div>
+      </div>
+    );
+  }
+  
+  if (!visibility.enabled) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 pt-20 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full shadow-lg border-amber-200">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              Página No Disponible
+            </h1>
+            <p className="text-gray-600 mb-6">
+              El seguimiento en vivo para <strong>{visibility.raceName || 'esta carrera'}</strong> no está activo en este momento.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Esta página estará habilitada durante el evento. Vuelve pronto para seguir a los atletas en tiempo real.
+            </p>
+            <Link to="/">
+              <Button className="w-full" data-testid="go-home-btn">
+                <Home className="w-4 h-4 mr-2" />
+                Volver al Inicio
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className="pt-20">
