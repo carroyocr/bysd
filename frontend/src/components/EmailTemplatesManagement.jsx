@@ -222,26 +222,6 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
     }
   };
 
-  const loadPreview = async () => {
-    setLoadingPreview(true);
-    try {
-      const response = await fetch(`${API_URL}/api/email-templates/preview?template_id=${template.id}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPreview(data);
-      } else {
-        toast.error('Error al cargar la vista previa');
-      }
-    } catch (error) {
-      toast.error('Error de conexión');
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
-
   const sendTestEmail = async () => {
     if (!testEmail || !testEmail.includes('@')) {
       toast.error('Ingresa un correo válido');
