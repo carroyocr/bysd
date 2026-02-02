@@ -36,6 +36,8 @@ export default function AdminLogin() {
       const data = await response.json();
       localStorage.setItem('admin_token', data.token);
       localStorage.setItem('admin_username', data.username);
+      localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
+      localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
       navigate('/admin');
     } catch (err) {
       setError(err.message);
