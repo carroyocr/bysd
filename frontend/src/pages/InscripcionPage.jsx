@@ -522,8 +522,8 @@ export default function InscripcionPage() {
     
     setCancelling(true);
     try {
-      const response = await fetch(`${API_URL}/api/registration/cancel?token=${editToken}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_URL}/api/registration/cancel/${editToken}`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: cancelReason === 'Otra razón' ? cancelOtherReason : cancelReason
