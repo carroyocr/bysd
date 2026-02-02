@@ -504,40 +504,57 @@ export default function InscripcionPage() {
           toast.error(data.detail || 'Error actualizando datos');
         }
       } else {
-        // New registration
-        const response = await fetch(`${API_URL}/api/registration/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        // New registration - Use XMLHttpRequest to avoid body stream issues
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${API_URL}/api/registration/register`, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
         
-        const data = await response.json();
-        
-        if (response.ok) {
-          setRegistrationResult(data);
-          
-          // Upload photo if selected
-          if (photoFile) {
-            await uploadPhoto(data.edit_token);
+        xhr.onload = async function() {
+          let data;
+          try {
+            data = JSON.parse(xhr.responseText);
+          } catch (parseErr) {
+            toast.error('Error al procesar respuesta del servidor');
+            setSubmitting(false);
+            return;
           }
           
-          setRegistrationComplete(true);
-          toast.success('¡Pre registro completado!');
-        } else {
-          // Handle validation errors from Pydantic (detail can be array or string)
-          let errorMessage = 'Error en el pre registro';
-          if (data.detail) {
-            if (Array.isArray(data.detail)) {
-              // Pydantic validation error - show first error
-              const firstError = data.detail[0];
-              const field = firstError.loc?.slice(-1)[0] || 'campo';
-              errorMessage = `Campo "${field}": ${firstError.msg}`;
-            } else {
-              errorMessage = data.detail;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setRegistrationResult(data);
+            
+            // Upload photo if selected
+            if (photoFile) {
+              await uploadPhoto(data.edit_token);
             }
+            
+            setRegistrationComplete(true);
+            toast.success('¡Pre registro completado!');
+          } else {
+            // Handle validation errors from Pydantic (detail can be array or string)
+            let errorMessage = 'Error en el pre registro';
+            if (data.detail) {
+              if (Array.isArray(data.detail)) {
+                // Pydantic validation error - show first error
+                const firstError = data.detail[0];
+                const field = firstError.loc?.slice(-1)[0] || 'campo';
+                errorMessage = `Campo "${field}": ${firstError.msg}`;
+              } else {
+                errorMessage = data.detail;
+              }
+            }
+            toast.error(errorMessage);
           }
-          toast.error(errorMessage);
-        }
+          setSubmitting(false);
+        };
+        
+        xhr.onerror = function() {
+          console.error('Registration error');
+          toast.error('Error de conexión. Intenta de nuevo.');
+          setSubmitting(false);
+        };
+        
+        xhr.send(JSON.stringify(payload));
+        return; // Exit early since XHR handles its own flow
       }
     } catch (error) {
       console.error('Registration error:', error);
