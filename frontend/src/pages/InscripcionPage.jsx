@@ -4,7 +4,7 @@ import {
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, Tent, Users, Target, Camera, CheckCircle, 
   AlertCircle, ArrowLeft, ArrowRight, Loader2, Upload,
-  Info, FileText
+  Info, FileText, XCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
