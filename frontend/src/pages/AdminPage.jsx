@@ -194,45 +194,65 @@ export default function AdminPage() {
             )}
           </TabsList>
 
-          <TabsContent value="control">
-            <RaceControlPanel embedded={true} />
-          </TabsContent>
+          {hasAccess('control') && (
+            <TabsContent value="control">
+              <RaceControlPanel embedded={true} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="scanner">
-            <QRScannerPanel />
-          </TabsContent>
+          {hasAccess('scanner') && (
+            <TabsContent value="scanner">
+              <QRScannerPanel />
+            </TabsContent>
+          )}
 
-          <TabsContent value="registrations">
-            <PreRegistrationManagement />
-          </TabsContent>
+          {hasAccess('registrations') && (
+            <TabsContent value="registrations">
+              <PreRegistrationManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="finances">
-            <FinancesManagement />
-          </TabsContent>
+          {hasAccess('finances') && (
+            <TabsContent value="finances">
+              <FinancesManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="volunteers">
-            <VolunteerConfigManagement />
-          </TabsContent>
+          {hasAccess('volunteers') && (
+            <TabsContent value="volunteers">
+              <VolunteerConfigManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="assignments">
-            <VolunteerAssignmentsManagement />
-          </TabsContent>
+          {hasAccess('assignments') && (
+            <TabsContent value="assignments">
+              <VolunteerAssignmentsManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="sponsors">
-            <SponsorsManagement />
-          </TabsContent>
+          {hasAccess('sponsors') && (
+            <TabsContent value="sponsors">
+              <SponsorsManagement />
+            </TabsContent>
+          )}
 
-          <TabsContent value="surveys">
-            <SurveyResultsSection />
-          </TabsContent>
+          {hasAccess('surveys') && (
+            <TabsContent value="surveys">
+              <SurveyResultsSection />
+            </TabsContent>
+          )}
 
-          <TabsContent value="config">
-            <RaceConfigPanel />
-          </TabsContent>
+          {hasAccess('config') && (
+            <TabsContent value="config">
+              <RaceConfigPanel />
+            </TabsContent>
+          )}
 
-          <TabsContent value="users">
-            <UserManagement />
-          </TabsContent>
+          {hasAccess('users') && (
+            <TabsContent value="users">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
