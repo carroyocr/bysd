@@ -52,7 +52,10 @@ export default function RaceConfigPanel() {
     payment_account_id: '',
     payment_bank_name: '',
     payment_account_type: '',
-    payment_account_number: ''
+    payment_account_number: '',
+    // Page visibility
+    show_tracking_page: true,
+    show_community_page: true
   });
 
   const token = localStorage.getItem('admin_token');
