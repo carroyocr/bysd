@@ -519,3 +519,74 @@ async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
         "qr_code_url": qr_url,
         "qr_code_base64": qr_base64
     }
+
+
+@router.get("/download-all-qr/{race_code}")
+async def download_all_qr_codes(race_code: str):
+    """
+    Generate and download a ZIP file containing all QR codes for athletes with BIB assigned.
+    Each file is named by BIB number (e.g., 001.png, 002.png).
+    """
+    from server import db as database
+    
+    # Verify race exists
+    race = await database.race_configurations.find_one({"code": race_code})
+    if not race:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    # Get all athletes with BIB assigned
+    athletes = await database.registrations.find({
+        "race_code": race_code,
+        "bib": {"$exists": True, "$ne": None}
+    }).to_list(1000)
+    
+    if not athletes:
+        raise HTTPException(status_code=400, detail="No hay atletas con BIB asignado")
+    
+    frontend_url = os.environ.get("FRONTEND_URL", "https://race-admin-1.preview.emergentagent.com")
+    
+    # Create ZIP file in memory
+    zip_buffer = BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for athlete in athletes:
+            bib = athlete.get("bib")
+            if bib is None:
+                continue
+            
+            # Format BIB number with leading zeros (e.g., 001, 002, etc.)
+            bib_str = str(bib).zfill(3)
+            
+            # Generate QR code for this athlete
+            scan_url = f"{frontend_url}/scan/confirmar?bib={bib_str}&race={race_code}"
+            
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_H,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(scan_url)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Save QR to bytes
+            img_buffer = BytesIO()
+            img.save(img_buffer, format="PNG")
+            img_buffer.seek(0)
+            
+            # Add to ZIP with BIB number as filename
+            zip_file.writestr(f"{bib_str}.png", img_buffer.getvalue())
+    
+    zip_buffer.seek(0)
+    
+    # Return as downloadable file
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=qr_codes_{race_code}.zip"
+        }
+    )
+
