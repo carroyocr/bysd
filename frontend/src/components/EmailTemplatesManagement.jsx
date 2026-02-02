@@ -302,7 +302,7 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
       </div>
 
       {/* Editor Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if(v === 'preview') loadPreview(); }}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if(v === 'preview') loadPreview(template.id); }}>
         <TabsList>
           <TabsTrigger value="editor">
             <Code className="w-4 h-4 mr-2" />
