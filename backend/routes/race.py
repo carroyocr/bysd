@@ -516,32 +516,86 @@ async def mark_winner(
     from server import db as database
     
     bib = request.get("bib")
-    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
     
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    LEGACY_RACE_CODES = ["BYSD-2026"]
     
-    if participant.get("status") == "winner":
-        raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
-    
-    # Check if there's already a winner
-    existing_winner = await database.participants.find_one({"status": "winner"}, {"_id": 0})
-    if existing_winner:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
-        )
-    
-    # Mark as winner
-    await database.participants.update_one(
-        {"bib": bib},
-        {
-            "$set": {
-                "status": "winner",
-                "updated_at": datetime.utcnow()
+    if active_race_code in LEGACY_RACE_CODES:
+        # Use legacy participants collection
+        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+        
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participante no encontrado")
+        
+        if participant.get("status") == "winner":
+            raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
+        
+        # Check if there's already a winner
+        existing_winner = await database.participants.find_one({"status": "winner"}, {"_id": 0})
+        if existing_winner:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
+            )
+        
+        # Mark as winner
+        await database.participants.update_one(
+            {"bib": bib},
+            {
+                "$set": {
+                    "status": "winner",
+                    "updated_at": datetime.utcnow()
+                }
             }
-        }
-    )
+        )
+    else:
+        # Use registrations collection for new races
+        try:
+            bib_int = int(bib)
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "$or": [
+                    {"bib": bib_int},
+                    {"bib": str(bib_int)},
+                    {"bib": str(bib_int).zfill(3)}
+                ]
+            }, {"_id": 0})
+        except (ValueError, TypeError):
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "bib": bib
+            }, {"_id": 0})
+        
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participante no encontrado en la carrera activa")
+        
+        if participant.get("status") == "winner":
+            raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
+        
+        # Check if there's already a winner in this race
+        existing_winner = await database.registrations.find_one({
+            "race_code": active_race_code,
+            "status": "winner"
+        }, {"_id": 0})
+        
+        if existing_winner:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
+            )
+        
+        # Mark as winner
+        await database.registrations.update_one(
+            {"email": participant.get("email"), "race_code": active_race_code},
+            {
+                "$set": {
+                    "status": "winner",
+                    "won_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
     
     return {
         "message": f"¡{participant.get('nombre')} {participant.get('apellidos')} ha sido marcado como GANADOR!",
