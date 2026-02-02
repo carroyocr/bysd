@@ -4,7 +4,7 @@ Allows scanning athlete QR codes to register lap completions
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
@@ -13,6 +13,7 @@ import qrcode
 from io import BytesIO
 import base64
 from pathlib import Path
+import zipfile
 
 router = APIRouter(prefix="/api/qr-scan", tags=["qr-scan"])
 
