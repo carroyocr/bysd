@@ -325,29 +325,33 @@ export default function Navigation() {
                     Patrocinadores
                   </Link>
 
-                  <Link
-                    to={`/resultados/${activeRaceCode}`}
-                    onClick={handleLinkClick}
-                    className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
-                      isResultadosActive && location.pathname.includes(activeRaceCode)
-                        ? 'text-primary bg-secondary'
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
-                    }`}
-                  >
-                    Resultados
-                  </Link>
+                  {pageVisibility.showTracking && (
+                    <Link
+                      to={`/resultados/${activeRaceCode}`}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        isResultadosActive && location.pathname.includes(activeRaceCode)
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Resultados
+                    </Link>
+                  )}
 
-                  <Link
-                    to={`/comunidad/${activeRaceCode}`}
-                    onClick={handleLinkClick}
-                    className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
-                      isComunidadActive && location.pathname.includes(activeRaceCode)
-                        ? 'text-primary bg-secondary'
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
-                    }`}
-                  >
-                    Comunidad
-                  </Link>
+                  {pageVisibility.showCommunity && (
+                    <Link
+                      to={`/comunidad/${activeRaceCode}`}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        isComunidadActive && location.pathname.includes(activeRaceCode)
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Comunidad
+                    </Link>
+                  )}
 
                   {/* Mobile Anteriores Accordion - Only show if there are past races */}
                   {pastRaces.length > 0 && (
