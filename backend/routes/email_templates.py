@@ -544,15 +544,14 @@ DEFAULT_TEMPLATES = [
     <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
         <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
         <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
-            Confirmamos que tu registro para <strong>{{race_name}}</strong> ha sido cancelado exitosamente.
+            Confirmamos que tu registro para <strong>{{race_name}}</strong> ha sido cancelado y eliminado de nuestro sistema.
         </p>
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; color: #4b5563;">
-                Si esto fue un error o deseas registrarte nuevamente, puedes hacerlo en cualquier momento desde nuestra página web.
-            </p>
+            <p style="margin: 0 0 8px 0; color: #4b5563;"><strong>Razón de cancelación:</strong></p>
+            <p style="margin: 0; color: #4b5563;">{{cancellation_reason}}</p>
         </div>
         <p style="font-size: 14px; color: #6b7280;">
-            Lamentamos verte partir. ¡Esperamos verte en futuras ediciones!
+            Si cambiaste de opinión, puedes volver a registrarte en cualquier momento desde nuestra página web.
         </p>
     </div>
     <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
