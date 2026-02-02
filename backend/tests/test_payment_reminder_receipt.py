@@ -14,7 +14,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://multi-event-portal.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://race-admin-1.preview.emergentagent.com')
 RACE_CODE = "BYSD-2027"
 TEST_TOKEN = "aYAYnRNvM_S4hQ-XUBEYDMP9pID5c3hYq3ga-7gHd-c"
 

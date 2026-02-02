@@ -202,7 +202,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     formatted_cost = f"{registration_cost:,.0f}".replace(",", ",")
     
     # Build edit URL - use the correct route
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://multi-event-portal.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
+    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://race-admin-1.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
     subject = f"¡Pre Registro Confirmado! - {race_code}"
     html_content = f"""
@@ -1179,7 +1179,7 @@ async def send_payment_reminder(race_code: str):
         "amount": race_config.get("registration_cost", 3500)
     }
     
-    frontend_url = os.environ.get("FRONTEND_URL", "https://multi-event-portal.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://race-admin-1.preview.emergentagent.com")
     race_name = race_config.get("name", "Backyard Ultra Santo Domingo")
     
     sent_count = 0
