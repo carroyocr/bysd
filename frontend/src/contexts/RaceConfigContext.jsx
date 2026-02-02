@@ -42,6 +42,13 @@ export function RaceConfigProvider({ children }) {
     fetchConfig();
   }, []);
 
+  // Update document title when config changes
+  useEffect(() => {
+    if (config.code) {
+      document.title = config.code;
+    }
+  }, [config.code]);
+
   // Helper function to format the race date for display
   const getFormattedDate = () => {
     if (!config.date) return '';
