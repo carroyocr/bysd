@@ -434,8 +434,27 @@ async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
     # Remove assignment
     await database.volunteer_assignments.update_one(
         {"id": slot_id},
-        {"$set": {"email_asignado": None, "updated_at": datetime.utcnow()}}
+        {"$set": {
+            "email_asignado": None, 
+            "nombre_asignado": None,
+            "updated_at": datetime.utcnow()
+        }}
     )
+    
+    # Check if volunteer has other assignments - if not, revert status to "registered"
+    other_assignments = await database.volunteer_assignments.count_documents({
+        "email_asignado": email
+    })
+    
+    if other_assignments == 0:
+        # No more assignments, revert to registered status
+        await database.volunteer_registrations.update_one(
+            {"email": email},
+            {"$set": {
+                "status": "registered",
+                "updated_at": datetime.utcnow()
+            }}
+        )
     
     # Cancel the reminder for this slot
     try:
