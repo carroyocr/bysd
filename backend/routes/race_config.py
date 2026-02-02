@@ -103,8 +103,38 @@ async def get_active_race(db=Depends(lambda: None)):
         config["registration_cost"] = 3500.0
     if "edition_number" not in config:
         config["edition_number"] = 1
+    if "show_tracking_page" not in config:
+        config["show_tracking_page"] = True
+    if "show_community_page" not in config:
+        config["show_community_page"] = True
     
     return config
+
+
+@router.get("/page-visibility")
+async def get_page_visibility(db=Depends(lambda: None)):
+    """Get the visibility settings for public pages (no auth required)"""
+    from server import db as database
+    
+    config = await database.race_configurations.find_one(
+        {"is_active": True}, 
+        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "name": 1, "code": 1}
+    )
+    
+    if not config:
+        return {
+            "show_tracking_page": True,
+            "show_community_page": True,
+            "race_name": "Backyard Ultra Santo Domingo",
+            "race_code": ""
+        }
+    
+    return {
+        "show_tracking_page": config.get("show_tracking_page", True),
+        "show_community_page": config.get("show_community_page", True),
+        "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
+        "race_code": config.get("code", "")
+    }
 
 
 @router.get("/all")
