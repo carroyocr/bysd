@@ -181,29 +181,33 @@ export default function Navigation() {
               Patrocinadores
             </Link>
 
-            {/* Direct link to active race Resultados */}
-            <Link
-              to={`/resultados/${activeRaceCode}`}
-              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
-                isResultadosActive && location.pathname.includes(activeRaceCode)
-                  ? 'text-primary bg-secondary'
-                  : 'text-foreground hover:text-primary hover:bg-secondary'
-              }`}
-            >
-              Resultados
-            </Link>
+            {/* Direct link to active race Resultados - Only show if tracking page is enabled */}
+            {pageVisibility.showTracking && (
+              <Link
+                to={`/resultados/${activeRaceCode}`}
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                  isResultadosActive && location.pathname.includes(activeRaceCode)
+                    ? 'text-primary bg-secondary'
+                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                }`}
+              >
+                Resultados
+              </Link>
+            )}
 
-            {/* Direct link to active race Comunidad */}
-            <Link
-              to={`/comunidad/${activeRaceCode}`}
-              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
-                isComunidadActive && location.pathname.includes(activeRaceCode)
-                  ? 'text-primary bg-secondary'
-                  : 'text-foreground hover:text-primary hover:bg-secondary'
-              }`}
-            >
-              Comunidad
-            </Link>
+            {/* Direct link to active race Comunidad - Only show if community page is enabled */}
+            {pageVisibility.showCommunity && (
+              <Link
+                to={`/comunidad/${activeRaceCode}`}
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                  isComunidadActive && location.pathname.includes(activeRaceCode)
+                    ? 'text-primary bg-secondary'
+                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                }`}
+              >
+                Comunidad
+              </Link>
+            )}
 
             {/* Anteriores Dropdown - Only show if there are past races */}
             {pastRaces.length > 0 && (
