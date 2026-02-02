@@ -262,6 +262,12 @@ export default function AdminPage() {
               <UserManagement />
             </TabsContent>
           )}
+
+          {hasAccess('emails') && (
+            <TabsContent value="emails">
+              <EmailTemplatesManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
