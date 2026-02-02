@@ -202,6 +202,22 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Sistema de QR Code para Control de Vueltas** (02 Febrero 2026)
+  - **Backend - Nuevo módulo `qr_scan.py`:**
+    - `GET /api/qr-scan/race-status` - Estado actual de la carrera (vuelta actual, tiempo restante)
+    - `GET /api/qr-scan/athlete/{bib}` - Información del atleta para confirmación
+    - `POST /api/qr-scan/confirm-lap` - Confirma vuelta o marca DNF
+    - `POST /api/qr-scan/generate-qr/{bib}` - Genera QR para atleta
+    - `GET /api/qr-scan/image/{filename}` - Sirve imágenes QR
+  - **Lógica de Auto-DNF:** Si el tiempo de la vuelta actual se agota mientras el atleta no ha completado la vuelta anterior, se marca como DNF automáticamente
+  - **Generación automática de QR:** Al asignar BIB (individual o en lote), se genera el QR automáticamente
+  - **Frontend:**
+    - Nueva página `/scan` - Escáner QR con cámara y entrada manual de BIB
+    - Nueva página `/scan/confirmar` - Confirmación de vuelta con información del atleta
+    - Botón "Escáner QR" en el Panel de Control de Carrera
+    - Ícono QR junto al BIB en la gestión de atletas (enlace a la imagen)
+  - **Tests:** 14/14 backend tests passed (100%)
+
 - [x] **Feature: Cancelación de Registro para Atletas y Voluntarios** (02 Febrero 2026)
   - **Nueva página `/cancelar-registro`** para cancelación vía link de email
     - Detecta automáticamente si es atleta o voluntario
