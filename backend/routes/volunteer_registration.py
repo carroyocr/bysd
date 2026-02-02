@@ -236,33 +236,22 @@ async def send_verification(request: VerificationRequest):
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=30)
     })
     
-    # Send email
+    # Send email using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_general_data
+        )
         
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #7c3aed;">🏃 Backyard Ultra Santo Domingo</h1>
-                <h2 style="color: #333;">Registro de Voluntarios</h2>
-            </div>
-            
-            <div style="background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
-                <p style="margin: 0; font-size: 16px;">Tu código de verificación es:</p>
-                <h1 style="font-size: 48px; letter-spacing: 8px; margin: 20px 0;">{code}</h1>
-                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Este código expira en 30 minutos</p>
-            </div>
-            
-            <p style="color: #666; text-align: center;">
-                ¡Gracias por tu interés en ser parte del equipo de voluntarios! 💪
-            </p>
-        </div>
-        """
+        merge_data = {
+            **build_race_data(active_race),
+            **build_general_data(verification_code=code),
+        }
         
-        await send_email(
+        await send_email_with_template(
+            db=db,
+            template_id="volunteer_verification_code",
             to_email=email,
-            subject="🏃 Código de Verificación - Voluntarios BYSD",
-            html_content=html_content
+            data=merge_data
         )
     except Exception as e:
         print(f"Error sending email: {e}")
