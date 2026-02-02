@@ -28,12 +28,54 @@ export default function ScanConfirmPage() {
   const [timeRemaining, setTimeRemaining] = useState(0);
   
   useEffect(() => {
-    if (bib) {
-      loadAthleteData();
-    } else {
-      setError('No se proporcionó número de BIB');
-      setLoading(false);
-    }
+    let isMounted = true;
+    const controller = new AbortController();
+    
+    const loadAthleteData = async () => {
+      if (!bib) {
+        setError('No se proporcionó número de BIB');
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const url = raceCode 
+          ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
+          : `${API_URL}/api/qr-scan/athlete/${bib}`;
+        
+        const response = await fetch(url, { signal: controller.signal });
+        const data = await response.json();
+        
+        if (!isMounted) return;
+        
+        if (!response.ok) {
+          throw new Error(data.detail || 'Error al cargar datos del atleta');
+        }
+        
+        setAthlete(data);
+        setTimeRemaining(data.time_remaining_seconds || 0);
+        
+        // Auto-DNF check
+        if (data.auto_dnf) {
+          toast.warning('Tiempo agotado - El atleta será marcado como DNF');
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err.name === 'AbortError') return;
+        setError(err.message);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    loadAthleteData();
+    
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [bib, raceCode]);
   
   // Countdown timer
