@@ -156,6 +156,10 @@ export default function AdminPage() {
           <TabsContent value="config">
             <RaceConfigPanel />
           </TabsContent>
+
+          <TabsContent value="users">
+            <UserManagement />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
