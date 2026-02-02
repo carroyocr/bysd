@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,6 +10,31 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 export default function ComunidadPage() {
   const { raceCode } = useParams();
   const { raceName, config } = useRaceConfig();
+  
+  // Page visibility check
+  const [visibility, setVisibility] = useState({ loading: true, enabled: true, raceName: '' });
+  
+  useEffect(() => {
+    const checkVisibility = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/page-visibility`);
+        if (response.ok) {
+          const data = await response.json();
+          setVisibility({
+            loading: false,
+            enabled: data.show_community_page,
+            raceName: data.race_name
+          });
+        } else {
+          setVisibility({ loading: false, enabled: true, raceName: '' });
+        }
+      } catch (error) {
+        console.error('Error checking page visibility:', error);
+        setVisibility({ loading: false, enabled: true, raceName: '' });
+      }
+    };
+    checkVisibility();
+  }, []);
   
   // Determine which race to show - from URL param or active race
   const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
