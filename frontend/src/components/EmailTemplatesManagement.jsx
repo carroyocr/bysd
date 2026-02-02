@@ -142,10 +142,37 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
   const [sendingTest, setSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
 
+  // Load preview function
+  const loadPreview = async (templateId) => {
+    setLoadingPreview(true);
+    try {
+      const response = await fetch(`${API_URL}/api/email-templates/preview?template_id=${templateId}`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPreview(data);
+      } else {
+        toast.error('Error al cargar la vista previa');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // When template changes, update content and reload preview if on preview tab
   useEffect(() => {
     setSubject(template.subject || '');
     setContent(template.content || '');
     setPreview(null);
+    
+    // If currently on preview tab, automatically load the new template's preview
+    if (activeTab === 'preview') {
+      loadPreview(template.id);
+    }
   }, [template.id, template.subject, template.content]);
 
   const handleInsertHtml = (html) => {
