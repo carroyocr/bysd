@@ -37,6 +37,7 @@ export default function Navigation() {
   const [pastRaces, setPastRaces] = useState([]);
   const [expandedMobile, setExpandedMobile] = useState({ anteriores: false });
   const [expandedPastRace, setExpandedPastRace] = useState({});
+  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true });
   const location = useLocation();
   const { getYear, config } = useRaceConfig();
 
@@ -46,6 +47,25 @@ export default function Navigation() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Fetch page visibility settings
+  useEffect(() => {
+    const fetchVisibility = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/page-visibility`);
+        if (response.ok) {
+          const data = await response.json();
+          setPageVisibility({
+            showTracking: data.show_tracking_page,
+            showCommunity: data.show_community_page
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching page visibility:', error);
+      }
+    };
+    fetchVisibility();
   }, []);
 
   // Fetch all races for the dropdown
