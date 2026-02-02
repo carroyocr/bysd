@@ -421,6 +421,45 @@ export default function VoluntarioRegistroPage() {
     setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
+  // Handle volunteer registration cancellation
+  const handleCancelRegistration = async () => {
+    if (!cancelReason) {
+      toast.error('Por favor selecciona una razón de cancelación');
+      return;
+    }
+    
+    if (cancelReason === 'Otra razón' && !cancelOtherReason.trim()) {
+      toast.error('Por favor especifica la razón de cancelación');
+      return;
+    }
+    
+    setCancelling(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/cancel/${editToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: cancelReason,
+          other_reason: cancelReason === 'Otra razón' ? cancelOtherReason : null
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success('Postulación cancelada exitosamente');
+        setShowCancelModal(false);
+        navigate('/');
+      } else {
+        toast.error(data.detail || 'Error al cancelar la postulación');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateStep()) return;
     
