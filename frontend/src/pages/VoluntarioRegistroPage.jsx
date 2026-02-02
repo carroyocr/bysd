@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
-  Loader2, Info, Users, Clipboard, Clock, Check, Edit2
+  Loader2, Info, Users, Clipboard, Clock, Check, Edit2, XCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
