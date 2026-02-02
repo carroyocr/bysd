@@ -374,8 +374,8 @@ export default function VolunteerConfigManagement() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Configuración de Voluntarios</h2>
-          <p className="text-muted-foreground">Administra las posiciones y turnos disponibles</p>
+          <h2 className="text-2xl font-bold">Configuración de Turnos</h2>
+          <p className="text-muted-foreground">Administra las posiciones y turnos disponibles para voluntarios</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {positions.length === 0 && (
