@@ -44,9 +44,18 @@ export default function ScanConfirmPage() {
           : `${API_URL}/api/qr-scan/athlete/${bib}`;
         
         const response = await fetch(url, { signal: controller.signal });
-        const data = await response.json();
         
         if (!isMounted) return;
+        
+        // Clone response to safely read body
+        const responseClone = response.clone();
+        let data;
+        
+        try {
+          data = await responseClone.json();
+        } catch (parseErr) {
+          throw new Error('Error al procesar respuesta del servidor');
+        }
         
         if (!response.ok) {
           throw new Error(data.detail || 'Error al cargar datos del atleta');
