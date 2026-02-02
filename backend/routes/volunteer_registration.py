@@ -348,74 +348,27 @@ async def register_volunteer(
     # Clean up session
     await db.volunteer_sessions.delete_many({"email": email})
     
-    # Build slots info for email
-    slots_text = ""
-    if data.slots_interes:
-        slots_info = await db.volunteer_assignments.find(
-            {"id": {"$in": data.slots_interes}},
-            {"_id": 0}
-        ).to_list(100)
-        
-        if slots_info:
-            slots_text = "<ul style='margin: 10px 0; padding-left: 20px;'>"
-            for slot in slots_info:
-                slots_text += f"<li>{slot.get('puesto', '')} - Turno {slot.get('turno', '')} ({slot.get('hora_inicio', '')} - {slot.get('hora_fin', '')})</li>"
-            slots_text += "</ul>"
-    
-    # Send confirmation email with edit link
+    # Send confirmation email with edit link using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_volunteer_data
+        )
         import os
         
         frontend_url = os.environ.get('FRONTEND_URL', 'https://eventmaster-67.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #7c3aed;">🏃 Backyard Ultra Santo Domingo</h1>
-            </div>
-            
-            <div style="background: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h2 style="color: #166534; margin-top: 0;">✅ ¡Registro de Voluntario Confirmado!</h2>
-                <p style="color: #166534;">Hola <strong>{data.nombre}</strong>, gracias por registrarte como voluntario.</p>
-            </div>
-            
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="color: #334155; margin-top: 0;">📋 Resumen de tu Registro</h3>
-                <p style="color: #64748b; margin: 5px 0;"><strong>Nombre:</strong> {data.nombre} {data.apellidos}</p>
-                <p style="color: #64748b; margin: 5px 0;"><strong>Email:</strong> {email}</p>
-                <p style="color: #64748b; margin: 5px 0;"><strong>Teléfono:</strong> {data.telefono}</p>
-                {f'<p style="color: #64748b; margin: 5px 0;"><strong>Turnos de Interés:</strong></p>{slots_text}' if slots_text else ''}
-            </div>
-            
-            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h3 style="color: #92400e; margin-top: 0;">📝 Editar tu Información</h3>
-                <p style="color: #92400e; font-size: 14px;">
-                    Si necesitas modificar tu información o cambiar tus turnos de interés, haz clic en el siguiente enlace:
-                </p>
-                <a href="{edit_url}" style="display: inline-block; background: #f59e0b; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">
-                    Editar Mi Postulación
-                </a>
-                <p style="color: #92400e; font-size: 12px; margin-top: 10px;">
-                    Guarda este correo para poder acceder a tu registro en el futuro.
-                </p>
-            </div>
-            
-            <p style="color: #666;">
-                Nos pondremos en contacto contigo pronto con más información sobre las tareas y horarios.
-            </p>
-            
-            <p style="color: #666; font-size: 14px;">
-                ¡Gracias por ser parte del equipo! 💪
-            </p>
-        </div>
-        """
+        merge_data = {
+            **build_race_data(active_race),
+            **build_volunteer_data(registration, edit_token=edit_token),
+            "volunteer_edit_link": edit_url,
+        }
         
-        await send_email(
+        await send_email_with_template(
+            db=db,
+            template_id="volunteer_registration_confirmation",
             to_email=email,
-            subject="✅ Registro de Voluntario Confirmado - BYSD",
-            html_content=html_content
+            data=merge_data
         )
         print(f"Confirmation email sent to {email}")
     except Exception as e:
