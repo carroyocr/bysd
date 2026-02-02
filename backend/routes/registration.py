@@ -1077,16 +1077,29 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
     ]
     athletes_with_score.sort(key=lambda x: x["score"], reverse=True)
     
-    # Assign BIBs in order
+    # Assign BIBs in order and generate QR codes
     assigned_count = 0
     assignments = []
+    
+    # Import QR generation
+    from routes.qr_scan import generate_qr_code
+    import os
+    frontend_url = os.environ.get("REACT_APP_BACKEND_URL", "").replace("/api", "")
+    if not frontend_url:
+        frontend_url = "https://race-admin-1.preview.emergentagent.com"
     
     for i, athlete in enumerate(athletes_with_score):
         bib_number = start_bib + i
         
+        # Generate QR code for this BIB
+        qr_url = generate_qr_code(str(bib_number), race_code, frontend_url)
+        
         result = await registrations_collection.update_one(
             {"email": athlete["email"], "race_code": race_code},
-            {"$set": {"bib": bib_number}}
+            {"$set": {
+                "bib": bib_number,
+                "qr_code_url": qr_url
+            }}
         )
         
         if result.modified_count > 0 or result.matched_count > 0:
@@ -1096,7 +1109,8 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
                 "nombre": athlete["nombre"],
                 "email": athlete["email"],
                 "score": round(athlete["score"], 1),
-                "experiencia": f"{athlete['anos_experiencia']}a / {athlete['maxima_distancia_km']}km"
+                "experiencia": f"{athlete['anos_experiencia']}a / {athlete['maxima_distancia_km']}km",
+                "qr_code_url": qr_url
             })
     
     return {
