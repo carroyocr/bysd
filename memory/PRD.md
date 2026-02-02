@@ -212,6 +212,28 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Deep Review: Control de Carrera y Sistema QR** (02 Febrero 2026)
+  - **Verificación completa del flujo:**
+    - Estadísticas de carrera y participantes
+    - Control de vueltas (avanzar, retroceder, completar)
+    - Sistema de escaneo QR (generar, escanear, confirmar)
+    - Estados de atleta (active, retired, dns, winner, honor)
+    - Auto-DNF basado en tiempo
+  - **Bugs corregidos:**
+    - ✅ `/reactivate` - Ahora usa `registrations` para carreras nuevas
+    - ✅ `/mark-dns` - Ahora usa `registrations` para carreras nuevas
+    - ✅ `/adjust-laps` - Ahora usa `registrations` para carreras nuevas
+    - ✅ `/edit-participant` - Ahora usa `registrations` para carreras nuevas
+    - ✅ `/mark-honor` - Ahora usa `registrations` para carreras nuevas
+  - **Tests verificados:**
+    - ✅ Obtener estadísticas y participantes
+    - ✅ Establecer/completar vueltas
+    - ✅ Escanear atleta por BIB
+    - ✅ Generar y confirmar via QR
+    - ✅ Marcar DNF, DNS, ganador, honor
+    - ✅ Reactivar y ajustar vueltas (en registrations)
+  - **Documentación creada:** `/app/memory/FLUJO_CONTROL_CARRERA.md`
+
 - [x] **Deep Review: Flujo de Registro de Voluntarios** (02 Febrero 2026)
   - **Verificación completa del flujo:**
     - Registro nuevo: verificación email → código → sesión → registro
@@ -227,6 +249,7 @@ El sistema soporta múltiples carreras con aislamiento de datos:
     - ✅ Validaciones de errores (slot ocupado, email incorrecto, etc.)
   - **Documentación creada:** `/app/memory/FLUJO_REGISTRO_VOLUNTARIOS.md`
   - **Bug resuelto:** El `AttributeError: 'str' object has no attribute 'get'` mencionado en el handoff ya no está presente (posiblemente corregido en actualización anterior)
+
 
 - [x] **Feature: Sistema de QR Code para Control de Vueltas** (02 Febrero 2026)
   - **Backend - Nuevo módulo `qr_scan.py`:**
