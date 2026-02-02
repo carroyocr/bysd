@@ -274,14 +274,16 @@ export default function UserManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="usuario@ejemplo.com"
+                  required
                 />
+                <p className="text-xs text-muted-foreground">Las credenciales se enviarán a este correo</p>
               </div>
             </div>
             
