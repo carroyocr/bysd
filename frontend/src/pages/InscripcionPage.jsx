@@ -1445,6 +1445,82 @@ export default function InscripcionPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <XCircle className="w-5 h-5" />
+                Cancelar Pre Registro
+              </CardTitle>
+              <CardDescription>
+                Esta acción no se puede deshacer. Tu pre registro será eliminado permanentemente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>¿Por qué deseas cancelar tu pre registro? *</Label>
+                <div className="space-y-2">
+                  {CANCEL_REASONS.map(reason => (
+                    <label key={reason} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cancelReason"
+                        value={reason}
+                        checked={cancelReason === reason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="text-sm">{reason}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {cancelReason === 'Otra razón' && (
+                <div className="space-y-2">
+                  <Label htmlFor="cancelOtherReason">Especifica la razón *</Label>
+                  <Input
+                    id="cancelOtherReason"
+                    value={cancelOtherReason}
+                    onChange={(e) => setCancelOtherReason(e.target.value)}
+                    placeholder="Describe tu razón..."
+                    maxLength={200}
+                  />
+                </div>
+              )}
+              
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason('');
+                    setCancelOtherReason('');
+                  }}
+                  className="flex-1"
+                >
+                  Mantener Pre Registro
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelRegistration}
+                  disabled={cancelling}
+                  className="flex-1"
+                >
+                  {cancelling ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelando...</>
+                  ) : (
+                    'Confirmar Cancelación'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
