@@ -780,6 +780,17 @@ export default function PreRegistrationManagement() {
                 <Download className="w-4 h-4 mr-2" />
                 Exportar CSV
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(`${API_URL}/api/qr-scan/download-all-qr/${raceCode}`, '_blank')}
+                disabled={athletesWithBibCount === 0}
+                className="border-blue-400 text-blue-700 hover:bg-blue-50"
+                data-testid="download-qr-codes-btn"
+              >
+                <QrCode className="w-4 h-4 mr-2" />
+                Descargar QRs ({athletesWithBibCount})
+              </Button>
             </div>
           </CardTitle>
           {sortByExperience && (
