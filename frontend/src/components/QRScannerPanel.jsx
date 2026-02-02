@@ -89,25 +89,16 @@ export default function QRScannerPanel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <QrCode className="w-5 h-5" />
-                Escáner de Códigos QR
-              </CardTitle>
-              <CardDescription>
-                Registra vueltas escaneando el QR del corredor o ingresando su BIB
-              </CardDescription>
-            </div>
-            <Button onClick={openFullScanner} className="bg-green-600 hover:bg-green-700">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Abrir Escáner Completo
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Escáner QR</h2>
+          <p className="text-muted-foreground">Registra vueltas escaneando el QR del corredor o ingresando su BIB</p>
+        </div>
+        <Button onClick={openFullScanner} className="bg-green-600 hover:bg-green-700">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Abrir Escáner Completo
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Race Status */}
