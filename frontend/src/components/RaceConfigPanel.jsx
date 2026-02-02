@@ -88,7 +88,10 @@ export default function RaceConfigPanel() {
         payment_account_id: activeData.payment_account_id || '',
         payment_bank_name: activeData.payment_bank_name || '',
         payment_account_type: activeData.payment_account_type || '',
-        payment_account_number: activeData.payment_account_number || ''
+        payment_account_number: activeData.payment_account_number || '',
+        // Page visibility
+        show_tracking_page: activeData.show_tracking_page !== false,
+        show_community_page: activeData.show_community_page !== false
       });
       
       // Load notification counts if race has manuals
