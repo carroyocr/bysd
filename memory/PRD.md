@@ -527,18 +527,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - `/app/backend/tests/test_surveys.py`
   - `/app/backend/tests/test_race_config.py`
   - `/app/backend/tests/test_pre_registration_admin.py`
-  - `/app/backend/tests/test_volunteer_edit_mode.py` (nuevo)
+  - `/app/backend/tests/test_volunteer_edit_mode.py`
+  - `/app/backend/tests/test_email_templates.py` (nuevo)
+  - `/app/backend/tests/test_page_visibility_and_templates.py` (nuevo)
 - **Reportes**: 
-  - `/app/test_reports/iteration_1.json`
-  - `/app/test_reports/iteration_2.json`
-  - `/app/test_reports/iteration_3.json`
-  - `/app/test_reports/iteration_4.json`
-  - `/app/test_reports/iteration_5.json`
-  - `/app/test_reports/iteration_8.json` (nuevo - edición voluntarios)
-  - `/app/test_reports/iteration_9.json` (nuevo - manuales y datos de pago)
-  - `/app/test_reports/iteration_10.json` (nuevo - notificaciones de manual)
-  - `/app/test_reports/iteration_11.json` (nuevo - recordatorio pago y comprobantes)
-- **Cobertura**: 109/109 tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_1.json` - iteration_14.json
+  - `/app/test_reports/iteration_15.json` (nuevo - visibilidad y plantillas email)
+- **Cobertura**: 127+ tests backend (100%), UI tests completos (100%)
 
 ---
 
