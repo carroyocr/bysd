@@ -201,24 +201,47 @@ def build_volunteer_data(volunteer: Dict, assignment: Dict = None, edit_token: s
     return data
 
 
-def build_payment_data(payment: Dict = None) -> Dict[str, str]:
+def build_payment_data(payment: Dict = None, race_config: Dict = None, edit_token: str = None) -> Dict[str, str]:
     """Build payment merge field data"""
-    if not payment:
-        return {
-            "payment_amount": "",
-            "payment_method": "",
-            "payment_reference": "",
-            "payment_date": "",
-            "payment_status": "",
-        }
     
-    return {
-        "payment_amount": payment.get("amount", ""),
-        "payment_method": payment.get("method", ""),
-        "payment_reference": payment.get("reference", ""),
-        "payment_date": payment.get("date", ""),
-        "payment_status": payment.get("status", ""),
+    # Default values
+    data = {
+        "payment_amount": "",
+        "payment_method": "",
+        "payment_reference": "",
+        "payment_date": "",
+        "payment_status": "",
+        "payment_bank_name": "",
+        "payment_account_name": "",
+        "payment_account_number": "",
+        "payment_account_type": "",
+        "payment_upload_url": "",
+        "payment_cancel_url": "",
     }
+    
+    # Fill from payment data if provided
+    if payment:
+        data["payment_amount"] = payment.get("amount", "")
+        data["payment_method"] = payment.get("method", "")
+        data["payment_reference"] = payment.get("reference", "")
+        data["payment_date"] = payment.get("date", "")
+        data["payment_status"] = payment.get("status", "")
+    
+    # Fill from race_config for bank details
+    if race_config:
+        amount = race_config.get("registration_cost", 3500)
+        data["payment_amount"] = data["payment_amount"] or f"RD$ {amount:,}"
+        data["payment_bank_name"] = race_config.get("payment_bank_name", "")
+        data["payment_account_name"] = race_config.get("payment_account_name", "")
+        data["payment_account_number"] = race_config.get("payment_account_number", "")
+        data["payment_account_type"] = race_config.get("payment_account_type", "")
+    
+    # Build URLs if edit_token provided
+    if edit_token:
+        data["payment_upload_url"] = f"{BASE_URL}/subir-comprobante?token={edit_token}"
+        data["payment_cancel_url"] = f"{BASE_URL}/cancelar-registro?token={edit_token}"
+    
+    return data
 
 
 def build_general_data(verification_code: str = None, username: str = None, password: str = None) -> Dict[str, str]:
