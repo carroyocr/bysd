@@ -312,6 +312,10 @@ app.include_router(qr_scan_router)
 from routes.users import router as users_router
 app.include_router(users_router)
 
+# Include email templates routes
+from routes.email_templates import router as email_templates_router
+app.include_router(email_templates_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
