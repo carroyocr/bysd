@@ -74,6 +74,7 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     # Store data for email before deletion
     nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
     email = registration.get("email", "").lower()
+    race_code = registration.get("race_code", "")
     
     # Remove any slot assignments for this volunteer
     await db.volunteer_assignments.update_many(
@@ -88,56 +89,26 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     await db.volunteer_verification_tokens.delete_many({"email": email})
     await db.volunteer_sessions.delete_many({"email": email})
     
-    # Send cancellation confirmation email
+    # Send cancellation confirmation email using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_volunteer_data
+        )
         
-        subject = "Confirmación de Cancelación - Voluntario Backyard Ultra"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f4;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-                <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 24px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 20px;">BACKYARD ULTRA SANTO DOMINGO</h1>
-                </div>
-                
-                <div style="padding: 32px 24px;">
-                    <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 16px;">
-                        Hola <strong>{nombre}</strong>,
-                    </p>
-                    
-                    <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px; line-height: 1.6;">
-                        Confirmamos que tu registro como voluntario ha sido cancelado y eliminado de nuestro sistema.
-                    </p>
-                    
-                    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-                        <p style="margin: 0; color: #4b5563; font-size: 14px;">
-                            <strong>Razón de cancelación:</strong><br>
-                            {reason_text}
-                        </p>
-                    </div>
-                    
-                    <p style="color: #6b7280; margin: 0; font-size: 13px;">
-                        Si cambiaste de opinión, puedes volver a registrarte en cualquier momento.
-                    </p>
-                </div>
-                
-                <div style="background-color: #1f2937; padding: 20px; text-align: center;">
-                    <p style="color: #9ca3af; margin: 0; font-size: 12px;">
-                        © Backyard Ultra Santo Domingo
-                    </p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        race_config = await db.race_configurations.find_one({"code": race_code}) if race_code else await db.race_configurations.find_one({"is_active": True})
         
-        await send_email(email, subject, html_content)
+        merge_data = {
+            **build_race_data(race_config),
+            **build_volunteer_data(registration),
+            "cancellation_reason": reason_text,
+        }
+        
+        await send_email_with_template(
+            db=db,
+            template_id="volunteer_cancellation",
+            to_email=email,
+            data=merge_data
+        )
     except Exception as e:
         print(f"Error sending cancellation email: {e}")
     
