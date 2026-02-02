@@ -184,7 +184,7 @@ export default function PaymentReceiptPage() {
     return (
       <div className="min-h-screen bg-stone-100">
         <Navigation />
-        <div className="max-w-lg mx-auto px-4 py-12">
+        <div className="max-w-lg mx-auto px-4 pt-24 py-12">
           <Card className="border-green-200 bg-green-50">
             <CardContent className="pt-6 text-center">
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
