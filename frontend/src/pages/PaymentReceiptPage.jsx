@@ -146,7 +146,7 @@ export default function PaymentReceiptPage() {
     return (
       <div className="min-h-screen bg-stone-100">
         <Navigation />
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center pt-24 py-20">
           <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function PaymentReceiptPage() {
     return (
       <div className="min-h-screen bg-stone-100">
         <Navigation />
-        <div className="max-w-lg mx-auto px-4 py-12">
+        <div className="max-w-lg mx-auto px-4 pt-24 py-12">
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6 text-center">
               <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
