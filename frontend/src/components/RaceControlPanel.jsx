@@ -692,13 +692,12 @@ export default function RaceControlPanel({ embedded = false }) {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Panel de Control</h2>
-            <p className="text-muted-foreground mt-1">Gestión de vueltas y participantes • {raceName}</p>
+            <h2 className="text-2xl font-bold">Control de Carrera</h2>
+            <p className="text-muted-foreground">Gestión de vueltas y participantes • {raceName}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
