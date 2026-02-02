@@ -522,12 +522,15 @@ export default function InscripcionPage() {
     
     setCancelling(true);
     try {
+      const requestBody = {
+        reason: cancelReason,
+        other_reason: cancelReason === 'Otra razón' ? cancelOtherReason : null
+      };
+      
       const response = await fetch(`${API_URL}/api/registration/cancel/${editToken}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: cancelReason === 'Otra razón' ? cancelOtherReason : cancelReason
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (response.ok) {
