@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -15,6 +15,7 @@ import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsMa
 import FinancesManagement from '../components/FinancesManagement';
 import QRScannerPanel from '../components/QRScannerPanel';
 import UserManagement from '../components/UserManagement';
+import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -27,7 +28,8 @@ const TAB_PERMISSIONS = {
   'sponsors': 'sponsors',
   'surveys': 'surveys',
   'config': 'config',
-  'users': 'users'
+  'users': 'users',
+  'emails': 'emails'
 };
 
 export default function AdminPage() {
