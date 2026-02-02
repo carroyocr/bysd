@@ -302,12 +302,24 @@ export default function SurveyResultsSection() {
   };
 
   return (
-    <div className="mb-8">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Resultados de Encuestas</h2>
+          <p className="text-muted-foreground">Feedback de atletas, voluntarios y espectadores</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchSurveyData} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div className="flex items-center gap-3">
             <ClipboardList className="w-6 h-6 text-primary" />
-            <CardTitle>Resultados de Encuestas</CardTitle>
+            <CardTitle>Resumen</CardTitle>
           </div>
           <Button 
             variant="outline" 
