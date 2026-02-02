@@ -431,6 +431,45 @@ export default function InscripcionPage() {
     setCurrentStep(prev => Math.max(prev - 1, isEditing ? 1 : 0));
   };
   
+  // Handle registration cancellation
+  const handleCancelRegistration = async () => {
+    if (!cancelReason) {
+      toast.error('Por favor selecciona una razón de cancelación');
+      return;
+    }
+    
+    if (cancelReason === 'Otra razón' && !cancelOtherReason.trim()) {
+      toast.error('Por favor especifica la razón de cancelación');
+      return;
+    }
+    
+    setCancelling(true);
+    try {
+      const response = await fetch(`${API_URL}/api/registration/cancel/${editToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: cancelReason,
+          other_reason: cancelReason === 'Otra razón' ? cancelOtherReason : null
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success('Inscripción cancelada exitosamente');
+        setShowCancelModal(false);
+        navigate('/');
+      } else {
+        toast.error(data.detail || 'Error al cancelar la inscripción');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setCancelling(false);
+    }
+  };
+  
   const submitRegistration = async () => {
     if (!validateCurrentStep()) return;
     
