@@ -345,6 +345,51 @@ DEFAULT_TEMPLATES = [
 """
     },
     {
+        "id": "payment_receipt_received",
+        "name": "Comprobante de Pago Recibido",
+        "description": "Se envía cuando un atleta sube su comprobante de pago",
+        "subject": "📄 Comprobante Recibido - {{race_name}}",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Comprobante Recibido</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">¡Hola <strong>{{athlete_nombre_completo}}</strong>!</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Hemos recibido tu comprobante de pago con los siguientes detalles:
+        </p>
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="padding: 8px 0; color: #6b7280;">Fecha de pago:</td>
+                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{{payment_date}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6b7280;">Banco origen:</td>
+                    <td style="padding: 8px 0; color: #1f2937;">{{bank_origin}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; color: #6b7280;">No. Transferencia:</td>
+                    <td style="padding: 8px 0; color: #1f2937;">{{transfer_number}}</td>
+                </tr>
+            </table>
+        </div>
+        <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="color: #92400e; margin: 0; font-size: 14px;">
+                <strong>📋 Estado:</strong> En revisión. Te notificaremos una vez que tu pago sea confirmado.
+            </p>
+        </div>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
+    },
+    {
         "id": "payment_confirmed",
         "name": "Pago Confirmado",
         "description": "Se envía cuando se confirma un pago",
