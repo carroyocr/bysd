@@ -754,10 +754,24 @@ async def get_templates(db=Depends(get_db)):
     # If no templates exist, initialize with defaults
     if not templates:
         for template in DEFAULT_TEMPLATES:
-            template["created_at"] = datetime.now(timezone.utc)
-            template["updated_at"] = datetime.now(timezone.utc)
-            await db.email_templates.insert_one(template)
+            template_copy = template.copy()
+            template_copy["created_at"] = datetime.now(timezone.utc)
+            template_copy["updated_at"] = datetime.now(timezone.utc)
+            await db.email_templates.insert_one(template_copy)
         templates = await db.email_templates.find({}, {"_id": 0}).to_list(100)
+    else:
+        # Check for missing templates and add them
+        existing_ids = {t["id"] for t in templates}
+        for template in DEFAULT_TEMPLATES:
+            if template["id"] not in existing_ids:
+                template_copy = template.copy()
+                template_copy["created_at"] = datetime.now(timezone.utc)
+                template_copy["updated_at"] = datetime.now(timezone.utc)
+                await db.email_templates.insert_one(template_copy)
+        
+        # Refresh list if we added any
+        if len(existing_ids) < len(DEFAULT_TEMPLATES):
+            templates = await db.email_templates.find({}, {"_id": 0}).to_list(100)
     
     return templates
 
