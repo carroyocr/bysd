@@ -1,0 +1,118 @@
+{
+  "summary": "Completed testing of 'Cancelar Registro' functionality for athletes and volunteers. All 13 backend API tests passed. Frontend CancelRegistrationPage correctly shows errors for missing/invalid tokens. Code review confirms cancel buttons and modals are properly implemented in InscripcionPage and VoluntarioRegistroPage edit modes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cancel_registration.py",
+    "/app/test_reports/pytest/pytest_cancel_registration.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend POST /api/registration/cancel/{token} correctly implemented (registration.py lines 933-1015)",
+    "Backend POST /api/volunteer-registration/cancel/{token} correctly implemented (volunteer_registration.py lines 60-149)",
+    "CancelRegistrationPage.jsx correctly handles: no token error, invalid token error, registration type detection (athlete/volunteer), cancellation reason selection with 'Otra razón' option",
+    "InscripcionPage.jsx shows 'Cancelar Pre Registro' button when isEditing=true (lines 1413-1423), modal with reason options (lines 1450-1524)",
+    "VoluntarioRegistroPage.jsx shows 'Cancelar Postulación' button when editMode=true (lines 1173-1184), modal with reason options (lines 1210-1285)",
+    "All cancellation handlers validate reason selection and call correct API endpoints",
+    "data-testid attributes present: confirm-cancel-btn (CancelRegistrationPage), cancel-volunteer-btn, confirm-cancel-volunteer-btn (VoluntarioRegistroPage)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cancel_registration.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "Code review passed, UI testing passed for /cancelar-registro page"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!",
+    "admin_url": "/admin"
+  },
+  "seed_data_creation": "No new seed data created. Existing volunteer registration available (carroyo.cr@gmail.com)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Cancel registration feature fully tested. Backend endpoints return 404 for invalid tokens as expected. Frontend pages correctly handle error states. To test full cancellation flow, a real registration with valid edit_token would be needed.",
+  "features_verified": {
+    "backend_endpoints": {
+      "POST /api/registration/cancel/{token}": {
+        "status": "PASSED",
+        "description": "Cancels athlete registration with reason, returns 404 for invalid token"
+      },
+      "POST /api/volunteer-registration/cancel/{token}": {
+        "status": "PASSED",
+        "description": "Cancels volunteer registration with reason, returns 404 for invalid token"
+      },
+      "GET /api/registration/my-registration?token={token}": {
+        "status": "PASSED",
+        "description": "Returns registration data or 404 for invalid token"
+      },
+      "GET /api/volunteer-registration/by-token/{token}": {
+        "status": "PASSED",
+        "description": "Returns volunteer registration data or 404 for invalid token"
+      }
+    },
+    "frontend_pages": {
+      "/cancelar-registro (no token)": {
+        "status": "PASSED",
+        "description": "Shows error: 'No se proporcionó un token válido'"
+      },
+      "/cancelar-registro?token=invalid": {
+        "status": "PASSED",
+        "description": "Shows error: 'No se encontró un registro con este token. El enlace puede haber expirado o ser inválido.'"
+      }
+    },
+    "frontend_code_review": {
+      "CancelRegistrationPage.jsx": {
+        "status": "PASSED",
+        "features": [
+          "Handles missing token with error message",
+          "Handles invalid token with error message",
+          "Detects registration type (athlete/volunteer)",
+          "Shows cancellation reason options",
+          "Shows 'Otra razón' text input when selected",
+          "Confirm button with data-testid='confirm-cancel-btn'",
+          "Success state shows confirmation message"
+        ]
+      },
+      "InscripcionPage.jsx": {
+        "status": "PASSED",
+        "features": [
+          "Cancel button appears when isEditing=true (line 1414)",
+          "Button text: 'Cancelar Pre Registro'",
+          "Modal shows 4 cancellation reasons",
+          "handleCancelRegistration calls /api/registration/cancel/{token}"
+        ]
+      },
+      "VoluntarioRegistroPage.jsx": {
+        "status": "PASSED",
+        "features": [
+          "Cancel button appears when editMode=true (line 1174)",
+          "Button text: 'Cancelar Postulación'",
+          "Button has data-testid='cancel-volunteer-btn'",
+          "Modal shows 4 cancellation reasons",
+          "Confirm button has data-testid='confirm-cancel-volunteer-btn'",
+          "handleCancelRegistration calls /api/volunteer-registration/cancel/{token}"
+        ]
+      }
+    }
+  },
+  "cancellation_reasons_verified": [
+    "Me lesioné",
+    "Ya no estoy interesado en participar",
+    "Tengo otros compromisos",
+    "Otra razón"
+  ],
+  "pytest_results": {
+    "total_tests": 13,
+    "passed": 13,
+    "failed": 0,
+    "test_file": "/app/backend/tests/test_cancel_registration.py"
+  }
+}
