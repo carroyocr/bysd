@@ -508,6 +508,44 @@ export default function InscripcionPage() {
     }
   };
   
+  // Handle registration cancellation
+  const handleCancelRegistration = async () => {
+    if (!cancelReason) {
+      toast.error('Por favor selecciona una razón para cancelar');
+      return;
+    }
+    
+    if (cancelReason === 'Otra razón' && !cancelOtherReason.trim()) {
+      toast.error('Por favor especifica la razón');
+      return;
+    }
+    
+    setCancelling(true);
+    try {
+      const response = await fetch(`${API_URL}/api/registration/cancel?token=${editToken}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: cancelReason === 'Otra razón' ? cancelOtherReason : cancelReason
+        })
+      });
+      
+      if (response.ok) {
+        toast.success('Pre registro cancelado exitosamente');
+        setShowCancelModal(false);
+        navigate('/');
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error cancelando el pre registro');
+      }
+    } catch (error) {
+      console.error('Cancel error:', error);
+      toast.error('Error de conexión. Intenta de nuevo.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+  
   // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
