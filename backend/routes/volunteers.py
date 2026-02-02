@@ -283,10 +283,16 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
         }}
     )
     
-    # Remove slot from slots_interes in volunteer_registrations (if it was an interest slot being confirmed)
+    # Update volunteer registration status to confirmed and remove from slots_interes
     await database.volunteer_registrations.update_one(
         {"email": email},
-        {"$pull": {"slots_interes": slot_id}}
+        {
+            "$set": {
+                "status": "confirmed",
+                "updated_at": datetime.utcnow()
+            },
+            "$pull": {"slots_interes": slot_id}
+        }
     )
     
     # Schedule reminder for this new assignment
