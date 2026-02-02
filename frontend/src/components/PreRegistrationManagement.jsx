@@ -8,7 +8,8 @@ import {
   Search, Users, UserCheck, UserX, Edit, Trash2, Save, X, 
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
-  Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown
+  Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown,
+  QrCode
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
