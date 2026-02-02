@@ -382,6 +382,40 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Control de Visibilidad de Páginas Públicas** (02 Febrero 2026)
+  - **Panel Admin - Pestaña Carrera**:
+    - Nuevos switches "Mostrar página de Tracking" y "Mostrar página de Comunidad"
+    - Permiten activar/desactivar las páginas públicas `/en-vivo` y `/comunidad`
+  - **Páginas Públicas**:
+    - `/en-vivo` y `/comunidad` verifican la configuración antes de mostrar contenido
+    - Mensaje elegante de "Página No Disponible" cuando está desactivada
+    - Botón "Volver al Inicio" para regresar a la home
+  - **Backend - Nuevo endpoint** (`backend/routes/race_config.py`):
+    - `GET /api/race-config/page-visibility` - Retorna configuración de visibilidad pública
+  - **Tests**: 18/18 tests backend (100%), frontend verificado
+
+- [x] **Feature: Sistema Centralizado de Plantillas de Email** (02 Febrero 2026)
+  - **Panel Admin - Nueva pestaña "Correos"**:
+    - Lista de 18 plantillas de email categorizadas (atletas, voluntarios, pagos, sistema)
+    - Editor HTML con preview en vivo (iframe)
+    - Lista de merge fields disponibles ({{athlete_nombre}}, {{race_name}}, etc.)
+    - Botón "Enviar Prueba" para verificar plantillas
+  - **Plantillas Disponibles**:
+    - Atletas: Confirmación registro, Verificación email, Código de acceso, Asignación BIB, Cancelación
+    - Voluntarios: Confirmación registro, Código verificación, Asignación turno, Recordatorio turno, Cancelación, Link edición
+    - Pagos: Recordatorio, Comprobante recibido, Pago confirmado, Pago rechazado
+    - Sistema: Credenciales admin, Verificación email
+  - **Refactorización Completa**:
+    - Todos los emails hardcodeados migrados al sistema de plantillas
+    - Archivos actualizados: registration.py, volunteer_registration.py, users.py, volunteers.py
+  - **Backend - Nuevos endpoints** (`backend/routes/email_templates.py`):
+    - `GET /api/email-templates/` - Lista todas las plantillas
+    - `GET /api/email-templates/{id}` - Obtener plantilla por ID
+    - `PUT /api/email-templates/{id}` - Actualizar plantilla
+    - `POST /api/email-templates/preview` - Preview renderizado
+    - `POST /api/email-templates/send-test` - Enviar email de prueba
+  - **Tests**: 18/18 tests backend (100%), UI verificada
+
 - [x] **Feature: Sistema de Recordatorio de Pago y Carga de Comprobante** (01 Febrero 2026)
   - **Panel Admin - Pre-Registro**:
     - Botón "Enviar Recordatorio" para notificar atletas activos con pago pendiente (30 días plazo)
