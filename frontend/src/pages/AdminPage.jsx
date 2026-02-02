@@ -121,57 +121,77 @@ export default function AdminPage() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="control" className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Control</span>
-              <span className="sm:hidden">Control</span>
-            </TabsTrigger>
-            <TabsTrigger value="scanner" className="flex items-center gap-2">
-              <QrCode className="w-4 h-4" />
-              <span className="hidden sm:inline">Escáner QR</span>
-              <span className="sm:hidden">QR</span>
-            </TabsTrigger>
-            <TabsTrigger value="registrations" className="flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Atletas</span>
-              <span className="sm:hidden">Atletas</span>
-            </TabsTrigger>
-            <TabsTrigger value="finances" className="flex items-center gap-2">
-              <Wallet className="w-4 h-4" />
-              <span className="hidden sm:inline">Presupuesto</span>
-              <span className="sm:hidden">Presup.</span>
-            </TabsTrigger>
-            <TabsTrigger value="volunteers" className="flex items-center gap-2">
-              <CalendarClock className="w-4 h-4" />
-              <span className="hidden sm:inline">Turnos</span>
-              <span className="sm:hidden">Turnos</span>
-            </TabsTrigger>
-            <TabsTrigger value="assignments" className="flex items-center gap-2">
-              <ClipboardCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Asignaciones</span>
-              <span className="sm:hidden">Asign.</span>
-            </TabsTrigger>
-            <TabsTrigger value="sponsors" className="flex items-center gap-2">
-              <Building2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Patrocinadores</span>
-              <span className="sm:hidden">Sponsors</span>
-            </TabsTrigger>
-            <TabsTrigger value="surveys" className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" />
-              <span className="hidden sm:inline">Encuestas</span>
-              <span className="sm:hidden">Encuestas</span>
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-2">
-              <Flag className="w-4 h-4" />
-              <span className="hidden sm:inline">Carrera</span>
-              <span className="sm:hidden">Carrera</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Usuarios</span>
-              <span className="sm:hidden">Usuarios</span>
-            </TabsTrigger>
+          <TabsList className="flex flex-wrap gap-1 h-auto lg:inline-flex">
+            {hasAccess('control') && (
+              <TabsTrigger value="control" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Control</span>
+                <span className="sm:hidden">Control</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('scanner') && (
+              <TabsTrigger value="scanner" className="flex items-center gap-2">
+                <QrCode className="w-4 h-4" />
+                <span className="hidden sm:inline">Escáner QR</span>
+                <span className="sm:hidden">QR</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('registrations') && (
+              <TabsTrigger value="registrations" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Atletas</span>
+                <span className="sm:hidden">Atletas</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('finances') && (
+              <TabsTrigger value="finances" className="flex items-center gap-2">
+                <Wallet className="w-4 h-4" />
+                <span className="hidden sm:inline">Presupuesto</span>
+                <span className="sm:hidden">Presup.</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('volunteers') && (
+              <TabsTrigger value="volunteers" className="flex items-center gap-2">
+                <CalendarClock className="w-4 h-4" />
+                <span className="hidden sm:inline">Turnos</span>
+                <span className="sm:hidden">Turnos</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('assignments') && (
+              <TabsTrigger value="assignments" className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Asignaciones</span>
+                <span className="sm:hidden">Asign.</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('sponsors') && (
+              <TabsTrigger value="sponsors" className="flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Patrocinadores</span>
+                <span className="sm:hidden">Sponsors</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('surveys') && (
+              <TabsTrigger value="surveys" className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                <span className="hidden sm:inline">Encuestas</span>
+                <span className="sm:hidden">Encuestas</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('config') && (
+              <TabsTrigger value="config" className="flex items-center gap-2">
+                <Flag className="w-4 h-4" />
+                <span className="hidden sm:inline">Carrera</span>
+                <span className="sm:hidden">Carrera</span>
+              </TabsTrigger>
+            )}
+            {hasAccess('users') && (
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span className="hidden sm:inline">Usuarios</span>
+                <span className="sm:hidden">Usuarios</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="control">
