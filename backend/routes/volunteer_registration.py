@@ -59,7 +59,7 @@ class VolunteerCancellationRequest(BaseModel):
 
 @router.post("/cancel/{token}")
 async def cancel_volunteer_registration(token: str, cancellation: VolunteerCancellationRequest):
-    """Cancel a volunteer registration"""
+    """Cancel and delete a volunteer registration"""
     from server import db
     
     registration = await db.volunteer_registrations.find_one({"edit_token": token})
@@ -71,31 +71,26 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     if cancellation.reason == "Otra razón" and cancellation.other_reason:
         reason_text = f"Otra razón: {cancellation.other_reason}"
     
-    # Remove any slot assignments for this volunteer
+    # Store data for email before deletion
+    nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
     email = registration.get("email", "").lower()
+    
+    # Remove any slot assignments for this volunteer
     await db.volunteer_assignments.update_many(
         {"email_asignado": email},
         {"$set": {"email_asignado": None, "nombre_asignado": None}}
     )
     
-    # Update registration status to cancelled
-    await db.volunteer_registrations.update_one(
-        {"edit_token": token},
-        {
-            "$set": {
-                "status": "cancelled",
-                "cancellation_reason": reason_text,
-                "cancelled_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
-    )
+    # Delete the registration completely
+    await db.volunteer_registrations.delete_one({"edit_token": token})
+    
+    # Clean up related data
+    await db.volunteer_verification_tokens.delete_many({"email": email})
+    await db.volunteer_sessions.delete_many({"email": email})
     
     # Send cancellation confirmation email
     try:
         from services.email_service import send_email
-        
-        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
         
         subject = "Confirmación de Cancelación - Voluntario Backyard Ultra"
         html_content = f"""
@@ -117,7 +112,7 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
                     </p>
                     
                     <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px; line-height: 1.6;">
-                        Confirmamos que tu registro como voluntario ha sido cancelado.
+                        Confirmamos que tu registro como voluntario ha sido cancelado y eliminado de nuestro sistema.
                     </p>
                     
                     <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
@@ -146,7 +141,7 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     except Exception as e:
         print(f"Error sending cancellation email: {e}")
     
-    return {"message": "Registro de voluntario cancelado exitosamente"}
+    return {"message": "Registro de voluntario cancelado y eliminado exitosamente"}
 
 
 @router.get("/available-slots")
