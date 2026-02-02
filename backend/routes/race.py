@@ -476,7 +476,33 @@ async def adjust_participant_laps(
     """Manually adjust the number of laps for a participant"""
     from server import db as database
     
-    participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
+    participant = None
+    use_registrations = False
+    
+    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
+        # Try registrations collection first for new races
+        try:
+            bib_int = int(request.bib.lstrip('0')) if request.bib.lstrip('0').isdigit() else None
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "$or": [
+                    {"bib": bib_int},
+                    {"bib": str(bib_int)},
+                    {"bib": str(bib_int).zfill(3)}
+                ] if bib_int else [{"bib": request.bib}]
+            }, {"_id": 0, "edit_token": 0})
+            if participant:
+                use_registrations = True
+        except ValueError:
+            pass
+    
+    # Fallback to participants collection for legacy races
+    if not participant:
+        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
     
     if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
@@ -491,16 +517,28 @@ async def adjust_participant_laps(
     new_km = round(request.new_laps * KM_PER_LAP, 1)
     
     # Update participant laps
-    await database.participants.update_one(
-        {"bib": request.bib},
-        {
-            "$set": {
-                "laps_completed": request.new_laps,
-                "total_km": new_km,
-                "updated_at": datetime.utcnow()
+    if use_registrations:
+        await database.registrations.update_one(
+            {"email": participant.get("email"), "race_code": active_race_code},
+            {
+                "$set": {
+                    "laps_completed": request.new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.now(timezone.utc)
+                }
             }
-        }
-    )
+        )
+    else:
+        await database.participants.update_one(
+            {"bib": request.bib},
+            {
+                "$set": {
+                    "laps_completed": request.new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
     
     return {
         "message": f"Vueltas de {request.bib} ajustadas de {old_laps} a {request.new_laps}",
