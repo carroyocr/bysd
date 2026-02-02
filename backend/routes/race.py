@@ -1123,15 +1123,9 @@ async def reset_cheers(
     if not active_race_code:
         raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
     
-    # Build query to include messages with matching race_code OR legacy messages without race_code
-    delete_query = {
-        "$or": [
-            {"race_code": active_race_code},
-            {"race_code": {"$exists": False}},
-            {"race_code": None},
-            {"race_code": ""}
-        ]
-    }
+    # IMPORTANT: Only delete messages that explicitly belong to the active race
+    # Do NOT delete legacy messages without race_code as they may belong to archived races
+    delete_query = {"race_code": active_race_code}
     
     # Count before deletion
     cheers_count = await database.cheer_messages.count_documents(delete_query)
