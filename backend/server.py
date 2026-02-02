@@ -308,6 +308,10 @@ app.include_router(finances_router, prefix="/api/finances")
 from routes.qr_scan import router as qr_scan_router
 app.include_router(qr_scan_router)
 
+# Include users routes
+from routes.users import router as users_router
+app.include_router(users_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
