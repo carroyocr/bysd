@@ -395,7 +395,34 @@ async def mark_dns(
     from server import db as database
     
     bib = request.get("bib")
-    participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
+    participant = None
+    use_registrations = False
+    
+    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
+        # Try registrations collection first for new races
+        try:
+            bib_int = int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "$or": [
+                    {"bib": bib_int},
+                    {"bib": str(bib_int)},
+                    {"bib": str(bib_int).zfill(3)}
+                ] if bib_int else [{"bib": bib}]
+            }, {"_id": 0, "edit_token": 0})
+            if participant:
+                use_registrations = True
+        except ValueError:
+            pass
+    
+    # Fallback to participants collection for legacy races
+    if not participant:
+        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
     
     if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
@@ -407,18 +434,32 @@ async def mark_dns(
         raise HTTPException(status_code=400, detail="El participante ya está retirado")
     
     # Update participant status - reset laps and km to 0
-    await database.participants.update_one(
-        {"bib": bib},
-        {
-            "$set": {
-                "status": "dns",
-                "laps_completed": 0,
-                "total_km": 0.0,
-                "retired_at_lap": None,
-                "updated_at": datetime.utcnow()
+    if use_registrations:
+        await database.registrations.update_one(
+            {"email": participant.get("email"), "race_code": active_race_code},
+            {
+                "$set": {
+                    "status": "dns",
+                    "laps_completed": 0,
+                    "total_km": 0.0,
+                    "retired_at_lap": None,
+                    "updated_at": datetime.now(timezone.utc)
+                }
             }
-        }
-    )
+        )
+    else:
+        await database.participants.update_one(
+            {"bib": bib},
+            {
+                "$set": {
+                    "status": "dns",
+                    "laps_completed": 0,
+                    "total_km": 0.0,
+                    "retired_at_lap": None,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
     
     # Also delete any lap logs for this participant
     await database.laps_log.delete_many({"participant_bib": bib})
