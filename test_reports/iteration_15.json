@@ -1,0 +1,81 @@
+{
+  "summary": "Completed testing of page visibility control and email templates system. All 18 backend tests passed. Frontend visibility toggle verified - both /en-vivo and /comunidad pages correctly show 'Página No Disponible' message when disabled.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_page_visibility_and_templates.py",
+    "/app/test_reports/pytest/pytest_page_visibility.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Page visibility endpoint correctly returns show_tracking_page and show_community_page boolean fields",
+    "Frontend pages (LiveDashboardPage.jsx, ComunidadPage.jsx) correctly check visibility and show 'not available' message",
+    "All 18 email templates are correctly loaded including payment_receipt_received",
+    "GET /api/email-templates/{template_id} returns correct template structure",
+    "PUT /api/race-config/update/{code} correctly updates visibility settings with authentication"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_page_visibility_and_templates.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "100% (visibility toggle verified)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!"
+  },
+  "seed_data_creation": "No seed data created - tests use existing race configuration BYSD-2027",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Page visibility system fully tested. Both show_tracking_page and show_community_page settings work correctly. Email templates system has 18 templates including payment_receipt_received. Settings were restored to enabled state after testing.",
+  "features_verified": {
+    "page_visibility_endpoint": {
+      "GET /api/race-config/page-visibility": {
+        "status": "PASSED",
+        "description": "Returns show_tracking_page, show_community_page, race_name, race_code"
+      },
+      "PUT /api/race-config/update/{code}": {
+        "status": "PASSED",
+        "description": "Updates visibility settings with authentication"
+      }
+    },
+    "frontend_visibility_check": {
+      "/en-vivo (LiveDashboardPage)": {
+        "status": "PASSED",
+        "description": "Shows 'Página No Disponible' when show_tracking_page=false"
+      },
+      "/comunidad (ComunidadPage)": {
+        "status": "PASSED",
+        "description": "Shows 'Comunidad No Disponible' when show_community_page=false"
+      }
+    },
+    "email_templates": {
+      "GET /api/email-templates/": {
+        "status": "PASSED",
+        "description": "Returns all 18 templates with correct structure"
+      },
+      "GET /api/email-templates/{template_id}": {
+        "status": "PASSED",
+        "description": "Returns specific template by ID, 404 for non-existent"
+      },
+      "payment_receipt_received template": {
+        "status": "PASSED",
+        "description": "Template exists with correct fields: athlete_nombre_completo, payment_date, race_name"
+      }
+    }
+  },
+  "pytest_results": {
+    "total_tests": 18,
+    "passed": 18,
+    "failed": 0,
+    "test_file": "/app/backend/tests/test_page_visibility_and_templates.py"
+  }
+}
