@@ -25,6 +25,8 @@ import InscripcionPage from './pages/InscripcionPage';
 import VoluntarioRegistroPage from './pages/VoluntarioRegistroPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
+import QRScannerPage from './pages/QRScannerPage';
+import ScanConfirmPage from './pages/ScanConfirmPage';
 import './App.css';
 
 export default function App() {
