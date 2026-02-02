@@ -1286,85 +1286,27 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         except Exception as e:
             print(f"Error creating income record: {e}")
     
-    # Send notification email to athlete
+    # Send notification email to athlete using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_athlete_data
+        )
         
-        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+        race_config = await db["race_configurations"].find_one({"code": race_code})
         
-        if approved:
-            subject = "✅ Pago Confirmado - Backyard Ultra Santo Domingo"
-            html_content = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">🎉 ¡Pago Confirmado!</h1>
-                </div>
-                
-                <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-                    <h2 style="color: #1f2937;">¡Felicidades {nombre}!</h2>
-                    
-                    <p style="color: #4b5563; font-size: 16px;">
-                        Tu pago ha sido verificado y confirmado. <strong>¡Ya eres un participante oficial!</strong>
-                    </p>
-                    
-                    <div style="background: #ecfdf5; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center; border: 2px solid #10b981;">
-                        <p style="color: #065f46; margin: 0; font-size: 18px; font-weight: bold;">
-                            ✓ Inscripción Completa
-                        </p>
-                    </div>
-                    
-                    <p style="color: #4b5563; font-size: 14px;">
-                        Próximamente recibirás más información sobre el evento, incluyendo la guía del corredor y detalles logísticos.
-                    </p>
-                    
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                    
-                    <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                        © Backyard Ultra Santo Domingo<br>
-                        ¡Nos vemos en la línea de salida!
-                    </p>
-                </div>
-            </body>
-            </html>
-            """
-        else:
-            subject = "⚠️ Comprobante de Pago Rechazado - Backyard Ultra Santo Domingo"
-            html_content = f"""
-            <html>
-            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 10px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">⚠️ Comprobante Rechazado</h1>
-                </div>
-                
-                <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-                    <h2 style="color: #1f2937;">Hola {nombre}</h2>
-                    
-                    <p style="color: #4b5563; font-size: 16px;">
-                        Lamentablemente, no pudimos verificar tu comprobante de pago. Esto puede deberse a:
-                    </p>
-                    
-                    <ul style="color: #4b5563; font-size: 14px;">
-                        <li>La imagen no es legible o está incompleta</li>
-                        <li>El monto no coincide con el costo de inscripción</li>
-                        <li>Los datos de la cuenta destino no son correctos</li>
-                    </ul>
-                    
-                    <p style="color: #4b5563; font-size: 16px;">
-                        Por favor, verifica la información y vuelve a subir tu comprobante.
-                    </p>
-                    
-                    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-                    
-                    <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                        Si tienes dudas, contáctanos a través de nuestras redes sociales.
-                    </p>
-                </div>
-            </body>
-            </html>
-            """
+        merge_data = {
+            **build_race_data(race_config),
+            **build_athlete_data(registration),
+        }
         
-        await send_email(email, subject, html_content)
+        template_id = "payment_confirmed" if approved else "payment_rejected"
+        
+        await send_email_with_template(
+            db=db,
+            template_id=template_id,
+            to_email=email,
+            data=merge_data
+        )
     except Exception as e:
         print(f"Error sending receipt review email: {e}")
     
