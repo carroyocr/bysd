@@ -77,6 +77,11 @@ export default function UserManagement() {
       return;
     }
     
+    if (!newUser.email) {
+      toast.error('El email es requerido para enviar las credenciales');
+      return;
+    }
+    
     if (newUser.password.length < 6) {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
