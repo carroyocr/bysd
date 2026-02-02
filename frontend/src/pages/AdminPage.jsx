@@ -68,11 +68,16 @@ export default function AdminPage() {
 
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 lg:w-auto lg:inline-flex">
             <TabsTrigger value="control" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Control</span>
               <span className="sm:hidden">Control</span>
+            </TabsTrigger>
+            <TabsTrigger value="scanner" className="flex items-center gap-2">
+              <QrCode className="w-4 h-4" />
+              <span className="hidden sm:inline">Escáner QR</span>
+              <span className="sm:hidden">QR</span>
             </TabsTrigger>
             <TabsTrigger value="registrations" className="flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
@@ -109,10 +114,19 @@ export default function AdminPage() {
               <span className="hidden sm:inline">Carrera</span>
               <span className="sm:hidden">Carrera</span>
             </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Usuarios</span>
+              <span className="sm:hidden">Usuarios</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="control">
             <RaceControlPanel embedded={true} />
+          </TabsContent>
+
+          <TabsContent value="scanner">
+            <QRScannerPanel />
           </TabsContent>
 
           <TabsContent value="registrations">
