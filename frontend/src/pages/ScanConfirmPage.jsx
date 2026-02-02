@@ -366,7 +366,7 @@ export default function ScanConfirmPage() {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={loadAthleteData}
+                onClick={refreshAthleteData}
                 className="text-gray-400 hover:text-white"
               >
                 <RefreshCw className="w-4 h-4" />
