@@ -68,6 +68,9 @@ class RaceConfigUpdate(BaseModel):
     payment_bank_name: Optional[str] = None
     payment_account_type: Optional[str] = None
     payment_account_number: Optional[str] = None
+    # Page visibility
+    show_tracking_page: Optional[bool] = None
+    show_community_page: Optional[bool] = None
 
 
 @router.get("/active")
