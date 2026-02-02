@@ -3,9 +3,15 @@ Test registration cancellation functionality
 """
 import pytest
 import asyncio
+import sys
+import os
 from httpx import AsyncClient
-from backend.server import app
-from backend.models.database import registrations_collection
+
+# Add backend to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+
+from server import app
+from models.database import registrations_collection
 from datetime import datetime, timezone
 
 
