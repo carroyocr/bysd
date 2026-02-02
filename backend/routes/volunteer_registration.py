@@ -456,52 +456,27 @@ async def request_edit_link(request: EditLinkRequest):
             {"$set": {"edit_token": edit_token}}
         )
     
-    # Send email with edit link
+    # Send email with edit link using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_volunteer_data
+        )
         import os
         
         frontend_url = os.environ.get('FRONTEND_URL', 'https://eventmaster-67.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
-        nombre = registration.get("nombre", "Voluntario")
         
-        html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #7c3aed;">🏃 Backyard Ultra Santo Domingo</h1>
-            </div>
-            
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h2 style="color: #334155; margin-top: 0;">📝 Link para Editar tu Postulación</h2>
-                <p style="color: #64748b;">Hola <strong>{nombre}</strong>,</p>
-                <p style="color: #64748b;">
-                    Recibimos tu solicitud para editar tu postulación como voluntario. 
-                    Haz clic en el siguiente botón para acceder a tu formulario:
-                </p>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{edit_url}" style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                    Editar Mi Postulación
-                </a>
-            </div>
-            
-            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <p style="color: #92400e; font-size: 14px; margin: 0;">
-                    <strong>⚠️ Importante:</strong> Este link es personal y único. No lo compartas con nadie.
-                </p>
-            </div>
-            
-            <p style="color: #666; font-size: 14px; text-align: center;">
-                ¡Gracias por ser parte del equipo de voluntarios! 💪
-            </p>
-        </div>
-        """
+        merge_data = {
+            **build_race_data(active_race),
+            **build_volunteer_data(registration, edit_token=edit_token),
+            "volunteer_edit_link": edit_url,
+        }
         
-        await send_email(
+        await send_email_with_template(
+            db=db,
+            template_id="volunteer_edit_link",
             to_email=email,
-            subject="📝 Link para Editar tu Postulación - BYSD",
-            html_content=html_content
+            data=merge_data
         )
         print(f"Edit link email sent to {email}")
     except Exception as e:
