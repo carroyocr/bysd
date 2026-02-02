@@ -53,13 +53,12 @@ export default function ScanConfirmPage() {
         : `${API_URL}/api/qr-scan/athlete/${bib}`;
       
       const response = await fetch(url);
+      const data = await response.json();
       
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.detail || 'Error al cargar datos del atleta');
       }
       
-      const data = await response.json();
       setAthlete(data);
       setTimeRemaining(data.time_remaining_seconds || 0);
       
