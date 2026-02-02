@@ -52,6 +52,103 @@ class VolunteerRegistrationData(BaseModel):
     comentarios: Optional[str] = None
 
 
+class VolunteerCancellationRequest(BaseModel):
+    reason: str
+    other_reason: Optional[str] = None
+
+
+@router.post("/cancel/{token}")
+async def cancel_volunteer_registration(token: str, cancellation: VolunteerCancellationRequest):
+    """Cancel a volunteer registration"""
+    from server import db
+    
+    registration = await db.volunteer_registrations.find_one({"edit_token": token})
+    
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    
+    reason_text = cancellation.reason
+    if cancellation.reason == "Otra razón" and cancellation.other_reason:
+        reason_text = f"Otra razón: {cancellation.other_reason}"
+    
+    # Remove any slot assignments for this volunteer
+    email = registration.get("email", "").lower()
+    await db.volunteer_assignments.update_many(
+        {"email_asignado": email},
+        {"$set": {"email_asignado": None, "nombre_asignado": None}}
+    )
+    
+    # Update registration status to cancelled
+    await db.volunteer_registrations.update_one(
+        {"edit_token": token},
+        {
+            "$set": {
+                "status": "cancelled",
+                "cancellation_reason": reason_text,
+                "cancelled_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Send cancellation confirmation email
+    try:
+        from services.email_service import send_email
+        
+        nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+        
+        subject = "Confirmación de Cancelación - Voluntario Backyard Ultra"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f4;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 24px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 20px;">BACKYARD ULTRA SANTO DOMINGO</h1>
+                </div>
+                
+                <div style="padding: 32px 24px;">
+                    <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 16px;">
+                        Hola <strong>{nombre}</strong>,
+                    </p>
+                    
+                    <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px; line-height: 1.6;">
+                        Confirmamos que tu registro como voluntario ha sido cancelado.
+                    </p>
+                    
+                    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                        <p style="margin: 0; color: #4b5563; font-size: 14px;">
+                            <strong>Razón de cancelación:</strong><br>
+                            {reason_text}
+                        </p>
+                    </div>
+                    
+                    <p style="color: #6b7280; margin: 0; font-size: 13px;">
+                        Si cambiaste de opinión, puedes volver a registrarte en cualquier momento.
+                    </p>
+                </div>
+                
+                <div style="background-color: #1f2937; padding: 20px; text-align: center;">
+                    <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+                        © Backyard Ultra Santo Domingo
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        await send_email(email, subject, html_content)
+    except Exception as e:
+        print(f"Error sending cancellation email: {e}")
+    
+    return {"message": "Registro de voluntario cancelado exitosamente"}
+
+
 @router.get("/available-slots")
 async def get_available_slots():
     """Get available volunteer slots grouped by position and shift (one per turno)"""
