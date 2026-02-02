@@ -1399,14 +1399,28 @@ export default function InscripcionPage() {
             {/* Navigation Buttons */}
             {currentStep > 0 && (
               <div className="flex justify-between mt-8 pt-6 border-t">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === (isEditing ? 1 : 0)}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Anterior
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === (isEditing ? 1 : 0)}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Anterior
+                  </Button>
+                  
+                  {/* Cancel Registration Button - Only show when editing */}
+                  {isEditing && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowCancelModal(true)}
+                      className="ml-2"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancelar Pre Registro
+                    </Button>
+                  )}
+                </div>
                 
                 {currentStep < STEPS.length - 1 ? (
                   <Button onClick={nextStep}>
