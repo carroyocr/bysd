@@ -859,6 +859,17 @@ export default function PreRegistrationManagement() {
                             <span className={`font-mono ${reg.bib ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                               {reg.bib || '—'}
                             </span>
+                            {reg.bib && reg.qr_code_url && (
+                              <a
+                                href={`${API_URL}${reg.qr_code_url}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:text-blue-700"
+                                title="Ver código QR"
+                              >
+                                <QrCode className="w-4 h-4" />
+                              </a>
+                            )}
                             {reg.bib && (
                               <Button
                                 size="sm"
