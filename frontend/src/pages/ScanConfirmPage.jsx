@@ -29,36 +29,39 @@ export default function ScanConfirmPage() {
   
   useEffect(() => {
     let isMounted = true;
-    const controller = new AbortController();
+    let xhr = null;
     
-    const loadAthleteData = async () => {
+    const loadAthleteData = () => {
       if (!bib) {
         setError('No se proporcionó número de BIB');
         setLoading(false);
         return;
       }
       
-      try {
-        const url = raceCode 
-          ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
-          : `${API_URL}/api/qr-scan/athlete/${bib}`;
-        
-        const response = await fetch(url, { signal: controller.signal });
-        
+      const url = raceCode 
+        ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
+        : `${API_URL}/api/qr-scan/athlete/${bib}`;
+      
+      // Use XMLHttpRequest to avoid body stream issues with platform interceptors
+      xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      
+      xhr.onload = function() {
         if (!isMounted) return;
         
-        // Clone response to safely read body
-        const responseClone = response.clone();
         let data;
-        
         try {
-          data = await responseClone.json();
+          data = JSON.parse(xhr.responseText);
         } catch (parseErr) {
-          throw new Error('Error al procesar respuesta del servidor');
+          setError('Error al procesar respuesta del servidor');
+          setLoading(false);
+          return;
         }
         
-        if (!response.ok) {
-          throw new Error(data.detail || 'Error al cargar datos del atleta');
+        if (xhr.status >= 400) {
+          setError(data.detail || 'Error al cargar datos del atleta');
+          setLoading(false);
+          return;
         }
         
         setAthlete(data);
@@ -68,22 +71,26 @@ export default function ScanConfirmPage() {
         if (data.auto_dnf) {
           toast.warning('Tiempo agotado - El atleta será marcado como DNF');
         }
-      } catch (err) {
+        
+        setLoading(false);
+      };
+      
+      xhr.onerror = function() {
         if (!isMounted) return;
-        if (err.name === 'AbortError') return;
-        setError(err.message);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+        setError('Error de conexión');
+        setLoading(false);
+      };
+      
+      xhr.send();
     };
     
     loadAthleteData();
     
     return () => {
       isMounted = false;
-      controller.abort();
+      if (xhr) {
+        xhr.abort();
+      }
     };
   }, [bib, raceCode]);
   
