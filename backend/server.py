@@ -304,6 +304,10 @@ app.include_router(volunteer_config_router, prefix="/api")
 from routes.finances import router as finances_router
 app.include_router(finances_router, prefix="/api/finances")
 
+# Include QR scan routes
+from routes.qr_scan import router as qr_scan_router
+app.include_router(qr_scan_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
