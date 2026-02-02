@@ -88,21 +88,20 @@ export default function ScanConfirmPage() {
     }
   }, [timeRemaining, completed]);
   
-  const loadAthleteData = async () => {
+  // Refresh function for manual reload
+  const refreshAthleteData = async () => {
+    if (!bib) return;
+    
+    setLoading(true);
+    setError(null);
+    
     try {
       const url = raceCode 
         ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
         : `${API_URL}/api/qr-scan/athlete/${bib}`;
       
       const response = await fetch(url);
-      const responseText = await response.text();
-      
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        throw new Error('Error al procesar respuesta del servidor');
-      }
+      const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.detail || 'Error al cargar datos del atleta');
