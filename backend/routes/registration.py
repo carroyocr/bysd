@@ -1116,10 +1116,6 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
         "assignments": assignments
     }
 
-    
-    return {"message": "Asignación de BIB eliminada", "email": email}
-
-
 
 # ============== PAYMENT REMINDER & RECEIPT ==============
 
