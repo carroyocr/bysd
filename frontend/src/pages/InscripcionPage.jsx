@@ -110,6 +110,19 @@ export default function InscripcionPage() {
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [registrationResult, setRegistrationResult] = useState(null);
   
+  // Cancellation modal
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelOtherReason, setCancelOtherReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  
+  const CANCEL_REASONS = [
+    "Me lesioné",
+    "Ya no estoy interesado en participar",
+    "Tengo otros compromisos",
+    "Otra razón"
+  ];
+  
   // Load existing registration if editing
   useEffect(() => {
     if (editToken) {
