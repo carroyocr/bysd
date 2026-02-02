@@ -1160,14 +1160,29 @@ export default function VoluntarioRegistroPage() {
             {/* Navigation Buttons - show after verification in normal mode or always in edit mode */}
             {(editMode || currentStepId !== 'verify') && (
               <div className="flex justify-between pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  onClick={prevStep} 
-                  disabled={currentStep === 0}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Anterior
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={prevStep} 
+                    disabled={currentStep === 0}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Anterior
+                  </Button>
+                  
+                  {/* Cancel button - only show in edit mode */}
+                  {editMode && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setShowCancelModal(true)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      data-testid="cancel-volunteer-btn"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancelar Postulación
+                    </Button>
+                  )}
+                </div>
                 
                 {currentStep < activeSteps.length - 1 ? (
                   <Button onClick={nextStep}>
@@ -1191,6 +1206,83 @@ export default function VoluntarioRegistroPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <XCircle className="w-5 h-5" />
+                Cancelar Postulación
+              </CardTitle>
+              <CardDescription>
+                Esta acción no se puede deshacer. Tu postulación como voluntario será eliminada permanentemente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>¿Por qué deseas cancelar tu postulación? *</Label>
+                <div className="space-y-2">
+                  {CANCEL_REASONS.map(reason => (
+                    <label key={reason} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cancelReason"
+                        value={reason}
+                        checked={cancelReason === reason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="text-sm">{reason}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {cancelReason === 'Otra razón' && (
+                <div className="space-y-2">
+                  <Label htmlFor="cancelOtherReason">Especifica la razón *</Label>
+                  <Input
+                    id="cancelOtherReason"
+                    value={cancelOtherReason}
+                    onChange={(e) => setCancelOtherReason(e.target.value)}
+                    placeholder="Describe tu razón..."
+                    maxLength={200}
+                  />
+                </div>
+              )}
+              
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCancelModal(false);
+                    setCancelReason('');
+                    setCancelOtherReason('');
+                  }}
+                  className="flex-1"
+                >
+                  Mantener Postulación
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancelRegistration}
+                  disabled={cancelling}
+                  className="flex-1"
+                  data-testid="confirm-cancel-volunteer-btn"
+                >
+                  {cancelling ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelando...</>
+                  ) : (
+                    'Confirmar Cancelación'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
