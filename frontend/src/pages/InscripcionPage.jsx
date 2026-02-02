@@ -1457,7 +1457,7 @@ export default function InscripcionPage() {
                 Cancelar Pre Registro
               </CardTitle>
               <CardDescription>
-                Esta acción no se puede deshacer. Tu pre registro será eliminado permanentemente.
+                Esta acción no se puede deshacer. Tu pre registro será eliminado permanentemente del sistema.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
