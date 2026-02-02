@@ -172,100 +172,31 @@ async def send_verification_email(email: str, code: str, nombre: str):
 
 
 async def send_confirmation_email(email: str, registration: dict, edit_token: str):
-    """Send registration confirmation email"""
-    from services.runner_email_service import send_email
+    """Send registration confirmation email using the template system"""
+    from services.template_email_service import (
+        send_email_with_template, build_race_data, build_athlete_data, build_payment_data
+    )
     
-    nombre = registration.get('nombre', '')
-    apellidos = registration.get('apellidos', '')
     race_code = registration.get('race_code', '')
     
-    # Get registration cost from race configuration
+    # Get race configuration
     race_config = await db["race_configurations"].find_one({"code": race_code})
-    registration_cost = race_config.get("registration_cost", 3500) if race_config else 3500
-    formatted_cost = f"{registration_cost:,.0f}".replace(",", ",")
     
-    # Build edit URL - use the correct route
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://eventmaster-67.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
+    # Build merge data
+    merge_data = {
+        **build_race_data(race_config),
+        **build_athlete_data(registration, edit_token),
+        **build_payment_data(race_config=race_config, edit_token=edit_token),
+        "athlete_personalizacion_camiseta": registration.get('personalizacion_camiseta', ''),
+        "athlete_talla_camiseta": registration.get('talla_camiseta', ''),
+    }
     
-    subject = f"¡Pre Registro Confirmado! - {race_code}"
-    html_content = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; border-radius: 10px; text-align: center;">
-            <h1 style="color: white; margin: 0;">¡Pre Registro Confirmado!</h1>
-            <p style="color: rgba(255,255,255,0.9); margin-top: 10px;">{race_code}</p>
-        </div>
-        
-        <div style="padding: 30px; background: #f9fafb; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #1f2937;">¡Hola {nombre}!</h2>
-            
-            <p style="color: #4b5563; font-size: 16px;">
-                Tu pre registro ha sido recibido exitosamente. Aquí están los detalles:
-            </p>
-            
-            <div style="background: white; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #e5e7eb;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Nombre:</td>
-                        <td style="padding: 10px 0; color: #1f2937; font-weight: bold;">{nombre} {apellidos}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Email:</td>
-                        <td style="padding: 10px 0; color: #1f2937;">{email}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Carrera:</td>
-                        <td style="padding: 10px 0; color: #1f2937;">{race_code}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Personalización:</td>
-                        <td style="padding: 10px 0; color: #1f2937;">{registration.get('personalizacion_camiseta', '')}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px 0; color: #6b7280;">Talla Camiseta:</td>
-                        <td style="padding: 10px 0; color: #1f2937;">{registration.get('talla_camiseta', '')}</td>
-                    </tr>
-                </table>
-            </div>
-            
-            <div style="background: #fef3c7; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #f59e0b;">
-                <h3 style="color: #92400e; margin-top: 0;">📝 Editar tu Información</h3>
-                <p style="color: #92400e; font-size: 14px; margin-bottom: 15px;">
-                    Si necesitas actualizar tus datos, puedes hacerlo usando el siguiente enlace:
-                </p>
-                <a href="{edit_url}" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-                    Editar mi Pre Registro
-                </a>
-                <p style="color: #b45309; font-size: 12px; margin-top: 15px;">
-                    ⚠️ Guarda este correo. El enlace es personal y te permitirá editar tu información.
-                </p>
-            </div>
-            
-            <div style="background: #dbeafe; border-radius: 10px; padding: 20px; margin: 20px 0; border: 1px solid #3b82f6;">
-                <h3 style="color: #1e40af; margin-top: 0;">📋 Importante - Próximos Pasos</h3>
-                <p style="color: #1e40af; font-size: 14px;">
-                    <strong>Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
-                </p>
-                <ul style="color: #1e40af; font-size: 14px; padding-left: 20px; margin-top: 10px;">
-                    <li>Cuatro (4) meses antes del evento, enviaremos un correo con las instrucciones para realizar el pago.</li>
-                    <li>El costo de la carrera será de <strong>RD${formatted_cost}</strong>.</li>
-                    <li>Tendrás un plazo de treinta (30) días para completar el pago.</li>
-                    <li>Si el pago no se realiza en ese período, el pre registro será desestimado.</li>
-                </ul>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-            
-            <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-                © Backyard Ultra Santo Domingo<br>
-                Si tienes preguntas, contáctanos a través de nuestras redes sociales.
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-    
-    await send_email(email, subject, html_content)
+    await send_email_with_template(
+        db=db,
+        template_id="athlete_registration_confirmation",
+        to_email=email,
+        data=merge_data
+    )
 
 
 # API Endpoints
