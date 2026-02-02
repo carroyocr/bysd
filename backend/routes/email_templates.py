@@ -237,7 +237,7 @@ DEFAULT_TEMPLATES = [
     {
         "id": "payment_reminder",
         "name": "Recordatorio de Pago",
-        "description": "Se envía para recordar un pago pendiente",
+        "description": "Se envía para recordar un pago pendiente con datos bancarios",
         "subject": "💳 Recordatorio: Pago pendiente - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
@@ -251,12 +251,48 @@ DEFAULT_TEMPLATES = [
         <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
             Te recordamos que tu pago de inscripción para <strong>{{race_name}}</strong> está pendiente.
         </p>
+        
         <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
             <p style="font-size: 14px; color: #92400e; margin: 0 0 10px 0;">Monto a pagar:</p>
             <p style="font-size: 32px; font-weight: bold; color: #ea580c; margin: 0;">{{payment_amount}}</p>
         </div>
-        <p style="font-size: 14px; color: #6b7280;">
-            Por favor, completa tu pago para asegurar tu lugar en la carrera.
+        
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0 0 15px 0;">📋 Datos para el pago:</p>
+            <table style="width: 100%; font-size: 14px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Banco:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_bank_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Titular:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Tipo de cuenta:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_type}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #ea580c;">{{payment_account_number}}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{payment_upload_url}}" style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                📤 Subir Comprobante de Pago
+            </a>
+        </div>
+        
+        <p style="font-size: 14px; color: #6b7280; text-align: center;">
+            Una vez realizado el pago, sube tu comprobante para confirmar tu inscripción.
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+        
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+            Si no puedes participar, puedes <a href="{{payment_cancel_url}}" style="color: #ea580c;">cancelar tu registro aquí</a>.
         </p>
     </div>
     <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
