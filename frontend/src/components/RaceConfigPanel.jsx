@@ -424,6 +424,20 @@ export default function RaceConfigPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Configuración de Carrera</h2>
+          <p className="text-muted-foreground">Gestiona las carreras y sus configuraciones</p>
+        </div>
+        {activeRace && !activeRace.is_default && (
+          <Badge className="bg-green-500 text-white px-3 py-1">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Carrera Activa: {activeRace.code}
+          </Badge>
+        )}
+      </div>
+
       {/* Active Race Configuration */}
       <Card className="border-primary/20">
         <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
@@ -431,16 +445,10 @@ export default function RaceConfigPanel() {
             <div className="flex items-center gap-3">
               <Settings className="w-6 h-6 text-primary" />
               <div>
-                <CardTitle>Carrera Activa</CardTitle>
-                <CardDescription>Configuración de la carrera actual</CardDescription>
+                <CardTitle>Detalles de la Carrera</CardTitle>
+                <CardDescription>Información y configuración actual</CardDescription>
               </div>
             </div>
-            {activeRace && !activeRace.is_default && (
-              <Badge className="bg-green-500">
-                <CheckCircle className="w-3 h-3 mr-1" />
-                {activeRace.code}
-              </Badge>
-            )}
             {activeRace?.is_default && (
               <Badge variant="outline" className="border-amber-500 text-amber-600">
                 <AlertCircle className="w-3 h-3 mr-1" />
