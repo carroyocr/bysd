@@ -194,25 +194,16 @@ export default function SponsorsManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Patrocinadores - {raceCode}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {sponsors.length} patrocinadores registrados
-              </p>
-            </div>
-            <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar Patrocinador
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Patrocinadores</h2>
+          <p className="text-muted-foreground">Gestiona los patrocinadores del evento • {sponsors.length} registrados</p>
+        </div>
+        <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
+          <Plus className="w-4 h-4 mr-2" />
+          Agregar Patrocinador
+        </Button>
+      </div>
 
       {/* Add/Edit Form */}
       {showAddForm && (
