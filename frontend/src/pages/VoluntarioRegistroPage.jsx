@@ -1217,7 +1217,7 @@ export default function VoluntarioRegistroPage() {
                 Cancelar Postulación
               </CardTitle>
               <CardDescription>
-                Esta acción no se puede deshacer. Tu postulación como voluntario será eliminada permanentemente.
+                Esta acción no se puede deshacer. Tu postulación como voluntario será eliminada permanentemente del sistema.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
