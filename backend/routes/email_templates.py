@@ -65,6 +65,12 @@ MERGE_FIELDS = {
             {"key": "{{payment_reference}}", "label": "Referencia", "example": "REF-123456"},
             {"key": "{{payment_date}}", "label": "Fecha de pago", "example": "15 de Enero, 2027"},
             {"key": "{{payment_status}}", "label": "Estado del pago", "example": "Confirmado"},
+            {"key": "{{payment_bank_name}}", "label": "Nombre del banco", "example": "Banco Popular"},
+            {"key": "{{payment_account_name}}", "label": "Titular de cuenta", "example": "Backyard Ultra SD"},
+            {"key": "{{payment_account_number}}", "label": "Número de cuenta", "example": "123-456789-0"},
+            {"key": "{{payment_account_type}}", "label": "Tipo de cuenta", "example": "Corriente"},
+            {"key": "{{payment_upload_url}}", "label": "Link subir comprobante", "example": "https://.../subir-comprobante"},
+            {"key": "{{payment_cancel_url}}", "label": "Link cancelar registro", "example": "https://.../cancelar"},
         ]
     },
     "general": {
