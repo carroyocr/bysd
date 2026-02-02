@@ -105,22 +105,34 @@ export default function ScanConfirmPage() {
   }, [timeRemaining, completed]);
   
   // Refresh function for manual reload
-  const refreshAthleteData = async () => {
+  const refreshAthleteData = () => {
     if (!bib) return;
     
     setLoading(true);
     setError(null);
     
-    try {
-      const url = raceCode 
-        ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
-        : `${API_URL}/api/qr-scan/athlete/${bib}`;
+    const url = raceCode 
+      ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
+      : `${API_URL}/api/qr-scan/athlete/${bib}`;
+    
+    // Use XMLHttpRequest to avoid body stream issues with platform interceptors
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    
+    xhr.onload = function() {
+      let data;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (parseErr) {
+        setError('Error al procesar respuesta del servidor');
+        setLoading(false);
+        return;
+      }
       
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Error al cargar datos del atleta');
+      if (xhr.status >= 400) {
+        setError(data.detail || 'Error al cargar datos del atleta');
+        setLoading(false);
+        return;
       }
       
       setAthlete(data);
@@ -130,11 +142,16 @@ export default function ScanConfirmPage() {
       if (data.auto_dnf) {
         toast.warning('Tiempo agotado - El atleta será marcado como DNF');
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
+      
       setLoading(false);
-    }
+    };
+    
+    xhr.onerror = function() {
+      setError('Error de conexión');
+      setLoading(false);
+    };
+    
+    xhr.send();
   };
   
   const handleConfirmLap = async () => {
