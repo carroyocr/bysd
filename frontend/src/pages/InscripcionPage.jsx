@@ -485,24 +485,38 @@ export default function InscripcionPage() {
       };
       
       if (isEditing) {
-        // Update existing registration
-        const response = await fetch(`${API_URL}/api/registration/update?token=${editToken}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        // Update existing registration - Use XMLHttpRequest to avoid body stream issues
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', `${API_URL}/api/registration/update?token=${editToken}`, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
         
-        if (response.ok) {
-          // Upload photo if new one selected
-          if (photoFile) {
-            await uploadPhoto(editToken);
+        xhr.onload = async function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            // Upload photo if new one selected
+            if (photoFile) {
+              await uploadPhoto(editToken);
+            }
+            toast.success('Datos actualizados exitosamente');
+            setRegistrationComplete(true);
+          } else {
+            let data;
+            try {
+              data = JSON.parse(xhr.responseText);
+            } catch (e) {
+              data = {};
+            }
+            toast.error(data.detail || 'Error actualizando datos');
           }
-          toast.success('Datos actualizados exitosamente');
-          setRegistrationComplete(true);
-        } else {
-          const data = await response.json();
-          toast.error(data.detail || 'Error actualizando datos');
-        }
+          setSubmitting(false);
+        };
+        
+        xhr.onerror = function() {
+          toast.error('Error de conexión. Intenta de nuevo.');
+          setSubmitting(false);
+        };
+        
+        xhr.send(JSON.stringify(payload));
+        return; // Exit early since XHR handles its own flow
       } else {
         // New registration - Use XMLHttpRequest to avoid body stream issues
         const xhr = new XMLHttpRequest();
