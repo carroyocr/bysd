@@ -1511,11 +1511,17 @@ async def get_cheer_leaderboard(
     limit: int = 10,
     db=Depends(lambda: None)
 ):
-    """Get leaderboard of athletes with most cheer messages"""
+    """Get leaderboard of athletes with most cheer messages for the active race"""
     from server import db as database
     
-    # Aggregate cheer messages by athlete
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Aggregate cheer messages by athlete - only for active race
+    match_stage = {"race_code": active_race_code} if active_race_code else {}
+    
     pipeline = [
+        {"$match": match_stage},
         {"$group": {
             "_id": "$athlete_bib",
             "cheer_count": {"$sum": 1}
