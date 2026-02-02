@@ -4,11 +4,12 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Switch } from './ui/switch';
 import { 
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
-  Mail, Send
+  Mail, Send, Eye, EyeOff, Users, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
