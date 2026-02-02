@@ -702,13 +702,6 @@ export default function RaceControlPanel({ embedded = false }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
-              onClick={() => window.open('/scan', '_blank')}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <QrCode className="w-4 h-4 mr-2" />
-              Escáner QR
-            </Button>
-            <Button
               onClick={() => setShowSendRunnerEmailsModal(true)}
               variant="outline"
               className="border-green-300 text-green-600 hover:bg-green-50"
