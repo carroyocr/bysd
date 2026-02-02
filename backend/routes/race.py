@@ -1491,10 +1491,18 @@ async def get_cheer_messages(
 async def get_cheer_count(
     db=Depends(lambda: None)
 ):
-    """Get total count of cheer messages"""
+    """Get total count of cheer messages for the active race"""
     from server import db as database
     
-    count = await database.cheer_messages.count_documents({})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    
+    # Count only messages for the active race
+    if active_race_code:
+        count = await database.cheer_messages.count_documents({"race_code": active_race_code})
+    else:
+        count = 0
+    
     return {"count": count}
 
 
