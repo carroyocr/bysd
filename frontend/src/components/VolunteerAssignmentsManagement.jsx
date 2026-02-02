@@ -291,6 +291,14 @@ export default function VolunteerAssignmentsManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold">Asignaciones de Voluntarios</h2>
+          <p className="text-muted-foreground">Gestiona las asignaciones de voluntarios a turnos</p>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="bg-blue-50 border-blue-200">
