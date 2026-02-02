@@ -1148,7 +1148,6 @@ export default function RaceControlPanel({ embedded = false }) {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Reset Database Modal */}
       {showResetModal && (
