@@ -194,6 +194,13 @@ export default function AdminPage() {
                 <span className="sm:hidden">Usuarios</span>
               </TabsTrigger>
             )}
+            {hasAccess('emails') && (
+              <TabsTrigger value="emails" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Correos</span>
+                <span className="sm:hidden">Correos</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {hasAccess('control') && (
