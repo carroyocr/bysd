@@ -201,6 +201,31 @@ Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso d
 ## Backlog / Tareas Pendientes
 
 ### 🟢 Completado Recientemente
+
+- [x] **Feature: Cancelación de Registro para Atletas y Voluntarios** (02 Febrero 2026)
+  - **Nueva página `/cancelar-registro`** para cancelación vía link de email
+    - Detecta automáticamente si es atleta o voluntario
+    - Muestra información del registro antes de confirmar
+    - Requiere seleccionar razón de cancelación
+    - Opción "Otra razón" con campo de texto libre
+    - Mensajes de error claros para tokens inválidos
+  - **InscripcionPage.jsx** - En modo edición:
+    - Nuevo botón "Cancelar Pre Registro" en la barra de navegación
+    - Modal de confirmación con 4 opciones de razón predefinidas
+    - Redirección al inicio después de cancelar exitosamente
+  - **VoluntarioRegistroPage.jsx** - En modo edición:
+    - Nuevo botón "Cancelar Postulación" en la barra de navegación
+    - Modal de confirmación con 4 opciones de razón predefinidas
+    - Redirección al inicio después de cancelar exitosamente
+  - **Backend endpoints**:
+    - `POST /api/registration/cancel/{token}` - Cancela registro de atleta
+    - `POST /api/volunteer-registration/cancel/{token}` - Cancela registro de voluntario
+    - Ambos actualizan status a "cancelled" y guardan razón y timestamp
+    - Envían email de confirmación de cancelación
+    - Voluntarios: También eliminan asignaciones de slots
+  - **Email de recordatorio de pago** ya incluye link de cancelación
+  - **Tests**: 13/13 backend tests passed (100%)
+
 - [x] **Feature: Panel Admin para Configuración de Voluntarios** (01 Febrero 2026)
   - Nueva pestaña "Voluntarios" en el panel de administración
   - CRUD completo para posiciones: crear, editar, eliminar
