@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -9,8 +7,9 @@ import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Mail, Save, Eye, Send, RotateCcw, ChevronRight, ChevronDown,
-  Copy, Check, Loader2, AlertCircle, Code, FileText, Users, 
-  DollarSign, Settings, Search
+  Copy, Check, Loader2, Code, FileText, Users, 
+  DollarSign, Settings, Search, Bold, Italic, Link, List, 
+  AlignLeft, AlignCenter, Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -24,8 +23,36 @@ const CATEGORIES = {
   sistema: { label: 'Sistema', icon: Settings, color: 'bg-purple-100 text-purple-700' },
 };
 
+// Simple toolbar for HTML editing
+const EditorToolbar = ({ onInsert }) => {
+  const tools = [
+    { icon: Bold, label: 'Negrita', html: '<strong>texto</strong>' },
+    { icon: Italic, label: 'Cursiva', html: '<em>texto</em>' },
+    { icon: Link, label: 'Enlace', html: '<a href="URL" style="color: #ea580c;">texto</a>' },
+    { icon: List, label: 'Lista', html: '<ul><li>Elemento 1</li><li>Elemento 2</li></ul>' },
+    { icon: AlignCenter, label: 'Centrar', html: '<div style="text-align: center;">texto</div>' },
+    { icon: Palette, label: 'Color', html: '<span style="color: #ea580c;">texto</span>' },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/30">
+      {tools.map((tool) => (
+        <Button
+          key={tool.label}
+          variant="ghost"
+          size="sm"
+          onClick={() => onInsert(tool.html)}
+          title={tool.label}
+        >
+          <tool.icon className="w-4 h-4" />
+        </Button>
+      ))}
+    </div>
+  );
+};
+
 // Merge field panel component
-const MergeFieldsPanel = ({ mergeFields, onInsert }) => {
+const MergeFieldsPanel = ({ mergeFields }) => {
   const [expandedSources, setExpandedSources] = useState(['race', 'athlete']);
   const [copiedField, setCopiedField] = useState(null);
 
@@ -55,7 +82,7 @@ const MergeFieldsPanel = ({ mergeFields, onInsert }) => {
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted-foreground mb-3">
-        Haz clic en un campo para copiarlo al portapapeles
+        Haz clic en un campo para copiarlo
       </p>
       {Object.entries(mergeFields).map(([source, data]) => (
         <div key={source} className="border rounded-lg overflow-hidden">
@@ -63,7 +90,7 @@ const MergeFieldsPanel = ({ mergeFields, onInsert }) => {
             className="w-full flex items-center justify-between p-3 bg-muted/50 hover:bg-muted transition-colors"
             onClick={() => toggleSource(source)}
           >
-            <span className="flex items-center gap-2 font-medium">
+            <span className="flex items-center gap-2 font-medium text-sm">
               <span>{sourceIcons[source]}</span>
               {data.label}
             </span>
@@ -74,7 +101,7 @@ const MergeFieldsPanel = ({ mergeFields, onInsert }) => {
             )}
           </button>
           {expandedSources.includes(source) && (
-            <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
+            <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
               {data.fields.map((field) => (
                 <button
                   key={field.key}
@@ -105,45 +132,25 @@ const MergeFieldsPanel = ({ mergeFields, onInsert }) => {
 };
 
 // Template editor component
-const TemplateEditor = ({ template, mergeFields, onSave, onReset }) => {
+const TemplateEditor = ({ template, onSave, onReset }) => {
   const [subject, setSubject] = useState(template.subject || '');
   const [content, setContent] = useState(template.content || '');
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [preview, setPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
   const [activeTab, setActiveTab] = useState('editor');
-  const quillRef = useRef(null);
 
   useEffect(() => {
     setSubject(template.subject || '');
     setContent(template.content || '');
-    setShowPreview(false);
     setPreview(null);
-  }, [template.id]);
+  }, [template.id, template.subject, template.content]);
 
-  const modules = useMemo(() => ({
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'align': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link'],
-      ['clean']
-    ],
-  }), []);
-
-  const formats = [
-    'header',
-    'bold', 'italic', 'underline',
-    'color', 'background',
-    'align',
-    'list', 'bullet',
-    'link'
-  ];
+  const handleInsertHtml = (html) => {
+    setContent(prev => prev + '\n' + html);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -198,7 +205,6 @@ const TemplateEditor = ({ template, mergeFields, onSave, onReset }) => {
       if (response.ok) {
         const data = await response.json();
         setPreview(data);
-        setShowPreview(true);
       } else {
         toast.error('Error al cargar la vista previa');
       }
@@ -289,17 +295,13 @@ const TemplateEditor = ({ template, mergeFields, onSave, onReset }) => {
       </div>
 
       {/* Editor Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if(v === 'preview') loadPreview(); }}>
         <TabsList>
           <TabsTrigger value="editor">
-            <FileText className="w-4 h-4 mr-2" />
-            Editor Visual
-          </TabsTrigger>
-          <TabsTrigger value="html">
             <Code className="w-4 h-4 mr-2" />
-            Código HTML
+            Editor HTML
           </TabsTrigger>
-          <TabsTrigger value="preview" onClick={loadPreview}>
+          <TabsTrigger value="preview">
             <Eye className="w-4 h-4 mr-2" />
             Vista Previa
           </TabsTrigger>
@@ -307,25 +309,14 @@ const TemplateEditor = ({ template, mergeFields, onSave, onReset }) => {
 
         <TabsContent value="editor" className="mt-4">
           <div className="border rounded-lg overflow-hidden">
-            <ReactQuill
-              ref={quillRef}
-              theme="snow"
+            <EditorToolbar onInsert={handleInsertHtml} />
+            <textarea
               value={content}
-              onChange={setContent}
-              modules={modules}
-              formats={formats}
-              style={{ minHeight: '400px' }}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full h-96 p-4 font-mono text-sm resize-none focus:outline-none"
+              placeholder="<div>Contenido HTML del correo...</div>"
             />
           </div>
-        </TabsContent>
-
-        <TabsContent value="html" className="mt-4">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full h-96 p-4 font-mono text-sm border rounded-lg bg-muted/30"
-            placeholder="<div>Contenido HTML...</div>"
-          />
         </TabsContent>
 
         <TabsContent value="preview" className="mt-4">
@@ -343,16 +334,17 @@ const TemplateEditor = ({ template, mergeFields, onSave, onReset }) => {
               </Card>
               <Card>
                 <CardContent className="p-0">
-                  <div 
-                    className="p-4 bg-white"
-                    dangerouslySetInnerHTML={{ __html: preview.content }}
+                  <iframe
+                    srcDoc={preview.content}
+                    className="w-full h-96 border-0"
+                    title="Email Preview"
                   />
                 </CardContent>
               </Card>
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              Haz clic en "Vista Previa" para ver cómo se verá el correo
+              Cargando vista previa...
             </div>
           )}
         </TabsContent>
@@ -511,7 +503,7 @@ export default function EmailTemplatesManagement() {
           {/* Template List */}
           <Card>
             <CardContent className="p-2">
-              <div className="space-y-1 max-h-[500px] overflow-y-auto">
+              <div className="space-y-1 max-h-[400px] overflow-y-auto">
                 {filteredTemplates.map((template) => {
                   const categoryInfo = CATEGORIES[template.category] || CATEGORIES.sistema;
                   return (
@@ -530,7 +522,6 @@ export default function EmailTemplatesManagement() {
                         </Badge>
                       </div>
                       <p className="font-medium text-sm truncate">{template.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{template.description}</p>
                     </button>
                   );
                 })}
@@ -542,9 +533,6 @@ export default function EmailTemplatesManagement() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Campos de Combinación</CardTitle>
-              <CardDescription className="text-xs">
-                Variables disponibles para usar en las plantillas
-              </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <MergeFieldsPanel mergeFields={mergeFields} />
@@ -559,7 +547,6 @@ export default function EmailTemplatesManagement() {
               <CardContent className="pt-6">
                 <TemplateEditor
                   template={selectedTemplate}
-                  mergeFields={mergeFields}
                   onSave={handleSave}
                   onReset={handleReset}
                 />
