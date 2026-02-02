@@ -202,7 +202,7 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
     formatted_cost = f"{registration_cost:,.0f}".replace(",", ",")
     
     # Build edit URL - use the correct route
-    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://racetrack-59.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
+    edit_url = f"{os.environ.get('FRONTEND_URL', 'https://eventmaster-67.preview.emergentagent.com')}/pre-registro/editar?token={edit_token}"
     
     subject = f"¡Pre Registro Confirmado! - {race_code}"
     html_content = f"""
@@ -1086,7 +1086,7 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
     import os
     frontend_url = os.environ.get("REACT_APP_BACKEND_URL", "").replace("/api", "")
     if not frontend_url:
-        frontend_url = "https://racetrack-59.preview.emergentagent.com"
+        frontend_url = "https://eventmaster-67.preview.emergentagent.com"
     
     for i, athlete in enumerate(athletes_with_score):
         bib_number = start_bib + i
@@ -1181,7 +1181,7 @@ async def send_payment_reminder(race_code: str):
     if not template:
         raise HTTPException(status_code=500, detail="Plantilla de correo no encontrada")
     
-    frontend_url = os.environ.get("FRONTEND_URL", "https://racetrack-59.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://eventmaster-67.preview.emergentagent.com")
     
     sent_count = 0
     failed_count = 0

@@ -198,7 +198,7 @@ async def create_user(user: UserCreate, authorization: str = Header(...)):
                     </div>
                     
                     <div style="text-align: center; margin-top: 24px;">
-                        <a href="https://racetrack-59.preview.emergentagent.com/admin/login" 
+                        <a href="https://eventmaster-67.preview.emergentagent.com/admin/login" 
                            style="display: inline-block; background-color: #1f2937; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">
                             Acceder al Panel
                         </a>

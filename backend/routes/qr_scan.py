@@ -500,7 +500,7 @@ async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
     if not athlete:
         raise HTTPException(status_code=404, detail=f"Atleta con BIB {bib} no encontrado")
     
-    frontend_url = os.environ.get("FRONTEND_URL", "https://racetrack-59.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://eventmaster-67.preview.emergentagent.com")
     
     # Generate QR code
     qr_url = generate_qr_code(bib, race_code, frontend_url)
@@ -543,7 +543,7 @@ async def download_all_qr_codes(race_code: str):
     if not athletes:
         raise HTTPException(status_code=400, detail="No hay atletas con BIB asignado")
     
-    frontend_url = os.environ.get("FRONTEND_URL", "https://racetrack-59.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://eventmaster-67.preview.emergentagent.com")
     
     # Create ZIP file in memory
     zip_buffer = BytesIO()
