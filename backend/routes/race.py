@@ -1412,11 +1412,20 @@ async def get_cheer_messages(
     # Determine data source based on race code
     LEGACY_RACE_CODES = ["BYSD-2026"]
     
+    # Build query - include messages with matching race_code OR messages without race_code (legacy)
     query = {}
     if active_race_code:
-        query["race_code"] = active_race_code
+        query["$or"] = [
+            {"race_code": active_race_code},
+            {"race_code": {"$exists": False}},
+            {"race_code": None},
+            {"race_code": ""}
+        ]
     if athlete_bib:
-        query["athlete_bib"] = athlete_bib
+        if "$or" in query:
+            query = {"$and": [{"$or": query["$or"]}, {"athlete_bib": athlete_bib}]}
+        else:
+            query["athlete_bib"] = athlete_bib
     
     # Calculate skip for pagination
     skip = (page - 1) * limit
