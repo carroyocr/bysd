@@ -24,6 +24,7 @@ import SurveyPage from './pages/SurveyPage';
 import InscripcionPage from './pages/InscripcionPage';
 import VoluntarioRegistroPage from './pages/VoluntarioRegistroPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
+import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import './App.css';
 
 export default function App() {
@@ -70,6 +71,8 @@ export default function App() {
                     <Route path="/pre-registro/editar" element={<InscripcionPage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
+                    {/* Cancel Registration */}
+                    <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
                     {/* Legacy routes - redirect */}
