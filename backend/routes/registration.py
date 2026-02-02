@@ -29,6 +29,20 @@ UPLOAD_DIR = "/app/backend/static/participant_photos"
 MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10MB max
 MIN_PHOTO_SIZE = 1 * 1024 * 1024   # 1MB min for high resolution
 
+# Cancellation reasons
+CANCELLATION_REASONS = [
+    "Me lesioné",
+    "Ya no estoy interesado en participar",
+    "Tengo otros compromisos",
+    "Otra razón"
+]
+
+
+class CancellationRequest(BaseModel):
+    reason: str
+    other_reason: Optional[str] = None
+
+
 # Ensure upload directory exists
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
