@@ -857,6 +857,74 @@ export default function RaceConfigPanel() {
                 </div>
               </div>
 
+              {/* Page Visibility Section */}
+              <div className="pt-6 border-t">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-purple-600" />
+                  Visibilidad de Páginas Públicas
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Controla qué páginas están visibles para el público durante el evento.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Tracking Page Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_tracking_page ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_tracking_page ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Users className={`w-5 h-5 ${editForm.show_tracking_page ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Página de Seguimiento</h4>
+                          <p className="text-sm text-muted-foreground">Resultados en vivo y posiciones</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_tracking_page}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_tracking_page: checked})}
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_tracking_page ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Visible en /seguimiento</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Oculta para visitantes</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Community Page Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_community_page ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_community_page ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <MessageCircle className={`w-5 h-5 ${editForm.show_community_page ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Página de Comunidad</h4>
+                          <p className="text-sm text-muted-foreground">Mensajes de ánimo y fans</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_community_page}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_community_page: checked})}
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_community_page ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Visible en /comunidad</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Oculta para visitantes</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button onClick={handleUpdateRace} disabled={saving}>
                   {saving ? (
