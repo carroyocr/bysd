@@ -386,6 +386,9 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - **Panel Admin - Pestaña Carrera**:
     - Nuevos switches "Mostrar página de Tracking" y "Mostrar página de Comunidad"
     - Permiten activar/desactivar las páginas públicas `/en-vivo` y `/comunidad`
+  - **Navegación Dinámica**:
+    - Los enlaces "Resultados" y "Comunidad" se ocultan automáticamente del menú cuando las páginas están desactivadas
+    - Funciona tanto en navegación desktop como móvil
   - **Páginas Públicas**:
     - `/en-vivo` y `/comunidad` verifican la configuración antes de mostrar contenido
     - Mensaje elegante de "Página No Disponible" cuando está desactivada
