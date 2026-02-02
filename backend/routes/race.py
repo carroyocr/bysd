@@ -630,28 +630,78 @@ async def complete_lap(
 ):
     from server import db as database
     
-    participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+    # Get active race code
+    active_race_code = await get_active_race_code(database)
+    LEGACY_RACE_CODES = ["BYSD-2026"]
     
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "retired":
-        raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
-    
-    new_laps = participant.get("laps_completed", 0) + 1
-    new_km = round(new_laps * KM_PER_LAP, 1)
-    
-    # Update participant
-    await database.participants.update_one(
-        {"bib": request.bib},
-        {
-            "$set": {
-                "laps_completed": new_laps,
-                "total_km": new_km,
-                "updated_at": datetime.utcnow()
+    if active_race_code in LEGACY_RACE_CODES:
+        # Use legacy participants collection
+        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
+        
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participante no encontrado")
+        
+        if participant.get("status") == "retired":
+            raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
+        
+        new_laps = participant.get("laps_completed", 0) + 1
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
+        await database.participants.update_one(
+            {"bib": request.bib},
+            {
+                "$set": {
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                }
             }
-        }
-    )
+        )
+    else:
+        # Use registrations collection for new races
+        # Find by BIB in active race
+        try:
+            bib_int = int(request.bib)
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "$or": [
+                    {"bib": bib_int},
+                    {"bib": str(bib_int)},
+                    {"bib": str(bib_int).zfill(3)}
+                ]
+            }, {"_id": 0})
+        except ValueError:
+            participant = await database.registrations.find_one({
+                "race_code": active_race_code,
+                "bib": request.bib
+            }, {"_id": 0})
+        
+        if not participant:
+            raise HTTPException(status_code=404, detail="Participante no encontrado en la carrera activa")
+        
+        if participant.get("status") == "retired":
+            raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
+        
+        new_laps = participant.get("laps_completed", 0) + 1
+        new_km = round(new_laps * KM_PER_LAP, 1)
+        
+        await database.registrations.update_one(
+            {"email": participant.get("email"), "race_code": active_race_code},
+            {
+                "$set": {
+                    "laps_completed": new_laps,
+                    "total_km": new_km,
+                    "updated_at": datetime.utcnow()
+                },
+                "$push": {
+                    "laps_log": {
+                        "lap": new_laps,
+                        "completed_at": datetime.utcnow(),
+                        "method": "manual"
+                    }
+                }
+            }
+        )
     
     # Log the lap
     lap_log = LapLog(
