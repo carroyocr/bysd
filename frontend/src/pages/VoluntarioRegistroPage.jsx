@@ -190,6 +190,19 @@ export default function VoluntarioRegistroPage() {
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [updateComplete, setUpdateComplete] = useState(false);
   
+  // Cancellation modal
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelOtherReason, setCancelOtherReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  
+  const CANCEL_REASONS = [
+    "Me lesioné",
+    "Ya no estoy interesado en participar",
+    "Tengo otros compromisos",
+    "Otra razón"
+  ];
+  
   // Get the steps based on mode
   const activeSteps = editMode ? EDIT_STEPS : STEPS;
   
