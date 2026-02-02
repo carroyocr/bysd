@@ -120,110 +120,32 @@ async def create_user(user: UserCreate, authorization: str = Header(...)):
     
     await db.admin_users.insert_one(user_doc)
     
-    # Send email with credentials
+    # Send email with credentials using template system
     try:
-        from services.email_service import send_email
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_general_data
+        )
         
-        # Get permission labels for email
-        permission_labels = {
-            'control': 'Panel de Control',
-            'athletes': 'Atletas',
-            'finances': 'Finanzas',
-            'volunteers': 'Voluntarios',
-            'sponsors': 'Patrocinadores',
-            'surveys': 'Encuestas',
-            'config': 'Configuración',
-            'scanner': 'Escáner QR',
-            'users': 'Usuarios'
+        # Get active race config
+        race_config = await db.race_configurations.find_one({"is_active": True})
+        
+        merge_data = {
+            **build_race_data(race_config),
+            **build_general_data(username=user.username.lower(), password=plain_password),
         }
         
-        permissions_html = ""
-        if user.permissions:
-            perms_list = [permission_labels.get(p, p) for p in user.permissions]
-            permissions_html = f"""
-            <div style="margin-top: 16px;">
-                <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px;"><strong>Permisos asignados:</strong></p>
-                <ul style="margin: 0; padding-left: 20px; color: #6b7280; font-size: 14px;">
-                    {"".join(f"<li>{p}</li>" for p in perms_list)}
-                </ul>
-            </div>
-            """
-        
-        nombre = user.nombre or user.username
-        
-        subject = "Credenciales de Acceso - Panel de Administración Backyard Ultra"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f4;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-                <div style="background: linear-gradient(135deg, #1f2937 0%, #374151 100%); padding: 24px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 20px;">BACKYARD ULTRA SANTO DOMINGO</h1>
-                    <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 14px;">Panel de Administración</p>
-                </div>
-                
-                <div style="padding: 32px 24px;">
-                    <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 16px;">
-                        Hola <strong>{nombre}</strong>,
-                    </p>
-                    
-                    <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 14px; line-height: 1.6;">
-                        Se ha creado una cuenta para ti en el panel de administración de Backyard Ultra Santo Domingo. 
-                        A continuación encontrarás tus credenciales de acceso:
-                    </p>
-                    
-                    <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <tr>
-                                <td style="padding: 8px 0; color: #6b7280; font-size: 14px; width: 120px;">Usuario:</td>
-                                <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: bold;">{user.username.lower()}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Contraseña:</td>
-                                <td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: bold; font-family: monospace;">{plain_password}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    
-                    {permissions_html}
-                    
-                    <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 16px; margin: 24px 0;">
-                        <p style="margin: 0; color: #92400e; font-size: 13px;">
-                            <strong>⚠️ Importante:</strong> Por seguridad, te recomendamos cambiar tu contraseña después del primer inicio de sesión.
-                        </p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 24px;">
-                        <a href="https://eventmaster-67.preview.emergentagent.com/admin/login" 
-                           style="display: inline-block; background-color: #1f2937; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">
-                            Acceder al Panel
-                        </a>
-                    </div>
-                </div>
-                
-                <div style="background-color: #1f2937; padding: 20px; text-align: center;">
-                    <p style="color: #9ca3af; margin: 0; font-size: 12px;">
-                        © Backyard Ultra Santo Domingo
-                    </p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        await send_email(user.email, subject, html_content)
+        await send_email_with_template(
+            db=db,
+            template_id="admin_credentials",
+            to_email=user.email,
+            data=merge_data
+        )
         
     except Exception as e:
         print(f"Error sending credentials email: {e}")
         # Don't fail user creation if email fails
     
     return {"message": "Usuario creado exitosamente. Se han enviado las credenciales por correo.", "username": user.username}
-    
-    return {"message": "Usuario creado exitosamente", "username": user.username}
 
 
 @router.put("/{username}/permissions")
