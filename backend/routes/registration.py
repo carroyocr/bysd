@@ -1150,10 +1150,16 @@ async def get_active_athletes_count(race_code: str):
 @router.post("/admin/send-payment-reminder/{race_code}")
 async def send_payment_reminder(race_code: str):
     """Send payment reminder email to all active athletes with pending payment"""
-    from services.email_service import send_email
+    from services.template_email_service import (
+        send_email_with_template, 
+        build_race_data, 
+        build_athlete_data, 
+        build_payment_data,
+        render_template
+    )
     
     # Get race config for payment info
-    race_config = await db["race_configurations"].find_one({"code": race_code})
+    race_config = await db["race_configurations"].find_one({"code": race_code}, {"_id": 0})
     if not race_config:
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
@@ -1164,24 +1170,18 @@ async def send_payment_reminder(race_code: str):
             "status": "active",
             "payment_status": "pending"
         },
-        {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1, "edit_token": 1}
+        {"_id": 0}
     ).to_list(1000)
     
     if not athletes:
         raise HTTPException(status_code=400, detail="No hay atletas activos con pago pendiente")
     
-    # Build payment info from race config
-    payment_info = {
-        "account_name": race_config.get("payment_account_name", "No configurado"),
-        "account_id": race_config.get("payment_account_id", ""),
-        "bank_name": race_config.get("payment_bank_name", "No configurado"),
-        "account_type": race_config.get("payment_account_type", ""),
-        "account_number": race_config.get("payment_account_number", "No configurado"),
-        "amount": race_config.get("registration_cost", 3500)
-    }
+    # Get the payment_reminder template
+    template = await db["email_templates"].find_one({"id": "payment_reminder"}, {"_id": 0})
+    if not template:
+        raise HTTPException(status_code=500, detail="Plantilla de correo no encontrada")
     
     frontend_url = os.environ.get("FRONTEND_URL", "https://racetrack-59.preview.emergentagent.com")
-    race_name = race_config.get("name", "Backyard Ultra Santo Domingo")
     
     sent_count = 0
     failed_count = 0
@@ -1191,28 +1191,22 @@ async def send_payment_reminder(race_code: str):
         if not email:
             continue
         
-        nombre = f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip() or "Corredor"
         edit_token = athlete.get("edit_token", "")
         
-        # Build upload receipt URL
-        upload_url = f"{frontend_url}/subir-comprobante?token={edit_token}"
+        # Build merge data for this athlete
+        merge_data = {
+            **build_race_data(race_config),
+            **build_athlete_data(athlete, edit_token),
+            **build_payment_data(None, race_config, edit_token),
+        }
         
-        # Build cancel URL
-        cancel_url = f"{frontend_url}/cancelar-registro?token={edit_token}"
-        
-        # Generate email HTML
-        html_content = generate_payment_reminder_email(
-            nombre=nombre,
-            race_name=race_name,
-            payment_info=payment_info,
-            upload_url=upload_url,
-            cancel_url=cancel_url
-        )
-        
-        subject = f"Recordatorio de Pago - {race_name}"
+        # Render template
+        rendered_subject = render_template(template["subject"], merge_data)
+        rendered_content = render_template(template["content"], merge_data)
         
         try:
-            success = await send_email(email, subject, html_content)
+            from services.template_email_service import send_templated_email
+            success = await send_templated_email(email, rendered_subject, rendered_content)
             if success:
                 sent_count += 1
             else:
