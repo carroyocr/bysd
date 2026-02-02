@@ -486,6 +486,196 @@ DEFAULT_TEMPLATES = [
     </div>
 </div>
 """
+    },
+    {
+        "id": "athlete_cancellation",
+        "name": "Confirmación de Cancelación - Atleta",
+        "description": "Se envía cuando un atleta cancela su registro",
+        "subject": "Confirmación de Cancelación - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Registro Cancelado</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Confirmamos que tu registro para <strong>{{race_name}}</strong> ha sido cancelado exitosamente.
+        </p>
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #4b5563;">
+                Si esto fue un error o deseas registrarte nuevamente, puedes hacerlo en cualquier momento desde nuestra página web.
+            </p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Lamentamos verte partir. ¡Esperamos verte en futuras ediciones!
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_cancellation",
+        "name": "Confirmación de Cancelación - Voluntario",
+        "description": "Se envía cuando un voluntario cancela su registro",
+        "subject": "Confirmación de Cancelación - Voluntario {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Postulación Cancelada</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Confirmamos que tu postulación como voluntario para <strong>{{race_name}}</strong> ha sido cancelada.
+        </p>
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #4b5563;">
+                Gracias por tu interés en apoyar nuestro evento. Si cambias de opinión, puedes postularte nuevamente.
+            </p>
+        </div>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_verification_code",
+        "name": "Código de Verificación - Voluntario",
+        "description": "Se envía con el código de verificación para voluntarios",
+        "subject": "🏃 Código de Verificación - Voluntarios {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "general"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Código de Verificación</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Tu código de verificación para el registro de voluntario es:
+        </p>
+        <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 36px; font-weight: bold; color: #10b981; margin: 0; letter-spacing: 8px;">{{verification_code}}</p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Este código expira en 30 minutos.
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #34d399; margin: 0; font-size: 14px;">¡Gracias por querer ser parte del equipo! 🙋</p>
+    </div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_edit_link",
+        "name": "Link de Edición - Voluntario",
+        "description": "Se envía con el link para editar la postulación",
+        "subject": "📝 Link para Editar tu Postulación - {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Editar Postulación</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Usa el siguiente enlace para editar tu postulación como voluntario:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{volunteer_edit_link}}" style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                Editar mi Postulación
+            </a>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Si no solicitaste este enlace, puedes ignorar este correo.
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
+    },
+    {
+        "id": "payment_rejected",
+        "name": "Pago Rechazado",
+        "description": "Se envía cuando se rechaza un comprobante de pago",
+        "subject": "⚠️ Comprobante de Pago Rechazado - {{race_name}}",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete", "payment"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">⚠️ Comprobante Rechazado</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Lamentamos informarte que el comprobante de pago que enviaste no pudo ser verificado.
+        </p>
+        <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <p style="margin: 0; color: #991b1b;">
+                <strong>Posibles razones:</strong>
+            </p>
+            <ul style="color: #991b1b; margin: 10px 0 0 0; padding-left: 20px;">
+                <li>Imagen borrosa o ilegible</li>
+                <li>Monto incorrecto</li>
+                <li>Cuenta de destino incorrecta</li>
+                <li>Comprobante duplicado o ya utilizado</li>
+            </ul>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Por favor, envía un nuevo comprobante válido para completar tu inscripción.
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
+    },
+    {
+        "id": "athlete_edit_code",
+        "name": "Código de Acceso - Atleta",
+        "description": "Se envía con el código para editar el registro del atleta",
+        "subject": "🔑 Código de Acceso - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete", "general"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Código de Acceso</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Tu código de acceso para editar tu registro es:
+        </p>
+        <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="font-size: 36px; font-weight: bold; color: #ea580c; margin: 0; letter-spacing: 8px;">{{verification_code}}</p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Este código es válido por 30 minutos. Úsalo para acceder a tu registro y realizar cambios.
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
     }
 ]
 
