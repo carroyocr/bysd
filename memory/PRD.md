@@ -212,6 +212,22 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Deep Review: Flujo de Registro de Voluntarios** (02 Febrero 2026)
+  - **Verificación completa del flujo:**
+    - Registro nuevo: verificación email → código → sesión → registro
+    - Asignación de slots: validaciones y cambio de status a "confirmed"
+    - Desasignación: validaciones y reversión de status a "registered"
+    - Edición: solicitud de link → obtención por token → actualización
+    - Cancelación: eliminación de asignaciones y registro
+  - **Tests verificados:**
+    - ✅ Envío de código de verificación
+    - ✅ Verificación de email existente/no existente
+    - ✅ Asignación/desasignación de voluntarios
+    - ✅ Cambios de status correctos
+    - ✅ Validaciones de errores (slot ocupado, email incorrecto, etc.)
+  - **Documentación creada:** `/app/memory/FLUJO_REGISTRO_VOLUNTARIOS.md`
+  - **Bug resuelto:** El `AttributeError: 'str' object has no attribute 'get'` mencionado en el handoff ya no está presente (posiblemente corregido en actualización anterior)
+
 - [x] **Feature: Sistema de QR Code para Control de Vueltas** (02 Febrero 2026)
   - **Backend - Nuevo módulo `qr_scan.py`:**
     - `GET /api/qr-scan/race-status` - Estado actual de la carrera (vuelta actual, tiempo restante)
