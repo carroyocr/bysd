@@ -313,6 +313,45 @@ export default function ComunidadPage() {
     a.bib.includes(searchAthlete)
   );
 
+  // Show loading state while checking visibility
+  if (visibility.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-20">
+        <div className="animate-pulse text-gray-500">Cargando...</div>
+      </div>
+    );
+  }
+  
+  // Show disabled page message if community is not enabled
+  if (!visibility.enabled) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 pt-20 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full shadow-lg border-purple-200">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-purple-100 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-purple-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              Comunidad No Disponible
+            </h1>
+            <p className="text-gray-600 mb-6">
+              La página de comunidad para <strong>{visibility.raceName || 'esta carrera'}</strong> no está activa en este momento.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Esta página estará disponible próximamente. Aquí podrás enviar mensajes de ánimo a los atletas y ver el ranking de fans.
+            </p>
+            <Link to="/">
+              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600" data-testid="go-home-btn">
+                <Home className="w-4 h-4 mr-2" />
+                Volver al Inicio
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
       {/* Header */}
