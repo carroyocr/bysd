@@ -106,7 +106,7 @@ export default function Hero() {
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
                 <img
-                  src="/logo-backyard-ultra.png"
+                  src={getLogoUrl('home')}
                   alt="Backyard Ultra Santo Domingo Logo"
                   className="relative w-full max-w-md mx-auto drop-shadow-2xl hover:scale-105 transition-transform duration-500"
                 />
