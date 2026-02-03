@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, Users, UserPlus } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Link } from 'react-router-dom';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
 export default function Hero() {
   const { getShortDate, getYear, raceLocation, getEditionLabel } = useRaceConfig();
+  const [preregistrationEnabled, setPreregistrationEnabled] = useState(true);
+  
+  useEffect(() => {
+    const checkPreregistration = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/page-visibility`);
+        if (response.ok) {
+          const data = await response.json();
+          setPreregistrationEnabled(data.show_preregistration !== false);
+        }
+      } catch (error) {
+        console.error('Error checking preregistration status:', error);
+      }
+    };
+    checkPreregistration();
+  }, []);
   
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
