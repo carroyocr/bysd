@@ -7,7 +7,7 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function Hero() {
-  const { getShortDate, getYear, raceLocation, getEditionLabel } = useRaceConfig();
+  const { getShortDate, getYear, raceLocation, getEditionLabel, getLogoUrl } = useRaceConfig();
   const [preregistrationEnabled, setPreregistrationEnabled] = useState(true);
   
   useEffect(() => {
