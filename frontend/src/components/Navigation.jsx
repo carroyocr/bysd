@@ -258,20 +258,23 @@ export default function Navigation() {
             )}
 
             {endNavLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={handleLinkClick}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap ${
-                  link.highlight
-                    ? 'bg-primary text-white hover:bg-primary/90'
-                    : location.pathname === link.href
-                      ? 'text-primary bg-secondary'
-                      : 'text-foreground hover:text-primary hover:bg-secondary'
-                }`}
-              >
-                {link.label}
-              </Link>
+              // Hide Pre Registro link if preregistration is disabled
+              link.href === '/pre-registro' && !pageVisibility.showPreregistration ? null : (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={handleLinkClick}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap ${
+                    link.highlight
+                      ? 'bg-primary text-white hover:bg-primary/90'
+                      : location.pathname === link.href
+                        ? 'text-primary bg-secondary'
+                        : 'text-foreground hover:text-primary hover:bg-secondary'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
           </div>
 
