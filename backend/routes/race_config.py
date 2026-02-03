@@ -324,7 +324,7 @@ async def upload_logo(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Upload a logo for a race"""
+    """Upload a logo for a race (legacy endpoint - uploads to logo_url)"""
     from server import db as database
     
     existing = await database.race_configurations.find_one({"code": code})
@@ -355,6 +355,80 @@ async def upload_logo(
     return {
         "message": "Logo subido exitosamente",
         "logo_url": logo_url
+    }
+
+
+@router.post("/upload-image/{code}/{image_type}")
+async def upload_race_image(
+    code: str,
+    image_type: str,
+    file: UploadFile = File(...),
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """
+    Upload a specific image for a race.
+    
+    Image types:
+    - home: Logo for home page hero section (recommended: 400x400px PNG, transparent background)
+    - menu: Logo for navigation menu (recommended: 48x48px PNG, transparent background)  
+    - favicon: Browser tab icon (recommended: 32x32px PNG or ICO)
+    """
+    from server import db as database
+    
+    valid_types = ["home", "menu", "favicon"]
+    if image_type not in valid_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Tipo de imagen inválido. Use: {', '.join(valid_types)}"
+        )
+    
+    existing = await database.race_configurations.find_one({"code": code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    # Validate file type
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP, SVG o ICO")
+    
+    # Generate filename based on type
+    ext = file.filename.split(".")[-1] if "." in file.filename else "png"
+    filename = f"{image_type}_{code}.{ext}"
+    filepath = LOGOS_DIR / filename
+    
+    # Save file
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Build the URL
+    image_url = f"/api/race-config/logo/{filename}"
+    
+    # Map image type to database field
+    field_map = {
+        "home": "logo_home_url",
+        "menu": "logo_menu_url",
+        "favicon": "favicon_url"
+    }
+    
+    # Update database
+    await database.race_configurations.update_one(
+        {"code": code},
+        {"$set": {field_map[image_type]: image_url, "updated_at": datetime.utcnow()}}
+    )
+    
+    # Recommended sizes for reference
+    size_recommendations = {
+        "home": "400x400px PNG con fondo transparente",
+        "menu": "48x48px PNG con fondo transparente",
+        "favicon": "32x32px PNG o ICO"
+    }
+    
+    return {
+        "message": f"Imagen '{image_type}' subida exitosamente",
+        "url": image_url,
+        "field": field_map[image_type],
+        "recommendation": size_recommendations[image_type]
     }
 
 
