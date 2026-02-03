@@ -70,6 +70,27 @@ export default function Navigation() {
     fetchVisibility();
   }, []);
 
+  // Fetch branding (menu logo)
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/branding`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.logo_menu_url) {
+            const url = data.logo_menu_url.startsWith('/api') 
+              ? `${API_URL}${data.logo_menu_url}` 
+              : data.logo_menu_url;
+            setMenuLogo(url);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching branding:', error);
+      }
+    };
+    fetchBranding();
+  }, []);
+
   // Fetch all races for the dropdown
   useEffect(() => {
     const fetchRaces = async () => {
