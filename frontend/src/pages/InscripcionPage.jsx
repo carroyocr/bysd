@@ -864,12 +864,19 @@ export default function InscripcionPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nacionalidad">Nacionalidad *</Label>
-                <Input
+                <select
                   id="nacionalidad"
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                   value={formData.nacionalidad}
                   onChange={(e) => handleInputChange('nacionalidad', e.target.value)}
-                  placeholder="Ej: Dominicana"
-                />
+                >
+                  <option value="">Seleccionar país</option>
+                  {COUNTRIES.map(country => (
+                    <option key={country.code} value={country.name}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="telefono">Teléfono *</Label>
