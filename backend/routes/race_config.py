@@ -71,6 +71,7 @@ class RaceConfigUpdate(BaseModel):
     # Page visibility
     show_tracking_page: Optional[bool] = None
     show_community_page: Optional[bool] = None
+    show_preregistration: Optional[bool] = None
 
 
 @router.get("/active")
