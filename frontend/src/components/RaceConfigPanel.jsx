@@ -93,7 +93,8 @@ export default function RaceConfigPanel() {
         payment_account_number: activeData.payment_account_number || '',
         // Page visibility
         show_tracking_page: activeData.show_tracking_page !== false,
-        show_community_page: activeData.show_community_page !== false
+        show_community_page: activeData.show_community_page !== false,
+        show_preregistration: activeData.show_preregistration !== false
       });
       
       // Load notification counts if race has manuals
