@@ -38,6 +38,7 @@ export default function Navigation() {
   const [expandedMobile, setExpandedMobile] = useState({ anteriores: false });
   const [expandedPastRace, setExpandedPastRace] = useState({});
   const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true });
+  const [menuLogo, setMenuLogo] = useState('/icon-bu.png');
   const location = useLocation();
   const { getYear, config } = useRaceConfig();
 
