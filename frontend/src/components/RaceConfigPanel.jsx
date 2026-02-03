@@ -302,6 +302,49 @@ export default function RaceConfigPanel() {
     }
   };
 
+  const handleImageUpload = async (e, imageType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!activeRace?.code || activeRace.is_default) {
+      toast.error('Primero debe crear una carrera');
+      return;
+    }
+    
+    const typeLabels = {
+      'home': 'Logo del Home',
+      'menu': 'Logo del Menú',
+      'favicon': 'Favicon'
+    };
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setUploadingLogo(true);
+    try {
+      const response = await fetch(`${API_URL}/api/race-config/upload-image/${activeRace.code}/${imageType}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || `Error al subir ${typeLabels[imageType]}`);
+      }
+      
+      const data = await response.json();
+      toast.success(`${typeLabels[imageType]} subido exitosamente`);
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const handleManualUpload = async (e, manualType) => {
     const file = e.target.files?.[0];
     if (!file) return;
