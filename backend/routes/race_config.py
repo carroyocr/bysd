@@ -121,13 +121,14 @@ async def get_page_visibility(db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"is_active": True}, 
-        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "name": 1, "code": 1}
+        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "name": 1, "code": 1}
     )
     
     if not config:
         return {
             "show_tracking_page": True,
             "show_community_page": True,
+            "show_preregistration": True,
             "race_name": "Backyard Ultra Santo Domingo",
             "race_code": ""
         }
@@ -135,6 +136,7 @@ async def get_page_visibility(db=Depends(lambda: None)):
     return {
         "show_tracking_page": config.get("show_tracking_page", True),
         "show_community_page": config.get("show_community_page", True),
+        "show_preregistration": config.get("show_preregistration", True),
         "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
         "race_code": config.get("code", "")
     }
