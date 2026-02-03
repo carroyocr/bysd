@@ -45,12 +45,28 @@ export function RaceConfigProvider({ children }) {
     fetchConfig();
   }, []);
 
-  // Update document title when config changes
+  // Update document title and favicon when config changes
   useEffect(() => {
     if (config.code) {
       document.title = config.code;
     }
-  }, [config.code]);
+    
+    // Update favicon dynamically
+    if (config.favicon_url) {
+      const faviconUrl = config.favicon_url.startsWith('/api') 
+        ? `${API_URL}${config.favicon_url}` 
+        : config.favicon_url;
+      
+      // Find or create favicon link
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = faviconUrl;
+    }
+  }, [config.code, config.favicon_url]);
 
   // Helper function to format the race date for display
   const getFormattedDate = () => {
