@@ -9,7 +9,7 @@ import {
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
-  Mail, Send, Eye, EyeOff, Users, MessageCircle
+  Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
 
