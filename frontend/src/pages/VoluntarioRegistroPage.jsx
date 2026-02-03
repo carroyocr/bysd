@@ -12,6 +12,7 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { COUNTRIES } from '../data/countries';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
