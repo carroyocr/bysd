@@ -1014,13 +1014,25 @@ export default function RaceConfigPanel() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-white p-4 rounded-lg border border-amber-200">
-              <h4 className="font-medium text-amber-900 mb-2">¿Qué sucede al archivar?</h4>
+              <h4 className="font-medium text-amber-900 mb-2">¿Qué sucede al crear una nueva carrera?</h4>
               <ul className="text-sm text-amber-800 space-y-1">
-                <li>• Los participantes actuales se guardan en el historial</li>
-                <li>• Los mensajes de ánimo se archivan</li>
-                <li>• Los patrocinadores se conservan</li>
-                <li>• Podrás consultar estos datos en el historial</li>
+                <li>✓ <strong>Se CONSERVAN</strong> todos los registros de atletas (tienen race_code)</li>
+                <li>✓ <strong>Se CONSERVAN</strong> los registros de voluntarios</li>
+                <li>✓ <strong>Se CONSERVAN</strong> los patrocinadores</li>
+                <li>✓ <strong>Se CONSERVAN</strong> las encuestas</li>
+                <li>• Los datos de carrera en vivo (participantes, mensajes) se archivan con el código de la carrera</li>
+                <li>• Puedes consultar los datos históricos en /resultados/{'{código}'}</li>
               </ul>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Antes de crear una nueva carrera
+              </h4>
+              <p className="text-sm text-blue-800">
+                Haz clic en "Ver Resumen de Datos" para verificar qué información se preservará y qué se archivará.
+              </p>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
