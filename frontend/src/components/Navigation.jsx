@@ -422,18 +422,21 @@ export default function Navigation() {
                   )}
 
                   {endNavLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      to={link.href}
-                      onClick={handleLinkClick}
-                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
-                        location.pathname === link.href
-                          ? 'text-primary bg-secondary'
-                          : 'text-foreground hover:text-primary hover:bg-secondary'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
+                    // Hide Pre Registro link if preregistration is disabled
+                    link.href === '/pre-registro' && !pageVisibility.showPreregistration ? null : (
+                      <Link
+                        key={link.href}
+                        to={link.href}
+                        onClick={handleLinkClick}
+                        className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                          location.pathname === link.href
+                            ? 'text-primary bg-secondary'
+                            : 'text-foreground hover:text-primary hover:bg-secondary'
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    )
                   ))}
                 </div>
               </div>
