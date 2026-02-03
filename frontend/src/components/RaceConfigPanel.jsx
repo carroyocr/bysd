@@ -395,12 +395,42 @@ export default function RaceConfigPanel() {
   };
 
   const handleArchiveData = async (code) => {
-    if (!window.confirm(`¿Estás seguro de archivar todos los datos de la carrera ${code}? Esta acción no se puede deshacer.`)) {
-      return;
-    }
-    
     setSaving(true);
+    
     try {
+      // First, get data summary
+      const summaryResponse = await fetch(`${API_URL}/api/race-config/data-summary/${code}`);
+      if (!summaryResponse.ok) {
+        throw new Error('Error al obtener resumen de datos');
+      }
+      const summary = await summaryResponse.json();
+      
+      // Build confirmation message
+      const collections = summary.collections || {};
+      let message = `📊 RESUMEN DE DATOS DE ${code}\n\n`;
+      message += `DATOS QUE SE PRESERVARÁN (tienen race_code):\n`;
+      message += `  • Registros de atletas: ${collections.registrations || 0}\n`;
+      message += `  • Voluntarios registrados: ${collections.volunteer_registrations || 0}\n`;
+      message += `  • Asignaciones de voluntarios: ${collections.volunteer_assignments || 0}\n`;
+      message += `  • Patrocinadores: ${collections.sponsors || 0}\n`;
+      message += `  • Encuestas: ${collections.surveys || 0}\n\n`;
+      
+      const legacyParticipants = collections.participants_legacy || 0;
+      const legacyCheers = collections.cheer_messages_legacy || 0;
+      
+      if (legacyParticipants > 0 || legacyCheers > 0) {
+        message += `DATOS LEGACY A ARCHIVAR:\n`;
+        message += `  • Participantes (carrera en vivo): ${legacyParticipants}\n`;
+        message += `  • Mensajes de ánimo: ${legacyCheers}\n\n`;
+      }
+      
+      message += `¿Deseas continuar con el archivado?`;
+      
+      if (!window.confirm(message)) {
+        setSaving(false);
+        return;
+      }
+      
       const response = await fetch(`${API_URL}/api/race-config/archive-data/${code}`, {
         method: 'POST',
         headers: {
@@ -414,7 +444,7 @@ export default function RaceConfigPanel() {
       }
       
       const data = await response.json();
-      toast.success(`Datos archivados: ${data.archived.participants} participantes, ${data.archived.cheer_messages} mensajes`);
+      toast.success(`✅ Datos archivados correctamente. ${data.note || ''}`);
       await loadData();
     } catch (error) {
       toast.error(error.message);
