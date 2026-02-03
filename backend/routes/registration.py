@@ -680,7 +680,7 @@ async def get_registration_stats(race_code: str):
     stats.pop("_id", None)
     stats["race_code"] = race_code
     
-    # Get t-shirt sizes distribution
+    # Get t-shirt sizes distribution (total)
     sizes_pipeline = [
         {"$match": {"race_code": race_code}},
         {"$group": {
@@ -690,6 +690,28 @@ async def get_registration_stats(race_code: str):
     ]
     sizes_result = await registrations_collection.aggregate(sizes_pipeline).to_list(10)
     stats["talla_distribution"] = {s["_id"]: s["count"] for s in sizes_result if s["_id"]}
+    
+    # Get t-shirt sizes distribution by gender (Masculino)
+    sizes_male_pipeline = [
+        {"$match": {"race_code": race_code, "sexo": "Masculino"}},
+        {"$group": {
+            "_id": "$talla_camiseta",
+            "count": {"$sum": 1}
+        }}
+    ]
+    sizes_male_result = await registrations_collection.aggregate(sizes_male_pipeline).to_list(10)
+    stats["talla_distribution_masculino"] = {s["_id"]: s["count"] for s in sizes_male_result if s["_id"]}
+    
+    # Get t-shirt sizes distribution by gender (Femenino)
+    sizes_female_pipeline = [
+        {"$match": {"race_code": race_code, "sexo": "Femenino"}},
+        {"$group": {
+            "_id": "$talla_camiseta",
+            "count": {"$sum": 1}
+        }}
+    ]
+    sizes_female_result = await registrations_collection.aggregate(sizes_female_pipeline).to_list(10)
+    stats["talla_distribution_femenino"] = {s["_id"]: s["count"] for s in sizes_female_result if s["_id"]}
     
     return stats
 
