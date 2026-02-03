@@ -56,7 +56,8 @@ export default function RaceConfigPanel() {
     payment_account_number: '',
     // Page visibility
     show_tracking_page: true,
-    show_community_page: true
+    show_community_page: true,
+    show_preregistration: true
   });
 
   const token = localStorage.getItem('admin_token');
