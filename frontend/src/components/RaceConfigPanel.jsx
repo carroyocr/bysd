@@ -1038,12 +1038,12 @@ export default function RaceConfigPanel() {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
                 variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
                 onClick={() => handleArchiveData(activeRace.code)}
-                disabled={saving || activeRace.data_archived}
+                disabled={saving}
               >
-                <Archive className="w-4 h-4 mr-2" />
-                {activeRace.data_archived ? 'Datos Ya Archivados' : 'Solo Archivar Datos'}
+                <FileText className="w-4 h-4 mr-2" />
+                Ver Resumen de Datos
               </Button>
               <Button 
                 className="bg-green-600 hover:bg-green-700"
