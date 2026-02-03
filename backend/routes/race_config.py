@@ -58,7 +58,10 @@ class RaceConfigUpdate(BaseModel):
     date: Optional[str] = None
     start_time: Optional[str] = None
     location: Optional[str] = None
-    logo_url: Optional[str] = None
+    logo_url: Optional[str] = None  # Legacy - main logo
+    logo_home_url: Optional[str] = None  # Logo for home page (recommended: 400x400px PNG)
+    logo_menu_url: Optional[str] = None  # Logo for navigation menu (recommended: 48x48px PNG)
+    favicon_url: Optional[str] = None  # Favicon for browser tab (recommended: 32x32px ICO/PNG)
     registration_cost: Optional[float] = None
     edition_number: Optional[int] = None
     timezone_gmt: Optional[str] = None  # e.g., "GMT-4"
