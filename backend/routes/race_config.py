@@ -117,6 +117,41 @@ async def get_active_race(db=Depends(lambda: None)):
     return config
 
 
+@router.get("/branding")
+async def get_race_branding(db=Depends(lambda: None)):
+    """Get branding images for the active race (public endpoint for frontend)"""
+    from server import db as database
+    
+    config = await database.race_configurations.find_one(
+        {"is_active": True}, 
+        {"_id": 0, "logo_url": 1, "logo_home_url": 1, "logo_menu_url": 1, "favicon_url": 1, "name": 1, "code": 1}
+    )
+    
+    # Default values
+    defaults = {
+        "logo_url": "/icon-bu.png",
+        "logo_home_url": "/icon-bu.png",
+        "logo_menu_url": "/icon-bu.png",
+        "favicon_url": "/favicon.ico"
+    }
+    
+    if not config:
+        return {
+            **defaults,
+            "race_name": "Backyard Ultra Santo Domingo",
+            "race_code": ""
+        }
+    
+    return {
+        "logo_url": config.get("logo_url") or defaults["logo_url"],
+        "logo_home_url": config.get("logo_home_url") or config.get("logo_url") or defaults["logo_home_url"],
+        "logo_menu_url": config.get("logo_menu_url") or defaults["logo_menu_url"],
+        "favicon_url": config.get("favicon_url") or defaults["favicon_url"],
+        "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
+        "race_code": config.get("code", "")
+    }
+
+
 @router.get("/page-visibility")
 async def get_page_visibility(db=Depends(lambda: None)):
     """Get the visibility settings for public pages (no auth required)"""
