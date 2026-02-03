@@ -924,6 +924,34 @@ export default function RaceConfigPanel() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Pre-Registration Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_preregistration ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_preregistration ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <ClipboardList className={`w-5 h-5 ${editForm.show_preregistration ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Pre-Registro</h4>
+                          <p className="text-sm text-muted-foreground">Inscripción de atletas</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_preregistration}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_preregistration: checked})}
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_preregistration ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Activo - Botón "Inscríbete Ahora"</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Inactivo - Muestra "Próximamente"</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
