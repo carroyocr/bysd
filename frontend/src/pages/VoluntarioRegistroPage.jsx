@@ -832,16 +832,22 @@ export default function VoluntarioRegistroPage() {
                     <option value="">Seleccionar</option>
                     <option value="Masculino">Masculino</option>
                     <option value="Femenino">Femenino</option>
-                    <option value="Otro">Otro</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Nacionalidad</Label>
-                  <Input
+                  <select
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                     value={formData.nacionalidad}
                     onChange={(e) => handleInputChange('nacionalidad', e.target.value)}
-                    placeholder="Ej: Dominicana"
-                  />
+                  >
+                    <option value="">Seleccionar país</option>
+                    {COUNTRIES.map(country => (
+                      <option key={country.code} value={country.name}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Teléfono *</Label>
