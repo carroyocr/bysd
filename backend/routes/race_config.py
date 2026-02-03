@@ -372,36 +372,46 @@ async def archive_race_data(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Archive all data (participants, cheers, sponsors) for a race"""
+    """Archive all data (participants, cheers, sponsors) for a race - LEGACY DATA ONLY.
+    Modern data (registrations, volunteers) already have race_code and don't need archiving."""
     from server import db as database
     
     existing = await database.race_configurations.find_one({"code": code})
     if not existing:
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
-    # Archive participants
+    archived_counts = {
+        "participants": 0,
+        "cheer_messages": 0,
+        "sponsors": 0
+    }
+    
+    # Archive participants (legacy - no race_code)
     participants = await database.participants.find({}).to_list(1000)
     if participants:
         for p in participants:
             p["race_code"] = code
             p.pop("_id", None)
         await database.archived_participants.insert_many(participants)
+        archived_counts["participants"] = len(participants)
     
-    # Archive cheer messages
+    # Archive cheer messages (legacy - no race_code)
     cheers = await database.cheer_messages.find({}).to_list(10000)
     if cheers:
         for c in cheers:
             c["race_code"] = code
             c.pop("_id", None)
         await database.archived_cheer_messages.insert_many(cheers)
+        archived_counts["cheer_messages"] = len(cheers)
     
-    # Archive sponsors (if exists)
+    # Archive sponsors (if exists and no race_code)
     sponsors = await database.sponsors.find({}).to_list(100)
     if sponsors:
         for s in sponsors:
             s["race_code"] = code
             s.pop("_id", None)
         await database.archived_sponsors.insert_many(sponsors)
+        archived_counts["sponsors"] = len(sponsors)
     
     # Mark race as archived
     await database.race_configurations.update_one(
@@ -410,13 +420,172 @@ async def archive_race_data(
     )
     
     return {
-        "message": f"Datos de la carrera '{code}' archivados",
-        "archived": {
-            "participants": len(participants),
-            "cheer_messages": len(cheers),
-            "sponsors": len(sponsors)
-        }
+        "message": f"Datos legacy de la carrera '{code}' archivados",
+        "archived": archived_counts,
+        "note": "Los datos modernos (registrations, volunteers) ya tienen race_code y se conservan automáticamente"
     }
+
+
+@router.post("/prepare-new-race/{old_code}")
+async def prepare_new_race(
+    old_code: str,
+    user=Depends(verify_token),
+    db=Depends(lambda: None)
+):
+    """
+    Prepare the system for a new race by:
+    1. Verifying all data from the old race has race_code
+    2. Clearing transient collections (participants, cheer_messages, fans, etc.)
+    3. NOT deleting registrations, volunteers, sponsors (they have race_code)
+    
+    This is a SAFE operation that preserves historical data.
+    """
+    from server import db as database
+    
+    existing = await database.race_configurations.find_one({"code": old_code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    summary = {
+        "preserved": {},
+        "cleared": {},
+        "warnings": []
+    }
+    
+    # === PRESERVED DATA (has race_code) ===
+    # These collections already have race_code and will be preserved
+    
+    # Count registrations
+    reg_count = await database.registrations.count_documents({"race_code": old_code})
+    summary["preserved"]["registrations"] = reg_count
+    
+    # Count volunteer registrations
+    vol_count = await database.volunteer_registrations.count_documents({"race_code": old_code})
+    summary["preserved"]["volunteer_registrations"] = vol_count
+    
+    # Count volunteer assignments
+    vol_assign_count = await database.volunteer_assignments.count_documents({"race_code": old_code})
+    summary["preserved"]["volunteer_assignments"] = vol_assign_count
+    
+    # Count sponsors
+    sponsor_count = await database.sponsors.count_documents({"race_code": old_code})
+    summary["preserved"]["sponsors"] = sponsor_count
+    
+    # Count surveys
+    survey_count = await database.surveys.count_documents({"race_code": old_code})
+    summary["preserved"]["surveys"] = survey_count
+    
+    # === LEGACY DATA TO ARCHIVE ===
+    # Archive participants (live race data) if any exist
+    participants = await database.participants.find({}).to_list(1000)
+    if participants:
+        for p in participants:
+            p["race_code"] = old_code
+            p.pop("_id", None)
+        await database.archived_participants.insert_many(participants)
+        await database.participants.delete_many({})
+        summary["cleared"]["participants"] = len(participants)
+    
+    # Archive cheer messages if any exist
+    cheers = await database.cheer_messages.find({}).to_list(10000)
+    if cheers:
+        for c in cheers:
+            c["race_code"] = old_code
+            c.pop("_id", None)
+        await database.archived_cheer_messages.insert_many(cheers)
+        await database.cheer_messages.delete_many({})
+        summary["cleared"]["cheer_messages"] = len(cheers)
+    
+    # Clear fans (they can re-register for the new race)
+    fans_count = await database.fans.count_documents({})
+    if fans_count > 0:
+        await database.fans.delete_many({})
+        summary["cleared"]["fans"] = fans_count
+    
+    # Clear verification tokens (session data)
+    tokens_count = await database.verification_tokens.count_documents({})
+    if tokens_count > 0:
+        await database.verification_tokens.delete_many({})
+        summary["cleared"]["verification_tokens"] = tokens_count
+    
+    # Clear volunteer verification tokens
+    vol_tokens = await database.volunteer_verification_tokens.count_documents({})
+    if vol_tokens > 0:
+        await database.volunteer_verification_tokens.delete_many({})
+        summary["cleared"]["volunteer_verification_tokens"] = vol_tokens
+    
+    # Clear volunteer sessions
+    vol_sessions = await database.volunteer_sessions.count_documents({})
+    if vol_sessions > 0:
+        await database.volunteer_sessions.delete_many({})
+        summary["cleared"]["volunteer_sessions"] = vol_sessions
+    
+    # Mark old race as data archived
+    await database.race_configurations.update_one(
+        {"code": old_code},
+        {"$set": {"data_archived": True, "data_archived_at": datetime.utcnow()}}
+    )
+    
+    return {
+        "message": f"Sistema preparado para nueva carrera. Datos de '{old_code}' preservados.",
+        "summary": summary,
+        "next_steps": [
+            "1. Crear la nueva carrera desde el panel de administración",
+            "2. Al marcarla como activa, la carrera anterior se archivará automáticamente",
+            "3. Los datos históricos se pueden consultar en /resultados/{codigo_anterior}"
+        ]
+    }
+
+
+@router.get("/data-summary/{code}")
+async def get_race_data_summary(
+    code: str,
+    db=Depends(lambda: None)
+):
+    """Get a summary of all data associated with a race"""
+    from server import db as database
+    
+    existing = await database.race_configurations.find_one({"code": code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+    
+    summary = {
+        "race_code": code,
+        "race_name": existing.get("name", ""),
+        "is_active": existing.get("is_active", False),
+        "data_archived": existing.get("data_archived", False),
+        "collections": {}
+    }
+    
+    # Count data in each collection
+    collections_to_check = [
+        ("registrations", {"race_code": code}),
+        ("volunteer_registrations", {"race_code": code}),
+        ("volunteer_assignments", {"race_code": code}),
+        ("sponsors", {"race_code": code}),
+        ("surveys", {"race_code": code}),
+        ("archived_participants", {"race_code": code}),
+        ("archived_cheer_messages", {"race_code": code}),
+        ("archived_sponsors", {"race_code": code}),
+    ]
+    
+    for col_name, query in collections_to_check:
+        try:
+            count = await database[col_name].count_documents(query)
+            summary["collections"][col_name] = count
+        except:
+            summary["collections"][col_name] = 0
+    
+    # Legacy collections (no race_code filter)
+    legacy_collections = ["participants", "cheer_messages", "fans"]
+    for col_name in legacy_collections:
+        try:
+            count = await database[col_name].count_documents({})
+            summary["collections"][f"{col_name}_legacy"] = count
+        except:
+            summary["collections"][f"{col_name}_legacy"] = 0
+    
+    return summary
 
 
 @router.get("/archived/{code}/participants")
