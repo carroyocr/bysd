@@ -108,6 +108,8 @@ async def get_active_race(db=Depends(lambda: None)):
         config["show_tracking_page"] = True
     if "show_community_page" not in config:
         config["show_community_page"] = True
+    if "show_preregistration" not in config:
+        config["show_preregistration"] = True
     
     return config
 
