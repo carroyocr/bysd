@@ -37,7 +37,7 @@ export default function Navigation() {
   const [pastRaces, setPastRaces] = useState([]);
   const [expandedMobile, setExpandedMobile] = useState({ anteriores: false });
   const [expandedPastRace, setExpandedPastRace] = useState({});
-  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true });
+  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true });
   const location = useLocation();
   const { getYear, config } = useRaceConfig();
 
@@ -58,7 +58,8 @@ export default function Navigation() {
           const data = await response.json();
           setPageVisibility({
             showTracking: data.show_tracking_page,
-            showCommunity: data.show_community_page
+            showCommunity: data.show_community_page,
+            showPreregistration: data.show_preregistration !== false
           });
         }
       } catch (error) {
