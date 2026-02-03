@@ -716,7 +716,7 @@ export default function PreRegistrationManagement() {
         </Card>
       )}
 
-      {/* T-shirt Distribution */}
+      {/* T-shirt Distribution by Gender */}
       {stats?.talla_distribution && Object.keys(stats.talla_distribution).length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -725,14 +725,50 @@ export default function PreRegistrationManagement() {
               Distribución de Tallas
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => (
-                <Badge key={size} variant="outline" className="px-3 py-1">
-                  {size}: {stats.talla_distribution[size] || 0}
-                </Badge>
-              ))}
+          <CardContent className="space-y-4">
+            {/* Total Distribution */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-2 font-medium">Total</p>
+              <div className="flex flex-wrap gap-2">
+                {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => (
+                  <Badge key={size} variant="outline" className="px-3 py-1">
+                    {size}: {stats.talla_distribution[size] || 0}
+                  </Badge>
+                ))}
+              </div>
             </div>
+            
+            {/* Male Distribution */}
+            {stats?.talla_distribution_masculino && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 font-medium flex items-center gap-1">
+                  <span className="text-blue-500">♂</span> Hombres
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => (
+                    <Badge key={`m-${size}`} variant="outline" className="px-3 py-1 border-blue-200 bg-blue-50/50 text-blue-700">
+                      {size}: {stats.talla_distribution_masculino[size] || 0}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Female Distribution */}
+            {stats?.talla_distribution_femenino && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2 font-medium flex items-center gap-1">
+                  <span className="text-pink-500">♀</span> Mujeres
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(size => (
+                    <Badge key={`f-${size}`} variant="outline" className="px-3 py-1 border-pink-200 bg-pink-50/50 text-pink-700">
+                      {size}: {stats.talla_distribution_femenino[size] || 0}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
