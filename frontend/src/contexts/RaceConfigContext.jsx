@@ -133,6 +133,25 @@ export function RaceConfigProvider({ children }) {
     return `RD$${cost.toLocaleString('es-DO')}`;
   };
 
+  // Get logo URLs with API prefix handling
+  const getLogoUrl = (type = 'default') => {
+    let url;
+    switch(type) {
+      case 'home':
+        url = config.logo_home_url || config.logo_url || DEFAULT_CONFIG.logo_home_url;
+        break;
+      case 'menu':
+        url = config.logo_menu_url || DEFAULT_CONFIG.logo_menu_url;
+        break;
+      case 'favicon':
+        url = config.favicon_url || DEFAULT_CONFIG.favicon_url;
+        break;
+      default:
+        url = config.logo_url || DEFAULT_CONFIG.logo_url;
+    }
+    return url?.startsWith('/api') ? `${API_URL}${url}` : url;
+  };
+
   const value = {
     config,
     loading,
@@ -146,6 +165,7 @@ export function RaceConfigProvider({ children }) {
     getRaceSlug,
     getEditionLabel,
     getFormattedCost,
+    getLogoUrl,
     // Shorthand getters
     raceName: config.name || DEFAULT_CONFIG.name,
     raceCode: config.code || DEFAULT_CONFIG.code,
@@ -153,6 +173,9 @@ export function RaceConfigProvider({ children }) {
     raceTime: config.start_time || DEFAULT_CONFIG.start_time,
     raceLocation: config.location || DEFAULT_CONFIG.location,
     raceLogo: config.logo_url || DEFAULT_CONFIG.logo_url,
+    logoHome: config.logo_home_url || config.logo_url || DEFAULT_CONFIG.logo_home_url,
+    logoMenu: config.logo_menu_url || DEFAULT_CONFIG.logo_menu_url,
+    favicon: config.favicon_url || DEFAULT_CONFIG.favicon_url,
     registrationCost: config.registration_cost || DEFAULT_CONFIG.registration_cost,
     editionNumber: config.edition_number || DEFAULT_CONFIG.edition_number,
   };
