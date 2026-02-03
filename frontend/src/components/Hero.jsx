@@ -84,13 +84,20 @@ export default function Hero() {
               </div>
               
               <div className="pt-6">
-                <Link 
-                  to="/pre-registro"
-                  className="inline-flex items-center gap-3 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-full transition-all duration-300 group shadow-lg hover:shadow-xl"
-                >
-                  <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-semibold">¡Pre Regístrate Ahora!</span>
-                </Link>
+                {preregistrationEnabled ? (
+                  <Link 
+                    to="/pre-registro"
+                    className="inline-flex items-center gap-3 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-full transition-all duration-300 group shadow-lg hover:shadow-xl"
+                  >
+                    <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-semibold">¡Pre Regístrate Ahora!</span>
+                  </Link>
+                ) : (
+                  <div className="inline-flex items-center gap-3 px-6 py-3 bg-muted text-muted-foreground rounded-full cursor-not-allowed">
+                    <Clock className="w-5 h-5" />
+                    <span className="text-sm font-semibold">Pre-Registro Próximamente</span>
+                  </div>
+                )}
               </div>
             </div>
 
