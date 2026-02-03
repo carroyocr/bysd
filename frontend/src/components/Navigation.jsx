@@ -164,7 +164,7 @@ export default function Navigation() {
           >
             <div className="w-12 h-12 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300">
               <img 
-                src="/icon-bu.png" 
+                src={menuLogo} 
                 alt="Backyard Ultra Icon" 
                 className="w-full h-full object-cover"
               />
