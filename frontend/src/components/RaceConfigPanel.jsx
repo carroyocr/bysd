@@ -510,33 +510,153 @@ export default function RaceConfigPanel() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Logo Section */}
-              <div className="flex items-center gap-6 p-4 bg-muted/50 rounded-lg">
-                <div className="w-24 h-24 bg-white rounded-lg border flex items-center justify-center overflow-hidden">
-                  {activeRace?.logo_url ? (
-                    <img 
-                      src={activeRace.logo_url.startsWith('/api') ? `${API_URL}${activeRace.logo_url}` : activeRace.logo_url} 
-                      alt="Logo" 
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <Image className="w-8 h-8 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <Label className="text-sm font-medium">Logo de la Carrera</Label>
-                  <p className="text-xs text-muted-foreground mb-2">PNG, JPG o SVG. Recomendado: 512x512px</p>
-                  <div className="flex gap-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      disabled={uploadingLogo}
-                      className="max-w-xs"
-                    />
-                    {uploadingLogo && <RotateCw className="w-5 h-5 animate-spin" />}
+              {/* Images/Branding Section */}
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2 text-lg">
+                  <Image className="w-5 h-5" />
+                  Imágenes de la Carrera
+                </h3>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  {/* Home Logo */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Logo del Home</h4>
+                      {activeRace?.logo_home_url ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Por defecto</Badge>
+                      )}
+                    </div>
+                    <div className="w-full h-24 bg-muted/50 rounded-lg border flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={activeRace?.logo_home_url ? 
+                          (activeRace.logo_home_url.startsWith('/api') ? `${API_URL}${activeRace.logo_home_url}` : activeRace.logo_home_url) 
+                          : '/icon-bu.png'
+                        } 
+                        alt="Logo Home" 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Aparece en la página principal</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 400×400px PNG transparente</p>
+                    </div>
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpg,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(e, 'home')}
+                        disabled={uploadingLogo}
+                      />
+                      <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="w-3 h-3 mr-2" />
+                          Subir Logo Home
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+
+                  {/* Menu Logo */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Logo del Menú</h4>
+                      {activeRace?.logo_menu_url ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Por defecto</Badge>
+                      )}
+                    </div>
+                    <div className="w-full h-24 bg-muted/50 rounded-lg border flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={activeRace?.logo_menu_url ? 
+                          (activeRace.logo_menu_url.startsWith('/api') ? `${API_URL}${activeRace.logo_menu_url}` : activeRace.logo_menu_url) 
+                          : '/icon-bu.png'
+                        } 
+                        alt="Logo Menú" 
+                        className="max-w-[48px] max-h-[48px] object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Aparece en la barra de navegación</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 48×48px PNG transparente</p>
+                    </div>
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpg,image/jpeg,image/webp,image/svg+xml"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(e, 'menu')}
+                        disabled={uploadingLogo}
+                      />
+                      <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="w-3 h-3 mr-2" />
+                          Subir Logo Menú
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+
+                  {/* Favicon */}
+                  <div className="p-4 border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Icono de Pestaña</h4>
+                      {activeRace?.favicon_url ? (
+                        <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Cargado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Por defecto</Badge>
+                      )}
+                    </div>
+                    <div className="w-full h-24 bg-muted/50 rounded-lg border flex items-center justify-center overflow-hidden">
+                      <img 
+                        src={activeRace?.favicon_url ? 
+                          (activeRace.favicon_url.startsWith('/api') ? `${API_URL}${activeRace.favicon_url}` : activeRace.favicon_url) 
+                          : '/favicon.ico'
+                        } 
+                        alt="Favicon" 
+                        className="max-w-[32px] max-h-[32px] object-contain"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Icono en la pestaña del navegador</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 32×32px PNG o ICO</p>
+                    </div>
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/png,image/x-icon,image/vnd.microsoft.icon,.ico"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(e, 'favicon')}
+                        disabled={uploadingLogo}
+                      />
+                      <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                        <span className="cursor-pointer">
+                          <Upload className="w-3 h-3 mr-2" />
+                          Subir Favicon
+                        </span>
+                      </Button>
+                    </label>
                   </div>
                 </div>
+
+                {uploadingLogo && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Subiendo imagen...
+                  </div>
+                )}
               </div>
 
               {/* Race Details Form */}
