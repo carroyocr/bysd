@@ -14,7 +14,6 @@ import SponsorsManagement from '../components/SponsorsManagement';
 import VolunteerConfigManagement from '../components/VolunteerConfigManagement';
 import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsManagement';
 import FinancesManagement from '../components/FinancesManagement';
-import QRScannerPanel from '../components/QRScannerPanel';
 import UserManagement from '../components/UserManagement';
 import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 
