@@ -772,12 +772,14 @@ async def export_lap_registrations(
         if not scan_time_str and reg.get("scan_time"):
             scan_time_str = reg.get("scan_time").strftime("%H:%M:%S")
         
-        # Calculate pace (min/km) only for completed laps
+        # Calculate pace (min/km) only for completed laps - format as mm:ss
         minutes_into_lap = reg.get("minutes_into_lap")
         pace_str = ""
         if minutes_into_lap is not None and reg.get("action") == "lap_completed":
-            pace = minutes_into_lap / KM_PER_LAP
-            pace_str = f"{pace:.2f}"
+            pace_decimal = minutes_into_lap / KM_PER_LAP
+            pace_minutes = int(pace_decimal)
+            pace_seconds = round((pace_decimal - pace_minutes) * 60)
+            pace_str = f"{pace_minutes}:{pace_seconds:02d}"
         
         writer.writerow([
             reg.get("bib", ""),
