@@ -725,6 +725,8 @@ async def export_lap_registrations(
         if not active_race:
             raise HTTPException(status_code=400, detail="No hay carrera activa")
         race_code = active_race.get("code")
+    else:
+        active_race = await database.race_configurations.find_one({"code": race_code})
     
     # Build query
     query = {"race_code": race_code}
@@ -748,26 +750,44 @@ async def export_lap_registrations(
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Header
+    # Header - using local time fields
     writer.writerow([
         "BIB", "Nombre", "Vuelta", "Acción", 
         "Hora Inicio Vuelta", "Hora Registro", 
-        "Minutos en Vuelta", "Registrado Por", "Razón/Notas"
+        "Minutos en Vuelta", "Ritmo (min/km)", "Registrado Por", "Razón/Notas"
     ])
+    
+    # Constants
+    KM_PER_LAP = 6.7
     
     # Data rows
     for reg in registrations:
-        lap_start = reg.get("lap_start_time")
-        scan_time = reg.get("scan_time")
+        # Use local time strings if available, otherwise format UTC
+        lap_start_str = reg.get("lap_start_time_local", "")
+        scan_time_str = reg.get("scan_time_local", "")
+        
+        # Fallback to UTC formatted if local not available
+        if not lap_start_str and reg.get("lap_start_time"):
+            lap_start_str = reg.get("lap_start_time").strftime("%H:%M:%S")
+        if not scan_time_str and reg.get("scan_time"):
+            scan_time_str = reg.get("scan_time").strftime("%H:%M:%S")
+        
+        # Calculate pace (min/km) only for completed laps
+        minutes_into_lap = reg.get("minutes_into_lap")
+        pace_str = ""
+        if minutes_into_lap is not None and reg.get("action") == "lap_completed":
+            pace = minutes_into_lap / KM_PER_LAP
+            pace_str = f"{pace:.2f}"
         
         writer.writerow([
             reg.get("bib", ""),
             reg.get("athlete_name", ""),
             reg.get("lap_number", ""),
             reg.get("action", ""),
-            lap_start.strftime("%Y-%m-%d %H:%M:%S") if lap_start else "",
-            scan_time.strftime("%Y-%m-%d %H:%M:%S") if scan_time else "",
-            reg.get("minutes_into_lap", ""),
+            lap_start_str,
+            scan_time_str,
+            minutes_into_lap if minutes_into_lap is not None else "",
+            pace_str,
             reg.get("scanned_by", ""),
             reg.get("reason", "")
         ])
