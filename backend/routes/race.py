@@ -1708,6 +1708,9 @@ async def get_cheer_messages(
     """Get cheer messages with pagination (most recent first)"""
     from server import db as database
     
+    # Legacy race codes - races that existed before race_code was added to messages
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     # Get race code - use parameter or get active race
     active_race_code = race_code
     if not active_race_code:
@@ -1720,14 +1723,15 @@ async def get_cheer_messages(
     # Choose the correct collection
     collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
-    # Determine data source based on race code
-    LEGACY_RACE_CODES = ["BYSD-2026"]
+    # For legacy races, automatically include messages without race_code
+    is_legacy_race = active_race_code in LEGACY_RACE_CODES
+    should_include_legacy = include_legacy or is_legacy_race
     
-    # Build query - by default only show messages for the specified race
+    # Build query
     query = {}
     if active_race_code:
-        if include_legacy:
-            # Include legacy messages only if explicitly requested
+        if should_include_legacy:
+            # Include messages with this race_code OR messages without race_code (legacy)
             query["$or"] = [
                 {"race_code": active_race_code},
                 {"race_code": {"$exists": False}},
