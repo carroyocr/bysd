@@ -218,6 +218,12 @@ export default function AdminPage() {
             </TabsContent>
           )}
 
+          {hasAccess('lap-registry') && (
+            <TabsContent value="lap-registry">
+              <LapRegistrationsPanel />
+            </TabsContent>
+          )}
+
           {hasAccess('scanner') && (
             <TabsContent value="scanner">
               <QRScannerPanel />
