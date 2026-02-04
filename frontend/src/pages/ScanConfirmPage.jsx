@@ -176,6 +176,12 @@ export default function ScanConfirmPage() {
       const data = await response.json();
       
       if (response.ok) {
+        if (data.action === 'lap_not_started') {
+          // Lap hasn't started - show warning but don't mark as completed
+          toast.warning(data.message);
+          return;
+        }
+        
         setCompleted(true);
         setCompletedAction(data);
         
