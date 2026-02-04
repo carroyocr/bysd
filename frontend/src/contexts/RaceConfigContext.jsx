@@ -82,12 +82,26 @@ export function RaceConfigProvider({ children }) {
     return date.toLocaleDateString('es-ES', options);
   };
 
+  // Helper function to parse GMT offset from timezone string
+  const getTimezoneOffset = () => {
+    const tz = config.timezone_gmt || 'GMT-4';
+    const match = tz.match(/GMT([+-]?\d+)/);
+    if (match) {
+      const offset = parseInt(match[1]);
+      const sign = offset >= 0 ? '-' : '+';
+      const absOffset = Math.abs(offset).toString().padStart(2, '0');
+      return `${sign}${absOffset}:00`;
+    }
+    return '-04:00'; // Default to GMT-4
+  };
+
   // Helper function to get the race start datetime
   const getRaceStartDate = () => {
     if (!config.date || !config.start_time) {
       return new Date('2026-01-24T09:00:00-04:00');
     }
-    return new Date(`${config.date}T${config.start_time}:00-04:00`);
+    const tzOffset = getTimezoneOffset();
+    return new Date(`${config.date}T${config.start_time}:00${tzOffset}`);
   };
 
   // Helper to get the short date format (e.g., "Sábado 24 Enero, 2026")
