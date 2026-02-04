@@ -489,9 +489,9 @@ async def confirm_lap(request: LapConfirmRequest):
                 "$set": {
                     "status": "retired",
                     "retired_at_lap": current_laps,
-                    "retired_at": datetime.now(timezone.utc),
+                    "retired_at": local_time,
                     "retired_reason": f"Regresó antes de tiempo ({minutes_into_lap} min < {MIN_LAP_TIME_MINUTES} min)",
-                    "updated_at": datetime.now(timezone.utc)
+                    "updated_at": local_time
                 }
             }
         )
@@ -504,11 +504,11 @@ async def confirm_lap(request: LapConfirmRequest):
             "lap_number": expected_lap,
             "action": "dnf_early_return",
             "lap_start_time": lap_info.get("lap_start_time"),
-            "scan_time": datetime.now(timezone.utc),
+            "scan_time": local_time,
             "minutes_into_lap": minutes_into_lap,
             "scanned_by": request.scanned_by or "unknown",
             "reason": f"Regresó a los {minutes_into_lap} minutos (mínimo {MIN_LAP_TIME_MINUTES})",
-            "created_at": datetime.now(timezone.utc)
+            "created_at": local_time
         })
         
         return {
