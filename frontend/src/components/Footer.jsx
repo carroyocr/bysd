@@ -13,14 +13,7 @@ export default function Footer() {
   };
 
   const quickLinks = [
-    { href: '/evento', label: 'Evento' },
-    { href: '/corredores', label: 'Corredores' },
-    { href: '/voluntarios', label: 'Voluntarios' },
-    { href: '/reglas', label: 'Reglas' },
-    { href: '/logistica', label: 'Logística' },
-    { href: '/patrocinadores', label: 'Patrocinadores' },
     { href: '/faq', label: 'FAQ' },
-    { href: '/encuesta', label: 'Encuesta' },
     { href: '/admin/login', label: 'Admin' },
   ];
 
