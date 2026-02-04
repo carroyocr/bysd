@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   QrCode, Check, X, Loader2, AlertTriangle, Clock, 
-  User, Timer, RefreshCw
+  User, Timer, RefreshCw, Home
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
