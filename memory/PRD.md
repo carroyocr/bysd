@@ -543,6 +543,33 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 ## Changelog
 
 ### 04 Febrero 2026
+- ✅ **Feature: Sistema de Control de Vueltas con Reglas Avanzadas**
+  - **Regla 1**: Escaneos duplicados en la misma vuelta solo registran el primero
+  - **Regla 2**: Regreso temprano (<35 min) marca automáticamente como DNF
+  - **Regla 3**: Tiempo agotado marca automáticamente como DNF
+  - **Regla 4**: Indicador si la vuelta ya fue registrada
+  - **Regla 5**: DNF manual requiere escribir "DNF" para confirmar
+  - **Nueva pestaña "Registro de Vueltas"**:
+    - Tabla con BIB, Nombre, Vuelta, Acción, Hora Inicio/Fin, Usuario Scan
+    - Filtros por vuelta, atleta y usuario que registró
+    - Exportación a CSV
+    - Resumen por vuelta con completadas/DNF
+  - Nueva colección: `lap_registrations`
+  - Archivos modificados: `backend/routes/qr_scan.py`, `frontend/src/pages/ScanConfirmPage.jsx`
+  - Nuevo componente: `frontend/src/components/LapRegistrationsPanel.jsx`
+  - Nuevos endpoints:
+    - `GET /api/qr-scan/lap-registrations` - Lista de registros con filtros
+    - `GET /api/qr-scan/lap-registrations/export` - Exportar CSV
+    - `GET /api/qr-scan/lap-registrations/summary` - Estadísticas por vuelta
+
+- ✅ **Feature: Control de Vueltas usa Fecha de Inicio Dinámica**
+  - El panel de control ahora usa la fecha/hora de inicio configurada en la carrera
+  - Se eliminó el hardcode de 9:00 AM
+  - Se agregó soporte para zona horaria (GMT-4, etc.)
+
+- ✅ **Bug Fix: Email de Confirmación de Pago sin Detalles**
+  - Agregados campos `payment_amount` y `payment_date` al template de email
+
 - ✅ **Feature: Dashboard de Progreso de Pagos**
   - Barra de progreso principal con porcentaje de gastos liquidados
   - Grid de estadísticas: Total Gastos, Pagado, Pendiente, Pagos Parciales
