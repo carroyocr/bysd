@@ -1958,24 +1958,31 @@ async def get_fan_badge_info(
     from server import db as database
     
     # Get race code - use parameter or get active race
-    active_race_code = race_code
-    if not active_race_code:
-        active_race_code = await get_active_race_code(database)
+    target_race_code = race_code
+    if not target_race_code:
+        target_race_code = await get_active_race_code(database)
+    
+    # Check if this is an archived race
+    race_config = await database.race_configurations.find_one({"code": target_race_code})
+    is_archived_race = race_config and race_config.get("data_archived", False)
+    
+    # Choose the correct collection for messages
+    messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
     # Build query
     query = {"fan_name": fan_name}
-    if active_race_code:
-        query["race_code"] = active_race_code
+    if target_race_code:
+        query["race_code"] = target_race_code
     
     # Count messages by this fan for this race
-    count = await database.cheer_messages.count_documents(query)
+    count = await messages_collection.count_documents(query)
     
     # Get unique athletes cheered
     pipeline = [
         {"$match": query},
         {"$group": {"_id": "$athlete_bib"}}
     ]
-    athletes = await database.cheer_messages.aggregate(pipeline).to_list(100)
+    athletes = await messages_collection.aggregate(pipeline).to_list(100)
     
     badge = get_fan_badge(count)
     
