@@ -601,7 +601,7 @@ export default function ScanConfirmPage() {
             {/* Action Buttons */}
             {!showDnfConfirm && (
               <div className="space-y-2 pt-1">
-                {athlete?.can_complete && !isAutoDNF ? (
+                {athlete?.can_complete && !isAutoDNF && !isLapNotStarted ? (
                   <Button 
                     onClick={handleConfirmLap}
                     disabled={confirming}
@@ -617,6 +617,15 @@ export default function ScanConfirmPage() {
                         Confirmar Vuelta {athlete?.lap_to_complete}
                       </>
                     )}
+                  </Button>
+                ) : isLapNotStarted ? (
+                  <Button 
+                    disabled={true}
+                    size="lg"
+                    className="w-full h-14 text-base bg-gray-600 cursor-not-allowed"
+                  >
+                    <Clock className="w-5 h-5 mr-2" />
+                    Esperando vuelta {athlete?.lap_to_complete}...
                   </Button>
                 ) : isAutoDNF ? (
                   <Button 
@@ -637,7 +646,7 @@ export default function ScanConfirmPage() {
                 ) : null}
                 
                 {/* Manual DNF Button - always available for active athletes */}
-                {athlete?.can_complete && !isAutoDNF && (
+                {athlete?.can_complete && !isAutoDNF && !isLapNotStarted && (
                   <Button 
                     onClick={() => setShowDnfConfirm(true)}
                     disabled={confirming}
