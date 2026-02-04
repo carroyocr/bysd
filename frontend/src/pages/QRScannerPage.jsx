@@ -2,20 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   QrCode, Camera, Clock, Users, AlertTriangle, 
-  Loader2, RefreshCw, ChevronRight, Timer
+  Loader2, RefreshCw, ChevronRight, Timer, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function QRScannerPage() {
   const navigate = useNavigate();
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const scannerRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
   
   const [raceStatus, setRaceStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,8 +28,17 @@ export default function QRScannerPage() {
   // Load race status
   useEffect(() => {
     loadRaceStatus();
-    const interval = setInterval(loadRaceStatus, 30000); // Refresh every 30 seconds
+    const interval = setInterval(loadRaceStatus, 30000);
     return () => clearInterval(interval);
+  }, []);
+  
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current) {
+        html5QrCodeRef.current.stop().catch(() => {});
+      }
+    };
   }, []);
   
   // Countdown timer
@@ -72,85 +82,61 @@ export default function QRScannerPage() {
   };
   
   const startCamera = async () => {
-    setScanning(true);
     setCameraError(null);
+    setScanning(true);
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
+      // Small delay to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        
-        // Start scanning for QR codes
-        scanQRCode();
-      }
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = html5QrCode;
+      
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+      };
+      
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          handleQRDetected(decodedText);
+        },
+        () => {} // Ignore errors during scanning
+      );
     } catch (err) {
       console.error('Camera error:', err);
-      setCameraError('No se pudo acceder a la cámara. Usa la entrada manual.');
+      let errorMessage = 'No se pudo acceder a la cámara.';
+      
+      if (err.toString().includes('NotAllowedError')) {
+        errorMessage = 'Permiso de cámara denegado. Por favor permite el acceso a la cámara en la configuración de tu navegador.';
+      } else if (err.toString().includes('NotFoundError')) {
+        errorMessage = 'No se encontró ninguna cámara en este dispositivo.';
+      } else if (err.toString().includes('NotReadableError')) {
+        errorMessage = 'La cámara está siendo usada por otra aplicación.';
+      }
+      
+      setCameraError(errorMessage);
       setScanning(false);
     }
   };
   
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current = null;
+      } catch (err) {
+        console.error('Error stopping camera:', err);
+      }
     }
     setScanning(false);
   };
   
-  const scanQRCode = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    
-    // Check if BarcodeDetector is available
-    if ('BarcodeDetector' in window) {
-      const barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
-      
-      const detectLoop = async () => {
-        if (!scanning) return;
-        
-        try {
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
-            
-            const barcodes = await barcodeDetector.detect(canvas);
-            
-            if (barcodes.length > 0) {
-              const qrData = barcodes[0].rawValue;
-              handleQRDetected(qrData);
-              return;
-            }
-          }
-        } catch (err) {
-          console.error('Detection error:', err);
-        }
-        
-        // Continue scanning
-        if (scanning) {
-          requestAnimationFrame(detectLoop);
-        }
-      };
-      
-      detectLoop();
-    } else {
-      // Fallback message
-      setCameraError('Tu navegador no soporta escaneo de QR nativo. Usa la entrada manual.');
-      stopCamera();
-    }
-  };
-  
-  const handleQRDetected = (data) => {
-    stopCamera();
+  const handleQRDetected = async (data) => {
+    await stopCamera();
     
     // Parse the QR code URL to extract BIB and race code
     try {
@@ -255,22 +241,20 @@ export default function QRScannerPage() {
           <CardContent className="space-y-4">
             {scanning ? (
               <div className="relative">
-                <video 
-                  ref={videoRef} 
-                  className="w-full rounded-lg bg-black"
-                  playsInline
-                  muted
+                <div 
+                  id="qr-reader" 
+                  ref={scannerRef}
+                  className="w-full rounded-lg overflow-hidden"
+                  style={{ minHeight: '300px' }}
                 />
-                <canvas ref={canvasRef} className="hidden" />
-                <div className="absolute inset-0 border-2 border-green-400 rounded-lg pointer-events-none">
-                  <div className="absolute inset-8 border border-green-400/50 rounded"></div>
-                </div>
                 <Button 
                   onClick={stopCamera}
                   variant="destructive"
-                  className="absolute bottom-4 left-1/2 -translate-x-1/2"
+                  size="sm"
+                  className="absolute top-2 right-2 z-10"
                 >
-                  Cancelar
+                  <X className="w-4 h-4 mr-1" />
+                  Cerrar
                 </Button>
               </div>
             ) : (
