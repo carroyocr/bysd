@@ -543,6 +543,24 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 ## Changelog
 
 ### 04 Febrero 2026
+- ✅ **Bug Fix: Sistema de Control de Vueltas - Hora Local y Validaciones**
+  - **Hora local**: Ahora se guardan campos `scan_time_local` y `lap_start_time_local` en formato legible (HH:MM:SS)
+  - **Vuelta no iniciada**: Nueva validación que impide registrar una vuelta que aún no ha comenzado
+  - **Mejoras en validaciones**:
+    - Regla 1: Escaneos duplicados solo cuentan el primero ✅
+    - Regla 2: Regreso temprano (<35 min) = auto-DNF ✅
+    - Regla 3: Tiempo agotado = auto-DNF ✅
+    - Regla 4: Indicador si vuelta ya registrada ✅
+    - Regla 5: DNF manual requiere escribir "DNF" ✅
+    - **Nueva** Regla 6: No se puede registrar vuelta que no ha iniciado ✅
+  - UI actualizada para mostrar estado "Vuelta no iniciada" con banner púrpura
+  - Archivos modificados: `backend/routes/qr_scan.py`, `frontend/src/pages/ScanConfirmPage.jsx`, `frontend/src/components/LapRegistrationsPanel.jsx`
+
+- ✅ **Mejora: Páginas del Scanner optimizadas para móvil**
+  - Sin menú ni pie de página
+  - Botón Home para volver al inicio
+  - Elementos compactos para pantallas pequeñas
+
 - ✅ **Feature: Sistema de Control de Vueltas con Reglas Avanzadas**
   - **Regla 1**: Escaneos duplicados en la misma vuelta solo registran el primero
   - **Regla 2**: Regreso temprano (<35 min) marca automáticamente como DNF
