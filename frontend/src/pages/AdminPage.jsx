@@ -97,10 +97,16 @@ export default function AdminPage() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Check if user has access to a specific tab
+  // Check if user has access to a specific tab or special permission
   const hasAccess = (tabId) => {
     if (isAdmin) return true;
     if (userPermissions.includes('all')) return true;
+    
+    // Check for special permissions (like 'scanner')
+    if (SPECIAL_PERMISSIONS.includes(tabId)) {
+      return userPermissions.includes(tabId);
+    }
+    
     const requiredPermission = TAB_PERMISSIONS[tabId];
     return userPermissions.includes(requiredPermission);
   };
