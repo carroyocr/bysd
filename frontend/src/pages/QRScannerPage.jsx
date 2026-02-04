@@ -325,10 +325,22 @@ export default function QRScannerPage() {
         </Card>
         
         {/* Quick Info */}
-        <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-          <p className="text-sm text-gray-400">
+        <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+          <p className="text-xs sm:text-sm text-gray-400">
             Al escanear el QR o ingresar el BIB, podrás confirmar la vuelta completada o marcar al atleta como DNF.
           </p>
+        </div>
+        
+        {/* Home Button at Bottom */}
+        <div className="pt-2 pb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/')}
+            className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Volver al Inicio
+          </Button>
         </div>
       </div>
     </div>
