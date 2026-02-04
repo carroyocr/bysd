@@ -860,7 +860,7 @@ export default function RaceControlPanel({ embedded = false }) {
                       </div>
                     </div>
                     <p className="text-xs text-blue-500 mt-2">
-                      La carrera inicia a las 9:00 AM • Cada vuelta dura 1 hora
+                      La carrera inicia a las {getRaceStartDate().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true })} • Cada vuelta dura 1 hora
                     </p>
                     <p className="text-xs text-blue-600 mt-1 font-medium">
                       Hora actual: {currentTime.toLocaleTimeString('es-DO')}
