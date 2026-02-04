@@ -58,6 +58,13 @@ export default function AdminPage() {
         const permissions = JSON.parse(localStorage.getItem('admin_permissions') || '[]');
         setUserPermissions(permissions);
         
+        // Check if user ONLY has scanner permission - redirect directly to /scan
+        const hasOnlyScanner = permissions.length === 1 && permissions[0] === 'scanner';
+        if (hasOnlyScanner && !isAdminUser) {
+          navigate('/scan');
+          return;
+        }
+        
         // Set initial tab based on permissions
         const requestedTab = searchParams.get('tab') || 'control';
         if (isAdminUser || permissions.includes('all') || permissions.includes(TAB_PERMISSIONS[requestedTab])) {
@@ -67,7 +74,15 @@ export default function AdminPage() {
           const firstAllowedTab = Object.keys(TAB_PERMISSIONS).find(tab => 
             permissions.includes(TAB_PERMISSIONS[tab])
           );
-          setActiveTab(firstAllowedTab || 'control');
+          if (firstAllowedTab) {
+            setActiveTab(firstAllowedTab);
+          } else if (permissions.includes('scanner')) {
+            // User only has scanner permission, redirect to scanner
+            navigate('/scan');
+            return;
+          } else {
+            setActiveTab('control');
+          }
         }
       } catch (e) {
         setUserPermissions([]);
