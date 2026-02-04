@@ -389,35 +389,57 @@ export default function FinancesManagement() {
       {summary.total_gastos > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Receipt className="w-5 h-5" />
-              Progreso de Pagos
-            </CardTitle>
-            <CardDescription>Estado de liquidación de gastos del evento</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Main Progress Bar */}
+            <div className="flex items-center justify-between">
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Gastos Liquidados</span>
-                  <span className="text-sm font-bold">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Receipt className="w-5 h-5" />
+                  Progreso de Pagos
+                  <Badge variant="outline" className="ml-2 font-normal">
                     {summary.total_gastos > 0 
                       ? Math.round(((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
-                      : 0}%
-                  </span>
-                </div>
-                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${summary.total_gastos > 0 
-                        ? Math.min(100, ((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
-                        : 0}%` 
-                    }}
-                  />
-                </div>
+                      : 0}% liquidado
+                  </Badge>
+                </CardTitle>
+                <CardDescription>Estado de liquidación de gastos del evento</CardDescription>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowProgressDashboard(!showProgressDashboard)}
+                className="h-8 w-8 p-0"
+              >
+                {showProgressDashboard ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {showProgressDashboard && (
+            <CardContent>
+              <div className="space-y-6">
+                {/* Main Progress Bar */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium">Gastos Liquidados</span>
+                    <span className="text-sm font-bold">
+                      {summary.total_gastos > 0 
+                        ? Math.round(((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${summary.total_gastos > 0 
+                          ? Math.min(100, ((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
+                          : 0}%` 
+                      }}
+                    />
+                  </div>
+                </div>
 
               {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
