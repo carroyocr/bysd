@@ -32,6 +32,9 @@ const TAB_PERMISSIONS = {
   'emails': 'emails'
 };
 
+// Special permissions that are not tabs (used for menu buttons)
+const SPECIAL_PERMISSIONS = ['scanner'];
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
