@@ -1851,6 +1851,9 @@ async def get_cheer_leaderboard(
     """Get leaderboard of athletes with most cheer messages"""
     from server import db as database
     
+    # Legacy race codes
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     # Get race code - use parameter or get active race
     target_race_code = race_code
     if not target_race_code:
@@ -1863,8 +1866,24 @@ async def get_cheer_leaderboard(
     # Choose the correct collection for messages
     messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
-    # Aggregate cheer messages by athlete - only for specified race
-    match_stage = {"race_code": target_race_code} if target_race_code else {}
+    # For legacy races, include messages without race_code
+    is_legacy_race = target_race_code in LEGACY_RACE_CODES
+    
+    # Build match stage
+    if target_race_code:
+        if is_legacy_race:
+            match_stage = {
+                "$or": [
+                    {"race_code": target_race_code},
+                    {"race_code": {"$exists": False}},
+                    {"race_code": None},
+                    {"race_code": ""}
+                ]
+            }
+        else:
+            match_stage = {"race_code": target_race_code}
+    else:
+        match_stage = {}
     
     pipeline = [
         {"$match": match_stage},
