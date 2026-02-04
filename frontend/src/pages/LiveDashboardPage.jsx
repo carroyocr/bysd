@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 
 export default function LiveDashboardPage() {
   const { raceCode } = useParams();
-  const [visibility, setVisibility] = useState({ loading: true, enabled: true, raceName: '' });
+  const [visibility, setVisibility] = useState({ loading: true, enabled: true, raceName: '', activeRaceCode: '' });
   
   useEffect(() => {
     const checkVisibility = async () => {
@@ -15,21 +15,25 @@ export default function LiveDashboardPage() {
         const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/page-visibility`);
         if (response.ok) {
           const data = await response.json();
+          // Only apply visibility restriction to the ACTIVE race
+          // Past races should always be accessible
+          const isActiveRace = !raceCode || data.race_code === raceCode;
           setVisibility({
             loading: false,
-            enabled: data.show_tracking_page,
-            raceName: data.race_name
+            enabled: isActiveRace ? data.show_tracking_page : true, // Always allow past races
+            raceName: data.race_name,
+            activeRaceCode: data.race_code
           });
         } else {
-          setVisibility({ loading: false, enabled: true, raceName: '' });
+          setVisibility({ loading: false, enabled: true, raceName: '', activeRaceCode: '' });
         }
       } catch (error) {
         console.error('Error checking page visibility:', error);
-        setVisibility({ loading: false, enabled: true, raceName: '' });
+        setVisibility({ loading: false, enabled: true, raceName: '', activeRaceCode: '' });
       }
     };
     checkVisibility();
-  }, []);
+  }, [raceCode]);
   
   if (visibility.loading) {
     return (
