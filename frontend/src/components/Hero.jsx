@@ -102,9 +102,9 @@ export default function Hero() {
             </div>
 
             {/* Logo Image - Hidden on mobile, visible on desktop */}
-            <div className="hidden lg:flex items-center justify-center animate-scale-in">
+            <div className="hidden lg:flex items-center justify-center animate-scale-in p-16">
               <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
+                <div className="absolute -inset-16 bg-primary/20 blur-3xl rounded-full"></div>
                 <img
                   src={getLogoUrl('home')}
                   alt="Backyard Ultra Santo Domingo Logo"
