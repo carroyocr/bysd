@@ -543,6 +543,14 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 ## Changelog
 
 ### 04 Febrero 2026
+- ✅ **Feature: Dashboard de Progreso de Pagos**
+  - Barra de progreso principal con porcentaje de gastos liquidados
+  - Grid de estadísticas: Total Gastos, Pagado, Pendiente, Pagos Parciales
+  - Desglose visual por estado (Pagados, Parciales, Pendientes) con barras de progreso
+  - Cálculo correcto de montos considerando pagos parciales
+  - Se muestra solo cuando hay gastos registrados
+  - Archivos modificados: `frontend/src/components/FinancesManagement.jsx`, `backend/routes/finances.py`
+
 - ✅ **Feature: Sistema de Gestión de Pagos de Gastos**
   - **Estado del pago**: Pendiente, Parcialmente Pagado, Pagado
   - **Métodos de pago**: Efectivo, Transferencia, Tarjeta, Cheque, PayPal, Otro
