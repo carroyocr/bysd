@@ -1713,10 +1713,17 @@ async def get_cheer_messages(
     if not active_race_code:
         active_race_code = await get_active_race_code(database)
     
+    # Check if this is an archived race - if so, query from archived_cheer_messages
+    race_config = await database.race_configurations.find_one({"code": active_race_code})
+    is_archived_race = race_config and race_config.get("data_archived", False)
+    
+    # Choose the correct collection
+    collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
+    
     # Determine data source based on race code
     LEGACY_RACE_CODES = ["BYSD-2026"]
     
-    # Build query - by default only show messages for the active race
+    # Build query - by default only show messages for the specified race
     query = {}
     if active_race_code:
         if include_legacy:
@@ -1728,7 +1735,7 @@ async def get_cheer_messages(
                 {"race_code": ""}
             ]
         else:
-            # Only show messages for the active race
+            # Only show messages for the specified race
             query["race_code"] = active_race_code
     
     if athlete_bib:
@@ -1741,11 +1748,11 @@ async def get_cheer_messages(
     skip = (page - 1) * limit
     
     # Get total count for pagination info
-    total_count = await database.cheer_messages.count_documents(query)
+    total_count = await collection.count_documents(query)
     total_pages = (total_count + limit - 1) // limit  # Ceiling division
     
     # Get messages sorted by created_at descending with pagination
-    messages = await database.cheer_messages.find(
+    messages = await collection.find(
         query,
         {"_id": 0}
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
