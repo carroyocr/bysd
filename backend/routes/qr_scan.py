@@ -463,11 +463,26 @@ async def confirm_lap(request: LapConfirmRequest):
             "registered_at": existing_scan.get("scan_time")
         }
     
+    # Get local time for this race
+    local_time = get_race_time(active_race)
+    
     # Check timing constraints
     minutes_into_lap = lap_info.get("minutes_into_lap", 0)
+    current_race_lap = lap_info.get("current_lap", 0)
+    
+    # Rule: Cannot register a lap that hasn't started yet
+    if expected_lap > current_race_lap:
+        return {
+            "success": False,
+            "action": "lap_not_started",
+            "message": f"La vuelta {expected_lap} aún no ha iniciado. Vuelta actual: {current_race_lap}. Debe esperar a que inicie.",
+            "bib": bib,
+            "laps_completed": current_laps,
+            "current_race_lap": current_race_lap
+        }
     
     # Rule 2: If scanned within 35 minutes, athlete returned too early - DNF
-    if minutes_into_lap < MIN_LAP_TIME_MINUTES and expected_lap == lap_info["current_lap"]:
+    if minutes_into_lap < MIN_LAP_TIME_MINUTES and expected_lap == current_race_lap:
         await database.registrations.update_one(
             {"email": email, "race_code": race_code},
             {
