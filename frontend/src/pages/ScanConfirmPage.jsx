@@ -553,13 +553,14 @@ export default function ScanConfirmPage() {
                   placeholder="Escriba DNF"
                   value={dnfInput}
                   onChange={(e) => setDnfInput(e.target.value.toUpperCase())}
-                  className="bg-gray-900 border-gray-700 text-white text-center mb-3"
+                  className="bg-gray-900 border-gray-700 text-white text-center mb-2 h-10"
                   autoFocus
                 />
                 <div className="flex gap-2">
                   <Button 
                     onClick={() => { setShowDnfConfirm(false); setDnfInput(''); }}
                     variant="outline"
+                    size="sm"
                     className="flex-1 border-gray-600"
                   >
                     Cancelar
@@ -567,6 +568,7 @@ export default function ScanConfirmPage() {
                   <Button 
                     onClick={handleDNF}
                     disabled={confirming || dnfInput !== 'DNF'}
+                    size="sm"
                     className="flex-1 bg-red-600 hover:bg-red-700"
                   >
                     {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar DNF'}
@@ -577,20 +579,20 @@ export default function ScanConfirmPage() {
             
             {/* Action Buttons */}
             {!showDnfConfirm && (
-              <div className="space-y-3 pt-2">
+              <div className="space-y-2 pt-1">
                 {athlete?.can_complete && !isAutoDNF ? (
                   <Button 
                     onClick={handleConfirmLap}
                     disabled={confirming}
                     size="lg"
-                    className="w-full h-16 text-lg bg-green-600 hover:bg-green-700"
+                    className="w-full h-14 text-base bg-green-600 hover:bg-green-700"
                     data-testid="confirm-lap-btn"
                   >
                     {confirming ? (
                       <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Confirmando...</>
                     ) : (
                       <>
-                        <Check className="w-6 h-6 mr-2" />
+                        <Check className="w-5 h-5 mr-2" />
                         Confirmar Vuelta {athlete?.lap_to_complete}
                       </>
                     )}
@@ -600,13 +602,13 @@ export default function ScanConfirmPage() {
                     onClick={handleConfirmLap}
                     disabled={confirming}
                     size="lg"
-                    className="w-full h-16 text-lg bg-red-600 hover:bg-red-700"
+                    className="w-full h-14 text-base bg-red-600 hover:bg-red-700"
                   >
                     {confirming ? (
                       <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Procesando...</>
                     ) : (
                       <>
-                        <X className="w-6 h-6 mr-2" />
+                        <X className="w-5 h-5 mr-2" />
                         Confirmar DNF Automático
                       </>
                     )}
