@@ -47,6 +47,7 @@ export default function FinancesManagement() {
   const [saving, setSaving] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [showPartialPaymentForm, setShowPartialPaymentForm] = useState(null);
+  const [showProgressDashboard, setShowProgressDashboard] = useState(true);
   
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
