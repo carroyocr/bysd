@@ -542,6 +542,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ## Changelog
 
+### 04 Febrero 2026
+- ✅ **Bug Fix: Efecto de Glow Cortado en Logo de Homepage** 
+  - Corregido bug visual donde el efecto de brillo/glow alrededor del logo en la página principal se cortaba abruptamente
+  - Causa: `overflow-hidden` en el contenedor padre limitaba la expansión del efecto `blur-3xl`
+  - Solución: Removido `overflow-hidden` de la sección principal, agregado padding al contenedor del logo (`p-20`), y expandido el área del glow con `blur-[80px]` y `scale-150`
+  - Archivo modificado: `frontend/src/components/Hero.jsx`
+
 ### 18 Enero 2026
 - ✅ Modificada lógica de DNF: Marcar como DNF ya NO incrementa vueltas
 - ✅ Corregida función `revert_lap`: Al revertir, atletas DNF se reactivan con sus vueltas originales
