@@ -436,6 +436,7 @@ export default function ScanConfirmPage() {
   // Main confirmation view
   const isUrgent = timeRemaining < 300; // Less than 5 minutes
   const isAutoDNF = athlete?.auto_dnf || athlete?.early_return;
+  const isLapNotStarted = athlete?.lap_to_complete > athlete?.current_race_lap;
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
@@ -454,8 +455,22 @@ export default function ScanConfirmPage() {
           <div className="w-9" />
         </div>
 
+        {/* Lap Not Started Warning */}
+        {isLapNotStarted && (
+          <div className="bg-purple-900/50 border border-purple-500 rounded-lg p-3 mb-3 text-center">
+            <Clock className="w-6 h-6 text-purple-400 mx-auto mb-1" />
+            <p className="text-purple-400 font-medium text-sm">VUELTA NO INICIADA</p>
+            <p className="text-xs text-gray-400 mt-1">
+              La vuelta {athlete?.lap_to_complete} aún no ha comenzado
+            </p>
+            <p className="text-xs text-purple-300 mt-1">
+              Vuelta actual: {athlete?.current_race_lap}. Debe esperar.
+            </p>
+          </div>
+        )}
+
         {/* Timer Banner */}
-        {athlete && athlete.can_complete && !isAutoDNF && (
+        {athlete && athlete.can_complete && !isAutoDNF && !isLapNotStarted && (
           <div className={`rounded-lg p-3 mb-3 text-center ${isUrgent ? 'bg-red-900/50 border border-red-500' : 'bg-gray-800 border border-gray-700'}`}>
             <div className="flex items-center justify-center gap-2 mb-1">
               <Timer className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-gray-400'}`} />
