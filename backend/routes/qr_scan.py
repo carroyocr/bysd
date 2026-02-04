@@ -606,7 +606,9 @@ async def confirm_lap(request: LapConfirmRequest):
         "lap_number": new_laps,
         "action": "lap_completed",
         "lap_start_time": lap_info.get("lap_start_time"),
+        "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
         "scan_time": local_time,
+        "scan_time_local": get_race_time_str(active_race),
         "minutes_into_lap": minutes_into_lap,
         "scanned_by": request.scanned_by or "unknown",
         "created_at": local_time
