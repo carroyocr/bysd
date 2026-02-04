@@ -133,6 +133,13 @@ export default function AdminPage() {
                 <span className="sm:hidden">Control</span>
               </TabsTrigger>
             )}
+            {hasAccess('lap-registry') && (
+              <TabsTrigger value="lap-registry" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <span className="hidden sm:inline">Registro Vueltas</span>
+                <span className="sm:hidden">Vueltas</span>
+              </TabsTrigger>
+            )}
             {hasAccess('scanner') && (
               <TabsTrigger value="scanner" className="flex items-center gap-2">
                 <QrCode className="w-4 h-4" />
