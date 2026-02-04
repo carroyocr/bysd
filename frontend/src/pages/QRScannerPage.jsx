@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  QrCode, Camera, Clock, Users, AlertTriangle, 
-  Loader2, RefreshCw, ChevronRight, Timer, X
+  QrCode, Camera, Users, AlertTriangle, 
+  Loader2, RefreshCw, ChevronRight, Timer, X, Home
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
