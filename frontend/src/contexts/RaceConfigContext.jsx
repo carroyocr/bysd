@@ -88,11 +88,12 @@ export function RaceConfigProvider({ children }) {
     const match = tz.match(/GMT([+-]?\d+)/);
     if (match) {
       const offset = parseInt(match[1]);
-      const sign = offset >= 0 ? '-' : '+';
+      // GMT-4 means UTC-4, so offset is -04:00
+      const sign = offset <= 0 ? '-' : '+';
       const absOffset = Math.abs(offset).toString().padStart(2, '0');
       return `${sign}${absOffset}:00`;
     }
-    return '-04:00'; // Default to GMT-4
+    return '-04:00'; // Default to GMT-4 (UTC-4)
   };
 
   // Helper function to get the race start datetime
