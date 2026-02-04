@@ -141,11 +141,15 @@ export default function AdminPage() {
               </TabsTrigger>
             )}
             {hasAccess('scanner') && (
-              <TabsTrigger value="scanner" className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/scan')}
+                className="flex items-center gap-2 px-3 py-1.5 h-auto text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground"
+              >
                 <QrCode className="w-4 h-4" />
                 <span className="hidden sm:inline">Escáner QR</span>
                 <span className="sm:hidden">QR</span>
-              </TabsTrigger>
+              </Button>
             )}
             {hasAccess('registrations') && (
               <TabsTrigger value="registrations" className="flex items-center gap-2">
