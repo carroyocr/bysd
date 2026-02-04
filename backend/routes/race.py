@@ -1795,36 +1795,56 @@ async def get_cheer_messages(
 
 @router.get("/cheers/count")
 async def get_cheer_count(
+    race_code: Optional[str] = Query(None, description="Race code to get count for"),
     db=Depends(lambda: None)
 ):
-    """Get total count of cheer messages for the active race"""
+    """Get total count of cheer messages for a race"""
     from server import db as database
     
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
+    # Get race code - use parameter or get active race
+    target_race_code = race_code
+    if not target_race_code:
+        target_race_code = await get_active_race_code(database)
     
-    # Count only messages for the active race
-    if active_race_code:
-        count = await database.cheer_messages.count_documents({"race_code": active_race_code})
+    # Check if this is an archived race
+    race_config = await database.race_configurations.find_one({"code": target_race_code})
+    is_archived_race = race_config and race_config.get("data_archived", False)
+    
+    # Choose the correct collection
+    collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
+    
+    # Count only messages for the specified race
+    if target_race_code:
+        count = await collection.count_documents({"race_code": target_race_code})
     else:
         count = 0
     
-    return {"count": count}
+    return {"count": count, "race_code": target_race_code, "is_archived": is_archived_race}
 
 
 @router.get("/cheers/leaderboard")
 async def get_cheer_leaderboard(
     limit: int = 10,
+    race_code: Optional[str] = Query(None, description="Race code to get leaderboard for"),
     db=Depends(lambda: None)
 ):
-    """Get leaderboard of athletes with most cheer messages for the active race"""
+    """Get leaderboard of athletes with most cheer messages"""
     from server import db as database
     
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
+    # Get race code - use parameter or get active race
+    target_race_code = race_code
+    if not target_race_code:
+        target_race_code = await get_active_race_code(database)
     
-    # Aggregate cheer messages by athlete - only for active race
-    match_stage = {"race_code": active_race_code} if active_race_code else {}
+    # Check if this is an archived race
+    race_config = await database.race_configurations.find_one({"code": target_race_code})
+    is_archived_race = race_config and race_config.get("data_archived", False)
+    
+    # Choose the correct collection for messages
+    messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
+    
+    # Aggregate cheer messages by athlete - only for specified race
+    match_stage = {"race_code": target_race_code} if target_race_code else {}
     
     pipeline = [
         {"$match": match_stage},
@@ -1836,7 +1856,7 @@ async def get_cheer_leaderboard(
         {"$limit": limit}
     ]
     
-    results = await database.cheer_messages.aggregate(pipeline).to_list(limit)
+    results = await messages_collection.aggregate(pipeline).to_list(limit)
     
     # Enrich with athlete data
     leaderboard = []
