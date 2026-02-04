@@ -246,14 +246,18 @@ export default function ScanConfirmPage() {
   const handleScanAnother = () => {
     navigate('/scan');
   };
+
+  const handleGoHome = () => {
+    navigate('/');
+  };
   
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center safe-area-inset">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-white mx-auto mb-4" />
-          <p className="text-gray-300">Cargando información del atleta...</p>
+          <Loader2 className="w-10 h-10 animate-spin text-white mx-auto mb-4" />
+          <p className="text-gray-300 text-sm">Cargando información del atleta...</p>
         </div>
       </div>
     );
@@ -262,7 +266,7 @@ export default function ScanConfirmPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
         <div className="max-w-md mx-auto pt-12">
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-8 text-center">
