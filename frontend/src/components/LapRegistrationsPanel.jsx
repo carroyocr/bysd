@@ -324,9 +324,13 @@ export default function LapRegistrationsPanel() {
                   {registrations.map((reg, index) => {
                     // Calculate pace (min/km) - lap is 6.7km
                     const KM_PER_LAP = 6.7;
-                    const pace = reg.minutes_into_lap && reg.action === 'lap_completed' 
-                      ? (reg.minutes_into_lap / KM_PER_LAP).toFixed(2) 
-                      : null;
+                    let paceFormatted = null;
+                    if (reg.minutes_into_lap && reg.action === 'lap_completed') {
+                      const paceDecimal = reg.minutes_into_lap / KM_PER_LAP;
+                      const paceMinutes = Math.floor(paceDecimal);
+                      const paceSeconds = Math.round((paceDecimal - paceMinutes) * 60);
+                      paceFormatted = `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')}`;
+                    }
                     
                     return (
                     <tr key={index} className="border-b hover:bg-muted/30">
