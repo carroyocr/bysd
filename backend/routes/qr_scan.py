@@ -75,6 +75,18 @@ def get_race_time(race_config: dict) -> datetime:
     return datetime.now(tz)
 
 
+def get_race_time_str(race_config: dict) -> str:
+    """Get current time as string in race timezone format HH:MM:SS"""
+    local_time = get_race_time(race_config)
+    return local_time.strftime("%H:%M:%S")
+
+
+def get_race_datetime_str(race_config: dict) -> str:
+    """Get current datetime as string in race timezone"""
+    local_time = get_race_time(race_config)
+    return local_time.strftime("%Y-%m-%d %H:%M:%S")
+
+
 def get_race_start_datetime(race_config: dict) -> datetime:
     """Get race start datetime from config"""
     tz_offset = parse_timezone_offset(race_config.get("timezone_gmt", "GMT-4"))
