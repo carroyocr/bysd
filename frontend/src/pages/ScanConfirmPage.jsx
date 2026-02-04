@@ -338,28 +338,38 @@ export default function ScanConfirmPage() {
                     <p className="text-sm text-gray-400">Vueltas</p>
                     <p className="text-2xl font-bold text-green-400">{completedAction.laps_completed}</p>
                   </div>
-                  <div className="bg-gray-800/50 rounded-lg p-3">
-                    <p className="text-sm text-gray-400">Distancia</p>
-                    <p className="text-2xl font-bold text-green-400">{completedAction.total_km} km</p>
+                  <div className="bg-gray-800/50 rounded-lg p-2">
+                    <p className="text-xs text-gray-400">Distancia</p>
+                    <p className="text-xl font-bold text-green-400">{completedAction.total_km} km</p>
                   </div>
                 </div>
               )}
               
               {completedAction.minutes_into_lap !== undefined && isDNF && (
-                <div className="bg-gray-800/50 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-gray-400">Tiempo en vuelta</p>
-                  <p className="text-xl font-bold text-orange-400">{completedAction.minutes_into_lap} minutos</p>
+                <div className="bg-gray-800/50 rounded-lg p-2 mb-3">
+                  <p className="text-xs text-gray-400">Tiempo en vuelta</p>
+                  <p className="text-lg font-bold text-orange-400">{completedAction.minutes_into_lap} minutos</p>
                 </div>
               )}
               
-              <Button 
-                onClick={handleScanAnother} 
-                size="lg" 
-                className="w-full bg-white text-gray-900 hover:bg-gray-200"
-              >
-                <QrCode className="w-5 h-5 mr-2" />
-                Escanear Siguiente Atleta
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleScanAnother} 
+                  size="lg" 
+                  className="w-full h-12 bg-white text-gray-900 hover:bg-gray-200"
+                >
+                  <QrCode className="w-5 h-5 mr-2" />
+                  Escanear Siguiente
+                </Button>
+                <Button 
+                  onClick={handleGoHome} 
+                  variant="ghost" 
+                  className="w-full text-gray-400"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Ir al Inicio
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -370,32 +380,32 @@ export default function ScanConfirmPage() {
   // Cannot complete - athlete inactive or already registered
   if (athlete && !athlete.can_complete && !athlete.auto_dnf && !athlete.early_return) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-        <div className="max-w-md mx-auto pt-12">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
+        <div className="max-w-md mx-auto pt-6">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mx-auto mb-4">
+            <CardContent className="p-5 text-center">
+              <div className="w-14 h-14 rounded-full bg-gray-700 flex items-center justify-center mx-auto mb-3">
                 {athlete.already_registered ? (
-                  <Clock className="w-8 h-8 text-blue-400" />
+                  <Clock className="w-7 h-7 text-blue-400" />
                 ) : (
-                  <User className="w-8 h-8 text-gray-400" />
+                  <User className="w-7 h-7 text-gray-400" />
                 )}
               </div>
               
-              <p className="text-4xl font-bold text-white mb-2">BIB #{athlete.bib}</p>
-              <h2 className="text-xl font-semibold text-white mb-1">
+              <p className="text-3xl font-bold text-white mb-1">BIB #{athlete.bib}</p>
+              <h2 className="text-lg font-semibold text-white mb-1">
                 {athlete.nombre} {athlete.apellidos}
               </h2>
               
-              <div className={`rounded-lg p-4 my-4 ${
+              <div className={`rounded-lg p-3 my-3 ${
                 athlete.already_registered 
                   ? 'bg-blue-900/30 border border-blue-500' 
                   : 'bg-amber-900/30 border border-amber-500'
               }`}>
-                <p className={athlete.already_registered ? 'text-blue-400' : 'text-amber-400'}>
+                <p className={`text-sm ${athlete.already_registered ? 'text-blue-400' : 'text-amber-400'}`}>
                   {athlete.message}
                 </p>
-                <p className="text-sm text-gray-400 mt-2">
+                <p className="text-xs text-gray-400 mt-2">
                   Estado: <span className="uppercase text-amber-400">{athlete.status}</span>
                 </p>
               </div>
