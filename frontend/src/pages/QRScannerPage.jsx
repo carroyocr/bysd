@@ -171,16 +171,27 @@ export default function QRScannerPage() {
   const isUrgent = timeRemaining < 300 && timeRemaining > 0;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <div className="max-w-md mx-auto pt-8 space-y-4">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
-            <QrCode className="w-7 h-7" />
-            Control de Vueltas
-          </h1>
-          <p className="text-gray-400 mt-1">Escanea el QR del corredor o ingresa su BIB</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 sm:p-4 safe-area-inset">
+      <div className="max-w-md mx-auto pt-2 sm:pt-4 space-y-3 sm:space-y-4">
+        {/* Header with Home Button */}
+        <div className="flex items-center justify-between mb-2">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/')}
+            className="text-gray-400 hover:text-white p-2"
+          >
+            <Home className="w-5 h-5" />
+          </Button>
+          <div className="text-center flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center justify-center gap-2">
+              <QrCode className="w-6 h-6 sm:w-7 sm:h-7" />
+              Control de Vueltas
+            </h1>
+          </div>
+          <div className="w-9" /> {/* Spacer for alignment */}
         </div>
+        <p className="text-gray-400 text-center text-sm">Escanea el QR del corredor o ingresa su BIB</p>
         
         {/* Race Status */}
         {raceStatus && raceStatus.race_active && (
