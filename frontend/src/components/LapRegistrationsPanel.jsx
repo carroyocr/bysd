@@ -316,11 +316,19 @@ export default function LapRegistrationsPanel() {
                     <th className="text-center py-3 px-3 font-medium">Inicio Vuelta</th>
                     <th className="text-center py-3 px-3 font-medium">Hora Registro</th>
                     <th className="text-center py-3 px-3 font-medium">Min. en Vuelta</th>
+                    <th className="text-center py-3 px-3 font-medium">Ritmo</th>
                     <th className="text-left py-3 px-3 font-medium">Registrado Por</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.map((reg, index) => (
+                  {registrations.map((reg, index) => {
+                    // Calculate pace (min/km) - lap is 6.7km
+                    const KM_PER_LAP = 6.7;
+                    const pace = reg.minutes_into_lap && reg.action === 'lap_completed' 
+                      ? (reg.minutes_into_lap / KM_PER_LAP).toFixed(2) 
+                      : null;
+                    
+                    return (
                     <tr key={index} className="border-b hover:bg-muted/30">
                       <td className="py-3 px-3">
                         <Badge variant="outline" className="font-mono">
@@ -357,13 +365,21 @@ export default function LapRegistrationsPanel() {
                           </span>
                         ) : '-'}
                       </td>
+                      <td className="py-3 px-3 text-center">
+                        {pace ? (
+                          <span className="font-mono text-blue-600">
+                            {pace} min/km
+                          </span>
+                        ) : '-'}
+                      </td>
                       <td className="py-3 px-3">
                         <span className="text-sm text-muted-foreground">
                           {reg.scanned_by || '-'}
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
