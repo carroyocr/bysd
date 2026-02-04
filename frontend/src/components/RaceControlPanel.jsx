@@ -45,13 +45,16 @@ export default function RaceControlPanel({ embedded = false }) {
   });
   const navigate = useNavigate();
 
-  // Race starts at 9:00 AM, each lap is 1 hour
-  const RACE_START_HOUR = 9;
+  // Get race start hour from config
+  const getRaceStartHour = () => {
+    const raceStart = getRaceStartDate();
+    return raceStart.getHours();
+  };
 
-  // Calculate the time range for a given lap
+  // Calculate the time range for a given lap using actual race start time
   const getLapTimeRange = (lap) => {
-    const startHour = RACE_START_HOUR + (lap - 1);
-    const endHour = startHour;
+    const raceStartHour = getRaceStartHour();
+    const startHour = raceStartHour + (lap - 1);
     
     // Format hours
     const formatHour = (hour) => {
@@ -70,7 +73,7 @@ export default function RaceControlPanel({ embedded = false }) {
     
     return {
       start: formatHour(startHour),
-      end: formatEndHour(endHour)
+      end: formatEndHour(startHour)
     };
   };
 
