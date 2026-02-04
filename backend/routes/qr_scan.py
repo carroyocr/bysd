@@ -521,16 +521,16 @@ async def confirm_lap(request: LapConfirmRequest):
         }
     
     # Rule 3: If lap time expired, auto-DNF
-    if lap_info["race_started"] and expected_lap < lap_info["current_lap"]:
+    if lap_info["race_started"] and expected_lap < current_race_lap:
         await database.registrations.update_one(
             {"email": email, "race_code": race_code},
             {
                 "$set": {
                     "status": "retired",
                     "retired_at_lap": current_laps,
-                    "retired_at": datetime.now(timezone.utc),
+                    "retired_at": local_time,
                     "retired_reason": "Tiempo agotado (auto-DNF por QR scan)",
-                    "updated_at": datetime.now(timezone.utc)
+                    "updated_at": local_time
                 }
             }
         )
@@ -543,10 +543,10 @@ async def confirm_lap(request: LapConfirmRequest):
             "lap_number": expected_lap,
             "action": "dnf_timeout",
             "lap_start_time": lap_info.get("lap_start_time"),
-            "scan_time": datetime.now(timezone.utc),
+            "scan_time": local_time,
             "scanned_by": request.scanned_by or "unknown",
             "reason": f"Tiempo agotado. Vuelta {expected_lap} debió completarse antes.",
-            "created_at": datetime.now(timezone.utc)
+            "created_at": local_time
         })
         
         return {
