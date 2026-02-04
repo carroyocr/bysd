@@ -21,7 +21,6 @@ import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 const TAB_PERMISSIONS = {
   'control': 'control',
   'lap-registry': 'control', // Same permission as control
-  'scanner': 'scanner',
   'registrations': 'athletes',
   'finances': 'finances',
   'volunteers': 'volunteers',
