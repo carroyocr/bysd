@@ -1902,14 +1902,21 @@ async def get_fans_leaderboard(
     from server import db as database
     
     # Get race code - use parameter or get active race
-    active_race_code = race_code
-    if not active_race_code:
-        active_race_code = await get_active_race_code(database)
+    target_race_code = race_code
+    if not target_race_code:
+        target_race_code = await get_active_race_code(database)
+    
+    # Check if this is an archived race
+    race_config = await database.race_configurations.find_one({"code": target_race_code})
+    is_archived_race = race_config and race_config.get("data_archived", False)
+    
+    # Choose the correct collection for messages
+    messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
     # Build match stage
     match_stage = {}
-    if active_race_code:
-        match_stage = {"$match": {"race_code": active_race_code}}
+    if target_race_code:
+        match_stage = {"$match": {"race_code": target_race_code}}
     
     pipeline = []
     if match_stage:
@@ -1925,7 +1932,7 @@ async def get_fans_leaderboard(
         {"$limit": limit}
     ])
     
-    results = await database.cheer_messages.aggregate(pipeline).to_list(limit)
+    results = await messages_collection.aggregate(pipeline).to_list(limit)
     
     leaderboard = []
     for i, item in enumerate(results):
