@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
+import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
@@ -20,6 +21,7 @@ import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
   'control': 'control',
+  'lap-registry': 'control', // Same permission as control
   'scanner': 'scanner',
   'registrations': 'athletes',
   'finances': 'finances',
