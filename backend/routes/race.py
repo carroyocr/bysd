@@ -1805,6 +1805,9 @@ async def get_cheer_count(
     """Get total count of cheer messages for a race"""
     from server import db as database
     
+    # Legacy race codes
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     # Get race code - use parameter or get active race
     target_race_code = race_code
     if not target_race_code:
@@ -1817,13 +1820,26 @@ async def get_cheer_count(
     # Choose the correct collection
     collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
-    # Count only messages for the specified race
+    # For legacy races, include messages without race_code
+    is_legacy_race = target_race_code in LEGACY_RACE_CODES
+    
+    # Count messages
     if target_race_code:
-        count = await collection.count_documents({"race_code": target_race_code})
+        if is_legacy_race:
+            count = await collection.count_documents({
+                "$or": [
+                    {"race_code": target_race_code},
+                    {"race_code": {"$exists": False}},
+                    {"race_code": None},
+                    {"race_code": ""}
+                ]
+            })
+        else:
+            count = await collection.count_documents({"race_code": target_race_code})
     else:
         count = 0
     
-    return {"count": count, "race_code": target_race_code, "is_archived": is_archived_race}
+    return {"count": count, "race_code": target_race_code, "is_archived": is_archived_race, "is_legacy": is_legacy_race}
 
 
 @router.get("/cheers/leaderboard")
