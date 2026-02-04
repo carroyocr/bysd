@@ -543,6 +543,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 ## Changelog
 
 ### 04 Febrero 2026
+- ✅ **Bug Fix: Reset Database ahora limpia lap_registrations**
+  - El botón "Reinicio de Base de Datos" ahora también elimina los registros de la tabla `lap_registrations`
+  - Esto asegura un reinicio completo de todos los datos de la carrera activa
+  - Archivo modificado: `backend/routes/race.py` (endpoint `reset_database`)
+
+- ✅ **Cleanup: Removido "Resumen de Vueltas" del Panel de Control**
+  - Se eliminó la sección de resumen de vueltas del `RaceControlPanel.jsx`
+  - (Completado en sesión anterior)
+
 - ✅ **Bug Fix: Sistema de Control de Vueltas - Hora Local y Validaciones**
   - **Hora local**: Ahora se guardan campos `scan_time_local` y `lap_start_time_local` en formato legible (HH:MM:SS)
   - **Vuelta no iniciada**: Nueva validación que impide registrar una vuelta que aún no ha comenzado
