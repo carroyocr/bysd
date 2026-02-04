@@ -228,12 +228,6 @@ export default function AdminPage() {
             </TabsContent>
           )}
 
-          {hasAccess('scanner') && (
-            <TabsContent value="scanner">
-              <QRScannerPanel />
-            </TabsContent>
-          )}
-
           {hasAccess('registrations') && (
             <TabsContent value="registrations">
               <PreRegistrationManagement />
