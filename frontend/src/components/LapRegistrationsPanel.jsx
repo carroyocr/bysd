@@ -340,11 +340,11 @@ export default function LapRegistrationsPanel() {
                         {getActionBadge(reg.action)}
                       </td>
                       <td className="py-3 px-3 text-center font-mono text-sm">
-                        {formatTime(reg.lap_start_time)}
+                        {reg.lap_start_time_local || formatTime(reg.lap_start_time, null)}
                       </td>
                       <td className="py-3 px-3 text-center">
                         <div className="font-mono text-sm">
-                          {formatTime(reg.scan_time)}
+                          {reg.scan_time_local || formatTime(reg.scan_time, null)}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {formatDate(reg.scan_time)}
