@@ -14,6 +14,7 @@ export default function Footer() {
 
   const quickLinks = [
     { href: '/faq', label: 'FAQ' },
+    { href: '/encuesta', label: 'Encuesta' },
     { href: '/admin/login', label: 'Admin' },
   ];
 
