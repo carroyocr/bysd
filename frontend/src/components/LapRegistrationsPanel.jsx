@@ -370,29 +370,6 @@ export default function LapRegistrationsPanel() {
           )}
         </CardContent>
       </Card>
-
-      {/* Lap Summary */}
-      {summary.by_lap && summary.by_lap.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Resumen por Vuelta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {summary.by_lap.map((lap) => (
-                <div key={lap.lap} className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Vuelta {lap.lap}</p>
-                  <p className="text-xl font-bold">{lap.completed}</p>
-                  <p className="text-xs text-green-600">completadas</p>
-                  {lap.dnf > 0 && (
-                    <p className="text-xs text-red-600 mt-1">{lap.dnf} DNF</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
