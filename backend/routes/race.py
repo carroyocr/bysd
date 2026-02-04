@@ -2013,6 +2013,9 @@ async def get_fan_badge_info(
     """Get badge info for a specific fan"""
     from server import db as database
     
+    # Legacy race codes
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     # Get race code - use parameter or get active race
     target_race_code = race_code
     if not target_race_code:
@@ -2025,10 +2028,25 @@ async def get_fan_badge_info(
     # Choose the correct collection for messages
     messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
+    # For legacy races, include messages without race_code
+    is_legacy_race = target_race_code in LEGACY_RACE_CODES
+    
     # Build query
-    query = {"fan_name": fan_name}
     if target_race_code:
-        query["race_code"] = target_race_code
+        if is_legacy_race:
+            query = {
+                "fan_name": fan_name,
+                "$or": [
+                    {"race_code": target_race_code},
+                    {"race_code": {"$exists": False}},
+                    {"race_code": None},
+                    {"race_code": ""}
+                ]
+            }
+        else:
+            query = {"fan_name": fan_name, "race_code": target_race_code}
+    else:
+        query = {"fan_name": fan_name}
     
     # Count messages by this fan for this race
     count = await messages_collection.count_documents(query)
