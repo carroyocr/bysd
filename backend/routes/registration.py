@@ -1315,10 +1315,24 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         )
         
         race_config = await db["race_configurations"].find_one({"code": race_code})
+        registration_cost = race_config.get("registration_cost", 3500) if race_config else 3500
+        
+        # Get payment date from receipt or use current date
+        payment_receipt = registration.get("payment_receipt", {})
+        payment_date = payment_receipt.get("payment_date") or payment_receipt.get("uploaded_at")
+        if payment_date:
+            if hasattr(payment_date, 'strftime'):
+                payment_date_str = payment_date.strftime("%d/%m/%Y")
+            else:
+                payment_date_str = str(payment_date)[:10]
+        else:
+            payment_date_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
         
         merge_data = {
             **build_race_data(race_config),
             **build_athlete_data(registration),
+            "payment_amount": f"RD${registration_cost:,.0f}",
+            "payment_date": payment_date_str,
         }
         
         template_id = "payment_confirmed" if approved else "payment_rejected"
