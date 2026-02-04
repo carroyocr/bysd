@@ -317,6 +317,11 @@ async def get_athlete_for_scan(bib: str, race_code: Optional[str] = None):
     if already_registered:
         can_complete = False
         message = f"¡Vuelta {lap_to_complete} ya fue registrada! No se puede registrar dos veces."
+    elif lap_to_complete > current_race_lap:
+        # Athlete trying to register a lap that hasn't started yet
+        can_complete = False
+        auto_dnf = False
+        message = f"⚠️ La vuelta {lap_to_complete} aún no ha iniciado. Vuelta actual: {current_race_lap}. Debe esperar."
     elif early_return:
         can_complete = False
         auto_dnf = True
