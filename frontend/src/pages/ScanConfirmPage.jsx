@@ -489,63 +489,63 @@ export default function ScanConfirmPage() {
         
         {/* Athlete Card */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 px-4 pt-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-white flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Confirmar Vuelta
+              <CardTitle className="text-white flex items-center gap-2 text-base">
+                <User className="w-4 h-4" />
+                Atleta
               </CardTitle>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={refreshAthleteData}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white h-8 w-8 p-0"
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
           </CardHeader>
           
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-4 pb-4">
             {/* BIB Number - Big */}
-            <div className="text-center py-4 bg-gray-900 rounded-lg">
-              <p className="text-sm text-gray-400 mb-1">Número de BIB</p>
-              <p className="text-6xl font-bold text-white">{athlete?.bib}</p>
+            <div className="text-center py-3 bg-gray-900 rounded-lg">
+              <p className="text-xs text-gray-400 mb-1">Número de BIB</p>
+              <p className="text-5xl font-bold text-white">{athlete?.bib}</p>
             </div>
             
             {/* Athlete Info */}
-            <div className="bg-gray-900/50 rounded-lg p-4">
-              <h3 className="text-xl font-semibold text-white text-center">
+            <div className="bg-gray-900/50 rounded-lg p-3">
+              <h3 className="text-lg font-semibold text-white text-center">
                 {athlete?.nombre} {athlete?.apellidos}
               </h3>
             </div>
             
             {/* Lap Info */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-400">Vueltas Completadas</p>
-                <p className="text-2xl font-bold text-blue-400">{athlete?.laps_completed || 0}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">Completadas</p>
+                <p className="text-xl font-bold text-blue-400">{athlete?.laps_completed || 0}</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-400">Vuelta a Registrar</p>
-                <p className="text-2xl font-bold text-green-400">{athlete?.lap_to_complete || 1}</p>
+              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">A Registrar</p>
+                <p className="text-xl font-bold text-green-400">{athlete?.lap_to_complete || 1}</p>
               </div>
             </div>
             
             {/* Message */}
             {athlete?.message && !isAutoDNF && (
-              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
-                <p className="text-sm text-blue-300 text-center">{athlete.message}</p>
+              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-2">
+                <p className="text-xs text-blue-300 text-center">{athlete.message}</p>
               </div>
             )}
             
             {/* DNF Confirmation Modal */}
             {showDnfConfirm && (
-              <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
-                <p className="text-red-400 font-medium mb-3 text-center">
+              <div className="bg-red-900/30 border border-red-500 rounded-lg p-3">
+                <p className="text-red-400 font-medium mb-2 text-center text-sm">
                   ¿Marcar a {athlete?.nombre} como DNF?
                 </p>
-                <p className="text-sm text-gray-400 mb-3 text-center">
+                <p className="text-xs text-gray-400 mb-2 text-center">
                   Escriba "DNF" para confirmar el retiro
                 </p>
                 <Input
