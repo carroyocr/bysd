@@ -42,6 +42,10 @@ export default function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/mensajes/presentacion" element={<MensajesPresentacionPage />} />
           
+          {/* QR Scanner routes without Navigation/Footer - optimized for mobile */}
+          <Route path="/scan" element={<QRScannerPage />} />
+          <Route path="/scan/confirmar" element={<ScanConfirmPage />} />
+          
           {/* Public routes with Navigation/Footer */}
           <Route
             path="/*"
