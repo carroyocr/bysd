@@ -6,27 +6,65 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { 
   DollarSign, TrendingUp, TrendingDown, Plus, Trash2, Edit, 
-  Save, X, Calendar, FileText, Loader2, Wallet
+  Save, X, Calendar, FileText, Loader2, Wallet, CreditCard,
+  CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp, Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Payment status options
+const PAYMENT_STATUS = {
+  pendiente: { label: 'Pendiente', color: 'bg-amber-100 text-amber-700', icon: Clock },
+  parcial: { label: 'Parcialmente Pagado', color: 'bg-blue-100 text-blue-700', icon: AlertCircle },
+  pagado: { label: 'Pagado', color: 'bg-green-100 text-green-700', icon: CheckCircle }
+};
+
+// Payment methods options
+const PAYMENT_METHODS = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia Bancaria',
+  tarjeta: 'Tarjeta de Crédito/Débito',
+  cheque: 'Cheque',
+  paypal: 'PayPal',
+  otro: 'Otro'
+};
+
 export default function FinancesManagement() {
   const { raceCode, loading: configLoading } = useRaceConfig();
   const [movements, setMovements] = useState([]);
-  const [summary, setSummary] = useState({ total_ingresos: 0, total_gastos: 0, saldo: 0 });
+  const [summary, setSummary] = useState({ 
+    total_ingresos: 0, 
+    total_gastos: 0, 
+    saldo: 0,
+    gastos_pendientes: 0,
+    gastos_pagados: 0 
+  });
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [showPartialPaymentForm, setShowPartialPaymentForm] = useState(null);
   
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
-    tipo: 'ingreso',
+    tipo: 'gasto',
     detalle: '',
-    monto: ''
+    monto: '',
+    estado_pago: 'pendiente',
+    metodo_pago: '',
+    referencia_pago: '',
+    proveedor: ''
+  });
+
+  const [partialPaymentData, setPartialPaymentData] = useState({
+    fecha: new Date().toISOString().split('T')[0],
+    monto: '',
+    metodo_pago: 'transferencia',
+    referencia: '',
+    notas: ''
   });
 
   const token = localStorage.getItem('admin_token');
@@ -43,7 +81,13 @@ export default function FinancesManagement() {
       if (response.ok) {
         const data = await response.json();
         setMovements(data.movements || []);
-        setSummary(data.summary || { total_ingresos: 0, total_gastos: 0, saldo: 0 });
+        setSummary(data.summary || { 
+          total_ingresos: 0, 
+          total_gastos: 0, 
+          saldo: 0,
+          gastos_pendientes: 0,
+          gastos_pagados: 0
+        });
       }
     } catch (error) {
       console.error('Error loading finances:', error);
@@ -60,9 +104,13 @@ export default function FinancesManagement() {
   const resetForm = () => {
     setFormData({
       fecha: new Date().toISOString().split('T')[0],
-      tipo: 'ingreso',
+      tipo: 'gasto',
       detalle: '',
-      monto: ''
+      monto: '',
+      estado_pago: 'pendiente',
+      metodo_pago: '',
+      referencia_pago: '',
+      proveedor: ''
     });
     setEditingId(null);
     setShowForm(false);
@@ -124,7 +172,11 @@ export default function FinancesManagement() {
       fecha: movement.fecha,
       tipo: movement.tipo,
       detalle: movement.detalle,
-      monto: movement.monto.toString()
+      monto: movement.monto.toString(),
+      estado_pago: movement.estado_pago || 'pendiente',
+      metodo_pago: movement.metodo_pago || '',
+      referencia_pago: movement.referencia_pago || '',
+      proveedor: movement.proveedor || ''
     });
     setEditingId(movement.id);
     setShowForm(true);
@@ -148,6 +200,89 @@ export default function FinancesManagement() {
     }
   };
 
+  const handleAddPartialPayment = async (movementId) => {
+    if (!partialPaymentData.monto || parseFloat(partialPaymentData.monto) <= 0) {
+      toast.error('Ingrese un monto válido');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/api/finances/movements/${movementId}/partial-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...partialPaymentData,
+          monto: parseFloat(partialPaymentData.monto)
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al registrar pago');
+      }
+
+      toast.success('Pago parcial registrado');
+      setShowPartialPaymentForm(null);
+      setPartialPaymentData({
+        fecha: new Date().toISOString().split('T')[0],
+        monto: '',
+        metodo_pago: 'transferencia',
+        referencia: '',
+        notas: ''
+      });
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePartialPayment = async (movementId, paymentId) => {
+    if (!window.confirm('¿Eliminar este pago parcial?')) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/finances/movements/${movementId}/partial-payment/${paymentId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!response.ok) throw new Error('Error al eliminar');
+
+      toast.success('Pago parcial eliminado');
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleMarkAsPaid = async (movement) => {
+    try {
+      const response = await fetch(`${API_URL}/api/finances/movements/${movement.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ estado_pago: 'pagado' })
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar');
+
+      toast.success('Gasto marcado como pagado');
+      loadData();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-DO', {
       style: 'currency',
@@ -155,6 +290,17 @@ export default function FinancesManagement() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount).replace('DOP', 'RD$');
+  };
+
+  const getStatusBadge = (status) => {
+    const statusInfo = PAYMENT_STATUS[status] || PAYMENT_STATUS.pendiente;
+    const Icon = statusInfo.icon;
+    return (
+      <Badge className={`${statusInfo.color} hover:${statusInfo.color}`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {statusInfo.label}
+      </Badge>
+    );
   };
 
   if (loading && !movements.length) {
@@ -176,7 +322,7 @@ export default function FinancesManagement() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-green-50 border-green-200">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -200,6 +346,20 @@ export default function FinancesManagement() {
               </div>
               <div className="p-3 bg-red-100 rounded-full">
                 <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-amber-600 font-medium">Gastos Pendientes</p>
+                <p className="text-2xl font-bold text-amber-700">{formatCurrency(summary.gastos_pendientes || 0)}</p>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-full">
+                <Clock className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </CardContent>
@@ -235,7 +395,7 @@ export default function FinancesManagement() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fecha">Fecha</Label>
                   <Input
@@ -261,18 +421,6 @@ export default function FinancesManagement() {
                   </select>
                 </div>
                 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="detalle">Detalle</Label>
-                  <Input
-                    id="detalle"
-                    type="text"
-                    placeholder="Descripción del movimiento..."
-                    value={formData.detalle}
-                    onChange={(e) => setFormData(prev => ({ ...prev, detalle: e.target.value }))}
-                    required
-                  />
-                </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="monto">Monto (RD$)</Label>
                   <Input
@@ -286,7 +434,83 @@ export default function FinancesManagement() {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="detalle">Detalle / Concepto</Label>
+                  <Input
+                    id="detalle"
+                    type="text"
+                    placeholder="Descripción del movimiento..."
+                    value={formData.detalle}
+                    onChange={(e) => setFormData(prev => ({ ...prev, detalle: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                {formData.tipo === 'gasto' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="proveedor">Proveedor (opcional)</Label>
+                    <Input
+                      id="proveedor"
+                      type="text"
+                      placeholder="Nombre del proveedor"
+                      value={formData.proveedor}
+                      onChange={(e) => setFormData(prev => ({ ...prev, proveedor: e.target.value }))}
+                    />
+                  </div>
+                )}
               </div>
+              
+              {/* Payment status section - only for expenses */}
+              {formData.tipo === 'gasto' && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    Estado del Pago
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="estado_pago">Estado</Label>
+                      <select
+                        id="estado_pago"
+                        value={formData.estado_pago}
+                        onChange={(e) => setFormData(prev => ({ ...prev, estado_pago: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                      >
+                        {Object.entries(PAYMENT_STATUS).map(([key, { label }]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="metodo_pago">Método de Pago</Label>
+                      <select
+                        id="metodo_pago"
+                        value={formData.metodo_pago}
+                        onChange={(e) => setFormData(prev => ({ ...prev, metodo_pago: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {Object.entries(PAYMENT_METHODS).map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="referencia_pago">Referencia/Número</Label>
+                      <Input
+                        id="referencia_pago"
+                        type="text"
+                        placeholder="# de transferencia, cheque, etc."
+                        value={formData.referencia_pago}
+                        onChange={(e) => setFormData(prev => ({ ...prev, referencia_pago: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={resetForm}>
@@ -334,68 +558,275 @@ export default function FinancesManagement() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
+                    <th className="text-left py-3 px-2 w-8"></th>
                     <th className="text-left py-3 px-2">Fecha</th>
                     <th className="text-left py-3 px-2">Tipo</th>
                     <th className="text-left py-3 px-2">Detalle</th>
+                    <th className="text-left py-3 px-2">Estado</th>
                     <th className="text-right py-3 px-2">Monto</th>
                     <th className="text-right py-3 px-2">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movements.map((movement) => (
-                    <tr key={movement.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-2">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {movement.fecha}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2">
-                        {movement.tipo === 'ingreso' ? (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                            Ingreso
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
-                            <TrendingDown className="w-3 h-3 mr-1" />
-                            Gasto
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className="text-sm">{movement.detalle}</span>
-                        {movement.auto_generated && (
-                          <Badge variant="outline" className="ml-2 text-xs">Auto</Badge>
-                        )}
-                      </td>
-                      <td className={`py-3 px-2 text-right font-mono font-semibold ${
-                        movement.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {movement.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(movement.monto)}
-                      </td>
-                      <td className="py-3 px-2 text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEdit(movement)}
-                            disabled={movement.auto_generated}
-                            title={movement.auto_generated ? 'Los movimientos automáticos no se pueden editar' : 'Editar'}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDelete(movement.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                    <React.Fragment key={movement.id}>
+                      <tr className={`border-b hover:bg-muted/50 ${expandedRow === movement.id ? 'bg-muted/30' : ''}`}>
+                        <td className="py-3 px-2">
+                          {movement.tipo === 'gasto' && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setExpandedRow(expandedRow === movement.id ? null : movement.id)}
+                            >
+                              {expandedRow === movement.id ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            {movement.fecha}
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          {movement.tipo === 'ingreso' ? (
+                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              Ingreso
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                              <TrendingDown className="w-3 h-3 mr-1" />
+                              Gasto
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-2">
+                          <div>
+                            <span className="text-sm font-medium">{movement.detalle}</span>
+                            {movement.proveedor && (
+                              <span className="text-xs text-muted-foreground block">
+                                Proveedor: {movement.proveedor}
+                              </span>
+                            )}
+                          </div>
+                          {movement.auto_generated && (
+                            <Badge variant="outline" className="ml-2 text-xs">Auto</Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-2">
+                          {movement.tipo === 'gasto' ? (
+                            <div className="space-y-1">
+                              {getStatusBadge(movement.estado_pago || 'pendiente')}
+                              {movement.estado_pago === 'parcial' && (
+                                <div className="text-xs text-muted-foreground">
+                                  Pagado: {formatCurrency(movement.monto_pagado || 0)}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </td>
+                        <td className={`py-3 px-2 text-right font-mono font-semibold ${
+                          movement.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {movement.tipo === 'ingreso' ? '+' : '-'}{formatCurrency(movement.monto)}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <div className="flex justify-end gap-1">
+                            {movement.tipo === 'gasto' && movement.estado_pago !== 'pagado' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => handleMarkAsPaid(movement)}
+                                title="Marcar como pagado"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEdit(movement)}
+                              disabled={movement.auto_generated}
+                              title={movement.auto_generated ? 'Los movimientos automáticos no se pueden editar' : 'Editar'}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDelete(movement.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      {/* Expanded row for expense details */}
+                      {expandedRow === movement.id && movement.tipo === 'gasto' && (
+                        <tr>
+                          <td colSpan="7" className="bg-muted/20 p-4">
+                            <div className="space-y-4">
+                              {/* Payment info */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Método de pago:</span>
+                                  <span className="ml-2 font-medium">
+                                    {movement.metodo_pago ? PAYMENT_METHODS[movement.metodo_pago] : 'No especificado'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Referencia:</span>
+                                  <span className="ml-2 font-medium">{movement.referencia_pago || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Pendiente:</span>
+                                  <span className="ml-2 font-medium text-amber-600">
+                                    {formatCurrency(movement.monto - (movement.monto_pagado || 0))}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Partial payments list */}
+                              {movement.pagos_parciales && movement.pagos_parciales.length > 0 && (
+                                <div>
+                                  <h5 className="font-medium mb-2 flex items-center gap-2">
+                                    <Receipt className="w-4 h-4" />
+                                    Historial de Pagos ({movement.pagos_parciales.length})
+                                  </h5>
+                                  <div className="bg-background rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm">
+                                      <thead>
+                                        <tr className="border-b bg-muted/50">
+                                          <th className="text-left py-2 px-3">Fecha</th>
+                                          <th className="text-left py-2 px-3">Método</th>
+                                          <th className="text-left py-2 px-3">Referencia</th>
+                                          <th className="text-right py-2 px-3">Monto</th>
+                                          <th className="text-right py-2 px-3 w-16"></th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {movement.pagos_parciales.map((pago) => (
+                                          <tr key={pago.id} className="border-b">
+                                            <td className="py-2 px-3">{pago.fecha}</td>
+                                            <td className="py-2 px-3">{PAYMENT_METHODS[pago.metodo_pago] || pago.metodo_pago}</td>
+                                            <td className="py-2 px-3">{pago.referencia || '-'}</td>
+                                            <td className="py-2 px-3 text-right font-mono text-green-600">
+                                              {formatCurrency(pago.monto)}
+                                            </td>
+                                            <td className="py-2 px-3 text-right">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-red-500"
+                                                onClick={() => handleDeletePartialPayment(movement.id, pago.id)}
+                                              >
+                                                <X className="w-3 h-3" />
+                                              </Button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Add partial payment form */}
+                              {movement.estado_pago !== 'pagado' && (
+                                <div>
+                                  {showPartialPaymentForm === movement.id ? (
+                                    <div className="bg-background p-4 rounded-lg border">
+                                      <h5 className="font-medium mb-3">Registrar Pago Parcial</h5>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        <div>
+                                          <Label className="text-xs">Fecha</Label>
+                                          <Input
+                                            type="date"
+                                            value={partialPaymentData.fecha}
+                                            onChange={(e) => setPartialPaymentData(prev => ({ ...prev, fecha: e.target.value }))}
+                                            className="h-9"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-xs">Monto</Label>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            placeholder="0.00"
+                                            value={partialPaymentData.monto}
+                                            onChange={(e) => setPartialPaymentData(prev => ({ ...prev, monto: e.target.value }))}
+                                            className="h-9"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-xs">Método</Label>
+                                          <select
+                                            value={partialPaymentData.metodo_pago}
+                                            onChange={(e) => setPartialPaymentData(prev => ({ ...prev, metodo_pago: e.target.value }))}
+                                            className="w-full h-9 px-3 border rounded-md bg-background text-sm"
+                                          >
+                                            {Object.entries(PAYMENT_METHODS).map(([key, label]) => (
+                                              <option key={key} value={key}>{label}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <Label className="text-xs">Referencia</Label>
+                                          <Input
+                                            type="text"
+                                            placeholder="# transferencia"
+                                            value={partialPaymentData.referencia}
+                                            onChange={(e) => setPartialPaymentData(prev => ({ ...prev, referencia: e.target.value }))}
+                                            className="h-9"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-2 mt-3">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleAddPartialPayment(movement.id)}
+                                          disabled={saving}
+                                        >
+                                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                                          Guardar Pago
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setShowPartialPaymentForm(null)}
+                                        >
+                                          Cancelar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setShowPartialPaymentForm(movement.id)}
+                                    >
+                                      <Plus className="w-4 h-4 mr-1" />
+                                      Agregar Pago Parcial
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
