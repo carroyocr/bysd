@@ -91,15 +91,27 @@ async def get_financial_movements(race_code: str):
     total_gastos = sum(m["monto"] for m in movements if m["tipo"] == "gasto")
     saldo = total_ingresos - total_gastos
     
-    # Calculate payment status summary for expenses
-    gastos_pendientes = sum(m["monto"] for m in movements if m["tipo"] == "gasto" and m.get("estado_pago") == "pendiente")
-    gastos_pagados = sum(m["monto"] for m in movements if m["tipo"] == "gasto" and m.get("estado_pago") == "pagado")
-    
-    # Calculate partial payments
+    # Calculate payment status summary for expenses (based on actual amounts paid)
+    gastos_pagados = 0
+    gastos_pendientes = 0
     total_pagos_parciales = 0
+    
     for m in movements:
-        if m["tipo"] == "gasto" and m.get("pagos_parciales"):
-            total_pagos_parciales += sum(p.get("monto", 0) for p in m["pagos_parciales"])
+        if m["tipo"] == "gasto":
+            monto_total = m.get("monto", 0)
+            monto_pagado = m.get("monto_pagado", 0)
+            
+            # Sum partial payments
+            if m.get("pagos_parciales"):
+                total_pagos_parciales += sum(p.get("monto", 0) for p in m["pagos_parciales"])
+            
+            # If fully paid (estado_pago == "pagado"), count full amount as paid
+            if m.get("estado_pago") == "pagado":
+                gastos_pagados += monto_total
+            else:
+                # Otherwise, use actual monto_pagado
+                gastos_pagados += monto_pagado
+                gastos_pendientes += (monto_total - monto_pagado)
     
     return {
         "movements": movements,
