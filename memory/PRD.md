@@ -543,11 +543,25 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 ## Changelog
 
 ### 04 Febrero 2026
-- ✅ **Bug Fix: Efecto de Glow Cortado en Logo de Homepage** 
-  - Corregido bug visual donde el efecto de brillo/glow alrededor del logo en la página principal se cortaba abruptamente
-  - Causa: `overflow-hidden` en el contenedor padre limitaba la expansión del efecto `blur-3xl`
-  - Solución: Removido `overflow-hidden` de la sección principal, agregado padding al contenedor del logo (`p-20`), y expandido el área del glow con `blur-[80px]` y `scale-150`
-  - Archivo modificado: `frontend/src/components/Hero.jsx`
+- ✅ **Feature: Sistema de Gestión de Pagos de Gastos**
+  - **Estado del pago**: Pendiente, Parcialmente Pagado, Pagado
+  - **Métodos de pago**: Efectivo, Transferencia, Tarjeta, Cheque, PayPal, Otro
+  - **Pagos parciales**: Historial completo de pagos con fecha, monto, método y referencia
+  - **Resumen mejorado**: Nueva tarjeta "Gastos Pendientes" en el dashboard
+  - **UI mejorada**: Filas expandibles para ver detalles y agregar pagos
+  - **Acciones rápidas**: Botón para marcar como pagado directamente
+  - Archivos modificados: `backend/routes/finances.py`, `frontend/src/components/FinancesManagement.jsx`
+  - Nuevos endpoints:
+    - `GET /api/finances/options` - Opciones de estado y métodos de pago
+    - `POST /api/finances/movements/{id}/partial-payment` - Agregar pago parcial
+    - `DELETE /api/finances/movements/{id}/partial-payment/{payment_id}` - Eliminar pago parcial
+
+- ✅ **Bug Fix: Escáner QR en Safari iOS**
+  - Reemplazada API `BarcodeDetector` (no soportada en Safari) por librería `html5-qrcode`
+  - Mejores mensajes de error para permisos de cámara
+  - Archivo modificado: `frontend/src/pages/QRScannerPage.jsx`
+
+- ✅ **Bug Fix: Efecto de Glow en Logo de Homepage** (revertido a estado original)
 
 ### 18 Enero 2026
 - ✅ Modificada lógica de DNF: Marcar como DNF ya NO incrementa vueltas
