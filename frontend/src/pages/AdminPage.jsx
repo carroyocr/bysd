@@ -32,10 +32,7 @@ const TAB_PERMISSIONS = {
   'emails': 'emails'
 };
 
-// Special permissions that are not tabs but links
-const SPECIAL_PERMISSIONS = ['scanner'];
-
-// Special permissions that are not tabs (used for menu buttons)
+// Special permissions that are not tabs (used for menu buttons like scanner)
 const SPECIAL_PERMISSIONS = ['scanner'];
 
 export default function AdminPage() {
