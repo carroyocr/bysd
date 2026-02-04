@@ -401,6 +401,9 @@ async def confirm_lap(request: LapConfirmRequest):
                 detail="Debe escribir 'DNF' para confirmar el retiro del atleta"
             )
         
+        # Get local time for this race
+        local_time = get_race_time(active_race)
+        
         # Manual DNF
         await database.registrations.update_one(
             {"email": email, "race_code": race_code},
@@ -408,9 +411,9 @@ async def confirm_lap(request: LapConfirmRequest):
                 "$set": {
                     "status": "retired",
                     "retired_at_lap": current_laps,
-                    "retired_at": datetime.now(timezone.utc),
+                    "retired_at": local_time,
                     "retired_reason": "DNF manual por QR scan",
-                    "updated_at": datetime.now(timezone.utc)
+                    "updated_at": local_time
                 }
             }
         )
@@ -423,10 +426,10 @@ async def confirm_lap(request: LapConfirmRequest):
             "lap_number": current_laps,
             "action": "dnf",
             "lap_start_time": lap_info.get("lap_start_time"),
-            "scan_time": datetime.now(timezone.utc),
+            "scan_time": local_time,
             "scanned_by": request.scanned_by or "unknown",
             "reason": "DNF manual confirmado",
-            "created_at": datetime.now(timezone.utc)
+            "created_at": local_time
         })
         
         return {
