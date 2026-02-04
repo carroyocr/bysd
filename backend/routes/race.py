@@ -1940,6 +1940,9 @@ async def get_fans_leaderboard(
     """Get leaderboard of fans with most cheer messages sent"""
     from server import db as database
     
+    # Legacy race codes
+    LEGACY_RACE_CODES = ["BYSD-2026"]
+    
     # Get race code - use parameter or get active race
     target_race_code = race_code
     if not target_race_code:
@@ -1952,10 +1955,24 @@ async def get_fans_leaderboard(
     # Choose the correct collection for messages
     messages_collection = database.archived_cheer_messages if is_archived_race else database.cheer_messages
     
+    # For legacy races, include messages without race_code
+    is_legacy_race = target_race_code in LEGACY_RACE_CODES
+    
     # Build match stage
-    match_stage = {}
     if target_race_code:
-        match_stage = {"$match": {"race_code": target_race_code}}
+        if is_legacy_race:
+            match_stage = {"$match": {
+                "$or": [
+                    {"race_code": target_race_code},
+                    {"race_code": {"$exists": False}},
+                    {"race_code": None},
+                    {"race_code": ""}
+                ]
+            }}
+        else:
+            match_stage = {"$match": {"race_code": target_race_code}}
+    else:
+        match_stage = None
     
     pipeline = []
     if match_stage:
