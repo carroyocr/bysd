@@ -928,18 +928,28 @@ export default function RaceControlPanel({ embedded = false }) {
                     className="pl-10"
                   />
                 </div>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">Todos ({participants.length})</option>
-                  <option value="active">Activos ({participants.filter(p => p.status === 'active').length})</option>
-                  <option value="winner">Ganador ({participants.filter(p => p.status === 'winner').length})</option>
-                  <option value="honor">Invitada de Honor ({participants.filter(p => p.status === 'honor').length})</option>
-                  <option value="retired">DNF ({participants.filter(p => p.status === 'retired').length})</option>
-                  <option value="dns">DNS ({participants.filter(p => p.status === 'dns').length})</option>
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="all">Todos ({participants.length})</option>
+                    <option value="active">Activos ({participants.filter(p => p.status === 'active').length})</option>
+                    <option value="winner">Ganador ({participants.filter(p => p.status === 'winner').length})</option>
+                    <option value="honor">Invitada de Honor ({participants.filter(p => p.status === 'honor').length})</option>
+                    <option value="retired">DNF ({participants.filter(p => p.status === 'retired').length})</option>
+                    <option value="dns">DNS ({participants.filter(p => p.status === 'dns').length})</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={loadData}
+                    title="Refrescar lista"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
