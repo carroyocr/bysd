@@ -384,6 +384,122 @@ export default function FinancesManagement() {
         </Card>
       </div>
 
+      {/* Payment Progress Dashboard */}
+      {summary.total_gastos > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Progreso de Pagos
+            </CardTitle>
+            <CardDescription>Estado de liquidación de gastos del evento</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Main Progress Bar */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">Gastos Liquidados</span>
+                  <span className="text-sm font-bold">
+                    {summary.total_gastos > 0 
+                      ? Math.round(((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
+                      : 0}%
+                  </span>
+                </div>
+                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${summary.total_gastos > 0 
+                        ? Math.min(100, ((summary.gastos_pagados || 0) / summary.total_gastos) * 100) 
+                        : 0}%` 
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Total Gastos</p>
+                  <p className="text-lg font-bold">{formatCurrency(summary.total_gastos)}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <p className="text-xs text-green-600 mb-1">Pagado</p>
+                  <p className="text-lg font-bold text-green-700">{formatCurrency(summary.gastos_pagados || 0)}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-4 text-center">
+                  <p className="text-xs text-amber-600 mb-1">Pendiente</p>
+                  <p className="text-lg font-bold text-amber-700">{formatCurrency(summary.gastos_pendientes || 0)}</p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <p className="text-xs text-blue-600 mb-1">Pagos Parciales</p>
+                  <p className="text-lg font-bold text-blue-700">{formatCurrency(summary.total_pagos_parciales || 0)}</p>
+                </div>
+              </div>
+
+              {/* Status Breakdown */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Desglose por Estado</h4>
+                <div className="space-y-2">
+                  {(() => {
+                    const gastos = movements.filter(m => m.tipo === 'gasto');
+                    const pagados = gastos.filter(m => m.estado_pago === 'pagado').length;
+                    const parciales = gastos.filter(m => m.estado_pago === 'parcial').length;
+                    const pendientes = gastos.filter(m => m.estado_pago === 'pendiente' || !m.estado_pago).length;
+                    const total = gastos.length;
+                    
+                    return (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 w-32">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm">Pagados</span>
+                          </div>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-green-500 rounded-full"
+                              style={{ width: `${total > 0 ? (pagados / total) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium w-16 text-right">{pagados} de {total}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 w-32">
+                            <AlertCircle className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm">Parciales</span>
+                          </div>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500 rounded-full"
+                              style={{ width: `${total > 0 ? (parciales / total) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium w-16 text-right">{parciales} de {total}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 w-32">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            <span className="text-sm">Pendientes</span>
+                          </div>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-amber-500 rounded-full"
+                              style={{ width: `${total > 0 ? (pendientes / total) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium w-16 text-right">{pendientes} de {total}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Add Movement Form */}
       {showForm ? (
         <Card>
