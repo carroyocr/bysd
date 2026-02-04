@@ -1263,8 +1263,7 @@ async def reset_database(
     await database.laps_log.delete_many({"race_code": active_race_code})
     
     # Delete lap registrations for this race
-    lap_del_result = await database.lap_registrations.delete_many({"race_code": active_race_code})
-    print(f"[RESET-DB] Deleted {lap_del_result.deleted_count} lap registrations for race {active_race_code}")
+    await database.lap_registrations.delete_many({"race_code": active_race_code})
     
     return {
         "message": f"Datos de carrera {active_race_code} reiniciados exitosamente",
