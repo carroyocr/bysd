@@ -269,16 +269,22 @@ export default function ScanConfirmPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
         <div className="max-w-md mx-auto pt-12">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-full bg-red-900/50 flex items-center justify-center mx-auto mb-4">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
+            <CardContent className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-900/50 flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle className="w-7 h-7 text-red-400" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">Error</h2>
-              <p className="text-gray-400 mb-6">{error}</p>
-              <Button onClick={handleScanAnother} variant="outline" className="border-gray-600 text-gray-300">
-                <QrCode className="w-4 h-4 mr-2" />
-                Escanear Otro
-              </Button>
+              <h2 className="text-lg font-bold text-white mb-2">Error</h2>
+              <p className="text-gray-400 mb-4 text-sm">{error}</p>
+              <div className="space-y-2">
+                <Button onClick={handleScanAnother} variant="outline" className="w-full border-gray-600 text-gray-300">
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Escanear Otro
+                </Button>
+                <Button onClick={handleGoHome} variant="ghost" className="w-full text-gray-400">
+                  <Home className="w-4 h-4 mr-2" />
+                  Ir al Inicio
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -293,41 +299,41 @@ export default function ScanConfirmPage() {
     const isDNF = ['dnf', 'auto_dnf', 'dnf_early_return', 'dnf_timeout'].includes(completedAction.action);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-        <div className="max-w-md mx-auto pt-12">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
+        <div className="max-w-md mx-auto pt-6">
           <Card className={`border-2 ${
             isSuccess ? 'bg-green-900/30 border-green-500' : 
             isAlreadyRegistered ? 'bg-blue-900/30 border-blue-500' :
             'bg-amber-900/30 border-amber-500'
           }`}>
-            <CardContent className="p-8 text-center">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+            <CardContent className="p-5 text-center">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${
                 isSuccess ? 'bg-green-500' : 
                 isAlreadyRegistered ? 'bg-blue-500' :
                 'bg-amber-500'
               }`}>
                 {isSuccess ? (
-                  <Check className="w-10 h-10 text-white" />
+                  <Check className="w-8 h-8 text-white" />
                 ) : isAlreadyRegistered ? (
-                  <Clock className="w-10 h-10 text-white" />
+                  <Clock className="w-8 h-8 text-white" />
                 ) : (
-                  <X className="w-10 h-10 text-white" />
+                  <X className="w-8 h-8 text-white" />
                 )}
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="text-xl font-bold text-white mb-2">
                 {isSuccess ? '¡Vuelta Completada!' : 
                  isAlreadyRegistered ? 'Ya Registrada' :
                  'DNF Registrado'}
               </h2>
               
-              <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
-                <p className="text-3xl font-bold text-white mb-1">BIB #{completedAction.bib}</p>
-                <p className="text-gray-400">{completedAction.message}</p>
+              <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
+                <p className="text-2xl font-bold text-white mb-1">BIB #{completedAction.bib}</p>
+                <p className="text-gray-400 text-sm">{completedAction.message}</p>
               </div>
               
               {isSuccess && (
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-gray-800/50 rounded-lg p-3">
                     <p className="text-sm text-gray-400">Vueltas</p>
                     <p className="text-2xl font-bold text-green-400">{completedAction.laps_completed}</p>
