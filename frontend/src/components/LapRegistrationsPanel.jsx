@@ -370,9 +370,9 @@ export default function LapRegistrationsPanel() {
                         ) : '-'}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        {pace ? (
+                        {paceFormatted ? (
                           <span className="font-mono text-blue-600">
-                            {pace} min/km
+                            {paceFormatted} /km
                           </span>
                         ) : '-'}
                       </td>
