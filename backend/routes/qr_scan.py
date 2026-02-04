@@ -558,7 +558,9 @@ async def confirm_lap(request: LapConfirmRequest):
             "lap_number": expected_lap,
             "action": "dnf_timeout",
             "lap_start_time": lap_info.get("lap_start_time"),
+            "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
             "scan_time": local_time,
+            "scan_time_local": get_race_time_str(active_race),
             "scanned_by": request.scanned_by or "unknown",
             "reason": f"Tiempo agotado. Vuelta {expected_lap} debió completarse antes.",
             "created_at": local_time
