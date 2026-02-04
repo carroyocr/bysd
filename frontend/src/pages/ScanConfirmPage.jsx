@@ -410,10 +410,16 @@ export default function ScanConfirmPage() {
                 </p>
               </div>
               
-              <Button onClick={handleScanAnother} variant="outline" className="border-gray-600 text-gray-300">
-                <QrCode className="w-4 h-4 mr-2" />
-                Escanear Otro
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={handleScanAnother} variant="outline" className="w-full border-gray-600 text-gray-300">
+                  <QrCode className="w-4 h-4 mr-2" />
+                  Escanear Otro
+                </Button>
+                <Button onClick={handleGoHome} variant="ghost" className="w-full text-gray-400">
+                  <Home className="w-4 h-4 mr-2" />
+                  Ir al Inicio
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -426,21 +432,35 @@ export default function ScanConfirmPage() {
   const isAutoDNF = athlete?.auto_dnf || athlete?.early_return;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-      <div className="max-w-md mx-auto pt-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-3 safe-area-inset">
+      <div className="max-w-md mx-auto pt-2">
+        {/* Home Button Header */}
+        <div className="flex items-center justify-between mb-3">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleGoHome}
+            className="text-gray-400 hover:text-white p-2"
+          >
+            <Home className="w-5 h-5" />
+          </Button>
+          <span className="text-gray-400 text-sm">Confirmar Vuelta</span>
+          <div className="w-9" />
+        </div>
+
         {/* Timer Banner */}
         {athlete && athlete.can_complete && !isAutoDNF && (
-          <div className={`rounded-lg p-4 mb-4 text-center ${isUrgent ? 'bg-red-900/50 border border-red-500' : 'bg-gray-800 border border-gray-700'}`}>
+          <div className={`rounded-lg p-3 mb-3 text-center ${isUrgent ? 'bg-red-900/50 border border-red-500' : 'bg-gray-800 border border-gray-700'}`}>
             <div className="flex items-center justify-center gap-2 mb-1">
-              <Timer className={`w-5 h-5 ${isUrgent ? 'text-red-400' : 'text-gray-400'}`} />
-              <span className="text-sm text-gray-400">Tiempo restante vuelta {athlete.current_race_lap}</span>
+              <Timer className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-gray-400'}`} />
+              <span className="text-xs text-gray-400">Tiempo restante vuelta {athlete.current_race_lap}</span>
             </div>
-            <p className={`text-4xl font-mono font-bold ${isUrgent ? 'text-red-400' : 'text-white'}`}>
+            <p className={`text-3xl font-mono font-bold ${isUrgent ? 'text-red-400' : 'text-white'}`}>
               {formatTime(timeRemaining)}
             </p>
             {athlete.minutes_into_lap !== undefined && (
-              <p className="text-sm text-gray-500 mt-1">
-                {athlete.minutes_into_lap} minutos transcurridos
+              <p className="text-xs text-gray-500 mt-1">
+                {athlete.minutes_into_lap} min transcurridos
               </p>
             )}
           </div>
@@ -448,22 +468,22 @@ export default function ScanConfirmPage() {
         
         {/* Early Return Warning */}
         {athlete?.early_return && (
-          <div className="bg-orange-900/50 border border-orange-500 rounded-lg p-4 mb-4 text-center">
-            <AlertTriangle className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-            <p className="text-orange-400 font-medium">REGRESÓ MUY TEMPRANO</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Solo {athlete.minutes_into_lap} minutos (mínimo 35 min)
+          <div className="bg-orange-900/50 border border-orange-500 rounded-lg p-3 mb-3 text-center">
+            <AlertTriangle className="w-6 h-6 text-orange-400 mx-auto mb-1" />
+            <p className="text-orange-400 font-medium text-sm">REGRESÓ MUY TEMPRANO</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Solo {athlete.minutes_into_lap} min (mínimo 35 min)
             </p>
-            <p className="text-sm text-orange-300 mt-2">Se marcará como DNF automáticamente</p>
+            <p className="text-xs text-orange-300 mt-1">Se marcará como DNF automáticamente</p>
           </div>
         )}
         
         {/* Auto DNF Warning (timeout) */}
         {athlete?.auto_dnf && !athlete?.early_return && (
-          <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-4 text-center">
-            <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <p className="text-red-400 font-medium">TIEMPO AGOTADO</p>
-            <p className="text-sm text-gray-400 mt-1">{athlete.message}</p>
+          <div className="bg-red-900/50 border border-red-500 rounded-lg p-3 mb-3 text-center">
+            <AlertTriangle className="w-6 h-6 text-red-400 mx-auto mb-1" />
+            <p className="text-red-400 font-medium text-sm">TIEMPO AGOTADO</p>
+            <p className="text-xs text-gray-400 mt-1">{athlete.message}</p>
           </div>
         )}
         
