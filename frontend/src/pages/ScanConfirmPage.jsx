@@ -621,23 +621,32 @@ export default function ScanConfirmPage() {
                     onClick={() => setShowDnfConfirm(true)}
                     disabled={confirming}
                     variant="outline"
-                    size="lg"
-                    className="w-full h-12 border-red-500 text-red-400 hover:bg-red-900/30"
+                    className="w-full h-10 border-red-500 text-red-400 hover:bg-red-900/30 text-sm"
                     data-testid="dnf-btn"
                   >
-                    <X className="w-5 h-5 mr-2" />
-                    Marcar como DNF (No Saldrá Más)
+                    <X className="w-4 h-4 mr-2" />
+                    Marcar como DNF
                   </Button>
                 )}
                 
-                <Button 
-                  onClick={handleScanAnother}
-                  variant="ghost"
-                  className="w-full text-gray-400 hover:text-white"
-                >
-                  <QrCode className="w-4 h-4 mr-2" />
-                  Escanear Otro Atleta
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleScanAnother}
+                    variant="outline"
+                    className="flex-1 text-gray-400 border-gray-600 text-sm"
+                  >
+                    <QrCode className="w-4 h-4 mr-1" />
+                    Escanear Otro
+                  </Button>
+                  <Button 
+                    onClick={handleGoHome}
+                    variant="ghost"
+                    className="flex-1 text-gray-400 text-sm"
+                  >
+                    <Home className="w-4 h-4 mr-1" />
+                    Inicio
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
