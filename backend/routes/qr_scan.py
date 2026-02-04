@@ -560,7 +560,6 @@ async def confirm_lap(request: LapConfirmRequest):
     # All checks passed - Complete the lap
     new_laps = current_laps + 1
     new_km = new_laps * KM_PER_LAP
-    scan_time = datetime.now(timezone.utc)
     
     await database.registrations.update_one(
         {"email": email, "race_code": race_code},
@@ -568,13 +567,13 @@ async def confirm_lap(request: LapConfirmRequest):
             "$set": {
                 "laps_completed": new_laps,
                 "total_km": round(new_km, 1),
-                "last_lap_time": scan_time,
-                "updated_at": scan_time
+                "last_lap_time": local_time,
+                "updated_at": local_time
             },
             "$push": {
                 "laps_log": {
                     "lap": new_laps,
-                    "completed_at": scan_time,
+                    "completed_at": local_time,
                     "method": "qr_scan",
                     "scanned_by": request.scanned_by
                 }
@@ -590,10 +589,10 @@ async def confirm_lap(request: LapConfirmRequest):
         "lap_number": new_laps,
         "action": "lap_completed",
         "lap_start_time": lap_info.get("lap_start_time"),
-        "scan_time": scan_time,
+        "scan_time": local_time,
         "minutes_into_lap": minutes_into_lap,
         "scanned_by": request.scanned_by or "unknown",
-        "created_at": scan_time
+        "created_at": local_time
     })
     
     return {
@@ -603,7 +602,7 @@ async def confirm_lap(request: LapConfirmRequest):
         "bib": bib,
         "laps_completed": new_laps,
         "total_km": round(new_km, 1),
-        "scan_time": scan_time.isoformat()
+        "scan_time": local_time.isoformat()
     }
 
 
