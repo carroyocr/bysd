@@ -124,7 +124,9 @@ export default function LapRegistrationsPanel() {
     });
   };
 
-  const formatTime = (dateStr) => {
+  const formatTime = (dateStr, localStr) => {
+    // Use local time string if available
+    if (localStr) return localStr;
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     return date.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
