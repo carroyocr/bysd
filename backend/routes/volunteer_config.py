@@ -259,10 +259,14 @@ async def _regenerate_slots_for_position(db, position_name: str, turnos: List[Sh
     for turno in turnos:
         turno_dict = turno.dict() if hasattr(turno, 'dict') else turno
         
-        # Check existing slots for this position+shift
+        # Get dia_tipo (default to "carrera" for backward compatibility)
+        dia_tipo = turno_dict.get("dia_tipo", "carrera")
+        
+        # Check existing slots for this position+shift+dia_tipo
         existing_count = await db.volunteer_assignments.count_documents({
             "puesto": target_name,
-            "turno": turno_dict["turno"]
+            "turno": turno_dict["turno"],
+            "dia_tipo": dia_tipo
         })
         
         slots_to_create = turno_dict["slots_count"] - existing_count
@@ -275,6 +279,7 @@ async def _regenerate_slots_for_position(db, position_name: str, turnos: List[Sh
                 "slot": existing_count + i + 1,
                 "hora_inicio": turno_dict["hora_inicio"],
                 "hora_fin": turno_dict["hora_fin"],
+                "dia_tipo": dia_tipo,
                 "email_asignado": None,
                 "nombre_asignado": None
             }
