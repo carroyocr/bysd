@@ -671,11 +671,8 @@ export default function VolunteerAssignmentsManagement() {
                                 : 'border-gray-200 hover:border-primary/50'}
                             `}
                           >
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs mb-1 ${slot.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : ''}`}
-                            >
-                              {slot.dia_tipo === 'previo' ? 'Previo' : 'Carrera'} - Turno {slot.turno}
+                            <Badge variant="outline" className="text-xs mb-1">
+                              Turno {slot.turno}
                             </Badge>
                             <div className="text-xs text-muted-foreground">
                               {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
