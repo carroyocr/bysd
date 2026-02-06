@@ -470,8 +470,11 @@ export default function VolunteerAssignmentsManagement() {
                                       <div>
                                         <div className="font-medium text-sm">{slot.puesto}</div>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                          <Badge variant="outline" className="text-xs">
-                                            Turno {slot.turno}
+                                          <Badge 
+                                            variant="outline" 
+                                            className={`text-xs ${slot.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : ''}`}
+                                          >
+                                            {slot.dia_tipo === 'previo' ? 'Día Previo' : 'Día Carrera'} - Turno {slot.turno}
                                           </Badge>
                                           <span className="flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
