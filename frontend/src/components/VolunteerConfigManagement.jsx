@@ -304,8 +304,8 @@ export default function VolunteerConfigManagement() {
       
       <div className="space-y-2">
         {turnos.map((turno, index) => (
-          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-            <div className="w-16">
+          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg flex-wrap">
+            <div className="w-14">
               <Input
                 value={turno.turno}
                 onChange={(e) => updateShift(turnos, setTurnos, index, 'turno', e.target.value.toUpperCase())}
@@ -315,6 +315,18 @@ export default function VolunteerConfigManagement() {
                 className="text-center font-bold"
               />
             </div>
+            <select
+              value={turno.dia_tipo || 'carrera'}
+              onChange={(e) => updateShift(turnos, setTurnos, index, 'dia_tipo', e.target.value)}
+              disabled={disabled}
+              className={`px-2 py-1.5 text-xs border rounded-md bg-background ${
+                turno.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-blue-300 bg-blue-50 text-blue-700'
+              }`}
+            >
+              {DIA_TIPO_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
             <div className="flex items-center gap-1 flex-1">
               <Clock className="w-4 h-4 text-muted-foreground" />
               <Input
