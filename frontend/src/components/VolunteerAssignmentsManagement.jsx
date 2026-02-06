@@ -80,14 +80,20 @@ export default function VolunteerAssignmentsManagement() {
     return availableSlots.filter(slot => !slot.email_asignado);
   };
 
-  // Group available slots by position
+  // Group available slots by position and day type
   const groupSlotsByPosition = (slots) => {
     const grouped = {};
     slots.forEach(slot => {
-      if (!grouped[slot.puesto]) {
-        grouped[slot.puesto] = [];
+      const diaTipo = slot.dia_tipo || 'carrera';
+      const key = `${diaTipo}|${slot.puesto}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          puesto: slot.puesto,
+          dia_tipo: diaTipo,
+          slots: []
+        };
       }
-      grouped[slot.puesto].push(slot);
+      grouped[key].slots.push(slot);
     });
     return grouped;
   };
