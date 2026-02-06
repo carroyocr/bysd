@@ -23,12 +23,18 @@ const formatTime12h = (time24) => {
 
 // Default shift templates
 const DEFAULT_SHIFTS = [
-  { turno: "A", hora_inicio: "08:00", hora_fin: "12:00", slots_count: 2 },
-  { turno: "B", hora_inicio: "12:00", hora_fin: "16:00", slots_count: 2 },
-  { turno: "C", hora_inicio: "16:00", hora_fin: "20:00", slots_count: 2 },
-  { turno: "D", hora_inicio: "20:00", hora_fin: "00:00", slots_count: 2 },
-  { turno: "E", hora_inicio: "00:00", hora_fin: "04:00", slots_count: 2 },
-  { turno: "F", hora_inicio: "04:00", hora_fin: "08:00", slots_count: 2 },
+  { turno: "A", hora_inicio: "08:00", hora_fin: "12:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "B", hora_inicio: "12:00", hora_fin: "16:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "C", hora_inicio: "16:00", hora_fin: "20:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "D", hora_inicio: "20:00", hora_fin: "00:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "E", hora_inicio: "00:00", hora_fin: "04:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "F", hora_inicio: "04:00", hora_fin: "08:00", slots_count: 2, dia_tipo: "carrera" },
+];
+
+// Day type options
+const DIA_TIPO_OPTIONS = [
+  { value: "previo", label: "Día Previo" },
+  { value: "carrera", label: "Día de Carrera" }
 ];
 
 export default function VolunteerConfigManagement() {
