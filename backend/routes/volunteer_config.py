@@ -11,6 +11,7 @@ class ShiftConfig(BaseModel):
     hora_inicio: str  # "08:00"
     hora_fin: str  # "12:00"
     slots_count: int  # Number of slots for this shift
+    dia_tipo: str = "carrera"  # "previo" or "carrera"
 
 
 class PositionCreate(BaseModel):
