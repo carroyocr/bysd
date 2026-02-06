@@ -640,11 +640,27 @@ export default function VolunteerAssignmentsManagement() {
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer())).map(([position, slots]) => (
-                    <div key={position}>
-                      <h4 className="font-semibold text-sm mb-2">{position}</h4>
+                  {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer()))
+                    .sort(([a], [b]) => {
+                      // Sort by day type first (previo first), then by position
+                      const [aDia] = a.split('|');
+                      const [bDia] = b.split('|');
+                      if (aDia !== bDia) return aDia === 'previo' ? -1 : 1;
+                      return a.localeCompare(b);
+                    })
+                    .map(([key, group]) => (
+                    <div key={key}>
+                      <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${group.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-blue-300 bg-blue-50 text-blue-700'}`}
+                        >
+                          {group.dia_tipo === 'previo' ? 'Día Previo' : 'Día Carrera'}
+                        </Badge>
+                        {group.puesto}
+                      </h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {slots.map((slot) => (
+                        {group.slots.map((slot) => (
                           <div
                             key={slot.id}
                             onClick={() => setSelectedSlotToAdd(slot)}
