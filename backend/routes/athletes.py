@@ -756,6 +756,41 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
     }
 
 
+
+@router.delete("/cancel-race/{registration_id}")
+async def cancel_race_registration(registration_id: str, authorization: str = Header(None)):
+    """Cancel a race registration (only if no payment receipt uploaded)"""
+    from server import db as database
+    from bson import ObjectId
+    
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+    
+    try:
+        reg = await database.registrations.find_one({"_id": ObjectId(registration_id)})
+    except:
+        raise HTTPException(status_code=404, detail="Inscripcion no encontrada")
+    
+    if not reg:
+        raise HTTPException(status_code=404, detail="Inscripcion no encontrada")
+    
+    # Verify ownership
+    if reg.get("athlete_id") != athlete_id and reg.get("email") != payload.get("email"):
+        raise HTTPException(status_code=403, detail="No autorizado")
+    
+    # Cannot cancel if payment receipt already uploaded
+    if reg.get("payment_receipt"):
+        raise HTTPException(status_code=400, detail="No puedes cancelar una inscripcion con comprobante de pago cargado")
+    
+    # Cannot cancel if already in race (active, retired, winner)
+    if reg.get("status") in ["active", "retired", "winner"]:
+        raise HTTPException(status_code=400, detail="No puedes cancelar una inscripcion en curso o finalizada")
+    
+    await database.registrations.delete_one({"_id": ObjectId(registration_id)})
+    
+    return {"success": True, "message": "Inscripcion cancelada exitosamente"}
+
+
 # ==================== HISTORICAL RESULTS / CLAIM ====================
 
 @router.get("/search-2026-results")
