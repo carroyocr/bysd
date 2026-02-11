@@ -8,6 +8,19 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Day type display helpers
+const DIA_TIPO_CONFIG = {
+  'previo': { label: 'Día Previo', color: 'purple', bgClass: 'border-purple-300 bg-purple-50 text-purple-700' },
+  'carrera': { label: 'Día Carrera', color: 'blue', bgClass: 'border-blue-300 bg-blue-50 text-blue-700' },
+  'carrera_dia1': { label: 'Día 1', color: 'blue', bgClass: 'border-blue-300 bg-blue-50 text-blue-700' },
+  'carrera_dia2': { label: 'Día 2', color: 'green', bgClass: 'border-green-300 bg-green-50 text-green-700' },
+  'carrera_dia3': { label: 'Día 3', color: 'orange', bgClass: 'border-orange-300 bg-orange-50 text-orange-700' }
+};
+
+const getDiaTipoDisplay = (diaTipo) => {
+  return DIA_TIPO_CONFIG[diaTipo] || { label: diaTipo || 'Sin asignar', color: 'gray', bgClass: 'border-gray-300 bg-gray-50 text-gray-700' };
+};
+
 export default function VolunteerAssignmentsManagement() {
   const [volunteers, setVolunteers] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
