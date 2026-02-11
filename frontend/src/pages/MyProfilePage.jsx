@@ -857,9 +857,9 @@ export default function MyProfilePage() {
           <div className="flex gap-2 border-b pb-2 overflow-x-auto">
             {[
               { key: 'profile', label: 'Mis Datos', icon: User },
-              { key: 'races', label: 'Mis Carreras', icon: Calendar },
-              { key: 'messages', label: 'Mensajes', icon: MessageCircle },
+              { key: 'races', label: 'Próximas Carreras', icon: Calendar },
               { key: 'history', label: 'Historial', icon: Trophy },
+              ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', icon: MessageCircle }] : []),
             ].map(tab => (
               <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'ghost'} onClick={() => setActiveTab(tab.key)} size="sm" data-testid={`tab-${tab.key}`}>
                 <tab.icon className="w-4 h-4 mr-2" />{tab.label}
