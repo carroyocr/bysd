@@ -4,7 +4,11 @@
 - **Proyecto**: Sistema de tracking en vivo para carrera Backyard Ultra
 - **Evento**: Santo Domingo 2026/2027
 - **Fecha de Creación**: Enero 2026
-- **Última Actualización**: 02 Febrero 2026
+- **Última Actualización**: 11 Febrero 2026
+
+## Reglas de Desarrollo (OBLIGATORIAS)
+1. **Emails**: Todos los correos electrónicos sin excepción deben estar incluidos en el módulo de correos mediante una plantilla HTML almacenada en la colección `email_templates` de MongoDB, utilizando el mismo formato y estilos que las plantillas existentes.
+2. **Diseño UI**: Todas las nuevas páginas deben seguir el patrón de diseño existente del proyecto: misma fuente (`font-display`), colores (naranja primario `#E8772E`, fondo claro), tipografía, estructuración, componentes Shadcn/UI, y estilo Tailwind CSS consistente con las páginas ya construidas.
 
 ## Descripción del Producto
 Aplicación web full-stack para gestionar y mostrar en tiempo real el progreso de una carrera Backyard Ultra. Incluye:
