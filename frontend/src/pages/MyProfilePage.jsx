@@ -223,7 +223,16 @@ export default function MyProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: pendingEmail, code: verificationCode })
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Parse error:', text);
+        toast.error('Error del servidor');
+        return;
+      }
       
       if (res.ok) {
         localStorage.setItem('athlete_token', data.token);
@@ -236,6 +245,7 @@ export default function MyProfilePage() {
         toast.error(data.detail || 'Código incorrecto');
       }
     } catch (error) {
+      console.error('Verify error:', error);
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
@@ -253,12 +263,23 @@ export default function MyProfilePage() {
         body: JSON.stringify({ email })
       });
       
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Parse error:', text);
+      }
+      
       if (res.ok) {
         setPendingEmail(email);
         toast.success('Si el correo existe, recibirás un código');
         setCurrentView(VIEW_RESET);
+      } else {
+        toast.error(data?.detail || 'Error al procesar solicitud');
       }
     } catch (error) {
+      console.error('Forgot password error:', error);
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
