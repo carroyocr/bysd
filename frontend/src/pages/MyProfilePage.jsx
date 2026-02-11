@@ -95,6 +95,11 @@ export default function MyProfilePage() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   
+  // Cheer messages
+  const [cheerMessages, setCheerMessages] = useState([]);
+  const [cheerRaces, setCheerRaces] = useState([]);
+  const [cheerFilter, setCheerFilter] = useState('');
+  
   // Race inscription
   const [showInscription, setShowInscription] = useState(false);
   const [inscriptionData, setInscriptionData] = useState({
