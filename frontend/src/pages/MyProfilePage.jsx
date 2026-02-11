@@ -31,6 +31,24 @@ const REG_STEPS = [
   { key: 'photo', label: 'Foto' },
 ];
 
+// Page wrapper (defined outside component to avoid re-mount on re-render)
+const PageContent = ({ children }) => (
+  <section className="py-12 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
+    <div className="container mx-auto px-4">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {children}
+      </div>
+    </div>
+  </section>
+);
+
+const SectionHeader = ({ title, subtitle }) => (
+  <div className="text-center space-y-4 pt-8 pb-4">
+    <h2 className="font-display text-4xl sm:text-5xl text-foreground">{title}</h2>
+    {subtitle && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>}
+  </div>
+);
+
 export default function MyProfilePage() {
   const navigate = useNavigate();
   const { config } = useRaceConfig();
