@@ -219,8 +219,12 @@ async def verify_email(data: VerifyEmailRequest):
     if not stored_code or stored_code != data.code:
         raise HTTPException(status_code=400, detail="Código incorrecto")
     
-    if code_expires and datetime.now(timezone.utc) > code_expires:
-        raise HTTPException(status_code=400, detail="Código expirado. Solicita uno nuevo.")
+    if code_expires:
+        # Handle both naive and aware datetimes from MongoDB
+        if code_expires.tzinfo is None:
+            code_expires = code_expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > code_expires:
+            raise HTTPException(status_code=400, detail="Código expirado. Solicita uno nuevo.")
     
     # Mark as verified
     await database.athletes.update_one(
