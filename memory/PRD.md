@@ -542,6 +542,27 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ## Changelog
 
+### 11 Febrero 2026
+- ✅ **Feature: Sistema Completo de Perfil de Atleta** (P0)
+  - **Ruta `/mi-perfil` añadida** a App.js (faltaba la definición de Route)
+  - **Bug fix crítico**: Backend `authorization` parameter cambiado de query param a `Header(None)` - el token JWT nunca se leía desde los headers
+  - **Dashboard funcional post-login**: Tabs "Mis Datos", "Mis Carreras", "Historial" 
+  - **Edición de perfil**: Botón Editar con formulario inline, guardado vía PUT /api/athletes/profile
+  - **Manejo de errores**: Login/registro muestran errores específicos del backend ("Credenciales incorrectas") en vez de "Error de conexión"
+  - **Login → fetchProfile()**: Después de login, se obtiene el perfil completo (no solo {id, email, nombre})
+  - Archivos modificados: `App.js`, `MyProfilePage.jsx`, `athletes.py`
+  - Tests: 18/18 backend (100%), frontend 95% (todos los flujos críticos verificados)
+
+- ✅ **Feature: Reclamar Resultados 2026**
+  - Búsqueda actualizada para buscar en `participants`, `archived_participants` y `registrations`
+  - Reclamación funcional: marca `claimed_by` en la colección origen
+  - Resultados reclamados aparecen en "Mi Historial de Carreras"
+  - Endpoint `claim-result` actualizado para manejar múltiples colecciones
+
+- ✅ **Feature: Tabs "Mis Carreras" e "Historial" conectados**
+  - "Mis Carreras": Muestra inscripciones activas desde `registrations` + estado vacío con enlace a pre-registro
+  - "Historial": Historial con resultados propios + reclamados de todas las colecciones
+
 ### 06 Febrero 2026
 - ✅ **Feature: Distinción Día Previo / Día de Carrera en Turnos de Voluntarios**
   - Nuevo campo `dia_tipo` en turnos: "previo" o "carrera"
