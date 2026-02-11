@@ -542,6 +542,31 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ## Changelog
 
+### 06 Febrero 2026
+- ✅ **Feature: Distinción Día Previo / Día de Carrera en Turnos de Voluntarios**
+  - Nuevo campo `dia_tipo` en turnos: "previo" o "carrera"
+  - Selector visual en formulario de configuración de turnos (azul=carrera, púrpura=previo)
+  - Los slots de voluntarios ahora incluyen la información del tipo de día
+  - Se muestra en el panel de asignaciones y en el modal de agregar turno
+  - Archivos modificados:
+    - `frontend/src/components/VolunteerConfigManagement.jsx`
+    - `frontend/src/components/VolunteerAssignmentsManagement.jsx`
+    - `backend/routes/volunteer_config.py`
+
+- ✅ **Feature: Ritmo por kilómetro en Registro de Vueltas**
+  - Nueva columna "Ritmo" en la tabla de registro de vueltas
+  - Formato en minutos:segundos (ej: 5:13 /km)
+  - Incluido en exportación CSV con hora local
+  - Archivos modificados: `LapRegistrationsPanel.jsx`, `qr_scan.py`
+
+- ✅ **Mejora: Botón Refrescar en Control de Participantes**
+  - Agregado botón de refrescar junto al filtro de status
+  - Archivo modificado: `RaceControlPanel.jsx`
+
+- ✅ **Mejora: Link directo al Escáner QR**
+  - El botón "Escáner QR" en el menú admin ahora navega directamente a `/scan`
+  - Archivo modificado: `AdminPage.jsx`
+
 ### 04 Febrero 2026
 - ✅ **Bug Fix: Reset Database ahora limpia lap_registrations**
   - El botón "Reinicio de Base de Datos" ahora también elimina los registros de la tabla `lap_registrations`
