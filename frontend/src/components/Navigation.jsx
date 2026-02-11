@@ -27,7 +27,6 @@ const staticNavLinks = [
 
 const endNavLinks = [
   { href: '/mi-perfil', label: 'Mi Perfil', icon: User },
-  { href: '/pre-registro', label: 'Pre Registro', highlight: true },
 ];
 
 export default function Navigation() {
