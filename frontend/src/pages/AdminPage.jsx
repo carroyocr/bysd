@@ -148,6 +148,7 @@ export default function AdminPage() {
         {/* Tabs Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="flex flex-wrap gap-1 h-auto lg:inline-flex">
+            {/* 1. Control */}
             {hasAccess('control') && (
               <TabsTrigger value="control" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -155,13 +156,15 @@ export default function AdminPage() {
                 <span className="sm:hidden">Control</span>
               </TabsTrigger>
             )}
+            {/* 2. Vueltas */}
             {hasAccess('lap-registry') && (
               <TabsTrigger value="lap-registry" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <span className="hidden sm:inline">Registro Vueltas</span>
+                <span className="hidden sm:inline">Vueltas</span>
                 <span className="sm:hidden">Vueltas</span>
               </TabsTrigger>
             )}
+            {/* 3. Escáner QR */}
             {hasAccess('scanner') && (
               <Button
                 variant="ghost"
@@ -173,6 +176,7 @@ export default function AdminPage() {
                 <span className="sm:hidden">QR</span>
               </Button>
             )}
+            {/* 4. Atletas */}
             {hasAccess('registrations') && (
               <TabsTrigger value="registrations" className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
@@ -180,13 +184,15 @@ export default function AdminPage() {
                 <span className="sm:hidden">Atletas</span>
               </TabsTrigger>
             )}
-            {hasAccess('finances') && (
-              <TabsTrigger value="finances" className="flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
-                <span className="hidden sm:inline">Presupuesto</span>
-                <span className="sm:hidden">Presup.</span>
+            {/* 5. Voluntarios (antes Asignaciones) */}
+            {hasAccess('assignments') && (
+              <TabsTrigger value="assignments" className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                <span className="hidden sm:inline">Voluntarios</span>
+                <span className="sm:hidden">Volunt.</span>
               </TabsTrigger>
             )}
+            {/* 6. Turnos */}
             {hasAccess('volunteers') && (
               <TabsTrigger value="volunteers" className="flex items-center gap-2">
                 <CalendarClock className="w-4 h-4" />
@@ -194,13 +200,7 @@ export default function AdminPage() {
                 <span className="sm:hidden">Turnos</span>
               </TabsTrigger>
             )}
-            {hasAccess('assignments') && (
-              <TabsTrigger value="assignments" className="flex items-center gap-2">
-                <ClipboardCheck className="w-4 h-4" />
-                <span className="hidden sm:inline">Asignaciones</span>
-                <span className="sm:hidden">Asign.</span>
-              </TabsTrigger>
-            )}
+            {/* 7. Patrocinadores */}
             {hasAccess('sponsors') && (
               <TabsTrigger value="sponsors" className="flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
@@ -208,20 +208,23 @@ export default function AdminPage() {
                 <span className="sm:hidden">Sponsors</span>
               </TabsTrigger>
             )}
+            {/* 8. Encuesta */}
             {hasAccess('surveys') && (
               <TabsTrigger value="surveys" className="flex items-center gap-2">
                 <ClipboardList className="w-4 h-4" />
-                <span className="hidden sm:inline">Encuestas</span>
-                <span className="sm:hidden">Encuestas</span>
+                <span className="hidden sm:inline">Encuesta</span>
+                <span className="sm:hidden">Encuesta</span>
               </TabsTrigger>
             )}
-            {hasAccess('config') && (
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Flag className="w-4 h-4" />
-                <span className="hidden sm:inline">Carrera</span>
-                <span className="sm:hidden">Carrera</span>
+            {/* 9. Correos */}
+            {hasAccess('emails') && (
+              <TabsTrigger value="emails" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                <span className="hidden sm:inline">Correos</span>
+                <span className="sm:hidden">Correos</span>
               </TabsTrigger>
             )}
+            {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
@@ -229,11 +232,12 @@ export default function AdminPage() {
                 <span className="sm:hidden">Usuarios</span>
               </TabsTrigger>
             )}
-            {hasAccess('emails') && (
-              <TabsTrigger value="emails" className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Correos</span>
-                <span className="sm:hidden">Correos</span>
+            {/* 11. Carrera */}
+            {hasAccess('config') && (
+              <TabsTrigger value="config" className="flex items-center gap-2">
+                <Flag className="w-4 h-4" />
+                <span className="hidden sm:inline">Carrera</span>
+                <span className="sm:hidden">Carrera</span>
               </TabsTrigger>
             )}
           </TabsList>
