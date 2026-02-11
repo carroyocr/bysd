@@ -831,6 +831,96 @@ async def cancel_race_registration(registration_id: str, authorization: str = He
     return {"success": True, "message": "Inscripcion cancelada exitosamente"}
 
 
+
+# ==================== CHEER MESSAGES ====================
+
+@router.get("/my-messages")
+async def get_my_cheer_messages(authorization: str = Header(None), race_code: str = None):
+    """Get all cheer messages for an athlete across all races"""
+    from server import db as database
+    from bson import ObjectId
+    
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+    
+    athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+    
+    # Collect all BIBs per race_code
+    bib_map = {}  # {race_code: [bibs]}
+    
+    # From current registrations
+    registrations = await database.registrations.find({
+        "$or": [{"athlete_id": athlete_id}, {"email": athlete["email"]}]
+    }).to_list(100)
+    for reg in registrations:
+        rc = reg.get("race_code", "")
+        bib = reg.get("bib")
+        if bib:
+            bib_map.setdefault(rc, set()).add(bib)
+    
+    # From claimed results (participants + archived_participants)
+    claimed_ids = athlete.get("claimed_results", [])
+    if claimed_ids:
+        try:
+            object_ids = [ObjectId(cid) for cid in claimed_ids]
+            for coll_name in ["participants", "archived_participants"]:
+                docs = await database[coll_name].find({"_id": {"$in": object_ids}}).to_list(100)
+                for doc in docs:
+                    rc = doc.get("race_code", "BYSD-2026")
+                    bib = doc.get("bib")
+                    if bib:
+                        bib_map.setdefault(rc, set()).add(bib)
+        except:
+            pass
+    
+    if not bib_map:
+        return {"messages": [], "races": []}
+    
+    # Determine which races are archived vs current
+    all_messages = []
+    race_labels = {}
+    
+    for rc, bibs in bib_map.items():
+        bib_list = list(bibs)
+        query = {"athlete_bib": {"$in": bib_list}}
+        if race_code and race_code != rc:
+            continue
+        
+        # Check if archived race
+        is_archived = "2026" in rc
+        collection = database.archived_cheer_messages if is_archived else database.cheer_messages
+        
+        # Add race_code filter for non-archived (current collection may have multiple races)
+        if not is_archived:
+            query["race_code"] = rc
+        
+        messages = await collection.find(query).sort("created_at", -1).to_list(500)
+        
+        # Get race name
+        race_config = await database.race_configurations.find_one({"code": rc})
+        race_name = race_config.get("name") if race_config else rc
+        race_labels[rc] = race_name
+        
+        for msg in messages:
+            all_messages.append({
+                "fan_name": msg.get("fan_name", "Anonimo"),
+                "message": msg.get("message", ""),
+                "race_code": rc,
+                "race_name": race_name,
+                "created_at": msg.get("created_at").isoformat() if msg.get("created_at") else None,
+            })
+    
+    # Sort all by date descending
+    all_messages.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    
+    races = [{"code": k, "name": v} for k, v in race_labels.items()]
+    
+    return {"messages": all_messages, "races": races}
+
+
+
 # ==================== HISTORICAL RESULTS / CLAIM ====================
 
 @router.get("/search-2026-results")
