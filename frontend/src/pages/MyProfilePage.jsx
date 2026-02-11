@@ -139,6 +139,7 @@ export default function MyProfilePage() {
       setCurrentView(VIEW_DASHBOARD);
       fetchMyRaces();
       fetchRaceHistory();
+      fetchCheerMessages();
     } else {
       localStorage.removeItem('athlete_token');
     }
