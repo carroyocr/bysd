@@ -47,9 +47,6 @@ export default function App() {
           <Route path="/scan" element={<QRScannerPage />} />
           <Route path="/scan/confirmar" element={<ScanConfirmPage />} />
           
-          {/* My Profile - without Navigation/Footer */}
-          <Route path="/mi-perfil" element={<MyProfilePage />} />
-          
           {/* Public routes with Navigation/Footer */}
           <Route
             path="/*"
