@@ -54,6 +54,8 @@ const SectionHeader = ({ title, subtitle }) => (
 export default function MyProfilePage() {
   const navigate = useNavigate();
   const { config } = useRaceConfig();
+  const raceCost = config?.registration_cost || 3500;
+  const formattedCost = `RD$${raceCost.toLocaleString('es-DO')}`;
   
   // Auth state
   const [currentView, setCurrentView] = useState(VIEW_LANDING);
