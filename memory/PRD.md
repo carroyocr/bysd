@@ -541,6 +541,18 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ---
 
+
+- ✅ **Feature: Formulario de Registro Multi-Step (reemplaza Pre Registro)**
+  - 6 pasos: Cuenta → Personal → Médico → Emergencia → Preferencias → Foto
+  - Todos los campos del Pre Registro migrados al perfil permanente
+  - Campos específicos del evento (motivación, experiencia, vueltas, carpa, hospedaje, acompañantes) movidos a formulario de inscripción a carrera
+  - Backend extendido con todos los campos nuevos: sexo, nacionalidad, tipo_sangre, condicion_medica, alergias, talla_camiseta, personalizacion_camiseta, etc.
+  - Endpoint POST /api/athletes/upload-photo para fotos de perfil
+  - Endpoint register-race actualizado: copia datos de perfil + campos de evento a colección `registrations`
+  - "Pre Registro" eliminado del menú de navegación
+  - Rutas legacy (/pre-registro, /inscripcion) redirigen a /mi-perfil
+  - Tests: 18/18 backend (100%), frontend 100% verificado
+
 ## Changelog
 
 ### 11 Febrero 2026
