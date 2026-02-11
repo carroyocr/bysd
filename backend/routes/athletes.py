@@ -820,7 +820,7 @@ async def get_race_history(authorization: str = Header(None)):
     if not athlete:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     
-    # Get all registrations (own + claimed)
+    # Get own registrations with completed status
     own_registrations = await database.registrations.find({
         "$or": [
             {"athlete_id": athlete_id},
@@ -829,15 +829,29 @@ async def get_race_history(authorization: str = Header(None)):
         "status": {"$in": ["retired", "winner", "finished", "dns"]}
     }).to_list(100)
     
-    # Get claimed historical results
+    # Get claimed historical results from all collections
     claimed_ids = athlete.get("claimed_results", [])
     claimed_results = []
     if claimed_ids:
         try:
-            object_ids = [ObjectId(id) for id in claimed_ids]
-            claimed_results = await database.registrations.find({
+            object_ids = [ObjectId(cid) for cid in claimed_ids]
+            # Search in archived_participants
+            archived = await database.archived_participants.find({
                 "_id": {"$in": object_ids}
             }).to_list(100)
+            claimed_results.extend(archived)
+            
+            # Search in participants
+            legacy = await database.participants.find({
+                "_id": {"$in": object_ids}
+            }).to_list(100)
+            claimed_results.extend(legacy)
+            
+            # Search in registrations
+            reg_claimed = await database.registrations.find({
+                "_id": {"$in": object_ids}
+            }).to_list(100)
+            claimed_results.extend(reg_claimed)
         except:
             pass
     
@@ -854,7 +868,7 @@ async def get_race_history(authorization: str = Header(None)):
     # Format
     history = []
     for reg in unique_results:
-        race_code = reg.get("race_code")
+        race_code = reg.get("race_code", "BYSD-2026")
         race_config = await database.race_configurations.find_one({"code": race_code})
         
         history.append({
