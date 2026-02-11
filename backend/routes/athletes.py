@@ -288,15 +288,25 @@ async def resend_verification_code(data: ForgotPasswordRequest):
     # Send email
     try:
         from services.template_email_service import send_templated_email
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #1a1a2e;">Backyard Ultra Santo Domingo</h1>
+            </div>
+            <h2>¡Hola {athlete["nombre"]}!</h2>
+            <p>Tu código de verificación es:</p>
+            <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a2e;">{verification_code}</span>
+            </div>
+            <p style="color: #666;">Este código expira en {CODE_EXPIRATION_MINUTES} minutos.</p>
+        </body>
+        </html>
+        """
         await send_templated_email(
             to_email=data.email,
             subject="Tu código de verificación - Backyard Ultra",
-            template_name="verification_code",
-            context={
-                "nombre": athlete["nombre"],
-                "code": verification_code,
-                "expires_minutes": CODE_EXPIRATION_MINUTES
-            }
+            html_content=html_content
         )
     except Exception as e:
         print(f"Error sending verification email: {e}")
