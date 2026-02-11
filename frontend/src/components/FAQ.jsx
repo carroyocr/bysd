@@ -89,7 +89,7 @@ export default function FAQ() {
   ];
 
   return (
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Header */}

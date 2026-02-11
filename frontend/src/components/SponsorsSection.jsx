@@ -224,7 +224,7 @@ export default function SponsorsSection({ raceCode }) {
 
   if (loading) {
     return (
-      <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
+      <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -235,7 +235,7 @@ export default function SponsorsSection({ raceCode }) {
   }
 
   return (
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
