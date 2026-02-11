@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Calendar, MapPin } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
