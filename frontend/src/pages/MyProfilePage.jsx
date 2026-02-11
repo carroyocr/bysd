@@ -857,17 +857,17 @@ export default function MyProfilePage() {
   if (currentView === VIEW_DASHBOARD && athlete) {
     return (
       <PageWrapper>
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8" data-testid="athlete-dashboard">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold">
-                  ¡Hola, {athlete.nombre}!
+                <h1 className="text-2xl font-bold" data-testid="dashboard-greeting">
+                  Hola, {athlete.nombre}!
                 </h1>
                 <p className="text-muted-foreground">{athlete.email}</p>
               </div>
-              <Button variant="outline" onClick={handleLogout}>
+              <Button variant="outline" onClick={handleLogout} data-testid="logout-btn">
                 <LogOut className="w-4 h-4 mr-2" />
                 Cerrar Sesión
               </Button>
@@ -875,83 +875,143 @@ export default function MyProfilePage() {
 
             {/* Tabs */}
             <div className="flex gap-2 border-b pb-2 overflow-x-auto">
-              <Button 
-                variant={activeTab === 'profile' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('profile')}
-                size="sm"
-              >
-                <User className="w-4 h-4 mr-2" />
-                Mi Perfil
-              </Button>
-              <Button 
-                variant={activeTab === 'races' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('races')}
-                size="sm"
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Mis Carreras
-              </Button>
-              <Button 
-                variant={activeTab === 'history' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('history')}
-                size="sm"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                Historial
-              </Button>
+              {[
+                { key: 'profile', label: 'Mis Datos', icon: User },
+                { key: 'races', label: 'Mis Carreras', icon: Calendar },
+                { key: 'history', label: 'Historial', icon: Trophy },
+              ].map(tab => (
+                <Button 
+                  key={tab.key}
+                  variant={activeTab === tab.key ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab(tab.key)}
+                  size="sm"
+                  data-testid={`tab-${tab.key}`}
+                >
+                  <tab.icon className="w-4 h-4 mr-2" />
+                  {tab.label}
+                </Button>
+              ))}
             </div>
 
             {/* Profile Tab */}
             {activeTab === 'profile' && (
-              <Card>
-                <CardHeader>
+              <Card data-testid="profile-card">
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <User className="w-5 h-5 text-primary" />
                     Mis Datos
                   </CardTitle>
+                  {!editMode ? (
+                    <Button variant="outline" size="sm" onClick={startEdit} data-testid="edit-profile-btn">
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Editar
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setEditMode(false)} data-testid="cancel-edit-btn">
+                        Cancelar
+                      </Button>
+                      <Button size="sm" onClick={handleSaveProfile} disabled={loading} data-testid="save-profile-btn">
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Guardar
+                      </Button>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label className="text-muted-foreground text-sm">Nombre completo</Label>
-                      <p className="font-medium">{athlete.nombre} {athlete.apellidos}</p>
+                  {!editMode ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div data-testid="profile-nombre">
+                        <Label className="text-muted-foreground text-sm">Nombre completo</Label>
+                        <p className="font-medium">{athlete.nombre} {athlete.apellidos}</p>
+                      </div>
+                      <div data-testid="profile-email">
+                        <Label className="text-muted-foreground text-sm">Email</Label>
+                        <p className="font-medium flex items-center gap-2">
+                          {athlete.email}
+                          {athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500" />}
+                        </p>
+                      </div>
+                      <div data-testid="profile-telefono">
+                        <Label className="text-muted-foreground text-sm">Teléfono</Label>
+                        <p className="font-medium">{athlete.telefono || '-'}</p>
+                      </div>
+                      <div data-testid="profile-nacimiento">
+                        <Label className="text-muted-foreground text-sm">Fecha de Nacimiento</Label>
+                        <p className="font-medium">{athlete.fecha_nacimiento || '-'}</p>
+                      </div>
+                      <div data-testid="profile-genero">
+                        <Label className="text-muted-foreground text-sm">Sexo</Label>
+                        <p className="font-medium capitalize">{athlete.genero || '-'}</p>
+                      </div>
+                      <div data-testid="profile-ubicacion">
+                        <Label className="text-muted-foreground text-sm">País / Ciudad</Label>
+                        <p className="font-medium">
+                          {athlete.pais || '-'}{athlete.ciudad ? ` / ${athlete.ciudad}` : ''}
+                        </p>
+                      </div>
+                      <div className="md:col-span-2" data-testid="profile-emergencia">
+                        <Label className="text-muted-foreground text-sm">Contacto de Emergencia</Label>
+                        <p className="font-medium">
+                          {athlete.contacto_emergencia_nombre || '-'}
+                          {athlete.contacto_emergencia_telefono && ` (${athlete.contacto_emergencia_telefono})`}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground text-sm">Email</Label>
-                      <p className="font-medium flex items-center gap-2">
-                        {athlete.email}
-                        {athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500" />}
-                      </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nombre</Label>
+                        <Input value={editData.nombre} onChange={e => setEditData({...editData, nombre: e.target.value})} data-testid="edit-nombre" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Apellidos</Label>
+                        <Input value={editData.apellidos} onChange={e => setEditData({...editData, apellidos: e.target.value})} data-testid="edit-apellidos" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Teléfono</Label>
+                        <Input value={editData.telefono} onChange={e => setEditData({...editData, telefono: e.target.value})} data-testid="edit-telefono" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fecha de Nacimiento</Label>
+                        <Input type="date" value={editData.fecha_nacimiento} onChange={e => setEditData({...editData, fecha_nacimiento: e.target.value})} data-testid="edit-nacimiento" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Sexo</Label>
+                        <select value={editData.genero} onChange={e => setEditData({...editData, genero: e.target.value})} className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground" data-testid="edit-genero">
+                          <option value="">Seleccionar</option>
+                          <option value="masculino">Masculino</option>
+                          <option value="femenino">Femenino</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>País</Label>
+                        <select value={editData.pais} onChange={e => setEditData({...editData, pais: e.target.value})} className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground" data-testid="edit-pais">
+                          <option value="">Seleccionar país</option>
+                          {COUNTRIES.map(c => <option key={c.code} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Ciudad</Label>
+                        <Input value={editData.ciudad} onChange={e => setEditData({...editData, ciudad: e.target.value})} data-testid="edit-ciudad" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Contacto Emergencia - Nombre</Label>
+                        <Input value={editData.contacto_emergencia_nombre} onChange={e => setEditData({...editData, contacto_emergencia_nombre: e.target.value})} data-testid="edit-emergencia-nombre" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Contacto Emergencia - Teléfono</Label>
+                        <Input value={editData.contacto_emergencia_telefono} onChange={e => setEditData({...editData, contacto_emergencia_telefono: e.target.value})} data-testid="edit-emergencia-tel" />
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-muted-foreground text-sm">Teléfono</Label>
-                      <p className="font-medium">{athlete.telefono || '-'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-sm">Fecha de Nacimiento</Label>
-                      <p className="font-medium">{athlete.fecha_nacimiento || '-'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-sm">País / Ciudad</Label>
-                      <p className="font-medium">
-                        {athlete.pais || '-'} {athlete.ciudad ? `/ ${athlete.ciudad}` : ''}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-sm">Contacto de Emergencia</Label>
-                      <p className="font-medium">
-                        {athlete.contacto_emergencia_nombre || '-'} 
-                        {athlete.contacto_emergencia_telefono && ` (${athlete.contacto_emergencia_telefono})`}
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             {/* Races Tab */}
             {activeTab === 'races' && (
-              <Card>
+              <Card data-testid="races-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-primary" />
@@ -960,25 +1020,25 @@ export default function MyProfilePage() {
                   <CardDescription>Carreras en las que estás inscrito</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {myRaces.filter(r => r.is_active).length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
+                  {myRaces.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground" data-testid="no-races-message">
                       <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No tienes inscripciones activas</p>
-                      <Button className="mt-4" onClick={() => navigate('/pre-registro')}>
+                      <Button className="mt-4" onClick={() => navigate('/pre-registro')} data-testid="register-race-btn">
                         Inscribirme a una carrera
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {myRaces.filter(r => r.is_active).map((race) => (
-                        <div key={race.registration_id} className="p-4 border rounded-lg">
+                      {myRaces.map((race) => (
+                        <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="font-semibold">{race.race_name}</h3>
                               <p className="text-sm text-muted-foreground">{race.race_date}</p>
                             </div>
-                            <div className="text-right">
-                              <Badge variant="outline" className="mb-2">BIB #{race.bib}</Badge>
+                            <div className="text-right space-y-1">
+                              {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
                               <div>
                                 <Badge variant={race.payment_status === 'paid' ? 'default' : 'secondary'}>
                                   {race.payment_status === 'paid' ? 'Pagado' : 'Pendiente de pago'}
@@ -996,16 +1056,16 @@ export default function MyProfilePage() {
 
             {/* History Tab */}
             {activeTab === 'history' && (
-              <div className="space-y-4">
+              <div className="space-y-4" data-testid="history-section">
                 {/* Claim 2026 Results */}
-                <Card>
+                <Card data-testid="claim-results-card">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Search className="w-5 h-5 text-primary" />
                       Reclamar Resultados 2026
                     </CardTitle>
                     <CardDescription>
-                      ¿Participaste en la edición 2026? Busca y vincula tus resultados
+                      Participaste en la edición 2026? Busca por nombre o BIB y vincula tus resultados
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1015,23 +1075,24 @@ export default function MyProfilePage() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch2026()}
+                        data-testid="search-2026-input"
                       />
-                      <Button onClick={handleSearch2026} disabled={searching}>
+                      <Button onClick={handleSearch2026} disabled={searching} data-testid="search-2026-btn">
                         {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                       </Button>
                     </div>
                     
                     {searchResults.length > 0 && (
-                      <div className="space-y-2">
+                      <div className="space-y-2" data-testid="search-results">
                         {searchResults.map((result) => (
-                          <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`result-${result.id}`}>
                             <div>
                               <p className="font-medium">
                                 {result.nombre} {result.apellidos}
                                 <Badge variant="outline" className="ml-2">BIB {result.bib}</Badge>
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {result.laps_completed} vueltas completadas
+                                {result.laps_completed} vueltas - {result.status === 'winner' ? 'Ganador' : result.status === 'retired' ? 'DNF' : result.status === 'dns' ? 'DNS' : result.status}
                               </p>
                             </div>
                             {result.already_claimed ? (
@@ -1040,7 +1101,7 @@ export default function MyProfilePage() {
                                 Reclamado
                               </Badge>
                             ) : (
-                              <Button size="sm" onClick={() => handleClaimResult(result.id)}>
+                              <Button size="sm" onClick={() => handleClaimResult(result.id)} data-testid={`claim-btn-${result.id}`}>
                                 Reclamar
                               </Button>
                             )}
@@ -1052,7 +1113,7 @@ export default function MyProfilePage() {
                 </Card>
 
                 {/* Race History */}
-                <Card>
+                <Card data-testid="race-history-card">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Trophy className="w-5 h-5 text-primary" />
@@ -1061,14 +1122,15 @@ export default function MyProfilePage() {
                   </CardHeader>
                   <CardContent>
                     {raceHistory.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
+                      <div className="text-center py-8 text-muted-foreground" data-testid="no-history-message">
                         <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
                         <p>Aún no tienes historial de carreras</p>
+                        <p className="text-sm mt-1">Usa el buscador de arriba para reclamar tus resultados de 2026</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
                         {raceHistory.map((race) => (
-                          <div key={race.registration_id} className="p-4 border rounded-lg">
+                          <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`history-${race.registration_id}`}>
                             <div className="flex justify-between items-start">
                               <div>
                                 <h3 className="font-semibold flex items-center gap-2">
@@ -1077,9 +1139,9 @@ export default function MyProfilePage() {
                                     <Badge variant="outline" className="text-xs">Reclamado</Badge>
                                   )}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">{race.race_date}</p>
+                                <p className="text-sm text-muted-foreground">{race.race_date || 'Fecha no disponible'}</p>
                               </div>
-                              <Badge variant="outline">BIB #{race.bib}</Badge>
+                              {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
                             </div>
                             <div className="mt-3 flex flex-wrap gap-4 text-sm">
                               <div>
@@ -1093,9 +1155,10 @@ export default function MyProfilePage() {
                               <div>
                                 <span className="text-muted-foreground">Estado:</span>
                                 <Badge variant="secondary" className="ml-1">
-                                  {race.status === 'winner' ? '🏆 Ganador' : 
+                                  {race.status === 'winner' ? 'Ganador' : 
                                    race.status === 'retired' ? 'DNF' : 
-                                   race.status === 'dns' ? 'DNS' : race.status}
+                                   race.status === 'dns' ? 'DNS' : 
+                                   race.status === 'active' ? 'Activo' : race.status}
                                 </Badge>
                               </div>
                             </div>
