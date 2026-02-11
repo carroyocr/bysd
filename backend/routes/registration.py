@@ -654,11 +654,12 @@ async def get_registration_stats(race_code: str):
     """Get registration statistics for a race"""
     pipeline = [
         {"$match": {"race_code": race_code}},
+        {"$addFields": {"sexo_lower": {"$toLower": "$sexo"}}},
         {"$group": {
             "_id": None,
             "total": {"$sum": 1},
-            "masculino": {"$sum": {"$cond": [{"$eq": ["$sexo", "Masculino"]}, 1, 0]}},
-            "femenino": {"$sum": {"$cond": [{"$eq": ["$sexo", "Femenino"]}, 1, 0]}},
+            "masculino": {"$sum": {"$cond": [{"$eq": ["$sexo_lower", "masculino"]}, 1, 0]}},
+            "femenino": {"$sum": {"$cond": [{"$eq": ["$sexo_lower", "femenino"]}, 1, 0]}},
             "with_photo": {"$sum": {"$cond": [{"$ne": ["$photo_url", None]}, 1, 0]}},
             "paid": {"$sum": {"$cond": [{"$eq": ["$payment_status", "paid"]}, 1, 0]}}
         }}
