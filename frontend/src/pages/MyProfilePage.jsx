@@ -876,6 +876,38 @@ export default function MyProfilePage() {
               <CardContent>
                 {!editMode ? (
                   <div className="space-y-6">
+                    {/* Photo + Name Header */}
+                    <div className="flex items-center gap-6 pb-4 border-b">
+                      <div className="relative group">
+                        {athlete.photo_url ? (
+                          <img src={`${API_URL}${athlete.photo_url}`} alt={athlete.nombre} className="w-24 h-24 rounded-full object-cover border-2 border-primary/20" data-testid="profile-photo" />
+                        ) : (
+                          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20" data-testid="profile-photo-placeholder">
+                            <User className="w-10 h-10 text-primary/50" />
+                          </div>
+                        )}
+                        <label className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/30 flex items-center justify-center cursor-pointer transition-colors">
+                          <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <input type="file" className="hidden" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            if (file.size > 10 * 1024 * 1024) { toast.error('Maximo 10MB'); return; }
+                            const formData = new FormData();
+                            formData.append('photo', file);
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('POST', `${API_URL}/api/athletes/upload-photo`, true);
+                            xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('athlete_token')}`);
+                            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { toast.success('Foto actualizada'); fetchProfile(); } else { toast.error('Error al subir foto'); } };
+                            xhr.send(formData);
+                          }} data-testid="profile-photo-upload" />
+                        </label>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">{athlete.nombre} {athlete.apellidos}</h3>
+                        <p className="text-muted-foreground flex items-center gap-2">{athlete.email} {athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500" />}</p>
+                        {athlete.personalizacion_camiseta && <Badge variant="outline" className="mt-1 uppercase">{athlete.personalizacion_camiseta}</Badge>}
+                      </div>
+                    </div>
                     {/* Personal */}
                     <div>
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Datos Personales</h4>
