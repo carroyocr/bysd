@@ -758,6 +758,23 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
     
     await database.registrations.insert_one(registration_doc)
     
+    # Send confirmation email using existing template
+    try:
+        from services.template_email_service import send_email_with_template, build_race_data, build_athlete_data
+        race_config = await database.race_configurations.find_one({"code": data.race_code})
+        merge_data = {
+            **build_race_data(race_config),
+            **build_athlete_data(registration_doc, edit_token=registration_doc["edit_token"]),
+        }
+        await send_email_with_template(
+            db=database,
+            template_id="athlete_registration_confirmation",
+            to_email=athlete["email"],
+            data=merge_data
+        )
+    except Exception as e:
+        print(f"Error sending confirmation email: {e}")
+    
     return {
         "success": True,
         "message": "Inscripción realizada",
