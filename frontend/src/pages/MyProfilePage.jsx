@@ -183,6 +183,11 @@ export default function MyProfilePage() {
       const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/verify-email`, { email: pendingEmail, code: verificationCode });
       if (ok) {
         localStorage.setItem('athlete_token', data.token);
+        // Upload photo if one was selected during registration
+        if (photoFile) {
+          toast.info('Subiendo foto...');
+          await uploadPhoto(data.token);
+        }
         toast.success('Email verificado!');
         await fetchProfile();
       } else { toast.error(data.detail || 'Codigo incorrecto'); }
