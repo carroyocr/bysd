@@ -1102,20 +1102,46 @@ export default function MyProfilePage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {myRaces.map(race => (
-                          <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h3 className="font-semibold">{race.race_name}</h3>
-                                <p className="text-sm text-muted-foreground">{race.race_date}</p>
+                        {myRaces.map(race => {
+                          const canCancel = !race.payment_receipt_status && race.status === 'registered';
+                          const showPaymentLink = race.edit_token && race.payment_status !== 'paid';
+                          const receiptPending = race.payment_receipt_status === 'pending';
+                          
+                          return (
+                            <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-semibold">{race.race_name}</h3>
+                                  <p className="text-sm text-muted-foreground">{race.race_date}</p>
+                                </div>
+                                <div className="text-right space-y-1">
+                                  {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
+                                  <div>
+                                    <Badge variant={race.payment_status === 'paid' ? 'default' : receiptPending ? 'outline' : 'secondary'}>
+                                      {race.payment_status === 'paid' ? 'Pagado' : receiptPending ? 'Comprobante en revision' : 'Pendiente de pago'}
+                                    </Badge>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-right space-y-1">
-                                {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
-                                <div><Badge variant={race.payment_status === 'paid' ? 'default' : 'secondary'}>{race.payment_status === 'paid' ? 'Pagado' : 'Pendiente de pago'}</Badge></div>
+                              {/* Action buttons */}
+                              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
+                                {showPaymentLink && (
+                                  <Button size="sm" variant="default" onClick={() => window.open(`/subir-comprobante?token=${race.edit_token}`, '_blank')} data-testid={`upload-receipt-btn-${race.registration_id}`}>
+                                    <Upload className="w-3 h-3 mr-2" /> Subir Comprobante de Pago
+                                  </Button>
+                                )}
+                                {receiptPending && (
+                                  <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu comprobante esta siendo revisado por el equipo</p>
+                                )}
+                                {canCancel && (
+                                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto" onClick={() => handleCancelRace(race.registration_id)} data-testid={`cancel-race-btn-${race.registration_id}`}>
+                                    <XCircle className="w-3 h-3 mr-2" /> Cancelar Inscripcion
+                                  </Button>
+                                )}
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
