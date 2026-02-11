@@ -658,10 +658,44 @@ export default function MyProfilePage() {
 
   // ===== REGISTER VIEW (Multi-Step) =====
   if (currentView === VIEW_REGISTER) {
+    const raceCost = config?.registration_cost || 3500;
+    const formattedCost = `RD$${raceCost.toLocaleString('es-DO')}`;
+    
     return (
       <PageContent>
         <SectionHeader title="Crear Perfil de Atleta" subtitle="Completa tu informacion para participar en eventos" />
-        <div className="max-w-3xl mx-auto" data-testid="register-form">
+        <div className="max-w-3xl mx-auto space-y-6" data-testid="register-form">
+          {/* Info Banner - same as pre-registro */}
+          {regStep === 0 && (
+            <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200" data-testid="info-banner">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-bold text-orange-900 mb-3">Pre Registro Abierto</h3>
+                <div className="space-y-3 text-sm text-orange-800">
+                  <p>
+                    Al crear tu perfil de atleta, podras inscribirte al evento.
+                    <strong> Completar el registro no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                  </p>
+                  <p>
+                    Cuatro (4) meses antes del evento, enviaremos un correo electronico a todos los prerregistrados con las instrucciones para realizar el pago de la inscripcion.
+                  </p>
+                  <p className="font-semibold text-lg text-orange-900">
+                    El costo de la carrera sera de {formattedCost}.
+                  </p>
+                  <p>
+                    A partir de la recepcion de ese correo, el participante contara con un plazo de <strong>treinta (30) dias</strong> para completar el pago correspondiente.
+                  </p>
+                  <p>
+                    Si el pago no se realiza dentro de ese periodo, el pre registro sera automaticamente desestimado y el cupo podra ser asignado a otro participante.
+                  </p>
+                  <p className="text-orange-600 italic flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    Te recomendamos estar atento a tu correo electronico y verificar tambien la carpeta de spam.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <Button variant="ghost" size="sm" onClick={() => { if (regStep > 0) prevRegStep(); else setCurrentView(VIEW_LANDING); }} className="w-fit mb-2" data-testid="reg-back-btn">
