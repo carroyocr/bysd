@@ -56,6 +56,9 @@ async def startup_db_indexes():
         
         logging.info("Database indexes created successfully")
         
+        # Run one-time migrations
+        await run_migrations()
+        
         # Initialize volunteer email scheduler
         await initialize_volunteer_scheduler()
         
