@@ -363,7 +363,7 @@ export default function MyProfilePage() {
 
   const handleClaimResult = async (resultId) => {
     const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/claim-result`, { result_id: resultId });
-    if (ok) { toast.success('Resultado reclamado!'); fetchRaceHistory(); handleSearch2026(); }
+    if (ok) { toast.success('Resultado reclamado!'); fetchRaceHistory(); fetchCheerMessages(); handleSearch2026(); }
     else { toast.error(data.detail || 'Error al reclamar'); }
   };
 
