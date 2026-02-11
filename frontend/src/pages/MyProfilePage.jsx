@@ -917,7 +917,7 @@ export default function MyProfilePage() {
                       </div>
                     </div>
                     {/* Personal */}
-                    <div>
+                    <div className="pb-6 border-b">
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Datos Personales</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div data-testid="profile-nombre"><Label className="text-muted-foreground text-xs">Nombre completo</Label><p className="font-medium">{athlete.nombre} {athlete.apellidos}</p></div>
@@ -929,7 +929,7 @@ export default function MyProfilePage() {
                       </div>
                     </div>
                     {/* Medical */}
-                    <div>
+                    <div className="pb-6 border-b">
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Informacion Medica</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><Label className="text-muted-foreground text-xs">Tipo de Sangre</Label><p className="font-medium">{athlete.tipo_sangre || '-'}</p></div>
