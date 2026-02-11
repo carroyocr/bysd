@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, ChevronDown, ChevronRight, History } from 'lucide-react';
+import { Menu, X, ChevronDown, ChevronRight, History, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -26,6 +26,7 @@ const staticNavLinks = [
 ];
 
 const endNavLinks = [
+  { href: '/mi-perfil', label: 'Mi Perfil', icon: User },
   { href: '/pre-registro', label: 'Pre Registro', highlight: true },
 ];
 
