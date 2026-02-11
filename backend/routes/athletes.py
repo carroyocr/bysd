@@ -615,7 +615,7 @@ async def upload_athlete_photo(
     with open(filepath, "wb") as f:
         f.write(content)
     
-    photo_url = f"/static/athlete_photos/{filename}"
+    photo_url = f"/api/static/athlete_photos/{filename}"
     
     await database.athletes.update_one(
         {"_id": ObjectId(athlete_id)},
