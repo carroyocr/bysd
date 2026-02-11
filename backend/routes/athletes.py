@@ -1,7 +1,7 @@
 """
 Athletes authentication and profile management
 """
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
@@ -29,11 +29,23 @@ class AthleteRegisterRequest(BaseModel):
     apellidos: str
     telefono: Optional[str] = None
     fecha_nacimiento: Optional[str] = None
-    genero: Optional[str] = None
-    pais: Optional[str] = None
-    ciudad: Optional[str] = None
+    sexo: Optional[str] = None
+    nacionalidad: Optional[str] = None
+    ciudad_residencia: Optional[str] = None
+    # Medical
+    tipo_sangre: Optional[str] = None
+    condicion_medica: Optional[str] = "No"
+    condicion_medica_detalle: Optional[str] = None
+    alergias: Optional[str] = "No"
+    alergias_detalle: Optional[str] = None
+    # Emergency
     contacto_emergencia_nombre: Optional[str] = None
+    contacto_emergencia_relacion: Optional[str] = None
     contacto_emergencia_telefono: Optional[str] = None
+    # Preferences
+    talla_camiseta: Optional[str] = None
+    personalizacion_camiseta: Optional[str] = None
+    como_se_entero: Optional[str] = None
 
 class AthleteLoginRequest(BaseModel):
     email: EmailStr
@@ -56,19 +68,30 @@ class UpdateProfileRequest(BaseModel):
     apellidos: Optional[str] = None
     telefono: Optional[str] = None
     fecha_nacimiento: Optional[str] = None
-    genero: Optional[str] = None
-    pais: Optional[str] = None
-    ciudad: Optional[str] = None
+    sexo: Optional[str] = None
+    nacionalidad: Optional[str] = None
+    ciudad_residencia: Optional[str] = None
+    tipo_sangre: Optional[str] = None
+    condicion_medica: Optional[str] = None
+    condicion_medica_detalle: Optional[str] = None
+    alergias: Optional[str] = None
+    alergias_detalle: Optional[str] = None
     contacto_emergencia_nombre: Optional[str] = None
+    contacto_emergencia_relacion: Optional[str] = None
     contacto_emergencia_telefono: Optional[str] = None
+    talla_camiseta: Optional[str] = None
+    personalizacion_camiseta: Optional[str] = None
+    como_se_entero: Optional[str] = None
 
 class RaceRegistrationRequest(BaseModel):
     race_code: str
-    categoria: Optional[str] = None
-    talla_camiseta: Optional[str] = None
-    club: Optional[str] = None
-    condiciones_medicas: Optional[str] = None
-    acepta_terminos: bool = False
+    motivacion: Optional[str] = None
+    anos_experiencia: Optional[int] = None
+    maxima_distancia_km: Optional[float] = None
+    vueltas_aspiradas: Optional[str] = None
+    tiene_carpa: Optional[str] = None
+    hospedaje: Optional[str] = None
+    acompanantes: Optional[int] = None
 
 class ClaimResultRequest(BaseModel):
     search_term: str  # nombre, apellidos or BIB
