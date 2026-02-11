@@ -8,8 +8,7 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import { COUNTRIES } from '../data/countries';
-import Navigation from '../components/Navigation';
-import Footer from '../components/Footer';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
