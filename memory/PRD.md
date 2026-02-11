@@ -400,6 +400,12 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Archivo: `backend/routes/athletes.py` línea 492
   - Test: curl verified (forgot → reset → login OK)
 
+- [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
+  - Nuevo endpoint `POST /api/athletes/unclaim-result` en `backend/routes/athletes.py`
+  - Botón "Desvincular" en tarjetas de historial reclamado en `frontend/src/pages/MyProfilePage.jsx`
+  - Confirmación antes de desvincular, actualiza historial y mensajes automáticamente
+  - Test: curl + screenshot verificados
+
 - [x] **Bug Fix: Admin no carga atletas registrados** (11 Febrero 2026)
   - Error: `TypeError: can only concatenate str (not "int") to str` en endpoint `/api/registration/admin/next-bib/{race_code}`
   - Causa: El campo `bib` se almacena como string ("001") pero el endpoint intentaba sumar `"001" + 1`
