@@ -465,7 +465,7 @@ async def reset_password(data: ResetPasswordRequest):
 # ==================== PROFILE ENDPOINTS ====================
 
 @router.get("/profile")
-async def get_profile(authorization: str = None):
+async def get_profile(authorization: str = Header(None)):
     """Get current athlete profile"""
     from server import db as database
     from bson import ObjectId
@@ -496,7 +496,7 @@ async def get_profile(authorization: str = None):
 
 
 @router.put("/profile")
-async def update_profile(data: UpdateProfileRequest, authorization: str = None):
+async def update_profile(data: UpdateProfileRequest, authorization: str = Header(None)):
     """Update athlete profile"""
     from server import db as database
     from bson import ObjectId
@@ -525,7 +525,7 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = None):
 # ==================== RACE REGISTRATION ENDPOINTS ====================
 
 @router.get("/my-races")
-async def get_my_races(authorization: str = None):
+async def get_my_races(authorization: str = Header(None)):
     """Get races the athlete is registered for"""
     from server import db as database
     from bson import ObjectId
@@ -573,7 +573,7 @@ async def get_my_races(authorization: str = None):
 
 
 @router.post("/register-race")
-async def register_for_race(data: RaceRegistrationRequest, authorization: str = None):
+async def register_for_race(data: RaceRegistrationRequest, authorization: str = Header(None)):
     """Register athlete for a race"""
     from server import db as database
     from bson import ObjectId
@@ -647,7 +647,7 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
 # ==================== HISTORICAL RESULTS / CLAIM ====================
 
 @router.get("/search-2026-results")
-async def search_2026_results(q: str, authorization: str = None):
+async def search_2026_results(q: str, authorization: str = Header(None)):
     """Search 2026 race results by name or BIB"""
     from server import db as database
     
@@ -692,7 +692,7 @@ async def search_2026_results(q: str, authorization: str = None):
 
 
 @router.post("/claim-result")
-async def claim_result(data: ConfirmClaimRequest, authorization: str = None):
+async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(None)):
     """Claim a historical result"""
     from server import db as database
     from bson import ObjectId
@@ -737,7 +737,7 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = None):
 
 
 @router.get("/race-history")
-async def get_race_history(authorization: str = None):
+async def get_race_history(authorization: str = Header(None)):
     """Get athlete's race history including claimed results"""
     from server import db as database
     from bson import ObjectId
