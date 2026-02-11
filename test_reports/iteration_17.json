@@ -1,0 +1,124 @@
+{
+  "summary": "Completed testing of Mi Perfil extended features. Backend: 18/18 tests passed (all extended profile fields, race inscription, history). Frontend: Multi-step registration works (6 steps verified), dashboard shows all profile sections (personal, medical, emergency, preferences). CRITICAL ISSUE: /pre-registro route NOT redirecting to MyProfilePage due to duplicate routes in App.js.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "/pre-registro redirect",
+        "issue": "Route NOT redirecting to /mi-perfil - still shows old InscripcionPage. Duplicate routes in App.js lines 77 and 90",
+        "affected_selectors": [],
+        "priority": "HIGH"
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Search results in History tab",
+        "issues": ["Minor HTML nesting warning: <div> inside <p> for Badge component - does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_athlete_profile_extended.py",
+    "/app/test_reports/pytest/pytest_athlete_extended.xml"
+  ],
+  "action_items": [
+    "FIX: Remove duplicate /pre-registro routes in App.js lines 77-78 (pointing to InscripcionPage) - they override the redirect on line 90"
+  ],
+  "critical_code_review_comments": [
+    "App.js has DUPLICATE routes for /pre-registro: line 77 -> InscripcionPage (executed), line 90 -> MyProfilePage (never reached)",
+    "Profile API correctly returns all extended fields: sexo, nacionalidad, tipo_sangre, condicion_medica, alergias, contacto_emergencia_*, talla_camiseta, personalizacion_camiseta",
+    "profile_complete flag correctly checks tipo_sangre, talla_camiseta, contacto_emergencia_nombre",
+    "Multi-step registration has all 6 steps: Account, Personal, Medical, Emergency, Preferences, Photo",
+    "Race inscription form has event-specific fields: motivacion, experiencia, distancia, vueltas, carpa, hospedaje, acompanantes",
+    "Pre Registro link correctly removed from navigation bar (endNavLinks only has Mi Perfil)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_athlete_profile_extended.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "92% (all features work except /pre-registro redirect)"
+  },
+  "test_credentials": {
+    "test_athlete_email": "test.athlete@example.com",
+    "test_athlete_password": "test123456",
+    "admin_username": "admin",
+    "admin_password": "Backyard2026!"
+  },
+  "seed_data_creation": "No new seed data - updated existing test athlete profile with tipo_sangre=AB+, talla_camiseta=L, personalizacion_camiseta=TESTER, contacto_emergencia fields",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend fully working with extended athlete profile fields. Frontend multi-step registration (6 steps) verified. Dashboard profile tab shows 4 sections: Personal, Medical, Emergency, Preferences. Races tab shows inscription button only when profile_complete=true. History tab has search 2026 and claim functionality working. NEEDS FIX: /pre-registro route - remove duplicate routes in App.js lines 77-78.",
+  "features_verified": {
+    "1_landing_header": {
+      "status": "PASSED",
+      "description": "/mi-perfil shows 'Mi Perfil de Atleta' header with font-display class matching Corredores style"
+    },
+    "2_pre_registro_not_in_nav": {
+      "status": "PASSED",
+      "description": "Pre Registro link NOT visible in navigation bar - only Mi Perfil is shown"
+    },
+    "3_pre_registro_redirect": {
+      "status": "FAILED",
+      "description": "/pre-registro still shows InscripcionPage instead of redirecting to MyProfilePage. FIX: Remove lines 77-78 in App.js"
+    },
+    "4_register_multistep_form": {
+      "status": "PASSED",
+      "description": "All 6 steps verified: Account (email, password), Personal (nombre, apellidos, nacimiento, sexo, nacionalidad, telefono, ciudad), Medical (sangre, condiciones, alergias), Emergency (contacto), Preferences (talla, personalizacion BIB), Photo"
+    },
+    "5_login_flow": {
+      "status": "PASSED",
+      "description": "Login with test.athlete@example.com/test123456 shows dashboard with full profile data"
+    },
+    "6_dashboard_profile_tab": {
+      "status": "PASSED",
+      "description": "Shows 4 sections: DATOS PERSONALES, INFORMACION MEDICA, CONTACTO DE EMERGENCIA, PREFERENCIAS with all fields"
+    },
+    "7_dashboard_edit_mode": {
+      "status": "PASSED",
+      "description": "Edit button activates edit mode with all fields editable, Save/Cancel buttons work"
+    },
+    "8_races_tab_inscription_button": {
+      "status": "PASSED",
+      "description": "Shows 'No tienes inscripciones activas' and 'Completa tu perfil primero para poder inscribirte' when profile_complete=false"
+    },
+    "9_race_inscription_form": {
+      "status": "NOT_TESTED_DIRECTLY",
+      "description": "Backend API tested - form has event-specific fields: motivacion, experiencia, distancia, vueltas, carpa, hospedaje, acompanantes"
+    },
+    "10_history_tab_search": {
+      "status": "PASSED",
+      "description": "Search 2026 results shows results from archived_participants, claim functionality works"
+    },
+    "11_backend_profile_api": {
+      "status": "PASSED",
+      "description": "GET /api/athletes/profile returns all new fields (sexo, nacionalidad, tipo_sangre, etc.)"
+    },
+    "12_backend_register_race_api": {
+      "status": "PASSED",
+      "description": "POST /api/athletes/register-race creates registration with profile data + event fields"
+    },
+    "13_login_wrong_password": {
+      "status": "PASSED",
+      "description": "Wrong password shows 'Credenciales incorrectas' not generic error"
+    }
+  },
+  "pytest_results": {
+    "total_tests": 18,
+    "passed": 18,
+    "failed": 0,
+    "test_file": "/app/backend/tests/test_athlete_profile_extended.py",
+    "test_classes": [
+      "TestAthleteAuth (3 tests)",
+      "TestProfileExtendedFields (5 tests)",
+      "TestProfileUpdate (3 tests)",
+      "TestRaceInscription (2 tests)",
+      "TestHistoryAndClaim (3 tests)",
+      "TestRegisterModel (2 tests)"
+    ]
+  }
+}
