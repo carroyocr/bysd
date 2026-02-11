@@ -74,10 +74,20 @@ async def run_migrations():
             needs = await db[coll_name].count_documents({"sexo": {"$exists": False}, "bib": {"$exists": True}})
             if needs > 0:
                 updated = 0
-                for bib, sexo in BIB_SEXO_MAP.items():
-                    r = await db[coll_name].update_one({"bib": bib, "sexo": {"$exists": False}}, {"$set": {"sexo": sexo}})
+                for bib_padded, sexo in BIB_SEXO_MAP.items():
+                    # Try all BIB formats: "048", "48", 48
+                    bib_stripped = bib_padded.lstrip("0") or "0"
+                    bib_variants = [bib_padded, bib_stripped]
+                    try:
+                        bib_variants.append(int(bib_stripped))
+                    except:
+                        pass
+                    r = await db[coll_name].update_many(
+                        {"bib": {"$in": bib_variants}, "sexo": {"$exists": False}},
+                        {"$set": {"sexo": sexo}}
+                    )
                     if r.modified_count > 0:
-                        updated += 1
+                        updated += r.modified_count
                 logging.info(f"Migration sexo ({coll_name}): {updated} updated")
             else:
                 logging.info(f"Migration sexo ({coll_name}): already applied")
