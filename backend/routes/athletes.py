@@ -172,15 +172,31 @@ async def register_athlete(data: AthleteRegisterRequest):
     # Send verification email
     try:
         from services.template_email_service import send_templated_email
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #1a1a2e;">Backyard Ultra Santo Domingo</h1>
+            </div>
+            <h2>¡Hola {data.nombre}!</h2>
+            <p>Gracias por crear tu perfil de atleta. Para completar tu registro, ingresa el siguiente código de verificación:</p>
+            <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a2e;">{verification_code}</span>
+            </div>
+            <p style="color: #666;">Este código expira en {CODE_EXPIRATION_MINUTES} minutos.</p>
+            <p>Si no solicitaste este código, puedes ignorar este mensaje.</p>
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                Backyard Ultra Santo Domingo<br>
+                Este es un correo automático, por favor no respondas.
+            </p>
+        </body>
+        </html>
+        """
         await send_templated_email(
             to_email=data.email,
             subject="Confirma tu cuenta - Backyard Ultra Santo Domingo",
-            template_name="verification_code",
-            context={
-                "nombre": data.nombre,
-                "code": verification_code,
-                "expires_minutes": CODE_EXPIRATION_MINUTES
-            }
+            html_content=html_content
         )
     except Exception as e:
         print(f"Error sending verification email: {e}")
