@@ -947,7 +947,7 @@ export default function MyProfilePage() {
                       </div>
                     </div>
                     {/* Preferences */}
-                    <div>
+                    <div className="pb-6 border-b">
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Preferencias</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><Label className="text-muted-foreground text-xs">Talla Camiseta</Label><p className="font-medium">{athlete.talla_camiseta || '-'}</p></div>
