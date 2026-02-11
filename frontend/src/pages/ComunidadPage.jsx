@@ -320,7 +320,7 @@ export default function ComunidadPage() {
   // Show loading state while checking visibility
   if (visibility.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-20">
+      <div className="min-h-screen flex items-center justify-center pt-16">
         <div className="animate-pulse text-gray-500">Cargando...</div>
       </div>
     );
@@ -329,7 +329,7 @@ export default function ComunidadPage() {
   // Show disabled page message if community is not enabled
   if (!visibility.enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 pt-20 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 pt-16 flex items-center justify-center px-4">
         <Card className="max-w-md w-full shadow-lg border-purple-200">
           <CardContent className="p-8 text-center">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-purple-100 flex items-center justify-center">
@@ -357,7 +357,7 @@ export default function ComunidadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-16">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
         <div className="container mx-auto px-4">
