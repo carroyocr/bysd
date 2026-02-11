@@ -887,6 +887,14 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
     
     for rc, bibs in bib_map.items():
         bib_list = list(bibs)
+        # Normalize BIBs: include both padded and unpadded versions
+        expanded_bibs = set()
+        for b in bib_list:
+            expanded_bibs.add(b)
+            stripped = b.lstrip("0") or "0"
+            expanded_bibs.add(stripped)
+            expanded_bibs.add(stripped.zfill(3))
+        bib_list = list(expanded_bibs)
         query = {"athlete_bib": {"$in": bib_list}}
         if race_code and race_code != rc:
             continue
