@@ -342,6 +342,41 @@ export default function MyProfilePage() {
     }
   };
 
+  // Start edit mode
+  const startEdit = () => {
+    setEditData({
+      nombre: athlete?.nombre || '',
+      apellidos: athlete?.apellidos || '',
+      telefono: athlete?.telefono || '',
+      fecha_nacimiento: athlete?.fecha_nacimiento || '',
+      genero: athlete?.genero || '',
+      pais: athlete?.pais || '',
+      ciudad: athlete?.ciudad || '',
+      contacto_emergencia_nombre: athlete?.contacto_emergencia_nombre || '',
+      contacto_emergencia_telefono: athlete?.contacto_emergencia_telefono || ''
+    });
+    setEditMode(true);
+  };
+
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    try {
+      const { ok, data } = await apiCall('PUT', `${API_URL}/api/athletes/profile`, editData);
+      if (ok) {
+        toast.success('Perfil actualizado');
+        setEditMode(false);
+        await fetchProfile();
+      } else {
+        toast.error(data.detail || 'Error al guardar');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ==================== RENDER VIEWS ====================
 
   // Simple page wrapper (Navigation/Footer provided by App layout)
