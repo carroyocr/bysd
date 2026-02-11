@@ -33,6 +33,11 @@ STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=str(STATIC_DIR / "uploads")), name="uploads")
 
+# Mount athlete photos
+ATHLETE_PHOTOS_DIR = ROOT_DIR / "static" / "athlete_photos"
+ATHLETE_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/api/static/athlete_photos", StaticFiles(directory=str(ATHLETE_PHOTOS_DIR)), name="athlete_photos")
+
 # Startup event to create database indexes
 @app.on_event("startup")
 async def startup_db_indexes():
