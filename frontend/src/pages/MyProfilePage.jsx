@@ -170,7 +170,14 @@ export default function MyProfilePage() {
         body: JSON.stringify(registerData)
       });
       
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        toast.error('Error en la respuesta del servidor');
+        return;
+      }
       
       if (res.ok) {
         setPendingEmail(registerData.email);
@@ -178,12 +185,11 @@ export default function MyProfilePage() {
         setCurrentView(VIEW_VERIFY);
       } else {
         // Show specific error message from server
-        const errorMsg = data.detail || 'Error al crear perfil';
-        toast.error(errorMsg);
+        toast.error(data.detail || 'Error al crear perfil');
       }
     } catch (error) {
-      console.error('Register error:', error);
-      toast.error('Error de conexión. Intenta de nuevo.');
+      console.error('Network error:', error);
+      toast.error('Error de conexión. Verifica tu internet.');
     } finally {
       setLoading(false);
     }
