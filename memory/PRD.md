@@ -559,7 +559,44 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ## Changelog
 
-### 11 Febrero 2026
+### 11 Febrero 2026 (Sesión 2)
+- ✅ **Feature: Pestaña Mensajes de Apoyo en Dashboard**
+  - Nueva pestaña "Mensajes" con mensajes de apoyo de fans
+  - Busca en `archived_cheer_messages` (2026) y `cheer_messages` (nuevas carreras)
+  - Mensajes vinculados automáticamente al reclamar resultados 2026
+  - Filtro por carrera cuando hay mensajes de múltiples eventos
+  - Endpoint: GET /api/athletes/my-messages?race_code=
+
+- ✅ **Feature: Subir Comprobante y Cancelar Inscripción desde Dashboard**
+  - Botón "Subir Comprobante de Pago" en cada inscripción (usa edit_token)
+  - Botón "Cancelar Inscripción" solo visible si no hay comprobante cargado
+  - Endpoint: DELETE /api/athletes/cancel-race/{id}
+  - edit_token generado automáticamente para registros que no tenían
+
+- ✅ **Feature: Correo de Confirmación al Inscribirse**
+  - Envía plantilla "Confirmación de Registro - Atleta" al completar inscripción
+  - Usa funciones existentes: send_email_with_template, build_race_data, build_athlete_data
+
+- ✅ **Feature: Validación de Email en Paso 1 del Registro**
+  - Endpoint POST /api/athletes/check-email verifica disponibilidad antes de continuar
+  - Evita que el usuario complete todo el formulario con un email ya registrado
+
+- ✅ **Feature: Foto de Perfil Funcional**
+  - Montada ruta /api/static/athlete_photos en server.py
+  - Foto visible en el dashboard con opción de cambiar via hover
+  - Subida de foto después de verificación de email en registro
+
+- ✅ **Feature: Banner de Costo e Instrucciones**
+  - Banner informativo con costo (RD$4,000) en registro (paso 1) e inscripción a carrera
+  - Mismo contenido del pre-registro original
+
+- ✅ **UI: Reducción de Espaciado**
+  - Reducido padding entre menú y contenido en TODAS las páginas (pt-20→pt-16, py-20→py-10)
+
+- ✅ **Bug Fix: Input pierde foco al escribir**
+  - Componentes PageContent y SectionHeader movidos fuera del componente principal
+
+### 11 Febrero 2026 (Sesión 1)
 - ✅ **Feature: Sistema Completo de Perfil de Atleta** (P0)
   - **Ruta `/mi-perfil` añadida** a App.js (faltaba la definición de Route)
   - **Bug fix crítico**: Backend `authorization` parameter cambiado de query param a `Header(None)` - el token JWT nunca se leía desde los headers
