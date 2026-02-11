@@ -642,6 +642,15 @@ async def get_my_races(authorization: str = Header(None)):
         race_code = reg.get("race_code")
         race_config = await database.race_configurations.find_one({"code": race_code})
         
+        # Generate edit_token if missing
+        edit_token = reg.get("edit_token")
+        if not edit_token:
+            edit_token = secrets.token_urlsafe(32)
+            await database.registrations.update_one(
+                {"_id": reg["_id"]},
+                {"$set": {"edit_token": edit_token}}
+            )
+        
         result.append({
             "registration_id": str(reg["_id"]),
             "race_code": race_code,
@@ -652,7 +661,7 @@ async def get_my_races(authorization: str = Header(None)):
             "status": reg.get("status", "registered"),
             "payment_status": reg.get("payment_status", "pending"),
             "payment_receipt_status": reg.get("payment_receipt", {}).get("status") if reg.get("payment_receipt") else None,
-            "edit_token": reg.get("edit_token"),
+            "edit_token": edit_token,
             "laps_completed": reg.get("laps_completed", 0),
             "is_active": race_config.get("is_active", False) if race_config else False
         })
