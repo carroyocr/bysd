@@ -124,7 +124,16 @@ export default function MyProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Parse error:', text);
+        toast.error('Error del servidor');
+        return;
+      }
       
       if (res.ok) {
         localStorage.setItem('athlete_token', data.token);
@@ -142,6 +151,7 @@ export default function MyProfilePage() {
         toast.error(data.detail || 'Error al iniciar sesión');
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
