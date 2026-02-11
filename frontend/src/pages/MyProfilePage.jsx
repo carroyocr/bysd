@@ -391,7 +391,7 @@ export default function MyProfilePage() {
     return (
       <PageWrapper>
         <div className="container mx-auto px-4 py-16">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto" data-testid="landing-card">
             <Card>
               <CardHeader className="text-center">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -407,6 +407,7 @@ export default function MyProfilePage() {
                   className="w-full" 
                   size="lg"
                   onClick={() => setCurrentView(VIEW_LOGIN)}
+                  data-testid="go-to-login-btn"
                 >
                   <Lock className="w-4 h-4 mr-2" />
                   Iniciar Sesión
@@ -416,6 +417,7 @@ export default function MyProfilePage() {
                   className="w-full" 
                   size="lg"
                   onClick={() => setCurrentView(VIEW_REGISTER)}
+                  data-testid="go-to-register-btn"
                 >
                   <User className="w-4 h-4 mr-2" />
                   Crear Nuevo Perfil
@@ -424,8 +426,9 @@ export default function MyProfilePage() {
                   <button 
                     className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     onClick={() => setCurrentView(VIEW_FORGOT)}
+                    data-testid="go-to-forgot-btn"
                   >
-                    ¿Olvidaste tu contraseña?
+                    Olvidaste tu contraseña?
                   </button>
                 </div>
               </CardContent>
