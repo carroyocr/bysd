@@ -1232,17 +1232,27 @@ async def get_race_history(authorization: str = Header(None)):
             
             all_participants = []
             for coll_name in collections_to_check:
-                # Try with and without race_code filter
                 docs = await database[coll_name].find(
                     {"race_code": race_code, "status": {"$nin": ["dns", "honor"]}},
                     {"_id": 1, "bib": 1, "laps_completed": 1, "sexo": 1, "claimed_by": 1}
                 ).to_list(1000)
-                if not docs and coll_name == "archived_participants":
+                if not docs:
+                    # Fallback: query without race_code filter
                     docs = await database[coll_name].find(
                         {"status": {"$nin": ["dns", "honor"]}},
                         {"_id": 1, "bib": 1, "laps_completed": 1, "sexo": 1, "claimed_by": 1}
                     ).to_list(1000)
                 all_participants.extend(docs)
+            
+            # Deduplicate by BIB (same athlete may exist in multiple collections)
+            seen_bibs = {}
+            unique_participants = []
+            for p in all_participants:
+                bib = p.get("bib")
+                if bib and bib not in seen_bibs:
+                    seen_bibs[bib] = True
+                    unique_participants.append(p)
+            all_participants = unique_participants
             
             if not all_participants:
                 logging.warning(f"Rankings: No participants found for {race_code}")
