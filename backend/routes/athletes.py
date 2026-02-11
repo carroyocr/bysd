@@ -1325,6 +1325,9 @@ async def get_race_history(authorization: str = Header(None)):
         gender_pos = gender_rank_map.get(reg_id)
         gender_total = gender_totals.get(athlete_sexo, 0)
         
+        if not overall_pos:
+            logging.warning(f"Rankings: reg_id={reg_id} NOT found in overall_map (map has {len(overall_map)} entries, sample keys: {list(overall_map.keys())[:3]})")
+        
         # Resolve race name from config
         race_name = race_code
         if race_config:
