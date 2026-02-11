@@ -287,7 +287,7 @@ export default function VolunteerConfigManagement() {
       hora_inicio: '08:00',
       hora_fin: '12:00',
       slots_count: 2,
-      dia_tipo: 'carrera'
+      dia_tipo: 'carrera_dia1'
     }]);
   };
 
