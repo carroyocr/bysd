@@ -657,10 +657,7 @@ async def search_2026_results(q: str, authorization: str = Header(None)):
     if not q or len(q) < 2:
         return {"results": []}
     
-    # Search in the old registrations (2026 race)
-    # These would be in a different collection or have a specific race_code
-    query = {
-        "race_code": {"$regex": "2026", "$options": "i"},
+    search_query = {
         "$or": [
             {"nombre": {"$regex": q, "$options": "i"}},
             {"apellidos": {"$regex": q, "$options": "i"}},
@@ -668,25 +665,78 @@ async def search_2026_results(q: str, authorization: str = Header(None)):
         ]
     }
     
-    results = await database.registrations.find(
-        query,
+    formatted = []
+    
+    # Search in archived_participants (BYSD-2026 data)
+    archived = await database.archived_participants.find(
+        {**search_query, "race_code": {"$regex": "2026", "$options": "i"}},
         {"_id": 1, "bib": 1, "nombre": 1, "apellidos": 1, "laps_completed": 1, 
          "status": 1, "race_code": 1, "claimed_by": 1}
     ).to_list(20)
     
-    # Format results
-    formatted = []
-    for r in results:
+    for r in archived:
         formatted.append({
             "id": str(r["_id"]),
+            "source": "archived",
             "bib": r.get("bib"),
             "nombre": r.get("nombre"),
             "apellidos": r.get("apellidos"),
             "laps_completed": r.get("laps_completed", 0),
             "status": r.get("status"),
-            "race_code": r.get("race_code"),
+            "race_code": r.get("race_code", "BYSD-2026"),
             "already_claimed": r.get("claimed_by") is not None
         })
+    
+    # Also search in participants collection (legacy 2026)
+    if len(formatted) < 20:
+        legacy = await database.participants.find(
+            search_query,
+            {"_id": 1, "bib": 1, "nombre": 1, "apellidos": 1, "laps_completed": 1, 
+             "status": 1, "claimed_by": 1}
+        ).to_list(20 - len(formatted))
+        
+        # Avoid duplicates by BIB
+        existing_bibs = {r["bib"] for r in formatted}
+        for r in legacy:
+            if r.get("bib") not in existing_bibs:
+                formatted.append({
+                    "id": str(r["_id"]),
+                    "source": "participants",
+                    "bib": r.get("bib"),
+                    "nombre": r.get("nombre"),
+                    "apellidos": r.get("apellidos"),
+                    "laps_completed": r.get("laps_completed", 0),
+                    "status": r.get("status"),
+                    "race_code": "BYSD-2026",
+                    "already_claimed": r.get("claimed_by") is not None
+                })
+    
+    # Also search in registrations with 2026 race_code
+    if len(formatted) < 20:
+        reg_query = {
+            "race_code": {"$regex": "2026", "$options": "i"},
+            **search_query
+        }
+        reg_results = await database.registrations.find(
+            reg_query,
+            {"_id": 1, "bib": 1, "nombre": 1, "apellidos": 1, "laps_completed": 1, 
+             "status": 1, "race_code": 1, "claimed_by": 1}
+        ).to_list(20 - len(formatted))
+        
+        existing_bibs = {r["bib"] for r in formatted}
+        for r in reg_results:
+            if r.get("bib") not in existing_bibs:
+                formatted.append({
+                    "id": str(r["_id"]),
+                    "source": "registrations",
+                    "bib": r.get("bib"),
+                    "nombre": r.get("nombre"),
+                    "apellidos": r.get("apellidos"),
+                    "laps_completed": r.get("laps_completed", 0),
+                    "status": r.get("status"),
+                    "race_code": r.get("race_code"),
+                    "already_claimed": r.get("claimed_by") is not None
+                })
     
     return {"results": formatted}
 
