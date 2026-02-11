@@ -180,21 +180,14 @@ export default function MyProfilePage() {
         body: JSON.stringify(registerData)
       });
       
-      // Clone response to avoid body already read errors
-      const resClone = res.clone();
+      const text = await res.text();
       let data;
       try {
-        data = await res.json();
-      } catch (parseError) {
-        // Try reading as text if JSON fails
-        const text = await resClone.text();
-        console.error('JSON parse error, raw response:', text);
-        try {
-          data = JSON.parse(text);
-        } catch {
-          toast.error('Error procesando respuesta del servidor');
-          return;
-        }
+        data = JSON.parse(text);
+      } catch {
+        console.error('Parse error:', text);
+        toast.error('Error del servidor');
+        return;
       }
       
       if (res.ok) {
@@ -202,11 +195,10 @@ export default function MyProfilePage() {
         toast.success('¡Perfil creado! Revisa tu correo');
         setCurrentView(VIEW_VERIFY);
       } else {
-        // Show specific error message from server
         toast.error(data.detail || 'Error al crear perfil');
       }
     } catch (error) {
-      console.error('Network error:', error);
+      console.error('Register error:', error);
       toast.error('Error de conexión. Verifica tu internet.');
     } finally {
       setLoading(false);
