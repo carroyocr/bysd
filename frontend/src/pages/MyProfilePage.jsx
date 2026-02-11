@@ -365,6 +365,18 @@ export default function MyProfilePage() {
     finally { setInscribing(false); }
   };
 
+  // Cancel race registration
+  const handleCancelRace = async (registrationId) => {
+    if (!window.confirm('Estas seguro que deseas cancelar tu inscripcion? Esta accion no se puede deshacer.')) return;
+    setLoading(true);
+    try {
+      const { ok, data } = await apiCall('DELETE', `${API_URL}/api/athletes/cancel-race/${registrationId}`);
+      if (ok) { toast.success('Inscripcion cancelada'); fetchMyRaces(); }
+      else { toast.error(data.detail || 'Error al cancelar'); }
+    } catch { toast.error('Error de conexion'); }
+    finally { setLoading(false); }
+  };
+
   // ===== REGISTER STEP CONTENT =====
   const renderRegStep = () => {
     switch (regStep) {
