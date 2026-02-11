@@ -717,6 +717,12 @@ export default function MyProfilePage() {
                   ¿No recibiste el código? Reenviar
                 </button>
               </div>
+              <div className="text-center pt-2 border-t">
+                <Button variant="ghost" onClick={() => navigate('/')} className="mt-2">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver al inicio
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
