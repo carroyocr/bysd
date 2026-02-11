@@ -367,6 +367,13 @@ export default function MyProfilePage() {
     else { toast.error(data.detail || 'Error al reclamar'); }
   };
 
+  const handleUnclaimResult = async (resultId) => {
+    if (!window.confirm('¿Seguro que deseas desvincular este resultado de tu perfil?')) return;
+    const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/unclaim-result`, { result_id: resultId });
+    if (ok) { toast.success('Resultado desvinculado'); fetchRaceHistory(); fetchCheerMessages(); }
+    else { toast.error(data.detail || 'Error al desvincular'); }
+  };
+
   // ===== RACE INSCRIPTION =====
   const handleInscribeRace = async () => {
     if (!inscriptionData.motivacion) { toast.error('Indica que te motiva a participar'); return; }
