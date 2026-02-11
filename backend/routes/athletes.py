@@ -750,11 +750,31 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(No
     payload = await get_current_athlete(authorization)
     athlete_id = payload["athlete_id"]
     
-    # Find the result
+    # Try to find the result in multiple collections
+    result = None
+    collection_name = None
+    
     try:
-        result = await database.registrations.find_one({"_id": ObjectId(data.result_id)})
+        obj_id = ObjectId(data.result_id)
     except:
         raise HTTPException(status_code=404, detail="Resultado no encontrado")
+    
+    # Check archived_participants first
+    result = await database.archived_participants.find_one({"_id": obj_id})
+    if result:
+        collection_name = "archived_participants"
+    
+    # Then check participants
+    if not result:
+        result = await database.participants.find_one({"_id": obj_id})
+        if result:
+            collection_name = "participants"
+    
+    # Then check registrations
+    if not result:
+        result = await database.registrations.find_one({"_id": obj_id})
+        if result:
+            collection_name = "registrations"
     
     if not result:
         raise HTTPException(status_code=404, detail="Resultado no encontrado")
@@ -763,9 +783,9 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(No
     if result.get("claimed_by"):
         raise HTTPException(status_code=400, detail="Este resultado ya fue reclamado")
     
-    # Mark as claimed
-    await database.registrations.update_one(
-        {"_id": ObjectId(data.result_id)},
+    # Mark as claimed in the source collection
+    await database[collection_name].update_one(
+        {"_id": obj_id},
         {"$set": {"claimed_by": athlete_id}}
     )
     
@@ -781,7 +801,7 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(No
         "result": {
             "bib": result.get("bib"),
             "laps_completed": result.get("laps_completed"),
-            "race_code": result.get("race_code")
+            "race_code": result.get("race_code", "BYSD-2026")
         }
     }
 
