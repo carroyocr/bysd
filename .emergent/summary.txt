@@ -1,87 +1,102 @@
 <analysis>**original_problem_statement:**
-The user's high-level goal is to enhance a multi-event race management platform.
+The user's high-level goal is to create a comprehensive race management platform. The current major initiative is to build a full-featured athlete profile system.
 
-During this session, the user requested a series of significant features and bug fixes:
-1.  **QR Scanner Fix for Safari/iPhone:** The native QR scanner was failing on iOS devices. The user requested a fix to ensure compatibility.
-2.  **Financial Management Overhaul:**
-    *   Add status tracking for expenses: Pagado (Paid), Pendiente (Pending), Parcialmente pagado (Partially Paid).
-    *   Implement a system to record partial payments for an expense, including amount, date, and payment method.
-    *   Create a dashboard to visualize payment progress, showing percentage completed, total amounts, and a breakdown by status.
-    *   Make the new financial dashboard collapsible.
-3.  **Lap Control Logic and Rules:**
-    *   **Bug Fix:** The lap control timer was using a hardcoded start time. It needed to use the dynamic start time from the active race's configuration.
-    *   Implement a strict set of rules for QR code scanning:
-        *   Rule 1: Multiple scans for the same lap only count the first one.
-        *   Rule 2: If a scan occurs in 35 minutes or less, the athlete is marked as DNF (Did Not Finish).
-        *   Rule 3: If a scan occurs after the lap's designated end time, the athlete is marked as DNF.
-        *   Rule 4: A rescan should indicate if the lap was already registered.
-        *   Rule 5: Add an option in the scanner UI to manually mark an athlete as DNF, requiring a DNF text confirmation.
-    *   **New Feature:** Create a new Registro de Vueltas (Lap Registrations) panel in the admin area to display a filterable, exportable table of all lap scan records (BIB, name, start time, completion time, scanning user).
-4.  **UI/UX and Bug Fixes:**
-    *   **Bug Fix:** A payment confirmation email was being sent without the payment amount and date.
-    *   **UI Optimization:** The QR scanner pages (, ) should be optimized for mobile by removing the main header/footer and adding a Home button.
-    *   **Bug Fix:** Lap registration records were displaying timestamps in UTC instead of the race's local time.
-    *   **Bug Fix:** The system allowed registering a lap that had not yet started.
-    *   **Cleanup:** Remove the Lap Summary section from the Lap Control Panel.
-    *   **Data Integrity:** The Reset Database button should also clear all records from the new  table.
+PRODUCT REQUIREMENTS:
+1.  **Athlete Profile System:**
+    *   Create a two-part registration process: a permanent athlete profile and a separate race-specific registration.
+    *   Implement user authentication with password creation and a forgot password recovery flow.
+    *   The system must retain the existing email verification process using a code.
+    *   Add a Mi Perfil link to the main navigation menu.
+    *   This new section should serve as a portal for athletes to either log in or create a new profile.
+    *   The logged-in athlete dashboard must include:
+        *   **Mis Datos:** A section to view and edit their permanent profile information.
+        *   **Próximas Carreras:** A list of races they are currently registered for.
+        *   **Historial:** A history of their past race results.
+    *   Athletes who participated in the 2026 race should be able to claim their old results by searching for their name or BIB number. New profiles should be created from scratch.
+2.  **Volunteer Shift Enhancements:**
+    *   Distinguish volunteer shifts between Día Previo (day before the race) and multiple race days (e.g., Día 1, Día 2) for events lasting over 24 hours.
+3.  **UI/UX and Bug Fixes:**
+    *   Fix the Athlete Profile dashboard, which is visually inconsistent, has invisible buttons, and does not load user data.
+    *   Fix authentication flows (login, password reset) that show a generic Error de conexión instead of specific backend messages like Credenciales incorrectas.
+    *   Reorder and rename the tabs in the admin panel.
+    *   Make the Escáner QR menu item a direct link to the full-screen scanner page ().
+    *   Add an average pace (min/km) column to the lap registration table and its CSV export, formatted as .
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-The application is a full-stack race management platform with a React frontend, FastAPI backend, and MongoDB database.
+The application is a full-stack race management platform with a React frontend, FastAPI backend, and MongoDB. It includes functionalities for financial management, advanced QR code lap scanning, and volunteer shift management.
 
-In this session, the following key systems were built or overhauled:
--   **Financial Management:** The Finanzas panel is now a robust expense tracking system. Admins can manage expenses with statuses (Pending, Partial, Paid), add partial payments, and view a collapsible progress dashboard with detailed statistics and progress bars.
--   **QR Code Lap Scanning:** The QR scanner is now fully functional across all devices (including Safari on iOS) using the  library. It enforces a complex set of business rules for lap validation (e.g., early return DNF, late DNF, duplicate scan prevention) and allows for manual DNF marking. The UI has been optimized for a full-screen mobile experience.
--   **Lap Registration Log:** A new Registro Vueltas panel has been added to the admin dashboard. It provides a comprehensive, filterable, and exportable log of every lap scan, including athlete details, timestamps, and scanner user.
--   **Dynamic Lap Timing:** The race control system is no longer dependent on hardcoded times. It now dynamically calculates all lap start/end times based on the active race's configured start time and timezone.
--   **Bug Fixes:** Critical bugs related to email content, timezone display, and lap registration logic have been resolved.
+The initial backend infrastructure and frontend pages for the new **Athlete Profile System** have been created, but the user-facing part is currently broken and non-functional. The system for managing **multi-day volunteer shifts** has been successfully implemented. Several smaller UI improvements and bug fixes, such as the admin tab reordering and pace calculation, have also been completed.
 
 **Last working item**:
--   **Last item agent was working:** The user requested two final changes: 1) Remove the Resumen de vueltas from the , and 2) Make the Reinicio de la Base de datos button also clear the  table. The agent completed the first part but has not yet started the second.
+-   **Last item agent was working:** The agent was in the middle of a complete rewrite of the athlete profile dashboard page (). The user reported that after an athlete logs in, the page is visually inconsistent with the rest of the site, data fields are empty, and buttons are invisible until hovered over. The agent's approach was to rebuild the page from scratch to match the site's established design and to use  for API calls to circumvent potential issues with .
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent. The agent must modify the  endpoint in  to add the  command. The test should involve adding a dummy record, calling the reset endpoint via curl, and verifying the  collection is empty.
+-   **Which testing method agent to use?** Frontend testing agent. After completing the rewrite of , the testing agent must be used to perform a full end-to-end test of the athlete login flow. The test should verify that the dashboard renders correctly (matching site design), populates the athlete's data in the form fields, and ensures all UI elements are visible and styled properly.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0 - HIGHEST PRIORITY)** The Reset Database button in the Race Control Panel does not clear the  table.
-    -   **Attempted fixes:** None.
+-   **Issue 1: (P0 - HIGHEST PRIORITY)** The athlete profile dashboard page is broken and unusable after login.
+    -   **Attempted fixes:** The agent started a complete rewrite of . The file was overwritten with a new boilerplate structure, but the actual UI components and data-fetching logic have not been implemented yet.
     -   **Next debug checklist:**
-        1.  Locate the  endpoint in .
-        2.  Inside the function, add the command  to clear the collection.
-        3.  Test by adding data to the collection, calling the reset endpoint, and verifying the collection is empty.
-    -   **Why fix this issue and what will be achieved with the fix?** To ensure a complete and clean data reset. Without this, resetting the database would leave orphaned lap records, leading to data inconsistency for testing or starting a new race.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend
+        1.  Flesh out the new  file.
+        2.  Implement the tabbed interface for Mis Datos, Mis Carreras, and Historial.
+        3.  Add a  hook to fetch the logged-in athlete's profile data from the backend ().
+        4.  Use  for the API call, following the pattern in .
+        5.  Bind the fetched data to the state and ensure it populates the input fields in the Mis Datos tab.
+        6.  Apply consistent styling (Tailwind CSS) to all components to match the rest of the application.
+    -   **Why fix this issue and what will be achieved with the fix?** This is the central part of the new athlete profile feature. Without a functional dashboard, the entire feature is inaccessible to users.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None.
+-   **Issue 2: (P1)** Login and password recovery flows show a generic Error de conexión message instead of specific errors from the backend.
+    -   **Attempted fixes:** The agent tried using  and  with , but the issue persisted. The current strategy is to switch to .
+    -   **Next debug checklist:**
+        1.  In the rewritten , ensure all authentication-related API calls (login, forgot password, reset password) use .
+        2.  Implement  handlers that check  (e.g., 200 vs. 400/401).
+        3.  When an error status is received, parse the  to get the specific error message (e.g., Credenciales incorrectas) and display it in a toast.
+    -   **Why fix this issue and what will be achieved with the fix?** Provides clear feedback to users during authentication, improving usability and reducing confusion.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None.
+-   **Task 1: (P0) Complete the Athlete Profile System.**
+    -   **Where to resume:** The file  has been reset to a basic structure. The immediate next step is to rebuild the UI for the athlete dashboard inside this file, including the data fetching and styling, as outlined in the Pending Issues section.
+    -   **What will be achieved with this?** A complete, functional, and visually consistent athlete profile and authentication system.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** The UI and error handling bugs listed as P0 and P1 issues.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **(P1)** Implement a UI notification (toast) when a fan levels up their community badge.
-    -   **(P2)** Add filters to the Comunidad page cheer message feed (e.g., filter by athlete or fan).
+    -   **(P1)** Implement the Reclamar Resultados 2026 feature within the athlete dashboard.
+    -   **(P2)** Build out the Próximas Carreras and Historial tabs with data from the backend.
 -   **Future Tasks:**
-    -   **(P3)** Remove the unused Twitter/X integration code (, ).
-    -   **(P4)** Optimize or remove the 27MB  file from the  directory.
-    -   **(P5)** Refactor large components like , , and  into smaller, more manageable sub-components.
+    -   **(P3)** Add toast notifications for fan community badge level-ups.
+    -   **(P4)** Implement filters on the Comunidad page.
+    -   **(P5)** Refactor large components (, , etc.).
+    -   **(P6)** Clean up unused code and large files (Twitter integration, ).
 
 **Completed work in this session**
--   **Feature: Financial Management System:** Implemented status tracking, partial payments, and a collapsible progress dashboard in  and .
--   **Feature: Advanced QR Lap Control System:** Replaced the native scanner with , implemented a comprehensive set of validation rules (early/late DNF, duplicates), and added a manual DNF flow in  and .
--   **Feature: Lap Registration Panel:** Created a new admin tab with a filterable and exportable table of all lap records in  and its corresponding backend endpoint.
--   **UI/UX: Mobile Scanner Optimization:** Reworked  routing to provide a full-screen experience for  and , removing the header/footer and adding home navigation.
--   **Bug Fix: Dynamic Lap Timing:** Corrected  and  to use the active race's configured start time and timezone instead of hardcoded values.
--   **Bug Fix: Payment Confirmation Email:** Fixed the email sending logic in  to correctly populate payment details.
--   **Bug Fix: Timezone and Logic in Lap Scanning:** Corrected timezone handling to ensure lap times are displayed correctly and added validation to prevent registering future laps.
--   **Cleanup:** Removed the Lap Summary card from  as requested.
+-   **Feature: Athlete Profile Backend:** Created all necessary backend endpoints () for registration, login (JWT), email verification, and password recovery.
+-   **Feature: Multi-Day Volunteer Shifts:** Updated the volunteer management system to support shifts on the day before the race and on multiple race days, with distinct UI coloring.
+-   **Feature: Pace Calculation:** Added an Average Pace (Ritmo) column to the lap registration panel and CSV export, formatted as .
+-   **UI/UX Improvement:** Reordered admin panel tabs and changed the Escáner QR tab into a direct link to .
+-   **UI/UX Improvement:** Added a Refresh button to the participant control panel in the admin area.
+-   **Bug Fix:** The Reset Database function now correctly clears the  collection.
+-   **Bug Fix:** Corrected an issue where the lap registration CSV export used UTC time instead of local time.
+-   **Bug Fix:** Fixed a server crash () in the email verification endpoint related to timezone-naive and timezone-aware datetime comparison.
+-   **Bug Fix:** Ensured all athlete-facing emails (verification, password reset) use the correct, pre-existing, and consistently styled templates from the database.
+-   **Bug Fix:** Corrected the Gender (to Masculino/Femenino) and Country (to a dropdown list) fields in the athlete registration form.
 
 **Earlier issues found/mentioned but not fixed**
--   The abandoned Twitter integration code (, ) remains in the codebase.
--   The large, obsolete  file is still in the  folder.
+-   An unused Twitter integration (, ) remains in the codebase.
+-   A large, 27MB  file is still present in the  directory.
+-   Several large React components are in need of refactoring for better maintainability.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -90,77 +105,86 @@ In this session, the following key systems were built or overhauled:
 
 
 **Key Technical Concepts**
--   **Cross-Browser Compatibility:** Migrated from the native  API to the  library to resolve compatibility issues on Safari/iOS.
--   **Complex Backend State Logic:** Implemented intricate business rules in FastAPI endpoints () to handle lap timing, athlete status (active, DNF), and multi-step validation before database transactions.
--   **Timezone-Aware Applications:** Addressed challenges with UTC storage in MongoDB and local time display by creating helper functions and storing formatted local time strings alongside UTC timestamps for reliable presentation.
--   **Conditional UI Layouts:** Modified React Router configuration in  to render specific routes () outside the main application layout, creating a dedicated, clutter-free mobile experience.
--   **Modular Admin Panels:** Extended the admin dashboard by creating a new, self-contained component () and integrating it as a new tab.
+-   **Full-Stack Authentication:** Implemented an end-to-end athlete authentication system using FastAPI for the backend (with JWT tokens for session management) and React for the frontend.
+-   **Frontend API Error Handling:** Identified and began implementing a workaround for a body stream already read error when using  for API calls with error responses. The adopted strategy is to use the more primitive .
+-   **Database-Driven Configuration:** Utilized a MongoDB collection () to store and retrieve HTML email templates, ensuring consistency across communications.
+-   **Timezone-Aware Logic:** Debugged and fixed a Python  by correctly handling timezone-aware () and timezone-naive  objects during comparisons.
 
 **key DB schema**
--   **:** Enhanced with  (String),  (Number), and  (Array of objects containing amount, date, method, reference).
--   **:** A new collection to log every scan event. Key fields include , , ,  (DateTime, UTC),  (String),  (String),  (e.g., 'lap_completed', 'dnf_early'), and .
--   **:** The  and  fields are now updated based on the complex logic within the QR scanning endpoints.
+-   ** (New):** Stores permanent user data. Includes fields like , , personal details, verification codes, and reset tokens.
+-   ** (Modified):** Added  (e.g., 'previo', 'carrera_dia1') to distinguish shift timing relative to the race start.
+-   ** (Utilized):** Leveraged existing templates and added new ones () for athlete communications.
 
 **changes in tech stack**
--   Added  (v3.8.0) to the frontend dependencies.
+-   None.
 
 **All files of reference**
--   **Backend (Heavily Modified):** , 
--   **Frontend (Heavily Modified):** , , 
--   **Frontend (New):** 
--   **Configuration/Setup:** , , 
+-   **Primary Focus:** , 
+-   **Supporting Files:**
+    -   
+    -   
+    -   
+    -   
+    -   
 
 **Areas that need refactoring**:
--   The large components identified in previous sessions (, etc.) still require refactoring.
--   The unused Twitter integration and large PDF file in the  directory should be removed to clean up the codebase.
+-    is currently undergoing a complete rewrite to fix major UI and functional problems.
+-   The unused Twitter integration and a large PDF in the  folder should be removed to reduce code and application size.
 
 **key api endpoints**
--   : Completely overhauled to handle new validation rules (early/late DNF, duplicate checks, future lap prevention).
--   : Rewritten to provide a detailed status object for the scanner UI.
--   : Modified to handle status updates and the addition of partial payments.
--   : New endpoint to fetch, filter, and paginate lap registration data.
--   : The endpoint targeted for the next modification to include  cleanup.
+-   **Athlete Endpoints (New/In-Progress):**
+    -   
+    -   
+    -   
+    -   
+    -   
+    -    (Backend exists, frontend implementation needed)
+-   **Other Modified Endpoints:**
+    -   
+    -   
+    -   
 
 **Critical Info for New Agent**
 -   **Language:** You **MUST** communicate with the user in **Spanish**.
--   **Top Priority:** Your first task is to complete the user's last request by modifying the  endpoint in  to also clear the  collection.
--   **QR Scanner Logic:** The business logic for lap scanning is now highly complex and centralized in . Review this file carefully before making any changes to the scanning or lap registration process.
--   **Timezone Handling:** The primary pattern is to store  objects in MongoDB (which converts them to UTC) and use helper fields like  (string) for direct, unambiguous display on the frontend. Be mindful of this when working with dates and times.
+-   **Top Priority:** Your first and only focus should be to fix the athlete profile dashboard (). The user is completely blocked on this new feature. You must complete the rewrite that the previous agent started, ensuring the page is functional, visually consistent, and correctly handles API calls and errors.
+-   **API Call Strategy:** A recurring problem in the frontend is handling API error responses. The established workaround is to use **** instead of , as this has proven more reliable in the preview environment. Apply this pattern for all API calls within .
+-   **Error Handling:** A major user complaint is seeing generic Error de conexión messages. Your frontend logic **must** parse the specific error detail from the backend's JSON response (e.g., Credenciales incorrectas) and display it to the user.
+-   **Design Consistency:** The user expects new features to seamlessly match the existing application's design. Use other pages like  and components within  as a visual and stylistic reference.
 
 **documents and test reports created in this job**
--    was consistently updated after each major feature or fix.
+-    was updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Fix two bugs: 1) lap registration time must be local, and 2) cannot register a lap that hasn't started. Do a deep review. -> **Status: COMPLETED**.
-9.  **User:** Optimize the QR scanner pages for mobile: remove header/footer and add a home button. -> **Status: COMPLETED**.
-8.  **User:** Add a comprehensive set of rules for lap scanning (DNF logic, duplicate handling, manual DNF) and create a new Lap Registrations panel. -> **Status: COMPLETED**.
-7.  **User:** The lap control panel is not using the configured race start time. Fix it. -> **Status: COMPLETED**.
-6.  **User:** The payment confirmation email is missing details. (Provided image) -> **Status: COMPLETED**.
-5.  **User:** Add a collapse/expand control to the new payments progress dashboard. -> **Status: COMPLETED**.
-4.  **User:** Add a payment progress dashboard (% completed, total paid/pending) to the finances panel. -> **Status: COMPLETED**.
-3.  **User:** I see the changes in production. -> **Status: ACKNOWLEDGED**.
-2.  **User:** Add options to the budget panel for payment status (paid/pending), partial payments, and payment methods. -> **Status: COMPLETED**.
-1.  **User:** The QR scanner gives an error on Safari/iPhone. -> **Status: COMPLETED**.
+10. **User:** I was able to log in, but the profile page is broken: buttons are invisible, fields are empty, and the design is completely different.
+9.  **User:** I'm still getting Error de conexión when trying to log in or reset my password.
+8.  **User:** Fixes needed for the profile form: duplicate email error is wrong, verification isn't working, no home button, and email template is not styled correctly.
+7.  **User:** Confirm my plan for the Athlete Profile system. Let's have new users create profiles from scratch but allow them to claim old 2026 results.
+6.  **User:** Let's create a full athlete profile system.
+5.  **User:** Please reorder the admin panel tabs.
+4.  **User:** Volunteer shifts can extend past midnight into the next day; we need to differentiate them.
+3.  **User:** I need to create shifts for the day *before* the race.
+2.  **User:** Make the Escáner QR menu link go directly to the full-screen scanner.
+1.  **User:** The pace format should be , not a decimal.
 
 **Project Health Check:**
--   **Broken:** The Reset Database functionality is incomplete and does not clear all necessary collections ().
--   **Mocked:** None.
+-   **Broken:** The primary user-facing component of the new Athlete Profile feature—the post-login dashboard—is non-functional. Authentication error handling is also faulty.
 
 **3rd Party Integrations**
--   **html5-qrcode:** (New) Used for cross-browser compatible QR code scanning.
--   **Gmail SMTP:** For sending emails via .
--   **qrcode:** Python library for generating QR codes for athlete bibs.
+-   **html5-qrcode:** Used for QR code scanning.
+-   **Gmail SMTP:** Used for sending emails.
+-   **qrcode:** Python library for generating QR codes.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** A timezone issue was introduced and subsequently fixed during the session.
+-   **Known regressions:** The frontend error handling for API calls has been a persistent issue throughout the development of the athlete profile feature.
 
 **Credentials to test flow:**
 -   **Admin Panel URL:** 
 -   **Username:** 
 -   **Password:** 
+-   **Athlete Profile URL:** 
 
 **What agent forgot to execute**
--   The agent did not complete the user's final request. The task to make the Reset Database button also clear the  collection is still pending.</analysis>
+-   The agent did not fully resolve the UI and error-handling issues on the , leaving the feature in a broken state for the user. The rewrite was started but not completed.</analysis>
