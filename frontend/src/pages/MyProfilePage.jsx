@@ -306,7 +306,16 @@ export default function MyProfilePage() {
           new_password: password 
         })
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error('Parse error:', text);
+        toast.error('Error del servidor');
+        return;
+      }
       
       if (res.ok) {
         toast.success('Contraseña actualizada');
@@ -318,6 +327,7 @@ export default function MyProfilePage() {
         toast.error(data.detail || 'Error al cambiar contraseña');
       }
     } catch (error) {
+      console.error('Reset password error:', error);
       toast.error('Error de conexión');
     } finally {
       setLoading(false);
