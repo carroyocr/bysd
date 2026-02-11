@@ -1225,7 +1225,7 @@ async def get_race_history(authorization: str = Header(None)):
         if race_code in ranking_cache:
             return ranking_cache[race_code]
         
-        empty = ({}, 0, {}, {})
+        empty = ({}, 0, {}, {}, {})
         try:
             # Determine collections
             collections_to_check = ["archived_participants", "participants"] if "2026" in race_code else ["registrations"]
