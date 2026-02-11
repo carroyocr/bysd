@@ -1334,16 +1334,19 @@ async def get_race_history(authorization: str = Header(None)):
             if cert_path.exists():
                 cert_available = True
         
-        # Lookup by BIB (handles cross-collection ID mismatch)
-        # Normalize BIB for lookup
+        # Lookup by BIB (handles cross-collection ID mismatch and BIB format differences)
         lookup_bib = bib
-        if bib and not overall_map.get(bib):
-            # Try normalized versions
-            stripped = bib.lstrip("0") or "0"
-            lookup_bib = bib if overall_map.get(bib) else stripped if overall_map.get(stripped) else stripped.zfill(3)
+        if bib:
+            # Try exact, then stripped, then padded
+            if not overall_map.get(bib):
+                stripped = bib.lstrip("0") or "0"
+                for candidate in [stripped, stripped.zfill(3), stripped.zfill(2)]:
+                    if overall_map.get(candidate):
+                        lookup_bib = candidate
+                        break
         
-        overall_pos = overall_map.get(lookup_bib)
-        gender_pos = gender_rank_map.get(lookup_bib)
+        overall_pos = overall_map.get(lookup_bib) if lookup_bib else None
+        gender_pos = gender_rank_map.get(lookup_bib) if lookup_bib else None
         gender_total = gender_totals.get(athlete_sexo, 0)
         
         if not overall_pos and bib:
