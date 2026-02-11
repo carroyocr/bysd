@@ -348,14 +348,10 @@ export default function MyProfilePage() {
 
   // ==================== RENDER VIEWS ====================
 
-  // Wrapper with Navigation and Footer
-  const PageWrapper = ({ children, showNav = true }) => (
-    <div className="min-h-screen flex flex-col">
-      {showNav && <Navigation />}
-      <main className="flex-grow bg-gradient-to-b from-background to-muted/30">
-        {children}
-      </main>
-      {showNav && <Footer />}
+  // Simple page wrapper (Navigation/Footer provided by App layout)
+  const PageWrapper = ({ children }) => (
+    <div className="bg-gradient-to-b from-background to-muted/30 min-h-[60vh]">
+      {children}
     </div>
   );
 
