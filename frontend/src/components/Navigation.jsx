@@ -287,7 +287,7 @@ export default function Navigation() {
                   key={link.href}
                   to={link.href}
                   onClick={handleLinkClick}
-                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap ${
+                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap flex items-center gap-1 ${
                     link.highlight
                       ? 'bg-primary text-white hover:bg-primary/90'
                       : location.pathname === link.href
@@ -295,6 +295,7 @@ export default function Navigation() {
                         : 'text-foreground hover:text-primary hover:bg-secondary'
                   }`}
                 >
+                  {link.icon && <link.icon className="w-4 h-4" />}
                   {link.label}
                 </Link>
               )
