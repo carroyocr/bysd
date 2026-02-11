@@ -1261,18 +1261,21 @@ async def get_race_history(authorization: str = Header(None)):
             
             logging.info(f"Rankings for {race_code}: {len(all_participants)} participants found")
             
-            # Dense ranking by laps_completed descending
+            # Dense ranking by laps_completed descending — keyed by BIB
             all_participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
             
-            overall_map = {}
+            overall_map = {}  # bib -> rank
+            id_to_bib = {}    # _id -> bib
             current_rank = 0
             prev_laps = None
             for i, p in enumerate(all_participants):
                 laps = p.get("laps_completed", 0)
+                bib = p.get("bib", "")
                 if laps != prev_laps:
                     current_rank = i + 1
                     prev_laps = laps
-                overall_map[str(p["_id"])] = current_rank
+                overall_map[bib] = current_rank
+                id_to_bib[str(p["_id"])] = bib
             
             total_overall = len(all_participants)
             
