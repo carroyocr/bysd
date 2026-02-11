@@ -1284,7 +1284,14 @@ export default function MyProfilePage() {
                               <h3 className="font-semibold flex items-center gap-2">{race.race_name || race.race_code}{race.is_claimed && <Badge variant="outline" className="text-xs">Reclamado</Badge>}</h3>
                               <p className="text-sm text-muted-foreground">{race.race_date || 'Fecha no disponible'}</p>
                             </div>
-                            {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
+                            <div className="flex items-center gap-2">
+                              {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
+                              {race.is_claimed && (
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleUnclaimResult(race.registration_id)} data-testid={`unclaim-btn-${race.registration_id}`}>
+                                  <LinkIcon className="w-4 h-4 mr-1" />Desvincular
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-4 text-sm">
                             <div><span className="text-muted-foreground">Vueltas:</span><span className="ml-1 font-semibold">{race.laps_completed}</span></div>
