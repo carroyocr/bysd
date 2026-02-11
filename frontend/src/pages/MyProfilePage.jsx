@@ -210,11 +210,8 @@ export default function MyProfilePage() {
       
       if (ok) {
         localStorage.setItem('athlete_token', data.token);
-        setAthlete(data.athlete);
         toast.success('¡Email verificado!');
-        setCurrentView(VIEW_DASHBOARD);
-        fetchMyRaces();
-        fetchRaceHistory();
+        await fetchProfile();
       } else {
         toast.error(data.detail || 'Código incorrecto');
       }
