@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
