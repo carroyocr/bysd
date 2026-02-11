@@ -531,12 +531,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - `/app/backend/tests/test_race_config.py`
   - `/app/backend/tests/test_pre_registration_admin.py`
   - `/app/backend/tests/test_volunteer_edit_mode.py`
-  - `/app/backend/tests/test_email_templates.py` (nuevo)
-  - `/app/backend/tests/test_page_visibility_and_templates.py` (nuevo)
+  - `/app/backend/tests/test_email_templates.py`
+  - `/app/backend/tests/test_page_visibility_and_templates.py`
+  - `/app/backend/tests/test_athlete_profile.py` (nuevo - 18 tests)
 - **Reportes**: 
-  - `/app/test_reports/iteration_1.json` - iteration_14.json
-  - `/app/test_reports/iteration_15.json` (nuevo - visibilidad y plantillas email)
-- **Cobertura**: 127+ tests backend (100%), UI tests completos (100%)
+  - `/app/test_reports/iteration_1.json` - iteration_15.json
+  - `/app/test_reports/iteration_16.json` (nuevo - perfil de atleta)
+- **Cobertura**: 145+ tests backend (100%), UI tests completos
 
 ---
 
