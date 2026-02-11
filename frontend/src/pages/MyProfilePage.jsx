@@ -154,6 +154,15 @@ export default function MyProfilePage() {
     if (ok) setRaceHistory(data.history || []);
   };
 
+  const fetchCheerMessages = async (raceFilter) => {
+    const url = raceFilter ? `${API_URL}/api/athletes/my-messages?race_code=${encodeURIComponent(raceFilter)}` : `${API_URL}/api/athletes/my-messages`;
+    const { ok, data } = await apiCall('GET', url);
+    if (ok) {
+      setCheerMessages(data.messages || []);
+      if (!raceFilter) setCheerRaces(data.races || []);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('athlete_token');
     setAthlete(null);
