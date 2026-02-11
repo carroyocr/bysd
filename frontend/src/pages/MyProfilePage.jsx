@@ -549,7 +549,7 @@ export default function MyProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="genero">Género</Label>
+                      <Label htmlFor="genero">Sexo</Label>
                       <select
                         id="genero"
                         value={registerData.genero}
@@ -559,16 +559,46 @@ export default function MyProfilePage() {
                         <option value="">Seleccionar</option>
                         <option value="masculino">Masculino</option>
                         <option value="femenino">Femenino</option>
-                        <option value="otro">Otro</option>
                       </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pais">País</Label>
-                      <Input
+                      <select
                         id="pais"
                         value={registerData.pais}
                         onChange={(e) => setRegisterData({...registerData, pais: e.target.value})}
-                      />
+                        className="w-full px-3 py-2 border rounded-md bg-background"
+                      >
+                        <option value="">Seleccionar país</option>
+                        <option value="República Dominicana">República Dominicana</option>
+                        <option value="Puerto Rico">Puerto Rico</option>
+                        <option value="Estados Unidos">Estados Unidos</option>
+                        <option value="México">México</option>
+                        <option value="España">España</option>
+                        <option value="Colombia">Colombia</option>
+                        <option value="Venezuela">Venezuela</option>
+                        <option value="Argentina">Argentina</option>
+                        <option value="Chile">Chile</option>
+                        <option value="Perú">Perú</option>
+                        <option value="Ecuador">Ecuador</option>
+                        <option value="Brasil">Brasil</option>
+                        <option value="Costa Rica">Costa Rica</option>
+                        <option value="Panamá">Panamá</option>
+                        <option value="Guatemala">Guatemala</option>
+                        <option value="Honduras">Honduras</option>
+                        <option value="El Salvador">El Salvador</option>
+                        <option value="Nicaragua">Nicaragua</option>
+                        <option value="Cuba">Cuba</option>
+                        <option value="Uruguay">Uruguay</option>
+                        <option value="Paraguay">Paraguay</option>
+                        <option value="Bolivia">Bolivia</option>
+                        <option value="Canadá">Canadá</option>
+                        <option value="Francia">Francia</option>
+                        <option value="Alemania">Alemania</option>
+                        <option value="Italia">Italia</option>
+                        <option value="Reino Unido">Reino Unido</option>
+                        <option value="Otro">Otro</option>
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="ciudad">Ciudad</Label>
