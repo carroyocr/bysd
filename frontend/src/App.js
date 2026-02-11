@@ -73,9 +73,6 @@ export default function App() {
                     <Route path="/comunidad/:raceCode" element={<ComunidadPage />} />
                     <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
                     <Route path="/encuesta" element={<SurveyPage />} />
-                    {/* Pre Registro routes */}
-                    <Route path="/pre-registro" element={<InscripcionPage />} />
-                    <Route path="/pre-registro/editar" element={<InscripcionPage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
                     {/* Cancel Registration */}
