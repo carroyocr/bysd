@@ -862,7 +862,7 @@ export default function MyProfilePage() {
   if (currentView === VIEW_DASHBOARD && athlete) {
     return (
       <PageWrapper>
-        <div className="container mx-auto px-4 py-8" data-testid="athlete-dashboard">
+        <div className="container mx-auto px-4 py-8 pt-12" data-testid="athlete-dashboard">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
