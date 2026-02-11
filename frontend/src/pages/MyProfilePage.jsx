@@ -33,8 +33,8 @@ const REG_STEPS = [
 
 // Page wrapper (matches CorredoresPage structure: pt-20 for nav clearance + py-20 section)
 const PageContent = ({ children }) => (
-  <div className="pt-20">
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
+  <div className="pt-16">
+    <section className="py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-8">
           {children}
