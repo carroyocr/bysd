@@ -489,8 +489,11 @@ async def reset_password(data: ResetPasswordRequest):
     if not stored_code or stored_code != data.code:
         raise HTTPException(status_code=400, detail="Código incorrecto")
     
-    if code_expires and datetime.now(timezone.utc) > code_expires:
-        raise HTTPException(status_code=400, detail="Código expirado")
+    if code_expires:
+        if code_expires.tzinfo is None:
+            code_expires = code_expires.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) > code_expires:
+            raise HTTPException(status_code=400, detail="Código expirado")
     
     # Update password
     await database.athletes.update_one(
