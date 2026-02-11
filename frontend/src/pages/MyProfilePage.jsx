@@ -858,6 +858,7 @@ export default function MyProfilePage() {
             {[
               { key: 'profile', label: 'Mis Datos', icon: User },
               { key: 'races', label: 'Mis Carreras', icon: Calendar },
+              { key: 'messages', label: 'Mensajes', icon: MessageCircle },
               { key: 'history', label: 'Historial', icon: Trophy },
             ].map(tab => (
               <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'ghost'} onClick={() => setActiveTab(tab.key)} size="sm" data-testid={`tab-${tab.key}`}>
