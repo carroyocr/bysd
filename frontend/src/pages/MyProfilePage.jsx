@@ -169,6 +169,7 @@ export default function MyProfilePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData)
       });
+      
       const data = await res.json();
       
       if (res.ok) {
@@ -176,10 +177,13 @@ export default function MyProfilePage() {
         toast.success('¡Perfil creado! Revisa tu correo');
         setCurrentView(VIEW_VERIFY);
       } else {
-        toast.error(data.detail || 'Error al crear perfil');
+        // Show specific error message from server
+        const errorMsg = data.detail || 'Error al crear perfil';
+        toast.error(errorMsg);
       }
     } catch (error) {
-      toast.error('Error de conexión');
+      console.error('Register error:', error);
+      toast.error('Error de conexión. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
