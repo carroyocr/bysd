@@ -974,7 +974,7 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
     import os
     frontend_url = os.environ.get("REACT_APP_BACKEND_URL", "").replace("/api", "")
     if not frontend_url:
-        frontend_url = "https://athlete-dashboard-7.preview.emergentagent.com"
+        frontend_url = "https://athlete-dashboard-ui.preview.emergentagent.com"
     
     for i, athlete in enumerate(athletes_with_score):
         bib_number = start_bib + i
@@ -1069,7 +1069,7 @@ async def send_payment_reminder(race_code: str):
     if not template:
         raise HTTPException(status_code=500, detail="Plantilla de correo no encontrada")
     
-    frontend_url = os.environ.get("FRONTEND_URL", "https://athlete-dashboard-7.preview.emergentagent.com")
+    frontend_url = os.environ.get("FRONTEND_URL", "https://athlete-dashboard-ui.preview.emergentagent.com")
     
     sent_count = 0
     failed_count = 0
