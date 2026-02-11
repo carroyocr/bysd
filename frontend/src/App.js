@@ -27,6 +27,7 @@ import PaymentReceiptPage from './pages/PaymentReceiptPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
+import MyProfilePage from './pages/MyProfilePage';
 import './App.css';
 
 export default function App() {
