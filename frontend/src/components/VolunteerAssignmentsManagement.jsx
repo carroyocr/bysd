@@ -477,7 +477,9 @@ export default function VolunteerAssignmentsManagement() {
                               </p>
                             ) : (
                               <div className="grid gap-2">
-                                {assignedSlots.map((slot) => (
+                                {assignedSlots.map((slot) => {
+                                  const diaTipoInfo = getDiaTipoDisplay(slot.dia_tipo);
+                                  return (
                                   <div 
                                     key={slot.id}
                                     className="flex items-center justify-between p-3 bg-background rounded-lg border"
@@ -491,9 +493,9 @@ export default function VolunteerAssignmentsManagement() {
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                           <Badge 
                                             variant="outline" 
-                                            className={`text-xs ${slot.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : ''}`}
+                                            className={`text-xs ${diaTipoInfo.bgClass}`}
                                           >
-                                            {slot.dia_tipo === 'previo' ? 'Día Previo' : 'Día Carrera'} - Turno {slot.turno}
+                                            {diaTipoInfo.label} - Turno {slot.turno}
                                           </Badge>
                                           <span className="flex items-center gap-1">
                                             <Clock className="w-3 h-3" />
