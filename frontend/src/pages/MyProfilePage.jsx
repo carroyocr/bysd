@@ -233,7 +233,7 @@ export default function MyProfilePage() {
         if (!regData.email || !regData.password) { toast.error('Completa email y contrasena'); return false; }
         if (regData.password.length < 6) { toast.error('La contrasena debe tener al menos 6 caracteres'); return false; }
         if (regData.password !== regData.confirmPassword) { toast.error('Las contrasenas no coinciden'); return false; }
-        break;
+        return 'check_email'; // signal to check email async
       case 1:
         if (!regData.nombre || !regData.apellidos || !regData.fecha_nacimiento || !regData.sexo || !regData.nacionalidad || !regData.telefono || !regData.ciudad_residencia) {
           toast.error('Por favor completa todos los campos obligatorios'); return false;
@@ -255,7 +255,17 @@ export default function MyProfilePage() {
     return true;
   };
 
-  const nextRegStep = () => { if (validateRegStep()) setRegStep(prev => Math.min(prev + 1, REG_STEPS.length - 1)); };
+  const nextRegStep = async () => {
+    const result = validateRegStep();
+    if (result === false) return;
+    if (result === 'check_email') {
+      setLoading(true);
+      const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/check-email`, { email: regData.email });
+      setLoading(false);
+      if (!ok) { toast.error(data.detail || 'Este correo ya esta registrado'); return; }
+    }
+    setRegStep(prev => Math.min(prev + 1, REG_STEPS.length - 1));
+  };
   const prevRegStep = () => setRegStep(prev => Math.max(prev - 1, 0));
 
   const handlePhotoChange = (e) => {
