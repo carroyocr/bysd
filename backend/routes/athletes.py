@@ -838,6 +838,45 @@ async def cancel_race_registration(registration_id: str, authorization: str = He
 
 # ==================== CHEER MESSAGES ====================
 
+
+@router.get("/debug-messages/{bib}")
+async def debug_messages(bib: str):
+    """Temporary diagnostic endpoint - remove after debugging"""
+    from server import db as database
+    stripped = bib.lstrip("0") or "0"
+    bib_variants = [bib, stripped, stripped.zfill(3), stripped.zfill(2)]
+    int_variants = []
+    for b in bib_variants:
+        try:
+            int_variants.append(int(b))
+        except:
+            pass
+    all_variants = list(set(bib_variants)) + int_variants
+    
+    result = {"bib_input": bib, "search_variants": [str(v) for v in all_variants]}
+    
+    for coll_name in ["archived_cheer_messages", "cheer_messages"]:
+        coll = database[coll_name]
+        total = await coll.count_documents({})
+        by_athlete_bib = await coll.count_documents({"athlete_bib": {"$in": all_variants}})
+        by_bib = await coll.count_documents({"bib": {"$in": all_variants}})
+        by_bib_number = await coll.count_documents({"bib_number": {"$in": all_variants}})
+        sample = await coll.find_one({}, {"_id": 0})
+        fields = list(sample.keys()) if sample else []
+        distinct_bibs = await coll.distinct("athlete_bib")
+        result[coll_name] = {
+            "total_docs": total,
+            "found_by_athlete_bib": by_athlete_bib,
+            "found_by_bib": by_bib,
+            "found_by_bib_number": by_bib_number,
+            "fields": fields,
+            "distinct_athlete_bibs_sample": distinct_bibs[:15],
+            "bib_type": type(distinct_bibs[0]).__name__ if distinct_bibs else "N/A"
+        }
+    
+    return result
+
+
 @router.get("/my-messages")
 async def get_my_cheer_messages(authorization: str = Header(None), race_code: str = None):
     """Get all cheer messages for an athlete across all races"""
