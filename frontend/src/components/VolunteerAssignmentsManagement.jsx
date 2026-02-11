@@ -658,20 +658,25 @@ export default function VolunteerAssignmentsManagement() {
                 <div className="space-y-4">
                   {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer()))
                     .sort(([a], [b]) => {
-                      // Sort by day type first (previo first), then by position
+                      // Sort by day type order: previo, carrera_dia1, carrera_dia2, carrera_dia3, carrera
+                      const dayOrder = { 'previo': 0, 'carrera_dia1': 1, 'carrera': 1, 'carrera_dia2': 2, 'carrera_dia3': 3 };
                       const [aDia] = a.split('|');
                       const [bDia] = b.split('|');
-                      if (aDia !== bDia) return aDia === 'previo' ? -1 : 1;
+                      const aOrder = dayOrder[aDia] ?? 99;
+                      const bOrder = dayOrder[bDia] ?? 99;
+                      if (aOrder !== bOrder) return aOrder - bOrder;
                       return a.localeCompare(b);
                     })
-                    .map(([key, group]) => (
+                    .map(([key, group]) => {
+                    const diaTipoInfo = getDiaTipoDisplay(group.dia_tipo);
+                    return (
                     <div key={key}>
                       <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                         <Badge 
                           variant="outline" 
-                          className={`text-xs ${group.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-blue-300 bg-blue-50 text-blue-700'}`}
+                          className={`text-xs ${diaTipoInfo.bgClass}`}
                         >
-                          {group.dia_tipo === 'previo' ? 'Día Previo' : 'Día Carrera'}
+                          {diaTipoInfo.label}
                         </Badge>
                         {group.puesto}
                       </h4>
@@ -697,7 +702,8 @@ export default function VolunteerAssignmentsManagement() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
 
