@@ -444,10 +444,10 @@ export default function MyProfilePage() {
     return (
       <PageWrapper>
         <div className="container mx-auto px-4 py-16">
-          <div className="max-w-md mx-auto">
+          <div className="max-w-md mx-auto" data-testid="login-card">
             <Card>
               <CardHeader>
-                <Button variant="ghost" size="sm" onClick={() => setCurrentView(VIEW_LANDING)} className="w-fit mb-2">
+                <Button variant="ghost" size="sm" onClick={() => setCurrentView(VIEW_LANDING)} className="w-fit mb-2" data-testid="login-back-btn">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Volver
                 </Button>
@@ -455,7 +455,7 @@ export default function MyProfilePage() {
                 <CardDescription>Ingresa con tu cuenta de atleta</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4" data-testid="login-form">
                   <div className="space-y-2">
                     <Label htmlFor="email">Correo electrónico</Label>
                     <div className="relative">
@@ -468,6 +468,7 @@ export default function MyProfilePage() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
+                        data-testid="login-email-input"
                       />
                     </div>
                   </div>
@@ -483,6 +484,7 @@ export default function MyProfilePage() {
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10 pr-10"
                         required
+                        data-testid="login-password-input"
                       />
                       <button
                         type="button"
@@ -493,7 +495,7 @@ export default function MyProfilePage() {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full" disabled={loading} data-testid="login-submit-btn">
                     {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                     Ingresar
                   </Button>
@@ -502,8 +504,9 @@ export default function MyProfilePage() {
                       type="button"
                       className="text-sm text-muted-foreground hover:text-primary transition-colors"
                       onClick={() => setCurrentView(VIEW_FORGOT)}
+                      data-testid="login-forgot-link"
                     >
-                      ¿Olvidaste tu contraseña?
+                      Olvidaste tu contraseña?
                     </button>
                   </div>
                 </form>
