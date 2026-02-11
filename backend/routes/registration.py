@@ -694,7 +694,7 @@ async def get_registration_stats(race_code: str):
     
     # Get t-shirt sizes distribution by gender (Masculino)
     sizes_male_pipeline = [
-        {"$match": {"race_code": race_code, "sexo": "Masculino"}},
+        {"$match": {"race_code": race_code, "sexo": {"$regex": "^masculino$", "$options": "i"}}},
         {"$group": {
             "_id": "$talla_camiseta",
             "count": {"$sum": 1}
@@ -705,7 +705,7 @@ async def get_registration_stats(race_code: str):
     
     # Get t-shirt sizes distribution by gender (Femenino)
     sizes_female_pipeline = [
-        {"$match": {"race_code": race_code, "sexo": "Femenino"}},
+        {"$match": {"race_code": race_code, "sexo": {"$regex": "^femenino$", "$options": "i"}}},
         {"$group": {
             "_id": "$talla_camiseta",
             "count": {"$sum": 1}
