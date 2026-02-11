@@ -1245,8 +1245,11 @@ async def get_race_history(authorization: str = Header(None)):
                 all_participants.extend(docs)
             
             if not all_participants:
+                logging.warning(f"Rankings: No participants found for {race_code}")
                 ranking_cache[race_code] = empty
                 return empty
+            
+            logging.info(f"Rankings for {race_code}: {len(all_participants)} participants found")
             
             # Dense ranking by laps_completed descending
             all_participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
