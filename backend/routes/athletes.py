@@ -920,9 +920,18 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
         messages = await collection.find(query).sort("created_at", -1).to_list(500)
         logging.info(f"Cheer messages query for {rc}: bib_map={list(bibs)}, expanded={combined_bibs}, found={len(messages)}, collection={collection.name}")
         
-        # Get race name
-        race_config = await database.race_configurations.find_one({"code": rc})
-        race_name = race_config.get("name") if race_config else rc
+        # Get race name - try multiple collections and field names
+        race_config = None
+        for coll_name in ["race_configurations", "race_config"]:
+            for field in ["code", "race_code"]:
+                race_config = await database[coll_name].find_one({field: rc})
+                if race_config:
+                    break
+            if race_config:
+                break
+        race_name = rc
+        if race_config:
+            race_name = race_config.get("name") or race_config.get("race_name") or rc
         race_labels[rc] = race_name
         
         for msg in messages:
