@@ -574,6 +574,43 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
     return {"success": True, "message": "Perfil actualizado"}
 
 
+ATHLETE_PHOTO_DIR = "/app/backend/static/athlete_photos"
+os.makedirs(ATHLETE_PHOTO_DIR, exist_ok=True)
+
+@router.post("/upload-photo")
+async def upload_athlete_photo(
+    photo: UploadFile = File(...),
+    authorization: str = Header(None)
+):
+    """Upload athlete profile photo"""
+    from server import db as database
+    from bson import ObjectId
+    import uuid
+    
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+    
+    if not photo.content_type or not photo.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
+    
+    ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+    filename = f"{athlete_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(ATHLETE_PHOTO_DIR, filename)
+    
+    content = await photo.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    
+    photo_url = f"/static/athlete_photos/{filename}"
+    
+    await database.athletes.update_one(
+        {"_id": ObjectId(athlete_id)},
+        {"$set": {"photo_url": photo_url, "updated_at": datetime.now(timezone.utc)}}
+    )
+    
+    return {"success": True, "photo_url": photo_url}
+
+
 # ==================== RACE REGISTRATION ENDPOINTS ====================
 
 @router.get("/my-races")
