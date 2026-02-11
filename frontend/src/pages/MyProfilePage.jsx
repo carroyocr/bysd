@@ -580,17 +580,6 @@ export default function MyProfilePage() {
     }
   };
 
-  // ===== PAGE WRAPPER =====
-  const PageContent = ({ children }) => (
-    <section className="py-12 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
-          {children}
-        </div>
-      </div>
-    </section>
-  );
-
   // ===== LANDING VIEW =====
   if (currentView === VIEW_LANDING) {
     return (
