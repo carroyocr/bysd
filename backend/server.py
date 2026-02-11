@@ -66,6 +66,25 @@ async def startup_db_indexes():
         logging.warning(f"Index creation warning (may already exist): {e}")
 
 
+async def run_migrations():
+    """Run one-time data migrations (idempotent)"""
+    try:
+        needs_migration = await db.archived_participants.count_documents({"sexo": {"$exists": False}, "bib": {"$exists": True}})
+        if needs_migration > 0:
+            from migrations.update_sexo_2026 import BIB_SEXO_MAP
+            updated = 0
+            for bib, sexo in BIB_SEXO_MAP.items():
+                result = await db.archived_participants.update_one({"bib": bib, "sexo": {"$exists": False}}, {"$set": {"sexo": sexo}})
+                if result.modified_count > 0:
+                    updated += 1
+            logging.info(f"Migration update_sexo_2026: {updated} participants updated")
+        else:
+            logging.info("Migration update_sexo_2026: already applied")
+    except Exception as e:
+        logging.warning(f"Migration warning: {e}")
+
+
+
 async def initialize_volunteer_scheduler():
     """Initialize the volunteer email scheduler on startup"""
     try:
