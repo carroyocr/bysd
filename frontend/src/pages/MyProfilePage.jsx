@@ -672,9 +672,6 @@ export default function MyProfilePage() {
 
   // ===== REGISTER VIEW (Multi-Step) =====
   if (currentView === VIEW_REGISTER) {
-    const raceCost = config?.registration_cost || 3500;
-    const formattedCost = `RD$${raceCost.toLocaleString('es-DO')}`;
-    
     return (
       <PageContent>
         <SectionHeader title="Crear Perfil de Atleta" subtitle="Completa tu informacion para participar en eventos" />
