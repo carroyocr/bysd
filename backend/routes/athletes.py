@@ -1323,7 +1323,7 @@ async def get_race_history(authorization: str = Header(None)):
         race_config = await find_race_config(race_code)
         reg_id = str(reg["_id"])
         
-        overall_map, total_overall, gender_rank_map, gender_totals = await get_rankings(race_code)
+        overall_map, total_overall, gender_rank_map, gender_totals, id_to_bib = await get_rankings(race_code)
         
         # Certificate check
         bib = reg.get("bib")
@@ -1334,12 +1334,20 @@ async def get_race_history(authorization: str = Header(None)):
             if cert_path.exists():
                 cert_available = True
         
-        overall_pos = overall_map.get(reg_id)
-        gender_pos = gender_rank_map.get(reg_id)
+        # Lookup by BIB (handles cross-collection ID mismatch)
+        # Normalize BIB for lookup
+        lookup_bib = bib
+        if bib and not overall_map.get(bib):
+            # Try normalized versions
+            stripped = bib.lstrip("0") or "0"
+            lookup_bib = bib if overall_map.get(bib) else stripped if overall_map.get(stripped) else stripped.zfill(3)
+        
+        overall_pos = overall_map.get(lookup_bib)
+        gender_pos = gender_rank_map.get(lookup_bib)
         gender_total = gender_totals.get(athlete_sexo, 0)
         
-        if not overall_pos:
-            logging.warning(f"Rankings: reg_id={reg_id} NOT found in overall_map (map has {len(overall_map)} entries, sample keys: {list(overall_map.keys())[:3]})")
+        if not overall_pos and bib:
+            logging.warning(f"Rankings: BIB={bib} NOT found in overall_map (map has {len(overall_map)} entries, sample keys: {list(overall_map.keys())[:5]})")
         
         # Resolve race name from config
         race_name = race_code
