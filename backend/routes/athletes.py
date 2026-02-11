@@ -143,6 +143,20 @@ def generate_verification_code() -> str:
     return str(random.randint(100000, 999999))
 
 
+
+@router.post("/check-email")
+async def check_email_availability(data: dict):
+    """Check if email is already registered"""
+    from server import db as database
+    email = data.get("email", "").lower().strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email requerido")
+    existing = await database.athletes.find_one({"email": email})
+    if existing:
+        raise HTTPException(status_code=409, detail="Este correo ya esta registrado. Usa 'Iniciar Sesion' para acceder a tu cuenta.")
+    return {"available": True}
+
+
 # Dependency to get current athlete
 async def get_current_athlete(authorization: str = Header(None)):
     """Extract and verify athlete from Authorization header"""
