@@ -23,19 +23,30 @@ const formatTime12h = (time24) => {
 
 // Default shift templates
 const DEFAULT_SHIFTS = [
-  { turno: "A", hora_inicio: "08:00", hora_fin: "12:00", slots_count: 2, dia_tipo: "carrera" },
-  { turno: "B", hora_inicio: "12:00", hora_fin: "16:00", slots_count: 2, dia_tipo: "carrera" },
-  { turno: "C", hora_inicio: "16:00", hora_fin: "20:00", slots_count: 2, dia_tipo: "carrera" },
-  { turno: "D", hora_inicio: "20:00", hora_fin: "00:00", slots_count: 2, dia_tipo: "carrera" },
-  { turno: "E", hora_inicio: "00:00", hora_fin: "04:00", slots_count: 2, dia_tipo: "carrera" },
-  { turno: "F", hora_inicio: "04:00", hora_fin: "08:00", slots_count: 2, dia_tipo: "carrera" },
+  { turno: "A", hora_inicio: "08:00", hora_fin: "12:00", slots_count: 2, dia_tipo: "carrera_dia1" },
+  { turno: "B", hora_inicio: "12:00", hora_fin: "16:00", slots_count: 2, dia_tipo: "carrera_dia1" },
+  { turno: "C", hora_inicio: "16:00", hora_fin: "20:00", slots_count: 2, dia_tipo: "carrera_dia1" },
+  { turno: "D", hora_inicio: "20:00", hora_fin: "00:00", slots_count: 2, dia_tipo: "carrera_dia1" },
+  { turno: "E", hora_inicio: "00:00", hora_fin: "04:00", slots_count: 2, dia_tipo: "carrera_dia2" },
+  { turno: "F", hora_inicio: "04:00", hora_fin: "08:00", slots_count: 2, dia_tipo: "carrera_dia2" },
 ];
 
 // Day type options
 const DIA_TIPO_OPTIONS = [
-  { value: "previo", label: "Día Previo" },
-  { value: "carrera", label: "Día de Carrera" }
+  { value: "previo", label: "Día Previo", color: "purple" },
+  { value: "carrera_dia1", label: "Día 1 Carrera", color: "blue" },
+  { value: "carrera_dia2", label: "Día 2 Carrera", color: "green" },
+  { value: "carrera_dia3", label: "Día 3 Carrera", color: "orange" }
 ];
+
+// Helper to get day type display info
+const getDiaTipoInfo = (diaTipo) => {
+  const option = DIA_TIPO_OPTIONS.find(o => o.value === diaTipo);
+  if (option) return option;
+  // Backward compatibility for old "carrera" value
+  if (diaTipo === "carrera") return { value: "carrera", label: "Día Carrera", color: "blue" };
+  return { value: diaTipo, label: diaTipo, color: "gray" };
+};
 
 export default function VolunteerConfigManagement() {
   const [positions, setPositions] = useState([]);
