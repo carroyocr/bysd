@@ -358,14 +358,6 @@ export default function MyProfilePage() {
     finally { setInscribing(false); }
   };
 
-  // ===== SECTION HEADER (matches Corredores style) =====
-  const SectionHeader = ({ title, subtitle }) => (
-    <div className="text-center space-y-4 pt-8 pb-4">
-      <h2 className="font-display text-4xl sm:text-5xl text-foreground">{title}</h2>
-      {subtitle && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>}
-    </div>
-  );
-
   // ===== REGISTER STEP CONTENT =====
   const renderRegStep = () => {
     switch (regStep) {
