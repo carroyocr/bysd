@@ -938,7 +938,7 @@ export default function MyProfilePage() {
                       </div>
                     </div>
                     {/* Emergency */}
-                    <div>
+                    <div className="pb-6 border-b">
                       <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contacto de Emergencia</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div><Label className="text-muted-foreground text-xs">Nombre</Label><p className="font-medium">{athlete.contacto_emergencia_nombre || '-'}</p></div>
