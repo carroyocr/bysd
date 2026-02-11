@@ -1295,11 +1295,39 @@ export default function MyProfilePage() {
                           </div>
                           <div className="mt-3 flex flex-wrap gap-4 text-sm">
                             <div><span className="text-muted-foreground">Vueltas:</span><span className="ml-1 font-semibold">{race.laps_completed}</span></div>
-                            <div><span className="text-muted-foreground">Distancia:</span><span className="ml-1 font-semibold">{(race.laps_completed * 6.7).toFixed(1)} km</span></div>
+                            <div><span className="text-muted-foreground">Distancia:</span><span className="ml-1 font-semibold">{race.total_km || (race.laps_completed * 6.7).toFixed(1)} km</span></div>
                             <div><span className="text-muted-foreground">Estado:</span>
                               <Badge variant="secondary" className="ml-1">{race.status === 'winner' ? 'Ganador' : race.status === 'retired' ? 'DNF' : race.status === 'dns' ? 'DNS' : race.status === 'active' ? 'Activo' : race.status}</Badge>
                             </div>
                           </div>
+                          {/* Rankings */}
+                          {race.status !== 'dns' && (
+                            <div className="mt-3 pt-3 border-t flex flex-wrap gap-4 text-sm">
+                              {race.overall_position && (
+                                <div data-testid={`overall-rank-${race.registration_id}`}>
+                                  <span className="text-muted-foreground">Posicion General:</span>
+                                  <span className="ml-1 font-semibold">{race.overall_position}/{race.overall_total}</span>
+                                </div>
+                              )}
+                              {race.gender_position && (
+                                <div data-testid={`gender-rank-${race.registration_id}`}>
+                                  <span className="text-muted-foreground">Posicion por Sexo:</span>
+                                  <span className="ml-1 font-semibold">{race.gender_position}/{race.gender_total}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {/* Certificate */}
+                          {race.certificate_available && (
+                            <div className="mt-3 pt-3 border-t flex flex-wrap gap-2" data-testid={`cert-section-${race.registration_id}`}>
+                              <Button size="sm" variant="outline" onClick={() => window.open(`${API_URL}/api/race/certificate/${race.bib}`, '_blank')} data-testid={`cert-pdf-${race.registration_id}`}>
+                                <ExternalLink className="w-3 h-3 mr-2" />Ver Certificado
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => window.open(`${API_URL}/api/race/certificate/${race.bib}/image`, '_blank')} data-testid={`cert-img-${race.registration_id}`}>
+                                <Camera className="w-3 h-3 mr-2" />Descargar Imagen
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
