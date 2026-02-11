@@ -1008,17 +1008,25 @@ export default function MyProfilePage() {
           {/* ===== RACES TAB ===== */}
           {activeTab === 'races' && (
             <div className="space-y-4">
-              {/* Inscription button */}
+              {/* Inscription button or Coming Soon */}
               {!showInscription && activeRace && !isRegisteredForActive && athlete.profile_complete && (
                 <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
                   <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                       <h3 className="font-display text-xl text-foreground">{activeRace.name || 'Backyard Ultra Santo Domingo'}</h3>
-                      <p className="text-muted-foreground text-sm">Inscribete a la proxima edicion</p>
+                      <p className="text-muted-foreground text-sm">
+                        {config?.show_preregistration !== false ? 'Inscribete a la proxima edicion' : 'La inscripcion aun no esta habilitada'}
+                      </p>
                     </div>
-                    <Button size="lg" onClick={() => setShowInscription(true)} data-testid="open-inscription-btn">
-                      <Heart className="w-4 h-4 mr-2" /> Inscribirme
-                    </Button>
+                    {config?.show_preregistration !== false ? (
+                      <Button size="lg" onClick={() => setShowInscription(true)} data-testid="open-inscription-btn">
+                        <Heart className="w-4 h-4 mr-2" /> Inscribirme
+                      </Button>
+                    ) : (
+                      <Button size="lg" variant="secondary" disabled data-testid="inscription-coming-soon">
+                        Proximamente
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
