@@ -1296,7 +1296,7 @@ async def get_race_history(authorization: str = Header(None)):
                 if sexo:
                     gender_groups.setdefault(sexo, []).append(p)
             
-            gender_rank_map = {}  # bib -> rank
+            gender_rank_map = {}  # bib -> rank (all normalized variants)
             gender_totals = {}
             for sexo, participants in gender_groups.items():
                 participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
@@ -1305,12 +1305,15 @@ async def get_race_history(authorization: str = Header(None)):
                 gender_totals[sexo] = len(participants)
                 for i, p in enumerate(participants):
                     laps = p.get("laps_completed", 0)
+                    bib = str(p.get("bib", ""))
                     if laps != prev_laps:
                         rank = i + 1
                         prev_laps = laps
-                    gender_rank_map[p.get("bib", "")] = rank
+                    stripped = bib.lstrip("0") or "0"
+                    for variant in [bib, stripped, stripped.zfill(3), stripped.zfill(2)]:
+                        gender_rank_map[variant] = rank
             
-            ranking_cache[race_code] = (overall_map, total_overall, gender_rank_map, gender_totals, id_to_bib)
+            ranking_cache[race_code] = (overall_map, total_overall, gender_rank_map, gender_totals, {})
             return ranking_cache[race_code]
         except Exception as e:
             logging.warning(f"Rankings calculation error for {race_code}: {e}")
