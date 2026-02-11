@@ -82,11 +82,12 @@ export default function App() {
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
-                    {/* Legacy routes - redirect */}
-                    <Route path="/inscripcion" element={<InscripcionPage />} />
-                    <Route path="/inscripcion/editar" element={<InscripcionPage />} />
                     {/* Athlete Profile */}
                     <Route path="/mi-perfil" element={<MyProfilePage />} />
+                    {/* Legacy pre-registro redirects to profile */}
+                    <Route path="/inscripcion" element={<MyProfilePage />} />
+                    <Route path="/inscripcion/editar" element={<MyProfilePage />} />
+                    <Route path="/pre-registro" element={<MyProfilePage />} />
                   </Routes>
                 </main>
                 <Footer />
