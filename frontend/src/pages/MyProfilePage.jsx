@@ -150,11 +150,8 @@ export default function MyProfilePage() {
       
       if (ok) {
         localStorage.setItem('athlete_token', data.token);
-        setAthlete(data.athlete);
         toast.success('¡Bienvenido!');
-        setCurrentView(VIEW_DASHBOARD);
-        fetchMyRaces();
-        fetchRaceHistory();
+        await fetchProfile();
       } else if (status === 403) {
         setPendingEmail(email);
         toast.info('Te enviamos un código de verificación');
