@@ -167,7 +167,7 @@ async def register_athlete(data: AthleteRegisterRequest):
         "updated_at": datetime.now(timezone.utc)
     }
     
-    result = await database.athletes.insert_one(athlete_doc)
+    await database.athletes.insert_one(athlete_doc)
     
     # Send verification email using template
     try:
