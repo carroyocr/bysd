@@ -738,6 +738,7 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         "hospedaje": data.hospedaje,
         "acompanantes": data.acompanantes,
         # Registration metadata
+        "edit_token": secrets.token_urlsafe(32),
         "bib": str(next_bib).zfill(3),
         "status": "registered",
         "payment_status": "pending",
