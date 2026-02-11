@@ -1036,6 +1036,31 @@ export default function MyProfilePage() {
                     <CardDescription>Preguntas especificas del evento {activeRace?.name || ''}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {/* Info Banner - costo e instrucciones */}
+                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-5">
+                      <h4 className="text-base font-bold text-orange-900 mb-3">Informacion Importante</h4>
+                      <div className="space-y-2 text-sm text-orange-800">
+                        <p>
+                          <strong>Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                        </p>
+                        <p>
+                          Cuatro (4) meses antes del evento, enviaremos un correo electronico con las instrucciones para realizar el pago de la inscripcion.
+                        </p>
+                        <p className="font-semibold text-lg text-orange-900">
+                          El costo de la carrera sera de {formattedCost}.
+                        </p>
+                        <p>
+                          A partir de la recepcion de ese correo, contaras con un plazo de <strong>treinta (30) dias</strong> para completar el pago correspondiente.
+                        </p>
+                        <p>
+                          Si el pago no se realiza dentro de ese periodo, el pre registro sera automaticamente desestimado y el cupo podra ser asignado a otro participante.
+                        </p>
+                        <p className="text-orange-600 italic flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          Te recomendamos estar atento a tu correo electronico y verificar tambien la carpeta de spam.
+                        </p>
+                      </div>
+                    </div>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Anos de Experiencia en Running *</Label>
