@@ -750,7 +750,7 @@ export default function VolunteerAssignmentsManagement() {
                   <strong>Posición:</strong> {selectedSlotToRemove.puesto}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  <strong>Día:</strong> {selectedSlotToRemove.dia_tipo === 'previo' ? 'Día Previo' : 'Día de Carrera'}
+                  <strong>Día:</strong> {getDiaTipoDisplay(selectedSlotToRemove.dia_tipo).label}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   <strong>Turno:</strong> {selectedSlotToRemove.turno} ({formatTime(selectedSlotToRemove.hora_inicio)} - {formatTime(selectedSlotToRemove.hora_fin)})
