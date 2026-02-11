@@ -666,23 +666,43 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         except:
             next_bib = 1
     
-    # Create registration
+    # Create registration with profile data + event-specific fields
     registration_doc = {
         "athlete_id": athlete_id,
         "race_code": data.race_code,
         "email": athlete["email"],
         "nombre": athlete["nombre"],
         "apellidos": athlete["apellidos"],
+        "fecha_nacimiento": athlete.get("fecha_nacimiento"),
+        "sexo": athlete.get("sexo") or athlete.get("genero"),
+        "nacionalidad": athlete.get("nacionalidad") or athlete.get("pais"),
         "telefono": athlete.get("telefono"),
+        "ciudad_residencia": athlete.get("ciudad_residencia") or athlete.get("ciudad"),
+        "tipo_sangre": athlete.get("tipo_sangre"),
+        "condicion_medica": athlete.get("condicion_medica"),
+        "condicion_medica_detalle": athlete.get("condicion_medica_detalle"),
+        "alergias": athlete.get("alergias"),
+        "alergias_detalle": athlete.get("alergias_detalle"),
+        "contacto_emergencia_nombre": athlete.get("contacto_emergencia_nombre"),
+        "contacto_emergencia_relacion": athlete.get("contacto_emergencia_relacion"),
+        "contacto_emergencia_telefono": athlete.get("contacto_emergencia_telefono"),
+        "talla_camiseta": athlete.get("talla_camiseta"),
+        "personalizacion_camiseta": athlete.get("personalizacion_camiseta"),
+        "como_se_entero": athlete.get("como_se_entero"),
+        "photo_url": athlete.get("photo_url"),
+        # Event-specific fields
+        "motivacion": data.motivacion,
+        "anos_experiencia": data.anos_experiencia,
+        "maxima_distancia_km": data.maxima_distancia_km,
+        "vueltas_aspiradas": data.vueltas_aspiradas,
+        "tiene_carpa": data.tiene_carpa,
+        "hospedaje": data.hospedaje,
+        "acompanantes": data.acompanantes,
+        # Registration metadata
         "bib": str(next_bib).zfill(3),
-        "categoria": data.categoria,
-        "talla_camiseta": data.talla_camiseta,
-        "club": data.club,
-        "condiciones_medicas": data.condiciones_medicas,
         "status": "registered",
         "payment_status": "pending",
         "laps_completed": 0,
-        "acepta_terminos": data.acepta_terminos,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
