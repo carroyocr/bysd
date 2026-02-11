@@ -170,13 +170,21 @@ export default function MyProfilePage() {
         body: JSON.stringify(registerData)
       });
       
+      // Clone response to avoid body already read errors
+      const resClone = res.clone();
       let data;
       try {
         data = await res.json();
       } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        toast.error('Error en la respuesta del servidor');
-        return;
+        // Try reading as text if JSON fails
+        const text = await resClone.text();
+        console.error('JSON parse error, raw response:', text);
+        try {
+          data = JSON.parse(text);
+        } catch {
+          toast.error('Error procesando respuesta del servidor');
+          return;
+        }
       }
       
       if (res.ok) {
