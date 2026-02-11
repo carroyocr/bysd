@@ -1288,7 +1288,7 @@ export default function MyProfilePage() {
                               {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
                               {race.is_claimed && (
                                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleUnclaimResult(race.registration_id)} data-testid={`unclaim-btn-${race.registration_id}`}>
-                                  <LinkIcon className="w-4 h-4 mr-1" />Desvincular
+                                  <Unlink className="w-4 h-4 mr-1" />Desvincular
                                 </Button>
                               )}
                             </div>
