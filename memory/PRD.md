@@ -400,6 +400,12 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Archivo: `backend/routes/athletes.py` línea 492
   - Test: curl verified (forgot → reset → login OK)
 
+- [x] **Bug Fix: Mensajes de apoyo no cargan para BIBs reclamados** (11 Febrero 2026)
+  - Causa: Mismatch de formato de BIB entre `archived_participants` (ej: '048') y `archived_cheer_messages` (ej: '48')
+  - Fix: Normalización de BIBs al buscar mensajes — expande cada BIB a versiones con/sin ceros (ej: '048' → {'48', '048'})
+  - Archivo: `backend/routes/athletes.py` endpoint `/my-messages`
+  - Test: curl verificado
+
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
   - Nuevo endpoint `POST /api/athletes/unclaim-result` en `backend/routes/athletes.py`
   - Botón "Desvincular" en tarjetas de historial reclamado en `frontend/src/pages/MyProfilePage.jsx`
