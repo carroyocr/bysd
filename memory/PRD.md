@@ -400,6 +400,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Archivo: `backend/routes/athletes.py` línea 492
   - Test: curl verified (forgot → reset → login OK)
 
+- [x] **Feature: Certificado y Rankings en Historial de Carreras** (11 Febrero 2026)
+  - Rankings: Posición General (overall) y Posición por Sexo con dense ranking (mismas vueltas = misma posición)
+  - Certificado: Botones "Ver Certificado" (PDF) y "Descargar Imagen" (PNG) visibles solo si el certificado existe
+  - Backend: Endpoint `/api/athletes/race-history` ampliado con cálculo de rankings y check de certificado
+  - Frontend: Tarjeta de historial actualizada con secciones de rankings y certificado
+  - Test: curl + screenshot verificados (Overall: 1/88, Gender: 1/2, Certificate: true)
+
 - [x] **Bug Fix: Mensajes de apoyo no cargan para BIBs reclamados** (11 Febrero 2026)
   - Causa: Mismatch de formato de BIB entre `archived_participants` (ej: '048') y `archived_cheer_messages` (ej: '48')
   - Fix: Normalización de BIBs al buscar mensajes — expande cada BIB a versiones con/sin ceros (ej: '048' → {'48', '048'})
