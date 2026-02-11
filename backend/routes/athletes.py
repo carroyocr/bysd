@@ -551,9 +551,17 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
     # Build update dict
     update_data = {"updated_at": datetime.now(timezone.utc)}
     
-    for field in ["nombre", "apellidos", "telefono", "fecha_nacimiento", 
-                  "genero", "pais", "ciudad", "contacto_emergencia_nombre",
-                  "contacto_emergencia_telefono"]:
+    profile_fields = [
+        "nombre", "apellidos", "telefono", "fecha_nacimiento", 
+        "sexo", "nacionalidad", "ciudad_residencia",
+        "tipo_sangre", "condicion_medica", "condicion_medica_detalle",
+        "alergias", "alergias_detalle",
+        "contacto_emergencia_nombre", "contacto_emergencia_relacion",
+        "contacto_emergencia_telefono",
+        "talla_camiseta", "personalizacion_camiseta", "como_se_entero"
+    ]
+    
+    for field in profile_fields:
         value = getattr(data, field, None)
         if value is not None:
             update_data[field] = value
