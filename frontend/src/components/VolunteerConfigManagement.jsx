@@ -401,6 +401,7 @@ export default function VolunteerConfigManagement() {
       </div>
     </div>
   );
+  };
 
   if (loading) {
     return (
