@@ -1171,6 +1171,52 @@ export default function MyProfilePage() {
             </div>
           )}
 
+
+          {/* ===== MESSAGES TAB ===== */}
+          {activeTab === 'messages' && (
+            <Card data-testid="messages-card">
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <CardTitle className="flex items-center gap-2"><MessageCircle className="w-5 h-5 text-primary" /> Mensajes de Apoyo</CardTitle>
+                  {cheerRaces.length > 1 && (
+                    <select value={cheerFilter} onChange={e => { setCheerFilter(e.target.value); fetchCheerMessages(e.target.value); }} className="h-9 px-3 rounded-md border border-input bg-background text-sm" data-testid="messages-race-filter">
+                      <option value="">Todas las carreras</option>
+                      {cheerRaces.map(r => <option key={r.code} value={r.code}>{r.name}</option>)}
+                    </select>
+                  )}
+                </div>
+                <CardDescription>
+                  {cheerMessages.length > 0 ? `${cheerMessages.length} mensaje${cheerMessages.length !== 1 ? 's' : ''} de apoyo recibido${cheerMessages.length !== 1 ? 's' : ''}` : 'Mensajes de apoyo de tus fans'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {cheerMessages.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground" data-testid="no-messages">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aun no has recibido mensajes de apoyo</p>
+                    <p className="text-sm mt-1">Los mensajes que tus fans te envien apareceran aqui</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3" data-testid="messages-list">
+                    {cheerMessages.map((msg, i) => (
+                      <div key={i} className="p-4 border rounded-lg bg-gradient-to-r from-orange-50/50 to-transparent" data-testid={`message-${i}`}>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-semibold text-foreground">{msg.fan_name}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">{msg.race_name}</Badge>
+                            {msg.created_at && <span className="text-xs text-muted-foreground">{new Date(msg.created_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                          </div>
+                        </div>
+                        <p className="text-foreground">{msg.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+
           {/* ===== HISTORY TAB ===== */}
           {activeTab === 'history' && (
             <div className="space-y-4" data-testid="history-section">
