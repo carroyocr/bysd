@@ -400,6 +400,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Archivo: `backend/routes/athletes.py` línea 492
   - Test: curl verified (forgot → reset → login OK)
 
+- [x] **Bug Fix: Admin no carga atletas registrados** (11 Febrero 2026)
+  - Error: `TypeError: can only concatenate str (not "int") to str` en endpoint `/api/registration/admin/next-bib/{race_code}`
+  - Causa: El campo `bib` se almacena como string ("001") pero el endpoint intentaba sumar `"001" + 1`
+  - Fix: Convertir `max_bib` a `int()` antes de sumar
+  - Archivo: `backend/routes/registration.py` línea 847
+  - Bug adicional: Estadísticas de género no contaban correctamente (comparación case-sensitive "Masculino" vs "masculino")
+  - Fix adicional: Normalización case-insensitive en pipeline de agregación de stats
+  - Test: 5/5 endpoints admin retornan 200, admin panel muestra atletas correctamente
+
 - [x] **Feature: Control de Visibilidad de Páginas Públicas** (02 Febrero 2026)
   - **Panel Admin - Pestaña Carrera**:
     - Nuevos switches "Mostrar página de Tracking" y "Mostrar página de Comunidad"
