@@ -1086,6 +1086,41 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(No
     }
 
 
+@router.post("/unclaim-result")
+async def unclaim_result(data: ConfirmClaimRequest, authorization: str = Header(None)):
+    """Unclaim a previously claimed historical result"""
+    from server import db as database
+    from bson import ObjectId
+
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+
+    try:
+        obj_id = ObjectId(data.result_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Resultado no encontrado")
+
+    # Find the result in any collection
+    for col_name in ["archived_participants", "participants", "registrations"]:
+        doc = await database[col_name].find_one({"_id": obj_id})
+        if doc:
+            if doc.get("claimed_by") != athlete_id:
+                raise HTTPException(status_code=403, detail="No puedes desvincular este resultado")
+            await database[col_name].update_one({"_id": obj_id}, {"$unset": {"claimed_by": ""}})
+            break
+    else:
+        raise HTTPException(status_code=404, detail="Resultado no encontrado")
+
+    # Remove from athlete's claimed_results
+    await database.athletes.update_one(
+        {"_id": ObjectId(athlete_id)},
+        {"$pull": {"claimed_results": data.result_id}}
+    )
+
+    return {"success": True, "message": "Resultado desvinculado"}
+
+
+
 @router.get("/race-history")
 async def get_race_history(authorization: str = Header(None)):
     """Get athlete's race history including claimed results"""
