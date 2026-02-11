@@ -121,7 +121,7 @@ def generate_verification_code() -> str:
 
 
 # Dependency to get current athlete
-async def get_current_athlete(authorization: str = None):
+async def get_current_athlete(authorization: str = Header(None)):
     """Extract and verify athlete from Authorization header"""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="No autorizado")
