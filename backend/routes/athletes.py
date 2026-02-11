@@ -651,6 +651,8 @@ async def get_my_races(authorization: str = Header(None)):
             "categoria": reg.get("categoria"),
             "status": reg.get("status", "registered"),
             "payment_status": reg.get("payment_status", "pending"),
+            "payment_receipt_status": reg.get("payment_receipt", {}).get("status") if reg.get("payment_receipt") else None,
+            "edit_token": reg.get("edit_token"),
             "laps_completed": reg.get("laps_completed", 0),
             "is_active": race_config.get("is_active", False) if race_config else False
         })
