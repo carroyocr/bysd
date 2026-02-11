@@ -85,6 +85,8 @@ export default function App() {
                     {/* Legacy routes - redirect */}
                     <Route path="/inscripcion" element={<InscripcionPage />} />
                     <Route path="/inscripcion/editar" element={<InscripcionPage />} />
+                    {/* Athlete Profile */}
+                    <Route path="/mi-perfil" element={<MyProfilePage />} />
                   </Routes>
                 </main>
                 <Footer />
