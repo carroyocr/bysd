@@ -3,7 +3,7 @@ import Rules from '../components/Rules';
 
 export default function ReglasPage() {
   return (
-    <div className="pt-20">
+    <div className="pt-16">
       <Rules />
     </div>
   );

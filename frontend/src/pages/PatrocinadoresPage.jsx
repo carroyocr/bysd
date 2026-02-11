@@ -6,7 +6,7 @@ export default function PatrocinadoresPage() {
   const { raceCode } = useParams();
   
   return (
-    <div className="pt-20">
+    <div className="pt-16">
       <SponsorsSection raceCode={raceCode} />
     </div>
   );

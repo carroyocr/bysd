@@ -3,7 +3,7 @@ import RunnersSection from '../components/RunnersSection';
 
 export default function CorredoresPage() {
   return (
-    <div className="pt-20">
+    <div className="pt-16">
       <RunnersSection />
     </div>
   );
