@@ -844,7 +844,10 @@ async def get_next_bib(race_code: str):
     if not result or result[0].get("max_bib") is None:
         return {"next_bib": 1}
     
-    return {"next_bib": result[0]["max_bib"] + 1}
+    try:
+        return {"next_bib": int(result[0]["max_bib"]) + 1}
+    except (ValueError, TypeError):
+        return {"next_bib": 1}
 
 
 @router.post("/cancel/{token}")
