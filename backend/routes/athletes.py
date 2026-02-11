@@ -855,24 +855,41 @@ async def debug_messages(bib: str):
     
     result = {"bib_input": bib, "search_variants": [str(v) for v in all_variants]}
     
-    for coll_name in ["archived_cheer_messages", "cheer_messages"]:
-        coll = database[coll_name]
-        total = await coll.count_documents({})
-        by_athlete_bib = await coll.count_documents({"athlete_bib": {"$in": all_variants}})
-        by_bib = await coll.count_documents({"bib": {"$in": all_variants}})
-        by_bib_number = await coll.count_documents({"bib_number": {"$in": all_variants}})
-        sample = await coll.find_one({}, {"_id": 0})
-        fields = list(sample.keys()) if sample else []
-        distinct_bibs = await coll.distinct("athlete_bib")
-        result[coll_name] = {
-            "total_docs": total,
-            "found_by_athlete_bib": by_athlete_bib,
-            "found_by_bib": by_bib,
-            "found_by_bib_number": by_bib_number,
-            "fields": fields,
-            "distinct_athlete_bibs_sample": distinct_bibs[:15],
-            "bib_type": type(distinct_bibs[0]).__name__ if distinct_bibs else "N/A"
-        }
+    # Check ALL collections that could have messages
+    for coll_name in ["archived_cheer_messages", "cheer_messages", "cheers", "messages"]:
+        try:
+            coll = database[coll_name]
+            total = await coll.count_documents({})
+            if total == 0:
+                result[coll_name] = {"total_docs": 0}
+                continue
+            by_athlete_bib = await coll.count_documents({"athlete_bib": {"$in": all_variants}})
+            # Also try without race_code filter (legacy)
+            legacy_query = {"$or": [{"race_code": {"$exists": False}}, {"race_code": None}, {"race_code": ""}]}
+            legacy_count = await coll.count_documents(legacy_query)
+            legacy_with_bib = await coll.count_documents({"$and": [legacy_query, {"athlete_bib": {"$in": all_variants}}]})
+            sample = await coll.find_one({}, {"_id": 0})
+            fields = list(sample.keys()) if sample else []
+            distinct_bibs = await coll.distinct("athlete_bib")
+            result[coll_name] = {
+                "total_docs": total,
+                "found_by_athlete_bib": by_athlete_bib,
+                "legacy_no_race_code": legacy_count,
+                "legacy_with_bib": legacy_with_bib,
+                "fields": fields,
+                "distinct_bibs_count": len(distinct_bibs),
+                "distinct_bibs_sample": [str(b) for b in distinct_bibs[:20]],
+                "bib_type": type(distinct_bibs[0]).__name__ if distinct_bibs else "N/A"
+            }
+        except Exception as e:
+            result[coll_name] = {"error": str(e)}
+    
+    # Check race config
+    active = await database.race_configurations.find_one({"is_active": True}, {"_id": 0, "code": 1, "name": 1, "data_archived": 1})
+    result["active_race"] = active if active else "not found"
+    
+    archived = await database.race_configurations.find_one({"code": "BYSD-2026"}, {"_id": 0, "code": 1, "data_archived": 1})
+    result["bysd2026_config"] = archived if archived else "not found"
     
     return result
 
