@@ -88,6 +88,8 @@ export default function MyProfilePage() {
   const [myRaces, setMyRaces] = useState([]);
   const [raceHistory, setRaceHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('profile');
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState({});
   
   // Claim results
   const [searchResults, setSearchResults] = useState([]);
