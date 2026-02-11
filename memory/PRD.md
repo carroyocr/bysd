@@ -393,6 +393,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Archivo modificado: `frontend/src/pages/MyProfilePage.jsx` (líneas 856-868)
   - Tests: 100% frontend (5/5 features verificadas, iteration_18.json)
 
+- [x] **Bug Fix: Restablecimiento de Contraseña** (11 Febrero 2026)
+  - Error: `TypeError: can't compare offset-naive and offset-aware datetimes` en endpoint `/api/athletes/reset-password`
+  - Causa: MongoDB devuelve datetime naive, pero el código comparaba con `datetime.now(timezone.utc)` (aware)
+  - Fix: Añadido check `tzinfo is None` + `.replace(tzinfo=timezone.utc)` (misma solución ya usada en verificación de email)
+  - Archivo: `backend/routes/athletes.py` línea 492
+  - Test: curl verified (forgot → reset → login OK)
+
 - [x] **Feature: Control de Visibilidad de Páginas Públicas** (02 Febrero 2026)
   - **Panel Admin - Pestaña Carrera**:
     - Nuevos switches "Mostrar página de Tracking" y "Mostrar página de Comunidad"
