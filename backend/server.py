@@ -67,19 +67,20 @@ async def startup_db_indexes():
 
 
 async def run_migrations():
-    """Run one-time data migrations (idempotent)"""
+    """Run one-time data migrations (idempotent) on both participant collections"""
     try:
-        needs_migration = await db.archived_participants.count_documents({"sexo": {"$exists": False}, "bib": {"$exists": True}})
-        if needs_migration > 0:
-            from migrations.update_sexo_2026 import BIB_SEXO_MAP
-            updated = 0
-            for bib, sexo in BIB_SEXO_MAP.items():
-                result = await db.archived_participants.update_one({"bib": bib, "sexo": {"$exists": False}}, {"$set": {"sexo": sexo}})
-                if result.modified_count > 0:
-                    updated += 1
-            logging.info(f"Migration update_sexo_2026: {updated} participants updated")
-        else:
-            logging.info("Migration update_sexo_2026: already applied")
+        from migrations.update_sexo_2026 import BIB_SEXO_MAP
+        for coll_name in ["archived_participants", "participants"]:
+            needs = await db[coll_name].count_documents({"sexo": {"$exists": False}, "bib": {"$exists": True}})
+            if needs > 0:
+                updated = 0
+                for bib, sexo in BIB_SEXO_MAP.items():
+                    r = await db[coll_name].update_one({"bib": bib, "sexo": {"$exists": False}}, {"$set": {"sexo": sexo}})
+                    if r.modified_count > 0:
+                        updated += 1
+                logging.info(f"Migration sexo ({coll_name}): {updated} updated")
+            else:
+                logging.info(f"Migration sexo ({coll_name}): already applied")
     except Exception as e:
         logging.warning(f"Migration warning: {e}")
 
