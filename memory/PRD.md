@@ -386,6 +386,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **UI: Reorden y Condicionalidad de Pestañas en Mi Perfil** (11 Febrero 2026)
+  - Nuevo orden: "Mis Datos", "Próximas Carreras", "Historial", "Mensajes"
+  - Renombrada "Mis Carreras" → "Próximas Carreras"
+  - Pestaña "Mensajes" solo visible si el atleta tiene mensajes de apoyo (cheerMessages.length > 0)
+  - Archivo modificado: `frontend/src/pages/MyProfilePage.jsx` (líneas 856-868)
+  - Tests: 100% frontend (5/5 features verificadas, iteration_18.json)
+
 - [x] **Feature: Control de Visibilidad de Páginas Públicas** (02 Febrero 2026)
   - **Panel Admin - Pestaña Carrera**:
     - Nuevos switches "Mostrar página de Tracking" y "Mostrar página de Comunidad"
