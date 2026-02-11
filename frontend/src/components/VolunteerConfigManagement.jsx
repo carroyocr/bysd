@@ -296,7 +296,20 @@ export default function VolunteerConfigManagement() {
   };
 
   // Shift editor component
-  const ShiftEditor = ({ turnos, setTurnos, disabled = false }) => (
+  const ShiftEditor = ({ turnos, setTurnos, disabled = false }) => {
+    // Get color classes based on dia_tipo
+    const getDiaTipoClasses = (diaTipo) => {
+      const info = getDiaTipoInfo(diaTipo);
+      switch(info.color) {
+        case 'purple': return 'border-purple-300 bg-purple-50 text-purple-700';
+        case 'blue': return 'border-blue-300 bg-blue-50 text-blue-700';
+        case 'green': return 'border-green-300 bg-green-50 text-green-700';
+        case 'orange': return 'border-orange-300 bg-orange-50 text-orange-700';
+        default: return 'border-gray-300 bg-gray-50 text-gray-700';
+      }
+    };
+
+    return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Turnos</Label>
@@ -327,12 +340,10 @@ export default function VolunteerConfigManagement() {
               />
             </div>
             <select
-              value={turno.dia_tipo || 'carrera'}
+              value={turno.dia_tipo || 'carrera_dia1'}
               onChange={(e) => updateShift(turnos, setTurnos, index, 'dia_tipo', e.target.value)}
               disabled={disabled}
-              className={`px-2 py-1.5 text-xs border rounded-md bg-background ${
-                turno.dia_tipo === 'previo' ? 'border-purple-300 bg-purple-50 text-purple-700' : 'border-blue-300 bg-blue-50 text-blue-700'
-              }`}
+              className={`px-2 py-1.5 text-xs border rounded-md ${getDiaTipoClasses(turno.dia_tipo)}`}
             >
               {DIA_TIPO_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
