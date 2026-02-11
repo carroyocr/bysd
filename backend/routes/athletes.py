@@ -918,6 +918,7 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
             query["race_code"] = rc
         
         messages = await collection.find(query).sort("created_at", -1).to_list(500)
+        logging.info(f"Cheer messages query for {rc}: bib_map={list(bibs)}, expanded={combined_bibs}, found={len(messages)}, collection={collection.name}")
         
         # Get race name
         race_config = await database.race_configurations.find_one({"code": rc})
