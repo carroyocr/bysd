@@ -1182,6 +1182,22 @@ async def get_race_history(authorization: str = Header(None)):
             seen_ids.add(rid)
             unique_results.append(r)
     
+    # Helper: find race config by code (try multiple field names and collections)
+    config_cache = {}
+    async def find_race_config(race_code):
+        if race_code in config_cache:
+            return config_cache[race_code]
+        config = None
+        for coll_name in ["race_configurations", "race_config"]:
+            for field in ["code", "race_code"]:
+                config = await database[coll_name].find_one({field: race_code})
+                if config:
+                    break
+            if config:
+                break
+        config_cache[race_code] = config
+        return config
+    
     # Pre-compute rankings per race_code
     ranking_cache = {}
     
@@ -1189,71 +1205,86 @@ async def get_race_history(authorization: str = Header(None)):
         if race_code in ranking_cache:
             return ranking_cache[race_code]
         
-        # Determine collection
-        collections_to_check = []
-        if "2026" in race_code:
-            collections_to_check = ["archived_participants", "participants"]
-        else:
-            collections_to_check = ["registrations"]
-        
-        all_participants = []
-        for coll_name in collections_to_check:
-            docs = await database[coll_name].find(
-                {"race_code": race_code, "status": {"$ne": "dns"}},
-                {"_id": 1, "bib": 1, "laps_completed": 1, "sexo": 1, "claimed_by": 1}
-            ).to_list(1000)
-            all_participants.extend(docs)
-        
-        # Sort by laps descending for overall ranking (dense ranking)
-        all_participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
-        
-        overall_map = {}
-        current_rank = 0
-        prev_laps = None
-        for i, p in enumerate(all_participants):
-            laps = p.get("laps_completed", 0)
-            if laps != prev_laps:
-                current_rank = i + 1
-                prev_laps = laps
-            overall_map[str(p["_id"])] = current_rank
-        
-        total_overall = len(all_participants)
-        
-        # Gender rankings - try to resolve gender for each participant
-        gender_groups = {}
-        for p in all_participants:
-            sexo = (p.get("sexo") or "").strip().lower()
-            if not sexo and p.get("claimed_by"):
-                claimed_athlete = await database.athletes.find_one(
-                    {"_id": ObjectId(p["claimed_by"])}, {"sexo": 1}
-                )
-                if claimed_athlete:
-                    sexo = (claimed_athlete.get("sexo") or "").strip().lower()
-            if sexo:
-                gender_groups.setdefault(sexo, []).append(p)
-        
-        gender_rank_map = {}
-        gender_totals = {}
-        for sexo, participants in gender_groups.items():
-            participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
-            rank = 0
+        empty = ({}, 0, {}, {})
+        try:
+            # Determine collections
+            collections_to_check = ["archived_participants", "participants"] if "2026" in race_code else ["registrations"]
+            
+            all_participants = []
+            for coll_name in collections_to_check:
+                # Try with and without race_code filter
+                docs = await database[coll_name].find(
+                    {"race_code": race_code, "status": {"$nin": ["dns", "honor"]}},
+                    {"_id": 1, "bib": 1, "laps_completed": 1, "sexo": 1, "claimed_by": 1}
+                ).to_list(1000)
+                if not docs and coll_name == "archived_participants":
+                    docs = await database[coll_name].find(
+                        {"status": {"$nin": ["dns", "honor"]}},
+                        {"_id": 1, "bib": 1, "laps_completed": 1, "sexo": 1, "claimed_by": 1}
+                    ).to_list(1000)
+                all_participants.extend(docs)
+            
+            if not all_participants:
+                ranking_cache[race_code] = empty
+                return empty
+            
+            # Dense ranking by laps_completed descending
+            all_participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
+            
+            overall_map = {}
+            current_rank = 0
             prev_laps = None
-            gender_totals[sexo] = len(participants)
-            for i, p in enumerate(participants):
+            for i, p in enumerate(all_participants):
                 laps = p.get("laps_completed", 0)
                 if laps != prev_laps:
-                    rank = i + 1
+                    current_rank = i + 1
                     prev_laps = laps
-                gender_rank_map[str(p["_id"])] = rank
-        
-        ranking_cache[race_code] = (overall_map, total_overall, gender_rank_map, gender_totals)
-        return ranking_cache[race_code]
+                overall_map[str(p["_id"])] = current_rank
+            
+            total_overall = len(all_participants)
+            
+            # Gender rankings
+            gender_groups = {}
+            for p in all_participants:
+                sexo = (p.get("sexo") or "").strip().lower()
+                if not sexo and p.get("claimed_by"):
+                    try:
+                        claimed_athlete = await database.athletes.find_one(
+                            {"_id": ObjectId(p["claimed_by"])}, {"sexo": 1}
+                        )
+                        if claimed_athlete:
+                            sexo = (claimed_athlete.get("sexo") or "").strip().lower()
+                    except:
+                        pass
+                if sexo:
+                    gender_groups.setdefault(sexo, []).append(p)
+            
+            gender_rank_map = {}
+            gender_totals = {}
+            for sexo, participants in gender_groups.items():
+                participants.sort(key=lambda x: x.get("laps_completed", 0), reverse=True)
+                rank = 0
+                prev_laps = None
+                gender_totals[sexo] = len(participants)
+                for i, p in enumerate(participants):
+                    laps = p.get("laps_completed", 0)
+                    if laps != prev_laps:
+                        rank = i + 1
+                        prev_laps = laps
+                    gender_rank_map[str(p["_id"])] = rank
+            
+            ranking_cache[race_code] = (overall_map, total_overall, gender_rank_map, gender_totals)
+            return ranking_cache[race_code]
+        except Exception as e:
+            logging.warning(f"Rankings calculation error for {race_code}: {e}")
+            ranking_cache[race_code] = empty
+            return empty
     
     # Format
     history = []
     for reg in unique_results:
         race_code = reg.get("race_code", "BYSD-2026")
-        race_config = await database.race_configurations.find_one({"code": race_code})
+        race_config = await find_race_config(race_code)
         reg_id = str(reg["_id"])
         
         overall_map, total_overall, gender_rank_map, gender_totals = await get_rankings(race_code)
@@ -1271,11 +1302,19 @@ async def get_race_history(authorization: str = Header(None)):
         gender_pos = gender_rank_map.get(reg_id)
         gender_total = gender_totals.get(athlete_sexo, 0)
         
+        # Resolve race name from config
+        race_name = race_code
+        if race_config:
+            race_name = race_config.get("name") or race_config.get("race_name") or race_code
+        race_date = None
+        if race_config:
+            race_date = race_config.get("race_date") or race_config.get("date")
+        
         history.append({
             "registration_id": reg_id,
             "race_code": race_code,
-            "race_name": race_config.get("name") if race_config else race_code,
-            "race_date": race_config.get("race_date") if race_config else None,
+            "race_name": race_name,
+            "race_date": race_date,
             "bib": bib,
             "laps_completed": reg.get("laps_completed", 0),
             "total_km": reg.get("total_km", 0),
