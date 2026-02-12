@@ -16,6 +16,7 @@ import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsMa
 import FinancesManagement from '../components/FinancesManagement';
 import UserManagement from '../components/UserManagement';
 import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
+import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
