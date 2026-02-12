@@ -427,6 +427,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Datos dinámicos: título, descripción (con edición), imagen (logo de carrera activa)
   - Cache de 1 minuto para evitar consultas excesivas al backend
   - Archivos: `frontend/plugins/og-middleware.js`, `frontend/craco.config.js`
+- [x] **Feature: Auto-Claim de Resultados 2026 al Registrar Perfil** (12 Febrero 2026)
+  - Al crear un perfil de atleta, si el correo coincide con un BIB de la carrera 2026 (mapa BIB→Email del Excel), se asocia automáticamente el resultado histórico
+  - Mapa de datos: `backend/migrations/bib_email_2026.py` (89 corredores con email)
+  - Lógica en `register_athlete` de `backend/routes/athletes.py`
+  - Tests: 8/8 passed (100%)
+- [x] **Feature: Control Anti-Duplicado en Claim de Resultados** (12 Febrero 2026)
+  - Un atleta no puede reclamar más de un resultado de la misma carrera (BYSD-2026)
+  - Verificación en `claim_result` de `backend/routes/athletes.py`
+  - Maneja registros legacy sin campo `race_code`
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
