@@ -30,7 +30,8 @@ const TAB_PERMISSIONS = {
   'surveys': 'surveys',
   'config': 'config',
   'users': 'users',
-  'emails': 'emails'
+  'emails': 'emails',
+  'results-2026': 'athletes', // Same permission as athletes
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
