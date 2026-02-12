@@ -420,6 +420,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Soporte para variantes de BIB: string '048', '48', entero 48
   - Archivo: `backend/routes/athletes.py` función `get_my_cheer_messages`
   - Tests: 14/14 passed (100%)
+- [x] **Feature: Meta Tags OG Dinámicos para Compartir en Redes Sociales** (12 Febrero 2026)
+  - Los meta tags Open Graph (WhatsApp, Facebook, Twitter, Telegram, etc.) ahora se actualizan automáticamente con la carrera activa
+  - Middleware CRACO que intercepta crawlers de redes sociales y sirve HTML con meta tags dinámicos
+  - Navegadores normales siguen recibiendo la app React sin cambios
+  - Datos dinámicos: título, descripción (con edición), imagen (logo de carrera activa)
+  - Cache de 1 minuto para evitar consultas excesivas al backend
+  - Archivos: `frontend/plugins/og-middleware.js`, `frontend/craco.config.js`
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
