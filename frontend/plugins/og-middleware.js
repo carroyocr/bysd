@@ -96,15 +96,18 @@ function setupOgMiddleware(devServerConfig) {
     middlewares.unshift({
       name: "og-meta-middleware",
       middleware: async (req, res, next) => {
-        // Only intercept root HTML page requests (not assets, not API)
-        const accept = req.headers.accept || "";
-        const isHtmlRequest = accept.includes("text/html");
-        const isAsset = /\.\w+$/.test(req.url) && !req.url.endsWith(".html");
-        const isApi = req.url.startsWith("/api/");
-        const isHotUpdate = req.url.includes("hot-update") || req.url.includes("__webpack");
-        const isSockJs = req.url.includes("/ws") || req.url.includes("sockjs");
+        // Only intercept social media crawler requests
+        const ua = (req.headers["user-agent"] || "").toLowerCase();
+        const isCrawler = /whatsapp|facebookexternalhit|twitterbot|linkedinbot|telegrambot|slackbot|discordbot|googlebot/.test(ua);
 
-        if (!isHtmlRequest || isAsset || isApi || isHotUpdate || isSockJs) {
+        if (!isCrawler) {
+          return next();
+        }
+
+        const accept = req.headers.accept || "";
+        const isHtmlRequest = accept.includes("text/html") || accept.includes("*/*");
+
+        if (!isHtmlRequest) {
           return next();
         }
 
