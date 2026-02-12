@@ -9,6 +9,9 @@ const config = {
   enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
 };
 
+// OG meta tag middleware (always loaded for dynamic WhatsApp/social previews)
+const { setupOgMiddleware } = require("./plugins/og-middleware");
+
 // Conditionally load visual editing modules only if enabled
 let babelMetadataPlugin;
 let setupDevServer;
