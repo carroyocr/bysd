@@ -1575,6 +1575,9 @@ async def admin_get_2026_results(authorization: str = Header(None)):
                         claim_type = "auto"
                     else:
                         claim_type = "manual"
+                else:
+                    athlete_info = {"email": "(perfil eliminado)", "nombre": "—", "apellidos": ""}
+                    claim_type = "huerfano"
 
             results.append({
                 "id": str(doc["_id"]),
