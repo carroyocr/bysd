@@ -226,6 +226,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">Correos</span>
               </TabsTrigger>
             )}
+            {/* 10. Resultados 2026 */}
+            {hasAccess('results-2026') && (
+              <TabsTrigger value="results-2026" className="flex items-center gap-2" data-testid="tab-results-2026">
+                <Trophy className="w-4 h-4" />
+                <span className="hidden sm:inline">Resultados 2026</span>
+                <span className="sm:hidden">2026</span>
+              </TabsTrigger>
+            )}
             {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
