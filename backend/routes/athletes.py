@@ -1206,6 +1206,35 @@ async def claim_result(data: ConfirmClaimRequest, authorization: str = Header(No
     if result.get("claimed_by"):
         raise HTTPException(status_code=400, detail="Este resultado ya fue reclamado")
     
+    # Prevent claiming more than one result from the same race (BYSD-2026)
+    result_race = result.get("race_code", "BYSD-2026")
+    athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+    existing_claims = athlete.get("claimed_results", []) if athlete else []
+    if existing_claims:
+        existing_oids = []
+        for cid in existing_claims:
+            try:
+                existing_oids.append(ObjectId(cid))
+            except:
+                pass
+        if existing_oids:
+            for coll in ["archived_participants", "participants"]:
+                already = await database[coll].find_one({
+                    "_id": {"$in": existing_oids},
+                    "race_code": result_race
+                })
+                if not already and "2026" in result_race:
+                    # Legacy records may not have race_code field
+                    already = await database[coll].find_one({
+                        "_id": {"$in": existing_oids},
+                        "race_code": {"$exists": False}
+                    })
+                if already:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Ya tienes un resultado reclamado de esta carrera"
+                    )
+    
     # Mark as claimed in the source collection
     await database[collection_name].update_one(
         {"_id": obj_id},
