@@ -355,7 +355,7 @@ async def register_volunteer(
         )
         import os
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://athlete-dashboard-ui.preview.emergentagent.com')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://cheer-messages-debug.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
         merge_data = {
@@ -463,7 +463,7 @@ async def request_edit_link(request: EditLinkRequest):
         )
         import os
         
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://athlete-dashboard-ui.preview.emergentagent.com')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://cheer-messages-debug.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
         merge_data = {
