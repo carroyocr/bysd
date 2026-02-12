@@ -217,6 +217,36 @@ async def register_athlete(data: AthleteRegisterRequest):
     
     await database.athletes.insert_one(athlete_doc)
     
+    # Auto-claim 2026 result if email matches a BIB from that race
+    auto_claimed_bib = None
+    try:
+        from migrations.bib_email_2026 import EMAIL_BIB_MAP
+        matched_bib = EMAIL_BIB_MAP.get(data.email.lower())
+        if matched_bib:
+            # Find the participant in archived_participants or participants
+            bib_variants = [matched_bib, matched_bib.lstrip("0") or "0"]
+            for coll_name in ["archived_participants", "participants"]:
+                participant = await database[coll_name].find_one({
+                    "bib": {"$in": bib_variants},
+                    "claimed_by": {"$exists": False}
+                })
+                if participant:
+                    pid = str(participant["_id"])
+                    aid = str(athlete_doc["_id"])
+                    await database[coll_name].update_one(
+                        {"_id": participant["_id"]},
+                        {"$set": {"claimed_by": aid}}
+                    )
+                    await database.athletes.update_one(
+                        {"_id": athlete_doc["_id"]},
+                        {"$addToSet": {"claimed_results": pid}}
+                    )
+                    auto_claimed_bib = matched_bib
+                    logging.info(f"Auto-claimed BIB {matched_bib} for {data.email.lower()}")
+                    break
+    except Exception as e:
+        logging.warning(f"Auto-claim error for {data.email.lower()}: {e}")
+    
     # Send verification email using template
     try:
         from services.template_email_service import send_email_with_template, build_race_data
