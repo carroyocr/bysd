@@ -317,6 +317,12 @@ export default function AdminPage() {
               <EmailTemplatesManagement />
             </TabsContent>
           )}
+
+          {hasAccess('results-2026') && (
+            <TabsContent value="results-2026">
+              <ClaimedResultsManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
