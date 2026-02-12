@@ -1543,7 +1543,7 @@ async def admin_get_2026_results(authorization: str = Header(None)):
     # Verify admin token
     try:
         token = authorization.replace("Bearer ", "") if authorization else ""
-        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "backyard-ultra-secret-2024"), algorithms=["HS256"])
+        payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
     except Exception:
         raise HTTPException(status_code=401, detail="No autorizado")
 
