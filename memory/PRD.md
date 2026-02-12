@@ -4,7 +4,7 @@
 - **Proyecto**: Sistema de tracking en vivo para carrera Backyard Ultra
 - **Evento**: Santo Domingo 2026/2027
 - **Fecha de Creación**: Enero 2026
-- **Última Actualización**: 11 Febrero 2026
+- **Última Actualización**: 12 Febrero 2026
 
 ## Reglas de Desarrollo (OBLIGATORIAS)
 1. **Emails**: Todos los correos electrónicos sin excepción deben estar incluidos en el módulo de correos mediante una plantilla HTML almacenada en la colección `email_templates` de MongoDB, utilizando el mismo formato y estilos que las plantillas existentes.
