@@ -1623,7 +1623,7 @@ async def admin_unclaim_2026(data: ConfirmClaimRequest, authorization: str = Hea
     # Verify admin token
     try:
         token = authorization.replace("Bearer ", "") if authorization else ""
-        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "backyard-ultra-secret-2024"), algorithms=["HS256"])
+        payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
     except Exception:
         raise HTTPException(status_code=401, detail="No autorizado")
 
