@@ -411,6 +411,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Causa: Mismatch de formato de BIB entre `archived_participants` (ej: '048') y `archived_cheer_messages` (ej: '48')
   - Fix: Normalización de BIBs al buscar mensajes — expande cada BIB a versiones con/sin ceros (ej: '048' → {'48', '048'})
   - Archivo: `backend/routes/athletes.py` endpoint `/my-messages`
+- [x] **Bug Fix P0: Mensajes legacy de producción no se mostraban** (12 Febrero 2026)
+  - Causa raíz: En producción, los 1,617 mensajes de la carrera 2026 están en `cheer_messages` SIN campo `race_code` (no en `archived_cheer_messages`)
+  - Fix: El endpoint `GET /api/athletes/my-messages` ahora consulta AMBAS colecciones para carreras 2026:
+    - `archived_cheer_messages` (datos de preview/archivo)
+    - `cheer_messages` con filtro `race_code: {$exists: false}` (datos legacy de producción)
+  - Deduplicación por fan_name + message + created_at para evitar duplicados
+  - Soporte para variantes de BIB: string '048', '48', entero 48
+  - Archivo: `backend/routes/athletes.py` función `get_my_cheer_messages`
+  - Tests: 14/14 passed (100%)
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
