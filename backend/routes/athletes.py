@@ -1529,3 +1529,123 @@ async def get_race_history(authorization: str = Header(None)):
     history.sort(key=lambda x: x.get("race_date") or "", reverse=True)
     
     return {"history": history}
+
+
+
+# ==================== ADMIN: 2026 RESULTS MANAGEMENT ====================
+
+@router.get("/admin/2026-results")
+async def admin_get_2026_results(authorization: str = Header(None)):
+    """Admin: Get all 2026 race results with claim status"""
+    from server import db as database
+    from bson import ObjectId
+
+    # Verify admin token
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "backyard-ultra-secret-2024"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    results = []
+
+    for coll_name in ["archived_participants", "participants"]:
+        docs = await database[coll_name].find(
+            {}, {"nombre": 1, "apellidos": 1, "bib": 1, "laps_completed": 1,
+                 "status": 1, "claimed_by": 1, "sexo": 1, "nacionalidad": 1}
+        ).sort("bib", 1).to_list(200)
+
+        for doc in docs:
+            claimed_by_id = doc.get("claimed_by")
+            athlete_info = None
+            claim_type = None
+
+            if claimed_by_id:
+                athlete = await database.athletes.find_one(
+                    {"_id": ObjectId(claimed_by_id)},
+                    {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+                )
+                if athlete:
+                    athlete_info = athlete
+                    # Determine claim type: auto or manual
+                    from migrations.bib_email_2026 import EMAIL_BIB_MAP
+                    bib = doc.get("bib", "")
+                    mapped_email = EMAIL_BIB_MAP.get(bib, "").lower()
+                    if mapped_email and athlete.get("email", "").lower() == mapped_email:
+                        claim_type = "auto"
+                    else:
+                        claim_type = "manual"
+
+            results.append({
+                "id": str(doc["_id"]),
+                "collection": coll_name,
+                "bib": doc.get("bib"),
+                "nombre": doc.get("nombre", ""),
+                "apellidos": doc.get("apellidos", ""),
+                "laps_completed": doc.get("laps_completed", 0),
+                "status": doc.get("status", ""),
+                "sexo": doc.get("sexo", ""),
+                "nacionalidad": doc.get("nacionalidad", ""),
+                "claimed_by_id": claimed_by_id,
+                "athlete": athlete_info,
+                "claim_type": claim_type,
+            })
+
+    # Deduplicate by BIB (prefer archived_participants)
+    seen_bibs = {}
+    unique = []
+    for r in results:
+        bib = r["bib"]
+        if bib not in seen_bibs or r["collection"] == "archived_participants":
+            seen_bibs[bib] = len(unique)
+            if bib in seen_bibs and seen_bibs[bib] < len(unique):
+                unique[seen_bibs[bib]] = r
+            else:
+                unique.append(r)
+
+    claimed_count = sum(1 for r in unique if r["claimed_by_id"])
+    return {
+        "results": unique,
+        "stats": {
+            "total": len(unique),
+            "claimed": claimed_count,
+            "unclaimed": len(unique) - claimed_count,
+        }
+    }
+
+
+@router.post("/admin/unclaim-2026")
+async def admin_unclaim_2026(data: ConfirmClaimRequest, authorization: str = Header(None)):
+    """Admin: Force-unclaim a 2026 result"""
+    from server import db as database
+    from bson import ObjectId
+
+    # Verify admin token
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "backyard-ultra-secret-2024"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    obj_id = ObjectId(data.result_id)
+
+    # Find the participant and its current claim
+    for coll_name in ["archived_participants", "participants"]:
+        doc = await database[coll_name].find_one({"_id": obj_id})
+        if doc:
+            claimed_by = doc.get("claimed_by")
+            # Remove claim from participant
+            await database[coll_name].update_one(
+                {"_id": obj_id}, {"$unset": {"claimed_by": ""}}
+            )
+            # Remove from athlete's claimed_results
+            if claimed_by:
+                await database.athletes.update_one(
+                    {"_id": ObjectId(claimed_by)},
+                    {"$pull": {"claimed_results": data.result_id}}
+                )
+            logging.info(f"Admin unclaimed BIB {doc.get('bib')} (was claimed by {claimed_by})")
+            return {"success": True, "message": f"Resultado BIB {doc.get('bib')} desvinculado"}
+
+    raise HTTPException(status_code=404, detail="Resultado no encontrado")
+
