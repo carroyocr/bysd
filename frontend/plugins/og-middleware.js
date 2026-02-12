@@ -58,7 +58,7 @@ function replaceMetaTags(html, race) {
   const name = race.name || "Backyard Ultra Santo Domingo";
   const edition = race.edition_number || 1;
   const edLabel = getEditionLabel(edition);
-  const location = (race.location || "Santo Domingo, Republica Dominicana").split(",").slice(-2).join(",").trim();
+  const location = (race.location || "Santo Domingo, Republica Dominicana").replace(/\.\s*$/, "").trim();
   const description = `${edLabel} edicion del Backyard Ultra en ${location}. Un desafio personal, un ejercicio de disciplina, una prueba de voluntad.`;
 
   // Build absolute image URL from race logo
