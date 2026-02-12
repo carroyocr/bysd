@@ -961,20 +961,49 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
             except:
                 pass
         combined_bibs = bib_list + int_bibs
-        query = {"athlete_bib": {"$in": combined_bibs}}
+        bib_query = {"athlete_bib": {"$in": combined_bibs}}
         if race_code and race_code != rc:
             continue
         
-        # Check if archived race
         is_archived = "2026" in rc
-        collection = database.archived_cheer_messages if is_archived else database.cheer_messages
+        messages = []
         
-        # Add race_code filter for non-archived (current collection may have multiple races)
-        if not is_archived:
-            query["race_code"] = rc
+        if is_archived:
+            # For 2026 race: query BOTH collections to handle prod/preview differences
+            # 1) archived_cheer_messages (preview may store them here)
+            arch_msgs = await database.archived_cheer_messages.find(bib_query).sort("created_at", -1).to_list(500)
+            messages.extend(arch_msgs)
+            logging.info(f"Cheer archived query for {rc}: found={len(arch_msgs)}")
+            
+            # 2) cheer_messages: legacy messages without race_code (production)
+            legacy_query = {
+                "athlete_bib": {"$in": combined_bibs},
+                "$or": [
+                    {"race_code": {"$exists": False}},
+                    {"race_code": None},
+                    {"race_code": ""},
+                    {"race_code": rc}
+                ]
+            }
+            legacy_msgs = await database.cheer_messages.find(legacy_query).sort("created_at", -1).to_list(500)
+            messages.extend(legacy_msgs)
+            logging.info(f"Cheer legacy query for {rc}: found={len(legacy_msgs)}")
+        else:
+            # For current races: only cheer_messages with matching race_code
+            query = {**bib_query, "race_code": rc}
+            messages = await database.cheer_messages.find(query).sort("created_at", -1).to_list(500)
         
-        messages = await collection.find(query).sort("created_at", -1).to_list(500)
-        logging.info(f"Cheer messages query for {rc}: bib_map={list(bibs)}, expanded={combined_bibs}, found={len(messages)}, collection={collection.name}")
+        # Deduplicate by message content + fan_name + created_at
+        seen = set()
+        unique_messages = []
+        for msg in messages:
+            key = (msg.get("fan_name", ""), msg.get("message", ""), str(msg.get("created_at", "")))
+            if key not in seen:
+                seen.add(key)
+                unique_messages.append(msg)
+        messages = unique_messages
+        
+        logging.info(f"Cheer messages for {rc}: bib_map={list(bibs)}, total_unique={len(messages)}")
         
         # Get race name - try multiple collections and field names
         race_config = None
