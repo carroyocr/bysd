@@ -5,6 +5,7 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta, timezone
 import os
+import urllib.parse
 from pathlib import Path
 from bson import ObjectId
 from models.race import (
@@ -2297,6 +2298,9 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
     participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
     
     if not participant:
+        participant = await database.archived_participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
     
     status = participant.get("status", "active")
@@ -2320,15 +2324,20 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
     # Get participant name for filename
     nombre = participant.get("nombre", "")
     apellidos = participant.get("apellidos", "")
-    filename = f"Certificado_{nombre}_{apellidos}_{bib}.pdf".replace(" ", "_")
+    # ASCII-safe filename + UTF-8 encoded filename* for proper accent support
+    from unicodedata import normalize
+    import re
+    safe_name = re.sub(r'[^\w\s-]', '', normalize('NFKD', f"{nombre}_{apellidos}").encode('ascii', 'ignore').decode()).replace(" ", "_")
+    safe_filename = f"Certificado_{safe_name}_{bib}.pdf"
+    utf8_filename = f"Certificado_{nombre}_{apellidos}_{bib}.pdf".replace(" ", "_")
     
     # Return with inline disposition so it opens in browser
     return FileResponse(
         path=certificate_path,
         media_type="application/pdf",
-        filename=filename,
+        filename=safe_filename,
         headers={
-            "Content-Disposition": f"inline; filename={filename}"
+            "Content-Disposition": f"inline; filename=\"{safe_filename}\"; filename*=UTF-8''{urllib.parse.quote(utf8_filename)}"
         }
     )
 
@@ -2342,6 +2351,9 @@ async def get_certificate_image(bib: str, db=Depends(lambda: None)):
     
     # Check participant exists and has valid status
     participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        participant = await database.archived_participants.find_one({"bib": bib}, {"_id": 0})
     
     if not participant:
         raise HTTPException(status_code=404, detail="Participante no encontrado")
@@ -2378,13 +2390,17 @@ async def get_certificate_image(bib: str, db=Depends(lambda: None)):
     # Get participant name for filename
     nombre = participant.get("nombre", "")
     apellidos = participant.get("apellidos", "")
-    filename = f"Certificado_{nombre}_{apellidos}_{bib}.png".replace(" ", "_")
+    from unicodedata import normalize
+    import re
+    safe_name = re.sub(r'[^\w\s-]', '', normalize('NFKD', f"{nombre}_{apellidos}").encode('ascii', 'ignore').decode()).replace(" ", "_")
+    safe_filename = f"Certificado_{safe_name}_{bib}.png"
+    utf8_filename = f"Certificado_{nombre}_{apellidos}_{bib}.png".replace(" ", "_")
     
     return Response(
         content=img_bytes,
         media_type="image/png",
         headers={
-            "Content-Disposition": f"attachment; filename={filename}"
+            "Content-Disposition": f"attachment; filename=\"{safe_filename}\"; filename*=UTF-8''{urllib.parse.quote(utf8_filename)}"
         }
     )
 
@@ -2395,6 +2411,9 @@ async def check_certificate(bib: str, db=Depends(lambda: None)):
     from server import db as database
     
     participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
+    
+    if not participant:
+        participant = await database.archived_participants.find_one({"bib": bib}, {"_id": 0})
     
     if not participant:
         return {"available": False, "reason": "Participante no encontrado"}
