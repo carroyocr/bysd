@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import EventoPage from './pages/EventoPage';
+import CampeonatoPage from './pages/CampeonatoPage';
 import CorredoresPage from './pages/CorredoresPage';
 import VoluntariosPage from './pages/VoluntariosPage';
 import ReglasPage from './pages/ReglasPage';
@@ -57,6 +58,7 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/evento" element={<EventoPage />} />
+                    <Route path="/campeonato" element={<CampeonatoPage />} />
                     <Route path="/corredores" element={<CorredoresPage />} />
                     <Route path="/voluntarios" element={<VoluntariosPage />} />
                     <Route path="/reglas" element={<ReglasPage />} />

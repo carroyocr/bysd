@@ -449,6 +449,11 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Tarjeta "Inscripciones Abiertas" en Hero que redirige a /mi-perfil, condicionada a `show_preregistration` de la carrera activa
   - Nota informativa en el login recordando completar el perfil para poder inscribirse
   - Archivos: `components/Hero.jsx`, `pages/MyProfilePage.jsx`
+- [x] **Feature: Pagina Campeonato Satelite por Equipos** (12 Febrero 2026)
+  - Nueva pagina `/campeonato` con toda la informacion de la comunicacion oficial de Big's Backyard Ultra
+  - Incluye: fecha, formato, clasificacion, seleccion nacional (15 titulares + 5 reservas), equipo de reserva, categoria Bronce, nota de fecha limite
+  - Enlace "Campeonato" en navegacion despues de "Evento"
+  - Archivos: `components/SateliteChampionship.jsx`, `pages/CampeonatoPage.jsx`, `App.js`, `Navigation.jsx`
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)

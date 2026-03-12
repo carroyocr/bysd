@@ -19,6 +19,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const staticNavLinks = [
   { href: '/evento', label: 'Evento' },
+  { href: '/campeonato', label: 'Campeonato' },
   { href: '/corredores', label: 'Corredores' },
   { href: '/voluntarios', label: 'Voluntarios' },
   { href: '/reglas', label: 'Reglas' },
