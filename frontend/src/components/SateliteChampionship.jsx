@@ -26,7 +26,6 @@ const reserveMembers = [
   { name: 'Ernesto Ovalles Javier', laps: 13 },
   { name: 'Daphne Liliana Heyaime Fernandez', laps: 13 },
   { name: 'Luis Antonio De Leon Encarnacion', laps: 13 },
-  { name: 'Ramon Alfredo Jose Rojas', laps: 12 },
 ];
 
 export default function SateliteChampionship() {
