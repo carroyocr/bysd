@@ -42,18 +42,15 @@ export default function Hero() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
-                <a
-                  href="https://connect.garmin.com/modern/event/2/24810160?shareableEventUuid=racetracking&pageIndex=1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
+                <div
+                  className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft"
                 >
-                  <Calendar className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                  <Calendar className="w-5 h-5 text-primary" />
                   <div className="text-left">
-                    <div className="text-xs text-muted-foreground font-medium group-hover:text-primary transition-colors">Fecha</div>
-                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{getShortDate()}</div>
+                    <div className="text-xs text-muted-foreground font-medium">Fecha</div>
+                    <div className="text-sm font-bold text-foreground">{getShortDate()}</div>
                   </div>
-                </a>
+                </div>
                 
                 <a 
                   href="https://maps.app.goo.gl/ZRMgpWA65jDLZgwcA"
