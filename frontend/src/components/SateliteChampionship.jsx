@@ -4,28 +4,28 @@ import { Badge } from './ui/badge';
 import { Globe, Users, Trophy, CalendarCheck, Flag, Star, Timer, Award, Target, Shield } from 'lucide-react';
 
 const teamMembers = [
-  { name: 'Jordano Martinez Abreu', laps: 31 },
+  { name: 'Jordano Martínez Abreu', laps: 31 },
   { name: 'Livio Feliz', laps: 30 },
-  { name: 'Walter Damian Parra', laps: 28 },
+  { name: 'Walter Damián Parra', laps: 28 },
   { name: 'Jorge Lewis Camilo Tejada', laps: 23 },
-  { name: 'Luis Perez Ernst', laps: 20 },
-  { name: 'Ivan Ortega', laps: 19 },
-  { name: 'Daiyi Shiguetome Rodriguez', laps: 18 },
-  { name: 'Cristian Minaya Dominguez', laps: 17 },
+  { name: 'Luis Pérez Ernst', laps: 20 },
+  { name: 'Iván Ortega', laps: 19 },
+  { name: 'Daiyi Shiguetome Rodríguez', laps: 18 },
+  { name: 'Cristian Minaya Domínguez', laps: 17 },
   { name: 'Carlos Alberto Ovalle', laps: 17 },
   { name: 'Yeirys Soto', laps: 17 },
-  { name: 'Juan Perez', laps: 17 },
+  { name: 'Juan Pérez', laps: 17 },
   { name: 'Pedro Pablo Taveras', laps: 16 },
-  { name: 'Simon Bolivar Cepeda Lora', laps: 15 },
-  { name: 'Joan Gomez Velazquez', laps: 15 },
-  { name: 'Jose Antonio Santos Leonardo', laps: 15 },
+  { name: 'Simón Bolívar Cepeda Lora', laps: 15 },
+  { name: 'Joan Gómez Velázquez', laps: 15 },
+  { name: 'José Antonio Santos Leonardo', laps: 15 },
 ];
 
 const reserveMembers = [
   { name: 'Rodrigo Farach Aldana', laps: 13 },
   { name: 'Ernesto Ovalles Javier', laps: 13 },
-  { name: 'Daphne Liliana Heyaime Fernandez', laps: 13 },
-  { name: 'Luis Antonio De Leon Encarnacion', laps: 13 },
+  { name: 'Daphne Liliana Heyaime Fernández', laps: 13 },
+  { name: 'Luis Antonio De León Encarnación', laps: 13 },
 ];
 
 export default function SateliteChampionship() {
@@ -41,10 +41,10 @@ export default function SateliteChampionship() {
               Evento Internacional
             </Badge>
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Campeonato Satelite por Equipos
+              Campeonato Satélite por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Republica Dominicana ha sido seleccionada para participar en el Campeonato Satelite por Equipos del Backyard Ultra
+              República Dominicana ha sido seleccionada para participar en el Campeonato Satélite por Equipos del Backyard Ultra
             </p>
           </div>
 
@@ -58,7 +58,7 @@ export default function SateliteChampionship() {
                 <h3 className="font-display text-xl text-foreground">Fecha</h3>
                 <p className="text-sm text-muted-foreground">
                   <strong className="text-foreground">17 de octubre de 2026</strong><br />
-                  Simultaneo a nivel mundial
+                  Simultáneo a nivel mundial
                 </p>
               </CardContent>
             </Card>
@@ -70,7 +70,7 @@ export default function SateliteChampionship() {
                 <h3 className="font-display text-xl text-foreground">Formato</h3>
                 <p className="text-sm text-muted-foreground">
                   <strong className="text-foreground">15 atletas</strong> por equipo nacional<br />
-                  Inicio sincronizado por satelite
+                  Inicio sincronizado por satélite
                 </p>
               </CardContent>
             </Card>
@@ -79,9 +79,9 @@ export default function SateliteChampionship() {
                 <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Trophy className="w-7 h-7 text-primary" />
                 </div>
-                <h3 className="font-display text-xl text-foreground">Clasificacion</h3>
+                <h3 className="font-display text-xl text-foreground">Clasificación</h3>
                 <p className="text-sm text-muted-foreground">
-                  El campeon nacional con <strong className="text-foreground">24+ vueltas</strong> clasifica al Mundial Individual (Tennessee, 2027)
+                  El campeón nacional con <strong className="text-foreground">24+ vueltas</strong> clasifica al Mundial Individual (Tennessee, 2027)
                 </p>
               </CardContent>
             </Card>
@@ -92,16 +92,16 @@ export default function SateliteChampionship() {
             <CardContent className="p-8 space-y-6">
               <h3 className="font-display text-2xl text-foreground flex items-center gap-3">
                 <Target className="w-6 h-6 text-primary" />
-                Como funciona
+                Cómo funciona
               </h3>
               <div className="grid md:grid-cols-2 gap-6 text-sm text-muted-foreground leading-relaxed">
                 <div className="space-y-3">
-                  <p>El Campeonato Satelite por Equipos es la <strong className="text-foreground">principal competencia por naciones</strong> dentro del formato Backyard Ultra. Equipos nacionales de multiples paises compiten simultaneamente.</p>
-                  <p>La puntuacion por equipo se calcula a razon de <strong className="text-foreground">un (1) punto por cada vuelta completada</strong> por cada miembro del equipo.</p>
+                  <p>El Campeonato Satélite por Equipos es la <strong className="text-foreground">principal competencia por naciones</strong> dentro del formato Backyard Ultra. Equipos nacionales de múltiples países compiten simultáneamente.</p>
+                  <p>La puntuación por equipo se calcula a razón de <strong className="text-foreground">un (1) punto por cada vuelta completada</strong> por cada miembro del equipo.</p>
                 </div>
                 <div className="space-y-3">
-                  <p>La carrera concluye cuando solo un atleta logra completar una vuelta dentro del tiempo limite. El ultimo atleta en competencia es declarado <strong className="text-foreground">campeon nacional</strong>.</p>
-                  <p>Todas las carreras comienzan a la <strong className="text-foreground">misma hora sincronizada por satelite</strong> para asegurar una comparacion internacional directa.</p>
+                  <p>La carrera concluye cuando solo un atleta logra completar una vuelta dentro del tiempo límite. El último atleta en competencia es declarado <strong className="text-foreground">campeón nacional</strong>.</p>
+                  <p>Todas las carreras comienzan a la <strong className="text-foreground">misma hora sincronizada por satélite</strong> para asegurar una comparación internacional directa.</p>
                 </div>
               </div>
             </CardContent>
@@ -112,10 +112,10 @@ export default function SateliteChampionship() {
             <div className="text-center space-y-2">
               <h3 className="font-display text-3xl text-foreground flex items-center justify-center gap-3">
                 <Flag className="w-6 h-6 text-primary" />
-                Seleccion Nacional
+                Selección Nacional
               </h3>
               <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                Coordinador Nacional: <strong className="text-foreground">Cristian Arroyo Lopez</strong>
+                Coordinador Nacional: <strong className="text-foreground">Cristian Arroyo López</strong>
               </p>
             </div>
 
@@ -189,7 +189,7 @@ export default function SateliteChampionship() {
 
             {/* Deadline Note */}
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800" data-testid="deadline-note">
-              <strong>Fecha limite de clasificacion:</strong> 1 de septiembre de 2026. La nomina podra actualizarse si algun atleta dominicano registra un mayor numero de vueltas en otro evento oficial de Backyard Ultra antes de esa fecha.
+              <strong>Fecha límite de clasificación:</strong> 1 de septiembre de 2026. La nómina podrá actualizarse si algún atleta dominicano registra un mayor número de vueltas en otro evento oficial de Backyard Ultra antes de esa fecha.
             </div>
           </div>
 
@@ -201,12 +201,12 @@ export default function SateliteChampionship() {
                   <Award className="w-7 h-7 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="font-display text-2xl text-foreground">Categoria Bronce</h3>
+                  <h3 className="font-display text-2xl text-foreground">Categoría Bronce</h3>
                   <p className="text-sm text-muted-foreground">Circuito Internacional de Backyard Ultra</p>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Backyard Ultra Santo Domingo ha sido oficialmente reconocido como una carrera de <strong className="text-foreground">Categoria Bronce</strong> dentro del circuito internacional. Esta designacion incrementa la visibilidad internacional del evento, fortalece la presencia de la Republica Dominicana en la comunidad global de ultradistancia y posiciona aun mas el evento como una importante plataforma de turismo deportivo para el pais.
+                Backyard Ultra Santo Domingo ha sido oficialmente reconocido como una carrera de <strong className="text-foreground">Categoría Bronce</strong> dentro del circuito internacional. Esta designación incrementa la visibilidad internacional del evento, fortalece la presencia de la República Dominicana en la comunidad global de ultradistancia y posiciona aún más el evento como una importante plataforma de turismo deportivo para el país.
               </p>
             </CardContent>
           </Card>
