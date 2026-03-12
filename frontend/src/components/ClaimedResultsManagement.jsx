@@ -252,11 +252,14 @@ export default function ClaimedResultsManagement() {
                     </td>
                     <td className="px-3 py-2.5">
                       {r.claimed_by_id ? (
-                        <Badge className={r.claim_type === 'auto'
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
-                          : 'bg-green-100 text-green-700 hover:bg-green-100'
+                        <Badge className={
+                          r.claim_type === 'auto'
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                            : r.claim_type === 'huerfano'
+                            ? 'bg-red-100 text-red-700 hover:bg-red-100'
+                            : 'bg-green-100 text-green-700 hover:bg-green-100'
                         }>
-                          {r.claim_type === 'auto' ? 'Auto' : 'Manual'}
+                          {r.claim_type === 'auto' ? 'Auto' : r.claim_type === 'huerfano' ? 'Huérfano' : 'Manual'}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="text-gray-400">Sin vincular</Badge>

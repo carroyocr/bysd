@@ -1,0 +1,111 @@
+{
+  "summary": "Complete testing of 'Resultados 2026' admin panel tab. Backend: 10/10 tests PASSED - GET /api/athletes/admin/2026-results returns all 90 participants with correct claim statuses (auto/manual/huérfano/sin vincular), POST /api/athletes/admin/unclaim-2026 successfully unclaims results. Frontend: All UI elements working - stats cards (total=90, claimed, unclaimed, percentage), search filter, filter buttons (Todos/Vinculados/Sin vincular/Auto), sortable columns, CSV export button, and Desvincular button which successfully removes claim and refreshes the list.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_2026_results_admin.py",
+    "/app/test_reports/pytest/pytest_2026_results_admin.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Admin endpoint correctly uses JWT_SECRET_KEY for token verification (lines 1545-1548 and 1626-1629 in athletes.py)",
+    "Claim types properly detected: auto (email matches BIB_EMAIL_MAP), manual (claimed by user), huerfano (claimed_by points to deleted profile)",
+    "Deduplication logic handles records in both archived_participants and participants collections",
+    "Frontend ClaimedResultsManagement.jsx properly uses data-testid attributes for all interactive elements"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_2026_results_admin.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (all UI features verified)"
+  },
+  "test_credentials": {
+    "admin_login": {
+      "url": "/api/race/auth/admin-login",
+      "username": "admin",
+      "password": "Backyard2026!"
+    }
+  },
+  "seed_data_creation": "None - tested with existing data (90 participants from BYSD-2026)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Resultados 2026 admin tab fully functional. 90 participants displayed, 3 currently claimed after testing (BIB 002 was unclaimed during test). Stats cards, search, filters, sorting, CSV export, and Desvincular all working correctly.",
+  "features_verified": {
+    "backend": {
+      "GET_admin_2026_results": {
+        "status": "PASSED",
+        "details": "Returns all 90 participants with id, bib, nombre, apellidos, laps_completed, status, sexo, nacionalidad, claimed_by_id, athlete info, claim_type"
+      },
+      "GET_admin_2026_results_claim_types": {
+        "status": "PASSED",
+        "details": "Correctly identifies: auto (email matches BIB_EMAIL_MAP), manual (user claimed), huerfano (profile deleted)"
+      },
+      "GET_admin_2026_results_stats": {
+        "status": "PASSED",
+        "details": "Returns stats with total, claimed, unclaimed counts"
+      },
+      "GET_admin_2026_results_auth": {
+        "status": "PASSED",
+        "details": "Returns 401 without token or with invalid token"
+      },
+      "POST_admin_unclaim_2026": {
+        "status": "PASSED",
+        "details": "Successfully unclaims result, removes claimed_by from participant, removes from athlete's claimed_results array"
+      },
+      "POST_admin_unclaim_2026_not_found": {
+        "status": "PASSED",
+        "details": "Returns 404 for non-existent result ID"
+      },
+      "POST_admin_unclaim_2026_auth": {
+        "status": "PASSED",
+        "details": "Returns 401 without token"
+      }
+    },
+    "frontend": {
+      "tab_loads": {
+        "status": "PASSED",
+        "details": "Tab 'Resultados 2026' with data-testid='tab-results-2026' visible and clickable"
+      },
+      "stats_cards": {
+        "status": "PASSED",
+        "details": "Total (90), Vinculados (dynamic), Sin vincular (dynamic), Porcentaje displayed correctly"
+      },
+      "search_filter": {
+        "status": "PASSED",
+        "details": "Search by BIB, name, email works - filters results in real-time"
+      },
+      "filter_buttons": {
+        "status": "PASSED",
+        "details": "Todos, Vinculados, Sin vincular, Auto buttons filter results correctly"
+      },
+      "results_table": {
+        "status": "PASSED",
+        "details": "Table shows BIB, Corredor, Vueltas, Sexo, Estado, Perfil Vinculado, Acciones columns"
+      },
+      "sortable_columns": {
+        "status": "PASSED",
+        "details": "BIB, nombre, laps, status columns are sortable with arrow icons"
+      },
+      "csv_export": {
+        "status": "PASSED",
+        "details": "CSV export button present with data-testid='export-csv-btn'"
+      },
+      "desvincular_button": {
+        "status": "PASSED",
+        "details": "Button visible on claimed rows, shows confirmation dialog, successfully unclaims and refreshes data"
+      },
+      "claim_type_badges": {
+        "status": "PASSED",
+        "details": "Auto (blue), Manual (green), Huérfano (red), Sin vincular (gray outline) badges displayed correctly"
+      }
+    }
+  }
+}
