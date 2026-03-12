@@ -445,6 +445,10 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Backend: `GET /api/athletes/admin/2026-results`, `POST /api/athletes/admin/unclaim-2026`
   - Frontend: `components/ClaimedResultsManagement.jsx`
   - Tests: 10/10 backend + frontend verificado (100%)
+- [x] **Feature: Tarjeta Inscripciones Abiertas en Home + Nota en Login** (12 Febrero 2026)
+  - Tarjeta "Inscripciones Abiertas" en Hero que redirige a /mi-perfil, condicionada a `show_preregistration` de la carrera activa
+  - Nota informativa en el login recordando completar el perfil para poder inscribirse
+  - Archivos: `components/Hero.jsx`, `pages/MyProfilePage.jsx`
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)

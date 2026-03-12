@@ -671,6 +671,9 @@ export default function MyProfilePage() {
                 <Button variant="ghost" size="sm" type="button" onClick={() => setCurrentView(VIEW_LANDING)} className="w-fit mb-2" data-testid="login-back-btn">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Volver
                 </Button>
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800" data-testid="login-profile-note">
+                  <span className="font-semibold">Nota:</span> Debes completar tu perfil de atleta para poder inscribirte en una carrera.
+                </div>
                 <div className="space-y-2">
                   <Label>Correo electronico</Label>
                   <div className="relative">
