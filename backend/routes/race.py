@@ -6,6 +6,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 import os
 import urllib.parse
+import logging
 from pathlib import Path
 from bson import ObjectId
 from models.race import (
@@ -2289,6 +2290,58 @@ async def send_test_runner_email(
         raise HTTPException(status_code=500, detail="Error al enviar el email")
 
 
+def _fix_certificate_name(pdf_path: str, correct_name: str) -> bytes:
+    """Fix corrupted name in certificate PDF on-the-fly. Returns corrected PDF bytes."""
+    import fitz
+
+    doc = fitz.open(pdf_path)
+    page = doc[0]
+
+    # Find the name text (first text block at y ~284-317)
+    pdf_name = None
+    name_bbox = None
+    for block in page.get_text("dict")["blocks"]:
+        if "lines" not in block:
+            continue
+        for line in block["lines"]:
+            for span in line["spans"]:
+                b = span["bbox"]
+                if 280 < b[1] < 320 and b[0] < 500:
+                    pdf_name = span["text"].strip()
+                    name_bbox = fitz.Rect(b)
+                    break
+            if name_bbox:
+                break
+        if name_bbox:
+            break
+
+    if not name_bbox or pdf_name == correct_name:
+        # Already correct or can't find name area
+        pdf_bytes = doc.tobytes()
+        doc.close()
+        return pdf_bytes
+
+    logging.info(f"Fixing certificate name: '{pdf_name}' -> '{correct_name}'")
+
+    # Redact old name (preserve background image)
+    page.add_redact_annot(name_bbox)
+    page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
+
+    # Insert correct name at same baseline
+    baseline_y = name_bbox.y0 + 12 * 1.621
+    page.insert_text(
+        fitz.Point(name_bbox.x0, baseline_y),
+        correct_name,
+        fontsize=12,
+        fontname="helv",
+        color=(0, 0, 0),
+    )
+
+    pdf_bytes = doc.tobytes()
+    doc.close()
+    return pdf_bytes
+
+
 @router.get("/certificate/{bib}")
 async def get_certificate(bib: str, db=Depends(lambda: None)):
     """Get certificate PDF for a participant. Opens in browser for viewing."""
@@ -2324,18 +2377,20 @@ async def get_certificate(bib: str, db=Depends(lambda: None)):
     # Get participant name for filename
     nombre = participant.get("nombre", "")
     apellidos = participant.get("apellidos", "")
-    # ASCII-safe filename + UTF-8 encoded filename* for proper accent support
+    correct_name = f"{nombre} {apellidos}"
     from unicodedata import normalize
     import re
     safe_name = re.sub(r'[^\w\s-]', '', normalize('NFKD', f"{nombre}_{apellidos}").encode('ascii', 'ignore').decode()).replace(" ", "_")
     safe_filename = f"Certificado_{safe_name}_{bib}.pdf"
     utf8_filename = f"Certificado_{nombre}_{apellidos}_{bib}.pdf".replace(" ", "_")
     
-    # Return with inline disposition so it opens in browser
-    return FileResponse(
-        path=certificate_path,
+    # Fix name in PDF on-the-fly if corrupted
+    from fastapi.responses import Response
+    pdf_bytes = _fix_certificate_name(str(certificate_path), correct_name)
+    
+    return Response(
+        content=pdf_bytes,
         media_type="application/pdf",
-        filename=safe_filename,
         headers={
             "Content-Disposition": f"inline; filename=\"{safe_filename}\"; filename*=UTF-8''{urllib.parse.quote(utf8_filename)}"
         }
@@ -2374,8 +2429,13 @@ async def get_certificate_image(bib: str, db=Depends(lambda: None)):
             detail="Certificado no disponible para este participante"
         )
     
-    # Convert PDF to high-resolution image
-    doc = fitz.open(str(certificate_path))
+    # Convert PDF to high-resolution image (fix name on-the-fly)
+    nombre = participant.get("nombre", "")
+    apellidos = participant.get("apellidos", "")
+    correct_name = f"{nombre} {apellidos}"
+    
+    pdf_bytes = _fix_certificate_name(str(certificate_path), correct_name)
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     page = doc[0]
     
     # High resolution: 300 DPI (default is 72, so multiply by ~4.17)
@@ -2388,8 +2448,6 @@ async def get_certificate_image(bib: str, db=Depends(lambda: None)):
     doc.close()
     
     # Get participant name for filename
-    nombre = participant.get("nombre", "")
-    apellidos = participant.get("apellidos", "")
     from unicodedata import normalize
     import re
     safe_name = re.sub(r'[^\w\s-]', '', normalize('NFKD', f"{nombre}_{apellidos}").encode('ascii', 'ignore').decode()).replace(" ", "_")
