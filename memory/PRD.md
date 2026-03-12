@@ -436,6 +436,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
   - Un atleta no puede reclamar más de un resultado de la misma carrera (BYSD-2026)
   - Verificación en `claim_result` de `backend/routes/athletes.py`
   - Maneja registros legacy sin campo `race_code`
+- [x] **Feature: Panel Admin - Pestaña Resultados 2026** (12 Febrero 2026)
+  - Nueva pestaña "Resultados 2026" en el panel de administración
+  - Muestra los 90 corredores de BYSD-2026 con estado de vinculación (Auto/Manual/Huérfano/Sin vincular)
+  - Estadísticas: total, vinculados, sin vincular, porcentaje
+  - Funciones: búsqueda, filtros, columnas ordenables, exportar CSV, desvincular resultados
+  - Detecta perfiles eliminados marcándolos como "Huérfano"
+  - Backend: `GET /api/athletes/admin/2026-results`, `POST /api/athletes/admin/unclaim-2026`
+  - Frontend: `components/ClaimedResultsManagement.jsx`
+  - Tests: 10/10 backend + frontend verificado (100%)
   - Test: curl verificado
 
 - [x] **Feature: Desvincular carrera reclamada** (11 Febrero 2026)
