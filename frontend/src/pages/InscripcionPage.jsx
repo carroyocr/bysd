@@ -19,7 +19,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Helper function to format cost
 const formatCost = (cost) => {
-  return `RD$${(cost || 3500).toLocaleString('es-DO')}`;
+  return `RD$${(cost || 4000).toLocaleString('es-DO')}`;
 };
 
 // Form steps

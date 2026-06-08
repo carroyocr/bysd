@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = {
   favicon_url: '/favicon.ico',
   is_active: true,
   is_default: true,
-  registration_cost: 3500,
+  registration_cost: 4000,
   edition_number: 1
 };
 
