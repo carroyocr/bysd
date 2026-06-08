@@ -284,6 +284,12 @@ export default function PaymentReceiptPage() {
           </CardContent>
         </Card>
 
+        {/* Payment timeline note */}
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800" data-testid="payment-timeline-note">
+          <p className="font-semibold mb-1">Importante sobre el pago:</p>
+          <p>El pago de la inscripción no es requerido en este momento. Se solicitará <strong>4 meses antes de la carrera</strong>. Recibirás un correo electrónico con el recordatorio y tendrás <strong>30 días</strong> para completarlo.</p>
+        </div>
+
         {/* Upload Form */}
         <Card>
           <CardHeader>
