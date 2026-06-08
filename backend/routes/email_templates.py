@@ -104,14 +104,7 @@ DEFAULT_TEMPLATES = [
         <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
             Tu registro para <strong>{{race_name}}</strong> ha sido recibido exitosamente.
         </p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
-            <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
-                <li>Completa el pago de inscripción</li>
-                <li>Espera la confirmación de tu BIB</li>
-                <li>Revisa la guía del corredor</li>
-            </ol>
-        </div>
+        {{proximos_pasos}}
         <p style="font-size: 14px; color: #6b7280;">
             Si necesitas modificar tu registro, usa este enlace:<br>
             <a href="{{athlete_edit_link}}" style="color: #ea580c;">Editar mi registro</a>
