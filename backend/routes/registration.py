@@ -717,6 +717,50 @@ async def get_registration_stats(race_code: str):
     return stats
 
 
+@router.get("/public/participants/{race_code}")
+async def public_participants(race_code: str):
+    """Public: list of registered participants for a race (bib, nombre, apellidos, sexo) + stats."""
+    MAX_CAPACITY = 120
+    query = {
+        "race_code": race_code,
+        "status": {"$nin": ["cancelled"]},
+    }
+    regs = await registrations_collection.find(
+        query,
+        {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1}
+    ).to_list(1000)
+
+    def bib_key(r):
+        try:
+            return int(r.get("bib") or 0)
+        except (ValueError, TypeError):
+            return 0
+
+    regs.sort(key=bib_key)
+
+    masculino = sum(1 for r in regs if (r.get("sexo") or "").strip().lower() == "masculino")
+    femenino = sum(1 for r in regs if (r.get("sexo") or "").strip().lower() == "femenino")
+    total = len(regs)
+
+    participants = [{
+        "bib": r.get("bib"),
+        "nombre": r.get("nombre", ""),
+        "apellidos": r.get("apellidos", ""),
+        "sexo": r.get("sexo", ""),
+    } for r in regs]
+
+    return {
+        "race_code": race_code,
+        "total": total,
+        "masculino": masculino,
+        "femenino": femenino,
+        "max_capacity": MAX_CAPACITY,
+        "plazas_disponibles": max(MAX_CAPACITY - total, 0),
+        "participants": participants,
+    }
+
+
+
 class AdminRegistrationUpdate(BaseModel):
     """Model for admin updates to registration"""
     nombre: Optional[str] = None

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon, BookOpen, Loader2 } from 'lucide-react';
+import { Backpack, Clock, Lightbulb, Shield, AlertTriangle, CheckCircle2, Download, MapIcon, BookOpen, Loader2, Users, UserRound, Hash } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -12,9 +12,32 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function RunnersSection() {
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
-  const { config, getFormattedDate } = useRaceConfig();
+  const { config, getFormattedDate, getYear } = useRaceConfig();
   const [manualUrl, setManualUrl] = useState(null);
   const [loadingManual, setLoadingManual] = useState(true);
+  const [participantsData, setParticipantsData] = useState(null);
+  const [loadingParticipants, setLoadingParticipants] = useState(true);
+
+  // Load registered participants for active race
+  useEffect(() => {
+    const loadParticipants = async () => {
+      if (!config?.code) {
+        setLoadingParticipants(false);
+        return;
+      }
+      try {
+        const response = await fetch(`${API_URL}/api/registration/public/participants/${config.code}`);
+        if (response.ok) {
+          setParticipantsData(await response.json());
+        }
+      } catch (error) {
+        console.error('Error loading participants:', error);
+      } finally {
+        setLoadingParticipants(false);
+      }
+    };
+    loadParticipants();
+  }, [config?.code]);
 
   // Load manual URL for active race
   useEffect(() => {
@@ -84,6 +107,107 @@ export default function RunnersSection() {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Todo lo que necesitas saber para prepararte para el desafío
             </p>
+          </div>
+
+          {/* Inscritos para el evento */}
+          <div className="space-y-6" data-testid="inscritos-section">
+            <div className="text-center space-y-2">
+              <h3 className="font-display text-3xl text-foreground">
+                Inscritos {getYear()}
+              </h3>
+              <p className="text-muted-foreground">
+                Atletas que ya aseguraron su lugar en la carrera
+              </p>
+            </div>
+
+            {loadingParticipants ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Stat Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-card border-border shadow-soft" data-testid="stat-total">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.total ?? 0}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Total inscritos</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-card border-border shadow-soft" data-testid="stat-hombres">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <UserRound className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.masculino ?? 0}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Hombres</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-card border-border shadow-soft" data-testid="stat-mujeres">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center flex-shrink-0">
+                        <UserRound className="w-6 h-6 text-pink-500" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.femenino ?? 0}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Mujeres</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-card border-border shadow-soft" data-testid="stat-plazas">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.plazas_disponibles ?? 0}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Plazas disponibles</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Participant List */}
+                <Card className="border-border shadow-soft">
+                  <CardContent className="p-6">
+                    {participantsData?.participants?.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                        {participantsData.participants.map((p, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-3 py-2 border-b border-border/60 last:border-0"
+                            data-testid={`participant-row-${p.bib}`}
+                          >
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-primary bg-primary/10 rounded-md px-2 py-1 min-w-[3rem] justify-center">
+                              <Hash className="w-3 h-3" />
+                              {p.bib}
+                            </span>
+                            <span className="text-sm text-foreground truncate">
+                              {p.nombre} {p.apellidos}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                        <p>Aún no hay atletas inscritos. ¡Sé el primero!</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
 
           {/* Download Manual */}
