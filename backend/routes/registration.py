@@ -752,6 +752,19 @@ async def public_participants(race_code: str):
         "sexo": r.get("sexo", ""),
     } for r in regs]
 
+    # Waitlist participants (status == "waitlist"), ordered by bib
+    waitlist_regs = await registrations_collection.find(
+        {"race_code": race_code, "status": "waitlist"},
+        {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1}
+    ).to_list(1000)
+    waitlist_regs.sort(key=bib_key)
+    waitlist = [{
+        "bib": r.get("bib"),
+        "nombre": r.get("nombre", ""),
+        "apellidos": r.get("apellidos", ""),
+        "sexo": r.get("sexo", ""),
+    } for r in waitlist_regs]
+
     return {
         "race_code": race_code,
         "total": total,
@@ -760,6 +773,8 @@ async def public_participants(race_code: str):
         "max_capacity": max_capacity,
         "plazas_disponibles": max(max_capacity - total, 0),
         "participants": participants,
+        "waitlist": waitlist,
+        "waitlist_total": len(waitlist),
     }
 
 

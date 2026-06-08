@@ -210,6 +210,42 @@ export default function RunnersSection() {
             )}
           </div>
 
+          {/* Lista de Espera (solo si hay atletas en espera) */}
+          {!loadingParticipants && participantsData?.waitlist?.length > 0 && (
+            <div className="space-y-6" data-testid="waitlist-section">
+              <div className="text-center space-y-2">
+                <h3 className="font-display text-3xl text-foreground">
+                  Atletas en Lista de Espera
+                </h3>
+                <p className="text-muted-foreground">
+                  Estos atletas serán contactados por orden si se libera un cupo
+                </p>
+              </div>
+
+              <Card className="border-amber-200 bg-amber-50/40 shadow-soft">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                    {participantsData.waitlist.map((p, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-3 py-2 border-b border-amber-200/60 last:border-0"
+                        data-testid={`waitlist-row-${p.bib}`}
+                      >
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-500/15 rounded-md px-2 py-1 min-w-[3rem] justify-center">
+                          <Hash className="w-3 h-3" />
+                          {p.bib}
+                        </span>
+                        <span className="text-sm text-foreground truncate">
+                          {p.nombre} {p.apellidos}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Download Manual */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
             <CardContent className="p-8">
