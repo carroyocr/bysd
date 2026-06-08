@@ -9,7 +9,7 @@ import {
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
   Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown,
-  QrCode
+  QrCode, ArrowUpCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -439,6 +439,36 @@ export default function PreRegistrationManagement() {
     }
   };
 
+  const [promotingEmail, setPromotingEmail] = useState(null);
+  const promoteWaitlist = async (email) => {
+    if (!window.confirm('¿Promover este atleta de la lista de espera a inscrito? Se le enviará un correo de confirmación.')) {
+      return;
+    }
+    setPromotingEmail(email);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/registration/admin/promote-waitlist/${email}?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      if (response.ok) {
+        toast.success('Atleta promovido a inscrito y notificado por correo');
+        loadData();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.detail || 'Error al promover el atleta');
+      }
+    } catch (error) {
+      console.error('Error promoting:', error);
+      toast.error('Error al promover');
+    } finally {
+      setPromotingEmail(null);
+    }
+  };
+
+
   const assignNextBib = () => {
     setEditForm(prev => ({ ...prev, bib: nextBib }));
   };
@@ -488,6 +518,7 @@ export default function PreRegistrationManagement() {
       registered: { label: 'Registrado', variant: 'outline', className: 'border-green-500 text-green-600' },
       confirmed: { label: 'Confirmado', variant: 'default', className: 'bg-green-500' },
       active: { label: 'Activo', variant: 'default', className: 'bg-emerald-500' },
+      waitlist: { label: 'Lista de Espera', variant: 'outline', className: 'border-amber-500 text-amber-600' },
       retired: { label: 'Retirado', variant: 'outline', className: 'border-red-500 text-red-600' },
       dns: { label: 'DNS', variant: 'outline', className: 'border-gray-500 text-gray-600' },
       winner: { label: 'Ganador', variant: 'default', className: 'bg-yellow-500' }
@@ -867,6 +898,7 @@ export default function PreRegistrationManagement() {
               <option value="registered">Registrado</option>
               <option value="confirmed">Confirmado</option>
               <option value="active">Activo</option>
+              <option value="waitlist">Lista de Espera</option>
             </select>
           </div>
 
@@ -1016,6 +1048,7 @@ export default function PreRegistrationManagement() {
                             <option value="registered">Registrado</option>
                             <option value="confirmed">Confirmado</option>
                             <option value="active">Activo</option>
+                            <option value="waitlist">Lista de Espera</option>
                           </select>
                         ) : (
                           getStatusBadge(reg.status)
@@ -1048,6 +1081,23 @@ export default function PreRegistrationManagement() {
                           </div>
                         ) : (
                           <div className="flex justify-end gap-1">
+                            {reg.status === 'waitlist' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => promoteWaitlist(reg.email)}
+                                disabled={promotingEmail === reg.email}
+                                className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                title="Promover a inscrito"
+                                data-testid={`promote-btn-${reg.email}`}
+                              >
+                                {promotingEmail === reg.email ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <ArrowUpCircle className="w-4 h-4" />
+                                )}
+                              </Button>
+                            )}
                             <Button 
                               size="sm" 
                               variant="ghost" 
