@@ -274,6 +274,12 @@ export default function PaymentReceiptPage() {
                 <span className="text-green-600">A nombre de:</span>
                 <p className="font-semibold text-green-800">{race_config?.payment_account_name || '-'}</p>
               </div>
+              {race_config?.payment_account_id && (
+                <div className="col-span-2">
+                  <span className="text-green-600">Cédula/Pasaporte:</span>
+                  <p className="font-mono font-medium text-green-800">{race_config.payment_account_id}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

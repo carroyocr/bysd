@@ -1348,10 +1348,10 @@ export default function InscripcionPage() {
               <div className="space-y-3 text-sm text-blue-800">
                 <p>
                   El pre registro al evento ya se encuentra abierto.
-                  <strong> Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                  <strong> Completar este formulario te garantiza un cupo al evento</strong>.
                 </p>
                 <p>
-                  Cuatro (4) meses antes del evento, enviaremos un correo electrónico a todos los prerregistrados con las instrucciones para realizar el pago de la inscripción.
+                  Cuatro (4) meses antes del evento, enviaremos un correo electrónico con las instrucciones para realizar el pago de la inscripción.
                 </p>
                 <p className="font-semibold text-lg text-blue-900">
                   El costo de la carrera será de {getFormattedCost()}.
@@ -1360,7 +1360,7 @@ export default function InscripcionPage() {
                   A partir de la recepción de ese correo, el participante contará con un plazo de <strong>treinta (30) días</strong> para completar el pago correspondiente.
                 </p>
                 <p>
-                  Si el pago no se realiza dentro de ese período, el pre registro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
+                  Si el pago no se realiza dentro de ese período, el registro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
                 </p>
                 <p className="text-blue-600 italic">
                   ⚠️ Te recomendamos estar atento a tu correo electrónico y verificar también la carpeta de spam.
