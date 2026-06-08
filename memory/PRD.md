@@ -386,6 +386,17 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Editor de Correos Enriquecido + Variables (Admin Mass Email Composer)** (08 Junio 2026)
+  - Editor WYSIWYG propio (`RichTextEditor.jsx`, contentEditable) — NO se usó react-quill por incompatibilidad con React 19 (findDOMNode removido)
+  - Barra de herramientas: negrita, cursiva, subrayado, lista con viñetas, lista numerada, enlace, salto de línea, quitar formato
+  - Botones de variables de personalización: `{{nombre}}`, `{{apellidos}}`, `{{nombre_completo}}`, `{{email}}` (insertan en el cursor vía ref `insertVariable`)
+  - Backend: `_personalize_email` sustituye variables por destinatario (orden longest-first); `_wrap_email_html` envuelve en plantilla estándar; `email-preview` muestra valores de ejemplo (Juan Pérez)
+  - Endpoints: `POST /api/athletes/admin/email-recipients` (devuelve nombre/apellidos/nombre_completo/email), `/admin/email-preview`, `/admin/send-email`
+  - Archivos: `frontend/src/components/RichTextEditor.jsx` (nuevo), `EmailComposer.jsx`, `backend/routes/athletes.py`
+  - Tests: 11/11 backend pytest + frontend 100% (iteration_23.json). Test file: `backend/tests/test_admin_email_composer.py`
+  - Nota: formato canónico de variables es `{{var}}` (llaves dobles)
+
+
 - [x] **UI: Reorden y Condicionalidad de Pestañas en Mi Perfil** (11 Febrero 2026)
   - Nuevo orden: "Mis Datos", "Próximas Carreras", "Historial", "Mensajes"
   - Renombrada "Mis Carreras" → "Próximas Carreras"
