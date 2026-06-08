@@ -1,0 +1,59 @@
+{
+  "summary": "Completo: Admin Mass Email Composer (WYSIWYG + merge variables). Backend 11/11 pytest PASSED (preview con sustitución de {{nombre}}, {{apellidos}}, {{nombre_completo}}, {{email}}; recipients para all_athletes/manual/volunteers con campos correctos; send-email con filter_type='manual' y un solo correo de prueba devolvió {sent, failed, total}; 401 sin token; 400 sin destinatarios). Frontend OK: editor contentEditable funciona, btn-bold aplica <b>, botones var-* insertan {{tag}} en el cursor, send-btn correctamente deshabilitado/habilitado según estado, modal de Vista previa muestra valores de ejemplo (Juan, Pérez) sin etiquetas raw.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_email_composer.py",
+    "/app/test_reports/pytest/pytest_admin_email_composer.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "El problema describe variables como {nombre} (llaves simples) pero la implementación real usa {{nombre}} (llaves dobles). Coherente entre frontend (MERGE_VARIABLES en EmailComposer.jsx) y backend (_personalize_email en athletes.py). Mantener consistencia y aclarar en la UI/PRD que el formato canónico es {{var}}.",
+    "_personalize_email aplica replacements en orden longest-first (nombre_completo antes que nombre) — correcto para evitar coincidencias parciales.",
+    "admin_send_email reutiliza admin_get_email_recipients para resolver destinatarios y guarda log en email_log; no expone _id de Mongo en respuesta.",
+    "Endpoints validan JWT con JWT_SECRET_KEY desde env y devuelven 401 si falta/ inválido. Bien.",
+    "send-email no fuerza un límite máximo de destinatarios. Considerar throttling/cap (p.ej. 500) para evitar envíos accidentales masivos vía API.",
+    "El editor (contentEditable) usa document.execCommand que está deprecado pero sigue funcionando en navegadores modernos; aceptable para MVP de admin."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_email_composer.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11)",
+    "frontend": "100% (todos los flujos verificados)"
+  },
+  "test_credentials": {
+    "admin_login": {"url": "POST /api/race/auth/admin-login", "username": "admin", "password": "Backyard2026!"},
+    "test_email_used_for_send": "test-composer@example.com"
+  },
+  "seed_data_creation": "Ninguno. Solo se ejecutó send-email con filter_type='manual' a una sola dirección de prueba (test-composer@example.com) para evitar envíos reales a atletas/voluntarios.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Email Composer admin completamente operativo. Si se añade soporte para imágenes/adjuntos o nuevos merge tags, ampliar pruebas en test_admin_email_composer.py. send-email se llamó solamente con manual_emails=[test-composer@example.com] para no disparar SMTP masivo. SMTP real puede contar como 'sent' o 'failed' según validación de Gmail, ambos son aceptables; lo crítico es que el endpoint personalice y devuelva el resumen correcto.",
+  "features_verified": {
+    "backend": {
+      "POST_email_preview": "Sustituye {{nombre}}/{{apellidos}}/{{nombre_completo}}/{{email}} por Juan/Pérez/Juan Pérez/juan.perez@ejemplo.com; preserva <b> y <br/>",
+      "POST_email_recipients_all_athletes": "Devuelve lista con email/nombre/apellidos/nombre_completo/source='atleta'",
+      "POST_email_recipients_manual": "Devuelve los correos provistos con source='manual'",
+      "POST_email_recipients_volunteers": "Devuelve voluntarios con source='voluntario'",
+      "POST_send_email_manual_single": "Devuelve {sent, failed, total=1}; personalización aplicada por destinatario",
+      "Auth_401": "Los 3 endpoints devuelven 401 sin token",
+      "send_email_400": "400 cuando no hay destinatarios"
+    },
+    "frontend": {
+      "tab_email_composer": "Se abre y muestra editor",
+      "rich_text_editor": "contentEditable acepta texto",
+      "btn_bold": "Aplica <b>...</b> al texto seleccionado/insertado",
+      "var_buttons": "var-nombre, var-apellidos, var-nombre_completo, var-email insertan {{tag}} en el cursor",
+      "preview_modal": "Muestra subject renderizado + HTML con Juan/Pérez; no quedan {{tags}} crudos",
+      "send_btn_disabled_logic": "Deshabilitado con asunto/contenido/destinatarios vacíos; habilitado al completarlos"
+    }
+  }
+}

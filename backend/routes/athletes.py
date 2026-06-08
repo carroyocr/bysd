@@ -1781,7 +1781,10 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         for email in (data.manual_emails or []):
             email = email.strip().lower()
             if email:
-                recipients.append({"email": email, "nombre": email, "source": "manual"})
+                recipients.append({
+                    "email": email, "nombre": "", "apellidos": "",
+                    "nombre_completo": "", "source": "manual"
+                })
         return {"recipients": recipients, "total": len(recipients)}
 
     if data.filter_type == "volunteers":
@@ -1790,9 +1793,13 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         ).to_list(500)
         for v in vols:
             if v.get("email"):
+                nombre = v.get("nombre", "") or ""
+                apellidos = v.get("apellidos", "") or ""
                 recipients.append({
                     "email": v["email"],
-                    "nombre": f"{v.get('nombre', '')} {v.get('apellidos', '')}".strip(),
+                    "nombre": nombre,
+                    "apellidos": apellidos,
+                    "nombre_completo": f"{nombre} {apellidos}".strip(),
                     "source": "voluntario"
                 })
         return {"recipients": recipients, "total": len(recipients)}
@@ -1802,13 +1809,20 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         {}, {"_id": 1, "email": 1, "nombre": 1, "apellidos": 1}
     ).to_list(500)
 
+    def build_athlete(a, source):
+        nombre = a.get("nombre", "") or ""
+        apellidos = a.get("apellidos", "") or ""
+        return {
+            "email": a["email"],
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "nombre_completo": f"{nombre} {apellidos}".strip(),
+            "source": source
+        }
+
     if data.filter_type == "all_athletes":
         for a in athletes:
-            recipients.append({
-                "email": a["email"],
-                "nombre": f"{a.get('nombre', '')} {a.get('apellidos', '')}".strip(),
-                "source": "atleta"
-            })
+            recipients.append(build_athlete(a, "atleta"))
     elif data.filter_type in ("inscribed", "not_inscribed"):
         query = {"race_code": data.race_code} if data.race_code else {}
         regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
@@ -1819,44 +1833,67 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
             is_inscribed = aid in inscribed_ids
             if (data.filter_type == "inscribed" and is_inscribed) or \
                (data.filter_type == "not_inscribed" and not is_inscribed):
-                recipients.append({
-                    "email": a["email"],
-                    "nombre": f"{a.get('nombre', '')} {a.get('apellidos', '')}".strip(),
-                    "source": "inscrito" if is_inscribed else "no inscrito"
-                })
+                recipients.append(build_athlete(a, "inscrito" if is_inscribed else "no inscrito"))
 
     return {"recipients": recipients, "total": len(recipients)}
 
 
-@router.post("/admin/email-preview")
-async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
-    """Admin: Preview email as it would appear"""
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+def _personalize_email(text: str, recipient: dict) -> str:
+    """Substitute merge variables with recipient data. Longer tags first to avoid partial matches."""
+    if not text:
+        return text
+    replacements = [
+        ("{{nombre_completo}}", recipient.get("nombre_completo", "") or ""),
+        ("{{apellidos}}", recipient.get("apellidos", "") or ""),
+        ("{{nombre}}", recipient.get("nombre", "") or ""),
+        ("{{email}}", recipient.get("email", "") or ""),
+    ]
+    for tag, value in replacements:
+        text = text.replace(tag, value)
+    return text
 
-    # Wrap content in the standard email template
-    html = f"""
+
+def _wrap_email_html(subject: str, content: str) -> str:
+    return f"""
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
     <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 22px;">{data.subject}</h1>
+        <h1 style="color: white; margin: 0; font-size: 22px;">{subject}</h1>
     </div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        {data.content}
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; color: #374151; line-height: 1.6;">
+        {content}
     </div>
     <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
         <p style="color: #9ca3af; margin: 0; font-size: 12px;">Backyard Ultra Santo Domingo</p>
     </div>
 </div>
 """
-    return {"html": html, "subject": data.subject}
+
+
+@router.post("/admin/email-preview")
+async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
+    """Admin: Preview email as it would appear (with sample variable values)"""
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    # Sample recipient so the admin sees how merge variables render
+    sample = {
+        "nombre": "Juan",
+        "apellidos": "Pérez",
+        "nombre_completo": "Juan Pérez",
+        "email": "juan.perez@ejemplo.com",
+    }
+    preview_subject = _personalize_email(data.subject, sample)
+    preview_content = _personalize_email(data.content, sample)
+    html = _wrap_email_html(preview_subject, preview_content)
+    return {"html": html, "subject": preview_subject}
 
 
 @router.post("/admin/send-email")
 async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(None)):
-    """Admin: Send email to filtered recipients"""
+    """Admin: Send personalized email to filtered recipients"""
     from server import db as database
     from services.template_email_service import send_templated_email
 
@@ -1873,28 +1910,15 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     if not recipients:
         raise HTTPException(status_code=400, detail="No hay destinatarios")
 
-    # Build HTML with the standard wrapper
-    html_template = f"""
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 22px;">{data.subject}</h1>
-    </div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        {data.content}
-    </div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">Backyard Ultra Santo Domingo</p>
-    </div>
-</div>
-"""
-
     sent = 0
     failed = 0
     for r in recipients:
-        # Replace {{nombre}} in content if present
-        personalized = html_template.replace("{{nombre}}", r.get("nombre", ""))
+        # Substitute merge variables per recipient (subject + content)
+        personalized_subject = _personalize_email(data.subject, r)
+        personalized_content = _personalize_email(data.content, r)
+        html = _wrap_email_html(personalized_subject, personalized_content)
         try:
-            success = await send_templated_email(r["email"], data.subject, personalized)
+            success = await send_templated_email(r["email"], personalized_subject, html)
             if success:
                 sent += 1
             else:

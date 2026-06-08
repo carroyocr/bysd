@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { RichTextEditor } from './RichTextEditor';
 import {
   Send, Eye, Users, UserCheck, UserX, HandHelping, Mail, Loader2,
   AtSign, X, ChevronDown
@@ -20,6 +21,13 @@ const FILTER_OPTIONS = [
   { key: 'manual', label: 'Correos específicos', icon: AtSign, color: 'text-gray-600' },
 ];
 
+const MERGE_VARIABLES = [
+  { tag: '{{nombre}}', label: 'Nombre' },
+  { tag: '{{apellidos}}', label: 'Apellidos' },
+  { tag: '{{nombre_completo}}', label: 'Nombre completo' },
+  { tag: '{{email}}', label: 'Correo' },
+];
+
 export default function EmailComposer() {
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
@@ -33,8 +41,13 @@ export default function EmailComposer() {
   const [showPreview, setShowPreview] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
   const [raceConfigs, setRaceConfigs] = useState([]);
+  const editorRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
+
+  const insertVariable = (tag) => {
+    if (editorRef.current) editorRef.current.insertVariable(tag);
+  };
 
   useEffect(() => {
     fetch(`${API_URL}/api/race-config/all`, { headers: { Authorization: `Bearer ${token}` } })
@@ -68,7 +81,7 @@ export default function EmailComposer() {
   }, [filterType, raceCode, loadRecipients]);
 
   const handlePreview = async () => {
-    if (!subject.trim() || !content.trim()) {
+    if (!subject.trim() || isContentEmpty) {
       toast.error('Escribe un asunto y contenido');
       return;
     }
@@ -87,7 +100,7 @@ export default function EmailComposer() {
   };
 
   const handleSend = async () => {
-    if (!subject.trim() || !content.trim()) {
+    if (!subject.trim() || isContentEmpty) {
       toast.error('Escribe un asunto y contenido');
       return;
     }
@@ -127,6 +140,7 @@ export default function EmailComposer() {
   };
 
   const selectedFilter = FILTER_OPTIONS.find(f => f.key === filterType);
+  const isContentEmpty = !content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 
   return (
     <div className="space-y-6" data-testid="email-composer">
@@ -240,16 +254,31 @@ export default function EmailComposer() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
-                  Contenido <span className="text-xs text-gray-400 font-normal">(Soporta HTML. Usa {'{{nombre}}'} para personalizar)</span>
+                  Contenido
                 </label>
-                <Textarea
-                  placeholder={'Escribe el contenido del correo...\n\nEjemplo:\n<p>Hola <strong>{{nombre}}</strong>,</p>\n<p>Te informamos que...</p>'}
+                <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs text-gray-500 mr-1">Insertar variable:</span>
+                  {MERGE_VARIABLES.map(({ tag, label }) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => insertVariable(tag)}
+                      className="px-2 py-1 rounded-md bg-[#E8772E]/10 text-[#E8772E] text-xs font-medium hover:bg-[#E8772E]/20 transition-colors"
+                      data-testid={`var-${tag.replace(/[{}]/g, '')}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <RichTextEditor
+                  ref={editorRef}
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  rows={12}
-                  className="font-mono text-sm"
-                  data-testid="email-content"
+                  onChange={setContent}
+                  placeholder="Escribe el contenido del correo. Usa los botones de arriba para dar formato e insertar variables como el nombre del atleta..."
                 />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Las variables (ej. {'{{nombre}}'}) se reemplazan por los datos de cada destinatario al enviar.
+                </p>
               </div>
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -266,7 +295,7 @@ export default function EmailComposer() {
                   </Button>
                   <Button
                     onClick={handleSend}
-                    disabled={sending || !subject.trim() || !content.trim() || recipients.length === 0}
+                    disabled={sending || !subject.trim() || isContentEmpty || recipients.length === 0}
                     className="bg-[#E8772E] hover:bg-[#d06a28]"
                     data-testid="send-btn"
                   >
