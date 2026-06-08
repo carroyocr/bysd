@@ -1055,10 +1055,10 @@ export default function MyProfilePage() {
                       <h4 className="text-base font-bold text-orange-900 mb-3">Informacion Importante</h4>
                       <div className="space-y-2 text-sm text-orange-800">
                         <p>
-                          <strong>Completar este formulario no garantiza un cupo confirmado</strong>, sino que asegura tu lugar en la lista de prerregistrados.
+                          <strong>Completar este formulario garantiza espacio para la carrera.</strong>
                         </p>
                         <p>
-                          Cuatro (4) meses antes del evento, enviaremos un correo electronico con las instrucciones para realizar el pago de la inscripcion.
+                          Cuatro (4) meses antes del evento, enviaremos un correo electrónico con las instrucciones para realizar el pago de la inscripción.
                         </p>
                         <p className="font-semibold text-lg text-orange-900">
                           El costo de la carrera sera de {formattedCost}.
