@@ -88,6 +88,39 @@ MERGE_FIELDS = {
 # Default email templates
 DEFAULT_TEMPLATES = [
     {
+        "id": "athlete_waitlist_confirmation",
+        "name": "Registro en Lista de Espera - Atleta",
+        "description": "Se envía cuando un atleta se registra pero el cupo máximo ya está completo",
+        "subject": "📋 Estás en lista de espera - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Estás en Lista de Espera</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            ¡Gracias por tu interés en <strong>{{race_name}}</strong>! En este momento hemos alcanzado el cupo máximo de participantes, por lo que tu registro ha quedado en nuestra <strong>lista de espera</strong>.
+        </p>
+        <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e; line-height: 1.6;">
+                Si se libera un espacio (por ejemplo, una cancelación), te contactaremos por este mismo correo siguiendo el orden de la lista de espera para confirmar tu inscripción.
+            </p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">
+            No necesitas hacer nada por ahora. Si necesitas modificar tus datos, usa este enlace:<br>
+            <a href="{{athlete_edit_link}}" style="color: #ea580c;">Editar mi registro</a>
+        </p>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p>
+    </div>
+</div>
+"""
+    },
+    {
         "id": "athlete_registration_confirmation",
         "name": "Confirmación de Registro - Atleta",
         "description": "Se envía cuando un atleta completa su pre-registro",

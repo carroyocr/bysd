@@ -51,6 +51,7 @@ class RaceConfigCreate(BaseModel):
     is_active: bool = True
     registration_cost: float = 3500.0  # Cost in local currency (RD$)
     edition_number: int = 1  # Edition number (1 = Primera, 2 = Segunda, etc.)
+    max_participants: int = 120  # Maximum number of participants before waitlist
 
 
 class RaceConfigUpdate(BaseModel):
@@ -64,6 +65,7 @@ class RaceConfigUpdate(BaseModel):
     favicon_url: Optional[str] = None  # Favicon for browser tab (recommended: 32x32px ICO/PNG)
     registration_cost: Optional[float] = None
     edition_number: Optional[int] = None
+    max_participants: Optional[int] = None
     timezone_gmt: Optional[str] = None  # e.g., "GMT-4"
     # Payment info
     payment_account_name: Optional[str] = None
@@ -99,7 +101,8 @@ async def get_active_race(db=Depends(lambda: None)):
             "is_active": True,
             "is_default": True,
             "registration_cost": 3500.0,
-            "edition_number": 1
+            "edition_number": 1,
+            "max_participants": 120
         }
     
     # Ensure defaults for new fields if not present
@@ -107,6 +110,8 @@ async def get_active_race(db=Depends(lambda: None)):
         config["registration_cost"] = 3500.0
     if "edition_number" not in config:
         config["edition_number"] = 1
+    if "max_participants" not in config:
+        config["max_participants"] = 120
     if "show_tracking_page" not in config:
         config["show_tracking_page"] = True
     if "show_community_page" not in config:

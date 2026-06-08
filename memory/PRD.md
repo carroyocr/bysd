@@ -386,6 +386,16 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Lista de Espera por Cupo Máximo + Sección Inscritos en Corredores** (08 Junio 2026)
+  - Nuevo campo `max_participants` (default 120) en config de carrera, editable en Admin → Carrera ("Máximo de Participantes")
+  - Nueva plantilla de email `athlete_waitlist_confirmation` ("Registro en Lista de Espera - Atleta") en `email_templates.py`
+  - `register-race` cuenta inscritos confirmados (excluye cancelled/waitlist); si >= max → status `waitlist` + plantilla de lista de espera; si no → confirmación normal. Respuesta incluye `waitlisted`
+  - Nueva sección pública en página Corredores (`RunnersSection.jsx`) antes de la Guía: tarjetas (total, hombres, mujeres, plazas disponibles) + lista de inscritos en 3 columnas ordenada por bib
+  - Endpoint público `GET /api/registration/public/participants/{race_code}` (lee max desde config, excluye cancelled/waitlist)
+  - Archivos: `backend/routes/{registration.py, athletes.py, race_config.py, email_templates.py}`, `frontend/src/components/{RunnersSection.jsx, RaceConfigPanel.jsx}`
+  - Verificado por curl: waitlist e2e (waitlisted:true al llenar cupo), template renderiza, campo admin guarda; UI verificada por screenshot
+
+
 - [x] **Feature: Editor de Correos Enriquecido + Variables (Admin Mass Email Composer)** (08 Junio 2026)
   - Editor WYSIWYG propio (`RichTextEditor.jsx`, contentEditable) — NO se usó react-quill por incompatibilidad con React 19 (findDOMNode removido)
   - Barra de herramientas: negrita, cursiva, subrayado, lista con viñetas, lista numerada, enlace, salto de línea, quitar formato

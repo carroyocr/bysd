@@ -762,6 +762,15 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         except:
             next_bib = 1
     
+    # Determine if this registration exceeds capacity -> waitlist
+    max_participants = race.get("max_participants", 120)
+    current_count = await database.registrations.count_documents({
+        "race_code": data.race_code,
+        "status": {"$nin": ["cancelled", "waitlist"]}
+    })
+    is_waitlist = current_count >= max_participants
+    reg_status = "waitlist" if is_waitlist else "registered"
+
     # Create registration with profile data + event-specific fields
     registration_doc = {
         "athlete_id": athlete_id,
@@ -797,7 +806,7 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         # Registration metadata
         "edit_token": secrets.token_urlsafe(32),
         "bib": str(next_bib).zfill(3),
-        "status": "registered",
+        "status": reg_status,
         "payment_status": "pending",
         "laps_completed": 0,
         "created_at": datetime.now(timezone.utc),
@@ -806,7 +815,7 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
     
     await database.registrations.insert_one(registration_doc)
     
-    # Send confirmation email using existing template
+    # Send confirmation email using existing template (or waitlist template if capacity reached)
     try:
         from services.template_email_service import send_email_with_template, build_race_data, build_athlete_data
         race_config = await database.race_configurations.find_one({"code": data.race_code})
@@ -815,44 +824,54 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
             **build_athlete_data(registration_doc, edit_token=registration_doc["edit_token"]),
         }
 
-        # Dynamic content based on date: before Oct 2026 vs Oct 2026+
-        now = datetime.now(timezone.utc)
-        payment_cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
-        if now < payment_cutoff:
-            merge_data["proximos_pasos"] = """
-                <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
-                    <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
-                </p>
-                <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-                    <p style="margin: 0; color: #1e40af; line-height: 1.6;">
-                        4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
-                    </p>
-                </div>
-            """
+        if is_waitlist:
+            # Waitlist: no payment timeline, just notify the athlete is on the waitlist
+            await send_email_with_template(
+                db=database,
+                template_id="athlete_waitlist_confirmation",
+                to_email=athlete["email"],
+                data=merge_data
+            )
         else:
-            merge_data["proximos_pasos"] = """
-                <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
-                    <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
-                        <li>Completa el pago de inscripción</li>
-                        <li>Espera la confirmación de tu BIB</li>
-                        <li>Revisa la guía del corredor</li>
-                    </ol>
-                </div>
-            """
+            # Dynamic content based on date: before Oct 2026 vs Oct 2026+
+            now = datetime.now(timezone.utc)
+            payment_cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
+            if now < payment_cutoff:
+                merge_data["proximos_pasos"] = """
+                    <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
+                        <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
+                    </p>
+                    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+                        <p style="margin: 0; color: #1e40af; line-height: 1.6;">
+                            4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
+                        </p>
+                    </div>
+                """
+            else:
+                merge_data["proximos_pasos"] = """
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
+                        <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
+                            <li>Completa el pago de inscripción</li>
+                            <li>Espera la confirmación de tu BIB</li>
+                            <li>Revisa la guía del corredor</li>
+                        </ol>
+                    </div>
+                """
 
-        await send_email_with_template(
-            db=database,
-            template_id="athlete_registration_confirmation",
-            to_email=athlete["email"],
-            data=merge_data
-        )
+            await send_email_with_template(
+                db=database,
+                template_id="athlete_registration_confirmation",
+                to_email=athlete["email"],
+                data=merge_data
+            )
     except Exception as e:
         print(f"Error sending confirmation email: {e}")
     
     return {
         "success": True,
-        "message": "Inscripción realizada",
+        "message": "Inscripción en lista de espera" if is_waitlist else "Inscripción realizada",
+        "waitlisted": is_waitlist,
         "bib": registration_doc["bib"]
     }
 

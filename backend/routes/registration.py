@@ -720,10 +720,13 @@ async def get_registration_stats(race_code: str):
 @router.get("/public/participants/{race_code}")
 async def public_participants(race_code: str):
     """Public: list of registered participants for a race (bib, nombre, apellidos, sexo) + stats."""
-    MAX_CAPACITY = 120
+    # Read max capacity from race config (fallback 120)
+    race_config = await db["race_configurations"].find_one({"code": race_code})
+    max_capacity = (race_config or {}).get("max_participants", 120)
+
     query = {
         "race_code": race_code,
-        "status": {"$nin": ["cancelled"]},
+        "status": {"$nin": ["cancelled", "waitlist"]},
     }
     regs = await registrations_collection.find(
         query,
@@ -754,8 +757,8 @@ async def public_participants(race_code: str):
         "total": total,
         "masculino": masculino,
         "femenino": femenino,
-        "max_capacity": MAX_CAPACITY,
-        "plazas_disponibles": max(MAX_CAPACITY - total, 0),
+        "max_capacity": max_capacity,
+        "plazas_disponibles": max(max_capacity - total, 0),
         "participants": participants,
     }
 

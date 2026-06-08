@@ -48,6 +48,7 @@ export default function RaceConfigPanel() {
     timezone_gmt: 'GMT-4',
     registration_cost: 3500,
     edition_number: 1,
+    max_participants: 120,
     // Payment info
     payment_account_name: '',
     payment_account_id: '',
@@ -85,6 +86,7 @@ export default function RaceConfigPanel() {
         timezone_gmt: activeData.timezone_gmt || 'GMT-4',
         registration_cost: activeData.registration_cost || 3500,
         edition_number: activeData.edition_number || 1,
+        max_participants: activeData.max_participants || 120,
         // Payment info
         payment_account_name: activeData.payment_account_name || '',
         payment_account_id: activeData.payment_account_id || '',
@@ -820,6 +822,23 @@ export default function RaceConfigPanel() {
                     placeholder="1"
                   />
                   <p className="text-xs text-muted-foreground">1 = Primera, 2 = Segunda, etc.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Máximo de Participantes
+                  </Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={editForm.max_participants}
+                    onChange={(e) => setEditForm({...editForm, max_participants: parseInt(e.target.value) || 1})}
+                    placeholder="120"
+                    data-testid="max-participants-input"
+                  />
+                  <p className="text-xs text-muted-foreground">Al alcanzar este número, las nuevas inscripciones pasan a lista de espera</p>
                 </div>
               </div>
 
