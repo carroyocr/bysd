@@ -1745,3 +1745,173 @@ async def admin_get_athlete_profiles(authorization: str = Header(None)):
             "verified": sum(1 for r in result if r["email_verified"]),
         }
     }
+
+
+# ==================== ADMIN: EMAIL COMPOSER ====================
+
+class EmailRecipientFilter(BaseModel):
+    filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'manual'
+    race_code: Optional[str] = None
+    manual_emails: Optional[list] = None
+
+class AdminEmailRequest(BaseModel):
+    subject: str
+    content: str
+    recipients: EmailRecipientFilter
+    
+class AdminEmailPreviewRequest(BaseModel):
+    subject: str
+    content: str
+
+
+@router.post("/admin/email-recipients")
+async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: str = Header(None)):
+    """Admin: Get list of email recipients based on filter"""
+    from server import db as database
+
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    recipients = []
+
+    if data.filter_type == "manual":
+        for email in (data.manual_emails or []):
+            email = email.strip().lower()
+            if email:
+                recipients.append({"email": email, "nombre": email, "source": "manual"})
+        return {"recipients": recipients, "total": len(recipients)}
+
+    if data.filter_type == "volunteers":
+        vols = await database.volunteers.find(
+            {}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+        ).to_list(500)
+        for v in vols:
+            if v.get("email"):
+                recipients.append({
+                    "email": v["email"],
+                    "nombre": f"{v.get('nombre', '')} {v.get('apellidos', '')}".strip(),
+                    "source": "voluntario"
+                })
+        return {"recipients": recipients, "total": len(recipients)}
+
+    # Athletes-based filters
+    athletes = await database.athletes.find(
+        {}, {"_id": 1, "email": 1, "nombre": 1, "apellidos": 1}
+    ).to_list(500)
+
+    if data.filter_type == "all_athletes":
+        for a in athletes:
+            recipients.append({
+                "email": a["email"],
+                "nombre": f"{a.get('nombre', '')} {a.get('apellidos', '')}".strip(),
+                "source": "atleta"
+            })
+    elif data.filter_type in ("inscribed", "not_inscribed"):
+        query = {"race_code": data.race_code} if data.race_code else {}
+        regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
+        inscribed_ids = {r["athlete_id"] for r in regs if r.get("athlete_id")}
+
+        for a in athletes:
+            aid = str(a["_id"])
+            is_inscribed = aid in inscribed_ids
+            if (data.filter_type == "inscribed" and is_inscribed) or \
+               (data.filter_type == "not_inscribed" and not is_inscribed):
+                recipients.append({
+                    "email": a["email"],
+                    "nombre": f"{a.get('nombre', '')} {a.get('apellidos', '')}".strip(),
+                    "source": "inscrito" if is_inscribed else "no inscrito"
+                })
+
+    return {"recipients": recipients, "total": len(recipients)}
+
+
+@router.post("/admin/email-preview")
+async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
+    """Admin: Preview email as it would appear"""
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    # Wrap content in the standard email template
+    html = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 22px;">{data.subject}</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        {data.content}
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">Backyard Ultra Santo Domingo</p>
+    </div>
+</div>
+"""
+    return {"html": html, "subject": data.subject}
+
+
+@router.post("/admin/send-email")
+async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(None)):
+    """Admin: Send email to filtered recipients"""
+    from server import db as database
+    from services.template_email_service import send_templated_email
+
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    # Get recipients
+    recipients_resp = await admin_get_email_recipients(data.recipients, authorization)
+    recipients = recipients_resp["recipients"]
+
+    if not recipients:
+        raise HTTPException(status_code=400, detail="No hay destinatarios")
+
+    # Build HTML with the standard wrapper
+    html_template = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 22px;">{data.subject}</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        {data.content}
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">Backyard Ultra Santo Domingo</p>
+    </div>
+</div>
+"""
+
+    sent = 0
+    failed = 0
+    for r in recipients:
+        # Replace {{nombre}} in content if present
+        personalized = html_template.replace("{{nombre}}", r.get("nombre", ""))
+        try:
+            success = await send_templated_email(r["email"], data.subject, personalized)
+            if success:
+                sent += 1
+            else:
+                failed += 1
+        except Exception as e:
+            logging.warning(f"Failed to send email to {r['email']}: {e}")
+            failed += 1
+
+    # Log the send
+    await database.email_log.insert_one({
+        "subject": data.subject,
+        "filter_type": data.recipients.filter_type,
+        "race_code": data.recipients.race_code,
+        "total_recipients": len(recipients),
+        "sent": sent,
+        "failed": failed,
+        "sent_at": datetime.now(timezone.utc),
+    })
+
+    return {"success": True, "sent": sent, "failed": failed, "total": len(recipients)}

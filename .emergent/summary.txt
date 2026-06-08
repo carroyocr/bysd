@@ -1,190 +1,149 @@
-<analysis>**original_problem_statement:**
-The user's high-level goal is to create a comprehensive race management platform. The current major initiative is to build a full-featured athlete profile system.
+<analysis>Here is the handover summary for the next agent:
+
+**original_problem_statement:** 
+The user wants to continue iterating on the Backyard Ultra Santo Domingo tracking and profile system. The requests include: resolving a production bug with legacy cheer messages, implementing dynamic OpenGraph meta tags for WhatsApp link sharing, automatically linking 2026 historical race results to athletes upon registration using an Excel mapping, building admin panels to manage these historical results and view athlete profiles, creating a new Campeonato Satélite por Equipos information page, fixing corrupted athlete names dynamically on PDF certificates, adding conditional UI and email logic based on payment timelines, and finally, building an Admin Mass Email Composer with rich text formatting and merge variables.
 
 PRODUCT REQUIREMENTS:
-1.  **Athlete Profile System:**
-    *   Create a two-part registration process: a permanent athlete profile and a separate race-specific registration.
-    *   Implement user authentication with password creation and a forgot password recovery flow.
-    *   The system must retain the existing email verification process using a code.
-    *   Add a Mi Perfil link to the main navigation menu.
-    *   This new section should serve as a portal for athletes to either log in or create a new profile.
-    *   The logged-in athlete dashboard must include:
-        *   **Mis Datos:** A section to view and edit their permanent profile information.
-        *   **Próximas Carreras:** A list of races they are currently registered for.
-        *   **Historial:** A history of their past race results.
-    *   Athletes who participated in the 2026 race should be able to claim their old results by searching for their name or BIB number. New profiles should be created from scratch.
-2.  **Volunteer Shift Enhancements:**
-    *   Distinguish volunteer shifts between Día Previo (day before the race) and multiple race days (e.g., Día 1, Día 2) for events lasting over 24 hours.
-3.  **UI/UX and Bug Fixes:**
-    *   Fix the Athlete Profile dashboard, which is visually inconsistent, has invisible buttons, and does not load user data.
-    *   Fix authentication flows (login, password reset) that show a generic Error de conexión instead of specific backend messages like Credenciales incorrectas.
-    *   Reorder and rename the tabs in the admin panel.
-    *   Make the Escáner QR menu item a direct link to the full-screen scanner page ().
-    *   Add an average pace (min/km) column to the lap registration table and its CSV export, formatted as .
+1. All emails sent from the system must use the existing HTML template module () and maintain a consistent format.
+2. All new pages or UI components must adhere to the project's existing design system.
 
-**User's preferred language**: Spanish
+**User's preferred language**: Spanish (You MUST respond in the user's preferred language only)
 
-**what currently exists?**
-The application is a full-stack race management platform with a React frontend, FastAPI backend, and MongoDB. It includes functionalities for financial management, advanced QR code lap scanning, and volunteer shift management.
+**what currently exists?** 
+A full-stack React/FastAPI/MongoDB application for a race event. It handles athlete registration, race claiming (historical and active), certificates generation, admin management (race config, athletes, volunteers, results), and custom email templates.
 
-The initial backend infrastructure and frontend pages for the new **Athlete Profile System** have been created, but the user-facing part is currently broken and non-functional. The system for managing **multi-day volunteer shifts** has been successfully implemented. Several smaller UI improvements and bug fixes, such as the admin tab reordering and pace calculation, have also been completed.
+**Last working item**: 
+- Last item agent was working: The agent was actively building the Admin Mass Email Composer (). Basic UI and backend endpoints were created. The user just requested to add rich text formatting capabilities (bold, line breaks) and dynamic merge variables (like athlete name ) to the composer so personalized emails can be drafted.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use?: Both (Frontend testing agent for the UI rich text editor, and curl/python script to ensure HTML payloads and merge variables are processed correctly by the backend email service).
+- User Testing Done: N
 
-**Last working item**:
--   **Last item agent was working:** The agent was in the middle of a complete rewrite of the athlete profile dashboard page (). The user reported that after an athlete logs in, the page is visually inconsistent with the rest of the site, data fields are empty, and buttons are invisible until hovered over. The agent's approach was to rebuild the page from scratch to match the site's established design and to use  for API calls to circumvent potential issues with .
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. After completing the rewrite of , the testing agent must be used to perform a full end-to-end test of the athlete login flow. The test should verify that the dashboard renders correctly (matching site design), populates the athlete's data in the form fields, and ensures all UI elements are visible and styled properly.
--   **User Testing Done:** N
-
-**All Pending/In progress Issue list**:
--   **Issue 1: (P0 - HIGHEST PRIORITY)** The athlete profile dashboard page is broken and unusable after login.
-    -   **Attempted fixes:** The agent started a complete rewrite of . The file was overwritten with a new boilerplate structure, but the actual UI components and data-fetching logic have not been implemented yet.
-    -   **Next debug checklist:**
-        1.  Flesh out the new  file.
-        2.  Implement the tabbed interface for Mis Datos, Mis Carreras, and Historial.
-        3.  Add a  hook to fetch the logged-in athlete's profile data from the backend ().
-        4.  Use  for the API call, following the pattern in .
-        5.  Bind the fetched data to the state and ensure it populates the input fields in the Mis Datos tab.
-        6.  Apply consistent styling (Tailwind CSS) to all components to match the rest of the application.
-    -   **Why fix this issue and what will be achieved with the fix?** This is the central part of the new athlete profile feature. Without a functional dashboard, the entire feature is inaccessible to users.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** None.
--   **Issue 2: (P1)** Login and password recovery flows show a generic Error de conexión message instead of specific errors from the backend.
-    -   **Attempted fixes:** The agent tried using  and  with , but the issue persisted. The current strategy is to switch to .
-    -   **Next debug checklist:**
-        1.  In the rewritten , ensure all authentication-related API calls (login, forgot password, reset password) use .
-        2.  Implement  handlers that check  (e.g., 200 vs. 400/401).
-        3.  When an error status is received, parse the  to get the specific error message (e.g., Credenciales incorrectas) and display it in a toast.
-    -   **Why fix this issue and what will be achieved with the fix?** Provides clear feedback to users during authentication, improving usability and reducing confusion.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on other issue:** None.
+**All Pending/In progress Issue list**: 
+There are no pending bug fixes at this moment.
 
 **In progress Task List**:
--   **Task 1: (P0) Complete the Athlete Profile System.**
-    -   **Where to resume:** The file  has been reset to a basic structure. The immediate next step is to rebuild the UI for the athlete dashboard inside this file, including the data fetching and styling, as outlined in the Pending Issues section.
-    -   **What will be achieved with this?** A complete, functional, and visually consistent athlete profile and authentication system.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** The UI and error handling bugs listed as P0 and P1 issues.
+Task 1: Add Rich Text and Merge Variables to Admin Email Composer (P0)
 
-**Upcoming and Future Tasks**
--   **Upcoming Tasks:**
-    -   **(P1)** Implement the Reclamar Resultados 2026 feature within the athlete dashboard.
-    -   **(P2)** Build out the Próximas Carreras and Historial tabs with data from the backend.
--   **Future Tasks:**
-    -   **(P3)** Add toast notifications for fan community badge level-ups.
-    -   **(P4)** Implement filters on the Comunidad page.
-    -   **(P5)** Refactor large components (, , etc.).
-    -   **(P6)** Clean up unused code and large files (Twitter integration, ).
+ Task Detail:
+  - Task 1: 
+     - Where to resume: Modify  to include an HTML formatting toolbar (bold, line breaks) and instructions/buttons to insert merge tags like . Update the backend endpoints  and  in  to properly process and substitute these merge tags per recipient using the .
+     - What will be achieved with this?: Admins will be able to send formatted, highly personalized mass emails to filtered groups of athletes directly from the dashboard.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix?: Both
+     - Blocked on something: None
 
-**Completed work in this session**
--   **Feature: Athlete Profile Backend:** Created all necessary backend endpoints () for registration, login (JWT), email verification, and password recovery.
--   **Feature: Multi-Day Volunteer Shifts:** Updated the volunteer management system to support shifts on the day before the race and on multiple race days, with distinct UI coloring.
--   **Feature: Pace Calculation:** Added an Average Pace (Ritmo) column to the lap registration panel and CSV export, formatted as .
--   **UI/UX Improvement:** Reordered admin panel tabs and changed the Escáner QR tab into a direct link to .
--   **UI/UX Improvement:** Added a Refresh button to the participant control panel in the admin area.
--   **Bug Fix:** The Reset Database function now correctly clears the  collection.
--   **Bug Fix:** Corrected an issue where the lap registration CSV export used UTC time instead of local time.
--   **Bug Fix:** Fixed a server crash () in the email verification endpoint related to timezone-naive and timezone-aware datetime comparison.
--   **Bug Fix:** Ensured all athlete-facing emails (verification, password reset) use the correct, pre-existing, and consistently styled templates from the database.
--   **Bug Fix:** Corrected the Gender (to Masculino/Femenino) and Country (to a dropdown list) fields in the athlete registration form.
+**Upcoming and Future Tasks**:
+Upcoming Tasks:
+- Refactor : Break this massive file down into smaller routers (, , ). (P1)
+- Decompose : Break down this god component into smaller, reusable UI components. (P1)
+- Remove temporary diagnostic endpoint (). (P2)
 
-**Earlier issues found/mentioned but not fixed**
--   An unused Twitter integration (, ) remains in the codebase.
--   A large, 27MB  file is still present in the  directory.
--   Several large React components are in need of refactoring for better maintainability.
+Future Tasks:
+- Add push or email notifications when an athlete receives a new cheer message.
 
-**Known issue recurrence from previous fork**
--   None.
+**Completed work in this session**:
+- Fixed legacy 2026 cheer messages bug in production by querying both  and  (ignoring ). (DONE)
+- Implemented CRACO middleware () for dynamic OpenGraph meta tags based on active race config. (DONE)
+- Auto-claim 2026 race results on athlete registration based on a provided email mapping, including manual claim anti-duplicate logic. (DONE)
+- Added Resultados 2026 admin management tab (). (DONE)
+- Added conditional Inscripciones Abiertas card in Home and reminder note in Mi Perfil based on  config. (DONE)
+- Created Campeonato Satélite por Equipos page from user's PDF, fixed accents, removed Garmin link from Home. (DONE)
+- Fixed PDF certificates name corruption dynamically using PyMuPDF () text replacement upon file serving, and fixed UTF-8 filename encoding for downloads. (DONE)
+- Added Cédula/Pasaporte to payment receipt and a conditional payment timeline note. (DONE)
+- Added Perfiles de Atletas admin management tab (). (DONE)
+- Implemented conditional payment reminder logic in registration confirmation email template. (DONE)
+- Created foundational UI and endpoints for Admin Email Composer. (DONE)
 
-**Code Architecture**
+**Earlier issues found/mentioned but not fixed**:
+None
+
+**Known issue recurrence from previous fork**:
+- Issue recurrence in previous fork: Out-of-memory error reported in older forks.
+- Recurrence count: 1
+- Status: BLOCKED (Mitigated by a larger machine previously, no recent occurrences).
+
+**Code Architecture**:
 
 
-**Key Technical Concepts**
--   **Full-Stack Authentication:** Implemented an end-to-end athlete authentication system using FastAPI for the backend (with JWT tokens for session management) and React for the frontend.
--   **Frontend API Error Handling:** Identified and began implementing a workaround for a body stream already read error when using  for API calls with error responses. The adopted strategy is to use the more primitive .
--   **Database-Driven Configuration:** Utilized a MongoDB collection () to store and retrieve HTML email templates, ensuring consistency across communications.
--   **Timezone-Aware Logic:** Debugged and fixed a Python  by correctly handling timezone-aware () and timezone-naive  objects during comparisons.
+**Key Technical Concepts**:
+- Frontend: React, Vite/CRACO, Tailwind CSS.
+- Backend: Python 3, FastAPI.
+- Database: MongoDB.
+- Dynamic Middleware: Express middleware inside CRACO config to serve dynamic raw HTML for social media crawlers.
+- PDF Manipulation:  () is used to dynamically replace strings in static PDFs in-memory before returning them via FastAPI.
 
-**key DB schema**
--   ** (New):** Stores permanent user data. Includes fields like , , personal details, verification codes, and reset tokens.
--   ** (Modified):** Added  (e.g., 'previo', 'carrera_dia1') to distinguish shift timing relative to the race start.
--   ** (Utilized):** Leveraged existing templates and added new ones () for athlete communications.
+**key DB schema**:
+- : Core user profiles.
+-  / : Active and historical race results.
+-  / : Support messages.
+- : Global settings managing UI toggles and active races.
 
-**changes in tech stack**
--   None.
+**changes in tech stack**:
+- Integrated CRACO local dev server middleware () to intercept HTML requests for OpenGraph previews.
+- Deepened usage of  (PyMuPDF) for dynamic text replacement over PDF redactions.
 
-**All files of reference**
--   **Primary Focus:** , 
--   **Supporting Files:**
-    -   
-    -   
-    -   
-    -   
-    -   
+**All files of reference**:
+1.  (Currently working on this).
+2.  (Contains the mass email endpoints to update).
+3.  (Created for WhatsApp dynamic previews).
+4.  (Contains the dynamic PDF generation logic).
+5.  (Updated with new tabs).
 
 **Areas that need refactoring**:
--    is currently undergoing a complete rewrite to fix major UI and functional problems.
--   The unused Twitter integration and a large PDF in the  folder should be removed to reduce code and application size.
+- : Contains >1700 lines. Must be split into Auth, Admin, and Profile routers.
+- : Contains >1300 lines of complex multi-view state logic. 
 
-**key api endpoints**
--   **Athlete Endpoints (New/In-Progress):**
-    -   
-    -   
-    -   
-    -   
-    -   
-    -    (Backend exists, frontend implementation needed)
--   **Other Modified Endpoints:**
-    -   
-    -   
-    -   
+**key api endpoints**:
+- : Sends emails to filtered athlete lists.
+- : Generates a preview payload for the email composer.
+- : Dynamically fixes and serves PDF certificates.
+-  & : Admin data fetching endpoints.
 
-**Critical Info for New Agent**
--   **Language:** You **MUST** communicate with the user in **Spanish**.
--   **Top Priority:** Your first and only focus should be to fix the athlete profile dashboard (). The user is completely blocked on this new feature. You must complete the rewrite that the previous agent started, ensuring the page is functional, visually consistent, and correctly handles API calls and errors.
--   **API Call Strategy:** A recurring problem in the frontend is handling API error responses. The established workaround is to use **** instead of , as this has proven more reliable in the preview environment. Apply this pattern for all API calls within .
--   **Error Handling:** A major user complaint is seeing generic Error de conexión messages. Your frontend logic **must** parse the specific error detail from the backend's JSON response (e.g., Credenciales incorrectas) and display it to the user.
--   **Design Consistency:** The user expects new features to seamlessly match the existing application's design. Use other pages like  and components within  as a visual and stylistic reference.
+**Critical Info for New Agent**:
+1. **PRODUCTION ENVIRONMENT DEPLOYED**: The user has deployed this app to a live production environment. If user reports issues going forward, you MUST clarify if the issue is in Preview or Production. **You can only fix code in Preview**; the user is responsible for redeploying to Production.
+2. **Static vs Dynamic Assets**: The PDF certificates in the backend  folder are corrupt. DO NOT attempt to rewrite the static PDFs using  redactions, as these files do not sync to production. The established fix dynamically replaces the corrupt strings *at the endpoint level* when the file is served. Do not deviate from this pattern.
+3. **Emails**: Always use  to compile and send HTML emails.
 
-**documents and test reports created in this job**
--    was updated.
+**documents and test reports created in this job**:
+-  (Updated)
+-  to  (Available)
 
-**Last 10 User Messages and any pending HUMAN messages**
-10. **User:** I was able to log in, but the profile page is broken: buttons are invisible, fields are empty, and the design is completely different.
-9.  **User:** I'm still getting Error de conexión when trying to log in or reset my password.
-8.  **User:** Fixes needed for the profile form: duplicate email error is wrong, verification isn't working, no home button, and email template is not styled correctly.
-7.  **User:** Confirm my plan for the Athlete Profile system. Let's have new users create profiles from scratch but allow them to claim old 2026 results.
-6.  **User:** Let's create a full athlete profile system.
-5.  **User:** Please reorder the admin panel tabs.
-4.  **User:** Volunteer shifts can extend past midnight into the next day; we need to differentiate them.
-3.  **User:** I need to create shifts for the day *before* the race.
-2.  **User:** Make the Escáner QR menu link go directly to the full-screen scanner.
-1.  **User:** The pace format should be , not a decimal.
+**Last 10 User Messages and any pending HUMAN messages**:
+1. *User*: El cambio no funciona en producción.
+2. *Agent (Ask Human)*: Clarified that static PDFs don't deploy, proposed dynamic endpoint fix.
+3. *User*: 1 (Approved)
+4. *User*: En los datos falta incluir el número de pasaporte que sería 109560676. (Provided image)
+5. *User*: Incluye un mensaje adicional que el pago no es requerido sino hasta 4 meses antes de la carrera...
+6. *User*: vamos a agrega una opción para poder consultar los atletas registrados en la sección de administrativo...
+7. *User*: (System Notif) Production deployment detected.
+8. *User*: El mensaje de confirmación no es consistente, Debería indicar, felicidades tu registro... (Provided conditional timeline rules for email).
+9. *User*: Vamos a agregar una sección en Adminsitración que me permita escribir correos a los perfiles...
+10. *User*: **(PENDING)** incluye la variables para agregar al correo, como nombre, agregar negitras, saltos de linea.
 
 **Project Health Check:**
--   **Broken:** The primary user-facing component of the new Athlete Profile feature—the post-login dashboard—is non-functional. Authentication error handling is also faulty.
+- Broken: None
+- Mocked: None
 
-**3rd Party Integrations**
--   **html5-qrcode:** Used for QR code scanning.
--   **Gmail SMTP:** Used for sending emails.
--   **qrcode:** Python library for generating QR codes.
+**3rd Party Integrations**:
+- SMTP (Gmail) — Uses standard environment variables, no Emergent Key required.
 
-**Testing status**
--   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None.
--   **Known regressions:** The frontend error handling for API calls has been a persistent issue throughout the development of the athlete profile feature.
+**Testing status**:
+- Testing agent used after significant changes: YES
+- Troubleshoot agent used after agent stuck in loop: NO
+- Test files created: None
+- Known regressions: None
 
-**Credentials to test flow:**
--   **Admin Panel URL:** 
--   **Username:** 
--   **Password:** 
--   **Athlete Profile URL:** 
+**Credentials to test flow**:
+- Admin Preview:  / 
+- Athlete Preview:  / 
 
-**What agent forgot to execute**
--   The agent did not fully resolve the UI and error-handling issues on the , leaving the feature in a broken state for the user. The rewrite was started but not completed.</analysis>
+**What agent forgot to execute**:
+The agent viewed the  component but did not implement the user's final request: adding a rich text editor (bold, line breaks) and merge variable logic () before the session ended. This should be your immediate next step.
+
+**Debugging checklist for current issue**
+    Issue: Email Composer needs rich text formatting and merge variable support.
+    Frontend files to check: 
+    -  (Implement rich text/HTML textarea and insert variable buttons).
+    Backend files to check: 
+    -  (Ensure  safely receives HTML and parses variables using the template renderer before dispatching).</analysis>

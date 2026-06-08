@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -18,6 +18,7 @@ import UserManagement from '../components/UserManagement';
 import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
 import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
+import EmailComposer from '../components/EmailComposer';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -34,6 +35,7 @@ const TAB_PERMISSIONS = {
   'emails': 'emails',
   'results-2026': 'athletes', // Same permission as athletes
   'athlete-profiles': 'athletes', // Same permission as athletes
+  'email-composer': 'emails', // Same permission as emails
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
@@ -244,6 +246,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">Perfiles</span>
               </TabsTrigger>
             )}
+            {/* 12. Enviar Correos */}
+            {hasAccess('email-composer') && (
+              <TabsTrigger value="email-composer" className="flex items-center gap-2" data-testid="tab-email-composer">
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Enviar Correos</span>
+                <span className="sm:hidden">Enviar</span>
+              </TabsTrigger>
+            )}
             {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -337,6 +347,12 @@ export default function AdminPage() {
           {hasAccess('athlete-profiles') && (
             <TabsContent value="athlete-profiles">
               <AthleteProfilesManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('email-composer') && (
+            <TabsContent value="email-composer">
+              <EmailComposer />
             </TabsContent>
           )}
         </Tabs>
