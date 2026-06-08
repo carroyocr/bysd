@@ -1652,3 +1652,69 @@ async def admin_unclaim_2026(data: ConfirmClaimRequest, authorization: str = Hea
 
     raise HTTPException(status_code=404, detail="Resultado no encontrado")
 
+
+
+# ==================== ADMIN: ATHLETE PROFILES ====================
+
+@router.get("/admin/athlete-profiles")
+async def admin_get_athlete_profiles(authorization: str = Header(None)):
+    """Admin: Get all registered athlete profiles with their race inscription status"""
+    from server import db as database
+    from bson import ObjectId
+
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    athletes = await database.athletes.find(
+        {}, {"password_hash": 0, "verification_code": 0, "reset_code": 0,
+             "verification_code_expires": 0, "reset_code_expires": 0}
+    ).sort("created_at", -1).to_list(500)
+
+    # Get all registrations to determine inscription status
+    registrations = await database.registrations.find(
+        {}, {"athlete_id": 1, "race_code": 1, "status": 1}
+    ).to_list(1000)
+    reg_by_athlete = {}
+    for r in registrations:
+        aid = r.get("athlete_id")
+        if aid:
+            reg_by_athlete.setdefault(aid, []).append({
+                "race_code": r.get("race_code"),
+                "status": r.get("status"),
+            })
+
+    result = []
+    for a in athletes:
+        aid = str(a["_id"])
+        regs = reg_by_athlete.get(aid, [])
+        result.append({
+            "id": aid,
+            "email": a.get("email", ""),
+            "nombre": a.get("nombre", ""),
+            "apellidos": a.get("apellidos", ""),
+            "telefono": a.get("telefono", ""),
+            "sexo": a.get("sexo", ""),
+            "nacionalidad": a.get("nacionalidad", ""),
+            "ciudad_residencia": a.get("ciudad_residencia", ""),
+            "email_verified": a.get("email_verified", False),
+            "created_at": a.get("created_at").isoformat() if a.get("created_at") else None,
+            "claimed_results": a.get("claimed_results", []),
+            "registrations": regs,
+            "inscribed": len(regs) > 0,
+            "talla_camiseta": a.get("talla_camiseta", ""),
+            "tipo_sangre": a.get("tipo_sangre", ""),
+        })
+
+    inscribed = sum(1 for r in result if r["inscribed"])
+    return {
+        "athletes": result,
+        "stats": {
+            "total": len(result),
+            "inscribed": inscribed,
+            "not_inscribed": len(result) - inscribed,
+            "verified": sum(1 for r in result if r["email_verified"]),
+        }
+    }

@@ -17,6 +17,7 @@ import FinancesManagement from '../components/FinancesManagement';
 import UserManagement from '../components/UserManagement';
 import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
+import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -32,6 +33,7 @@ const TAB_PERMISSIONS = {
   'users': 'users',
   'emails': 'emails',
   'results-2026': 'athletes', // Same permission as athletes
+  'athlete-profiles': 'athletes', // Same permission as athletes
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
@@ -234,6 +236,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">2026</span>
               </TabsTrigger>
             )}
+            {/* 11. Perfiles de Atletas */}
+            {hasAccess('athlete-profiles') && (
+              <TabsTrigger value="athlete-profiles" className="flex items-center gap-2" data-testid="tab-athlete-profiles">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Perfiles</span>
+                <span className="sm:hidden">Perfiles</span>
+              </TabsTrigger>
+            )}
             {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -321,6 +331,12 @@ export default function AdminPage() {
           {hasAccess('results-2026') && (
             <TabsContent value="results-2026">
               <ClaimedResultsManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('athlete-profiles') && (
+            <TabsContent value="athlete-profiles">
+              <AthleteProfilesManagement />
             </TabsContent>
           )}
         </Tabs>
