@@ -386,6 +386,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Admin Perfiles — Activar cuenta y establecer contraseña** (09 Junio 2026)
+  - En Admin → Perfiles, columna "Acciones": botón activar cuenta (✓, solo si email_verified=false) y botón nueva contraseña (🔑, modal)
+  - Endpoints admin: `POST /api/athletes/admin/verify-account/{athlete_id}` (email_verified=true) y `POST /api/athletes/admin/set-password/{athlete_id}` (set password + activa cuenta, min 6 chars, reutiliza PBKDF2)
+  - Archivos: `backend/routes/athletes.py` (_verify_admin_token, AdminSetPasswordRequest, 2 endpoints), `frontend/src/components/AthleteProfilesManagement.jsx`
+  - Verificado por curl: activar ✓, set-password corta→400, set-password válida + login OK, sin token→401; UI por screenshot
+
+
 - [x] **Feature: Cambiar Contraseña desde Mi Perfil** (09 Junio 2026)
   - Nueva sección "Seguridad" en pestaña "Mis Datos" con formulario para cambiar contraseña (actual + nueva + confirmar, con toggle mostrar/ocultar)
   - Endpoint autenticado `POST /api/athletes/change-password` (re-verifica contraseña actual, valida min 6 chars y que sea diferente, reutiliza PBKDF2 hash_password/verify_password existentes — NO se migró a bcrypt para no romper hashes)

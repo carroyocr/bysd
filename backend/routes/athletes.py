@@ -1805,6 +1805,80 @@ async def admin_get_athlete_profiles(authorization: str = Header(None)):
     }
 
 
+def _verify_admin_token(authorization: str):
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+
+class AdminSetPasswordRequest(BaseModel):
+    new_password: str
+
+
+@router.post("/admin/verify-account/{athlete_id}")
+async def admin_verify_account(athlete_id: str, authorization: str = Header(None)):
+    """Admin: Activate (verify) an athlete account."""
+    from server import db as database
+    from bson import ObjectId
+
+    _verify_admin_token(authorization)
+
+    try:
+        oid = ObjectId(athlete_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    athlete = await database.athletes.find_one({"_id": oid})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    await database.athletes.update_one(
+        {"_id": oid},
+        {"$set": {
+            "email_verified": True,
+            "verification_code": None,
+            "verification_code_expires": None,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    return {"success": True, "message": "Cuenta activada", "email_verified": True}
+
+
+@router.post("/admin/set-password/{athlete_id}")
+async def admin_set_password(athlete_id: str, data: AdminSetPasswordRequest, authorization: str = Header(None)):
+    """Admin: Set a new password for an athlete account (also activates it)."""
+    from server import db as database
+    from bson import ObjectId
+
+    _verify_admin_token(authorization)
+
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+
+    try:
+        oid = ObjectId(athlete_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    athlete = await database.athletes.find_one({"_id": oid})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    await database.athletes.update_one(
+        {"_id": oid},
+        {"$set": {
+            "password_hash": hash_password(data.new_password),
+            "email_verified": True,
+            "reset_code": None,
+            "reset_code_expires": None,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+    return {"success": True, "message": "Contraseña actualizada"}
+
+
 # ==================== ADMIN: EMAIL COMPOSER ====================
 
 class EmailRecipientFilter(BaseModel):

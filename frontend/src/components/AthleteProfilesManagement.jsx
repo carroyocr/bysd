@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
   Search, Users, UserCheck, UserX, Loader2, Download, ArrowUpDown,
-  Mail, MailCheck, ClipboardList, ShieldCheck
+  Mail, MailCheck, ClipboardList, ShieldCheck, KeyRound, CheckCircle2, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -19,8 +19,41 @@ export default function AthleteProfilesManagement() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortField, setSortField] = useState('created_at');
   const [sortAsc, setSortAsc] = useState(false);
+  const [activatingId, setActivatingId] = useState(null);
+  const [pwdModal, setPwdModal] = useState(null); // athlete object
+  const [newPwd, setNewPwd] = useState('');
+  const [savingPwd, setSavingPwd] = useState(false);
 
   const token = localStorage.getItem('admin_token');
+
+  const activateAccount = async (athlete) => {
+    if (!window.confirm(`¿Activar la cuenta de ${athlete.nombre} ${athlete.apellidos}?`)) return;
+    setActivatingId(athlete.id);
+    try {
+      const res = await fetch(`${API_URL}/api/athletes/admin/verify-account/${athlete.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) { toast.success('Cuenta activada'); loadData(); }
+      else { const d = await res.json().catch(() => ({})); toast.error(d.detail || 'Error al activar'); }
+    } catch { toast.error('Error de conexión'); }
+    finally { setActivatingId(null); }
+  };
+
+  const saveNewPassword = async () => {
+    if (newPwd.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    setSavingPwd(true);
+    try {
+      const res = await fetch(`${API_URL}/api/athletes/admin/set-password/${pwdModal.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ new_password: newPwd }),
+      });
+      if (res.ok) { toast.success('Contraseña actualizada'); setPwdModal(null); setNewPwd(''); loadData(); }
+      else { const d = await res.json().catch(() => ({})); toast.error(d.detail || 'Error al actualizar'); }
+    } catch { toast.error('Error de conexión'); }
+    finally { setSavingPwd(false); }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -208,6 +241,7 @@ export default function AthleteProfilesManagement() {
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">País</th>
                   <SortHeader field="inscribed">Estado</SortHeader>
                   <SortHeader field="created_at">Registro</SortHeader>
+                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -245,11 +279,38 @@ export default function AthleteProfilesManagement() {
                     <td className="px-3 py-2.5 text-gray-500 text-xs">
                       {a.created_at ? new Date(a.created_at).toLocaleDateString('es-DO') : '—'}
                     </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center justify-end gap-1">
+                        {!a.email_verified && (
+                          <Button
+                            size="sm" variant="ghost"
+                            onClick={() => activateAccount(a)}
+                            disabled={activatingId === a.id}
+                            className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Activar cuenta"
+                            data-testid={`activate-btn-${a.id}`}
+                          >
+                            {activatingId === a.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <CheckCircle2 className="w-4 h-4" />}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => { setPwdModal(a); setNewPwd(''); }}
+                          className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Crear nueva contraseña"
+                          data-testid={`set-password-btn-${a.id}`}
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-3 py-8 text-center text-gray-400">
                       No se encontraron atletas
                     </td>
                   </tr>
@@ -259,6 +320,41 @@ export default function AthleteProfilesManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Set Password Modal */}
+      {pwdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="set-password-modal">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Nueva contraseña</h3>
+              </div>
+              <button onClick={() => setPwdModal(null)} className="text-gray-400 hover:text-gray-600" data-testid="close-password-modal">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">
+              Establecer una nueva contraseña para <strong>{pwdModal.nombre} {pwdModal.apellidos}</strong> ({pwdModal.email}). La cuenta también quedará activada.
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder="Mínimo 6 caracteres"
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                data-testid="new-password-modal-input"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setPwdModal(null)} data-testid="cancel-password-modal-btn">Cancelar</Button>
+              <Button onClick={saveNewPassword} disabled={savingPwd} className="bg-blue-600 hover:bg-blue-700" data-testid="confirm-password-modal-btn">
+                {savingPwd && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Guardar Contraseña
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
