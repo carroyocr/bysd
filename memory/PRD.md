@@ -386,6 +386,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Cambiar Contraseña desde Mi Perfil** (09 Junio 2026)
+  - Nueva sección "Seguridad" en pestaña "Mis Datos" con formulario para cambiar contraseña (actual + nueva + confirmar, con toggle mostrar/ocultar)
+  - Endpoint autenticado `POST /api/athletes/change-password` (re-verifica contraseña actual, valida min 6 chars y que sea diferente, reutiliza PBKDF2 hash_password/verify_password existentes — NO se migró a bcrypt para no romper hashes)
+  - Archivos: `backend/routes/athletes.py` (ChangePasswordRequest + change_password), `frontend/src/pages/MyProfilePage.jsx`
+  - Verificado por curl: contraseña incorrecta→400, cambio exitoso→login con nueva OK→revertido a password123; UI por screenshot
+
+
 - [x] **Feature: Lista de Espera por Cupo Máximo + Sección Inscritos en Corredores** (08 Junio 2026)
   - Nuevo campo `max_participants` (default 120) en config de carrera, editable en Admin → Carrera ("Máximo de Participantes")
   - Nueva plantilla de email `athlete_waitlist_confirmation` ("Registro en Lista de Espera - Atleta") en `email_templates.py`

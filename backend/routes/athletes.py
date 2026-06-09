@@ -64,6 +64,10 @@ class ResetPasswordRequest(BaseModel):
     code: str
     new_password: str
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class UpdateProfileRequest(BaseModel):
     nombre: Optional[str] = None
     apellidos: Optional[str] = None
@@ -541,6 +545,41 @@ async def reset_password(data: ResetPasswordRequest):
     )
     
     return {"success": True, "message": "Contraseña actualizada"}
+
+
+@router.post("/change-password")
+async def change_password(data: ChangePasswordRequest, authorization: str = Header(None)):
+    """Change password while authenticated (requires current password)"""
+    from server import db as database
+    from bson import ObjectId
+
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+
+    athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+
+    # Verify current password
+    if not verify_password(data.current_password, athlete.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+
+    if verify_password(data.new_password, athlete.get("password_hash", "")):
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe ser diferente a la actual")
+
+    await database.athletes.update_one(
+        {"_id": athlete["_id"]},
+        {"$set": {
+            "password_hash": hash_password(data.new_password),
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+
+    return {"success": True, "message": "Contraseña actualizada correctamente"}
 
 
 # ==================== PROFILE ENDPOINTS ====================

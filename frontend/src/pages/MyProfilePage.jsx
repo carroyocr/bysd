@@ -89,6 +89,10 @@ export default function MyProfilePage() {
   const [activeTab, setActiveTab] = useState('profile');
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
+  const [showPwdForm, setShowPwdForm] = useState(false);
+  const [pwdData, setPwdData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [showPwdValues, setShowPwdValues] = useState(false);
   
   // Search 2026
   const [searchTerm, setSearchTerm] = useState('');
@@ -352,7 +356,26 @@ export default function MyProfilePage() {
     finally { setLoading(false); }
   };
 
-  // ===== SEARCH & CLAIM 2026 =====
+  const handleChangePassword = async () => {
+    if (!pwdData.current_password || !pwdData.new_password) { toast.error('Completa todos los campos'); return; }
+    if (pwdData.new_password.length < 6) { toast.error('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+    if (pwdData.new_password !== pwdData.confirm_password) { toast.error('Las contraseñas no coinciden'); return; }
+    setPwdLoading(true);
+    try {
+      const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/change-password`, {
+        current_password: pwdData.current_password,
+        new_password: pwdData.new_password,
+      });
+      if (ok) {
+        toast.success('Contraseña actualizada correctamente');
+        setPwdData({ current_password: '', new_password: '', confirm_password: '' });
+        setShowPwdForm(false);
+      } else {
+        toast.error(data.detail || 'Error al cambiar la contraseña');
+      }
+    } catch { toast.error('Error de conexion'); }
+    finally { setPwdLoading(false); }
+  };
   const handleSearch2026 = async () => {
     if (!searchTerm || searchTerm.length < 2) { toast.error('Ingresa al menos 2 caracteres'); return; }
     setSearching(true);
@@ -964,6 +987,49 @@ export default function MyProfilePage() {
                         <div><Label className="text-muted-foreground text-xs">Personalizacion BIB</Label><p className="font-medium uppercase">{athlete.personalizacion_camiseta || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Como se entero</Label><p className="font-medium">{athlete.como_se_entero || '-'}</p></div>
                       </div>
+                    </div>
+
+                    {/* Security / Change Password */}
+                    <div className="pt-6 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-primary" />
+                          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Seguridad</h4>
+                        </div>
+                        {!showPwdForm && (
+                          <Button variant="outline" size="sm" onClick={() => setShowPwdForm(true)} data-testid="open-change-password-btn">
+                            <Lock className="w-4 h-4 mr-2" />Cambiar Contraseña
+                          </Button>
+                        )}
+                      </div>
+                      {showPwdForm && (
+                        <div className="mt-4 space-y-4 max-w-md" data-testid="change-password-form">
+                          <div className="space-y-2">
+                            <Label>Contraseña actual</Label>
+                            <Input type={showPwdValues ? 'text' : 'password'} value={pwdData.current_password} onChange={e => setPwdData({...pwdData, current_password: e.target.value})} data-testid="current-password-input" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Nueva contraseña</Label>
+                            <Input type={showPwdValues ? 'text' : 'password'} value={pwdData.new_password} onChange={e => setPwdData({...pwdData, new_password: e.target.value})} data-testid="new-password-input" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Confirmar nueva contraseña</Label>
+                            <Input type={showPwdValues ? 'text' : 'password'} value={pwdData.confirm_password} onChange={e => setPwdData({...pwdData, confirm_password: e.target.value})} data-testid="confirm-password-input" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={() => setShowPwdValues(!showPwdValues)} className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground">
+                              {showPwdValues ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              {showPwdValues ? 'Ocultar' : 'Mostrar'} contraseñas
+                            </button>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <Button size="sm" onClick={handleChangePassword} disabled={pwdLoading} data-testid="save-password-btn">
+                              {pwdLoading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Actualizar Contraseña
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setShowPwdForm(false); setPwdData({ current_password: '', new_password: '', confirm_password: '' }); }} data-testid="cancel-password-btn">Cancelar</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
