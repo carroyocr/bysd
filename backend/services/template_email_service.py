@@ -48,9 +48,10 @@ async def get_template_by_id(db, template_id: str) -> Optional[Dict]:
 async def send_templated_email(
     to_email: str,
     subject: str,
-    html_content: str
+    html_content: str,
+    is_plain: bool = False
 ) -> bool:
-    """Send an email with rendered HTML content"""
+    """Send an email with rendered HTML content (or plain text if is_plain=True)"""
     
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         print("Gmail credentials not configured")
@@ -62,7 +63,7 @@ async def send_templated_email(
         msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
         msg['To'] = to_email
         
-        part = MIMEText(html_content, 'html', 'utf-8')
+        part = MIMEText(html_content, 'plain' if is_plain else 'html', 'utf-8')
         msg.attach(part)
         
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:

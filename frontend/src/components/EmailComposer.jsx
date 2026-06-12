@@ -41,6 +41,7 @@ export default function EmailComposer() {
   const [showPreview, setShowPreview] = useState(false);
   const [showRecipients, setShowRecipients] = useState(false);
   const [raceConfigs, setRaceConfigs] = useState([]);
+  const [plainText, setPlainText] = useState(false);
   const editorRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
@@ -51,7 +52,9 @@ export default function EmailComposer() {
 
   useEffect(() => {
     fetch(`${API_URL}/api/race-config/all`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json()).then(data => setRaceConfigs(data || [])).catch(() => {});
+      .then(r => r.json())
+      .then(data => setRaceConfigs(Array.isArray(data) ? data : (data?.races || [])))
+      .catch(() => {});
   }, [token]);
 
   const loadRecipients = useCallback(async () => {
@@ -89,7 +92,7 @@ export default function EmailComposer() {
       const res = await fetch(`${API_URL}/api/athletes/admin/email-preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject, content }),
+        body: JSON.stringify({ subject, content, plain_text: plainText }),
       });
       const data = await res.json();
       setPreviewHtml(data.html);
@@ -115,6 +118,7 @@ export default function EmailComposer() {
       const body = {
         subject,
         content,
+        plain_text: plainText,
         recipients: {
           filter_type: filterType,
           race_code: filterType === 'inscribed' ? raceCode : null,
@@ -182,7 +186,7 @@ export default function EmailComposer() {
                   data-testid="race-select"
                 >
                   <option value="">Todas las carreras</option>
-                  {raceConfigs.map(rc => (
+                  {(Array.isArray(raceConfigs) ? raceConfigs : []).map(rc => (
                     <option key={rc.code} value={rc.code}>{rc.name}</option>
                   ))}
                 </select>
@@ -279,6 +283,16 @@ export default function EmailComposer() {
                 <p className="text-xs text-gray-400 mt-1.5">
                   Las variables (ej. {'{{nombre}}'}) se reemplazan por los datos de cada destinatario al enviar.
                 </p>
+                <label className="flex items-center gap-2 mt-3 cursor-pointer select-none" data-testid="plain-text-toggle">
+                  <input
+                    type="checkbox"
+                    checked={plainText}
+                    onChange={(e) => setPlainText(e.target.checked)}
+                    className="w-4 h-4 accent-[#E8772E]"
+                  />
+                  <span className="text-sm text-gray-700">Enviar en formato de texto plano</span>
+                  <span className="text-xs text-gray-400">(sin estilos ni colores)</span>
+                </label>
               </div>
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-2 text-sm text-gray-500">

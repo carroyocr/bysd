@@ -11,6 +11,7 @@ import jwt
 import logging
 import os
 import random
+import re
 
 router = APIRouter(prefix="/athletes", tags=["athletes"])
 
@@ -1890,10 +1891,12 @@ class AdminEmailRequest(BaseModel):
     subject: str
     content: str
     recipients: EmailRecipientFilter
-    
+    plain_text: bool = False
+
 class AdminEmailPreviewRequest(BaseModel):
     subject: str
     content: str
+    plain_text: bool = False
 
 
 @router.post("/admin/email-recipients")
@@ -2001,6 +2004,27 @@ def _wrap_email_html(subject: str, content: str) -> str:
 """
 
 
+def _html_to_plain(html: str) -> str:
+    """Convert simple HTML (from the WYSIWYG editor) to readable plain text."""
+    if not html:
+        return ""
+    text = html
+    # Block/break elements -> newlines
+    text = re.sub(r'(?i)<\s*br\s*/?\s*>', '\n', text)
+    text = re.sub(r'(?i)</\s*(p|div|h[1-6])\s*>', '\n', text)
+    text = re.sub(r'(?i)<\s*li[^>]*>', '\n- ', text)
+    text = re.sub(r'(?i)</\s*(ul|ol)\s*>', '\n', text)
+    # Strip all remaining tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Decode common HTML entities
+    replacements = {'&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'"}
+    for ent, char in replacements.items():
+        text = text.replace(ent, char)
+    # Collapse excessive blank lines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 @router.post("/admin/email-preview")
 async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
     """Admin: Preview email as it would appear (with sample variable values)"""
@@ -2019,6 +2043,13 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
     }
     preview_subject = _personalize_email(data.subject, sample)
     preview_content = _personalize_email(data.content, sample)
+
+    if data.plain_text:
+        plain = _html_to_plain(preview_content)
+        # Wrap in <pre> just for on-screen display (the real email is plain text)
+        html = f'<div style="padding:24px;font-family:monospace;white-space:pre-wrap;color:#1f2937;font-size:14px;">{plain}</div>'
+        return {"html": html, "subject": preview_subject, "plain_text": True}
+
     html = _wrap_email_html(preview_subject, preview_content)
     return {"html": html, "subject": preview_subject}
 
@@ -2048,9 +2079,14 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
         # Substitute merge variables per recipient (subject + content)
         personalized_subject = _personalize_email(data.subject, r)
         personalized_content = _personalize_email(data.content, r)
-        html = _wrap_email_html(personalized_subject, personalized_content)
+        if data.plain_text:
+            body = _html_to_plain(personalized_content)
+        else:
+            body = _wrap_email_html(personalized_subject, personalized_content)
         try:
-            success = await send_templated_email(r["email"], personalized_subject, html)
+            success = await send_templated_email(
+                r["email"], personalized_subject, body, is_plain=data.plain_text
+            )
             if success:
                 sent += 1
             else:
@@ -2064,6 +2100,7 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
         "subject": data.subject,
         "filter_type": data.recipients.filter_type,
         "race_code": data.recipients.race_code,
+        "plain_text": data.plain_text,
         "total_recipients": len(recipients),
         "sent": sent,
         "failed": failed,
