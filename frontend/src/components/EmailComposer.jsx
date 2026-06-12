@@ -50,6 +50,28 @@ export default function EmailComposer() {
     if (editorRef.current) editorRef.current.insertVariable(tag);
   };
 
+  const downloadResultsCsv = (results) => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Correo', 'Nombre', 'Estado', 'Detalle'];
+    const rows = results.map(r => [
+      esc(r.email),
+      esc(r.nombre_completo),
+      esc(r.success ? 'Enviado' : 'Fallido'),
+      esc(r.error || ''),
+    ].join(','));
+    const csv = '\uFEFF' + [header.map(esc).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    a.download = `resultado-envio-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     fetch(`${API_URL}/api/race-config/all`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
@@ -133,6 +155,9 @@ export default function EmailComposer() {
       const data = await res.json();
       if (data.success) {
         toast.success(`Correo enviado: ${data.sent} exitosos, ${data.failed} fallidos`);
+        if (Array.isArray(data.results) && data.results.length > 0) {
+          downloadResultsCsv(data.results);
+        }
       } else {
         toast.error(data.detail || 'Error al enviar');
       }

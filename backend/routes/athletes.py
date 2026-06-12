@@ -2057,8 +2057,9 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
 @router.post("/admin/send-email")
 async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(None)):
     """Admin: Send personalized email to filtered recipients"""
+    import asyncio
     from server import db as database
-    from services.template_email_service import send_templated_email
+    from services.template_email_service import send_bulk_emails_sync
 
     try:
         token = authorization.replace("Bearer ", "") if authorization else ""
@@ -2073,27 +2074,35 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     if not recipients:
         raise HTTPException(status_code=400, detail="No hay destinatarios")
 
-    sent = 0
-    failed = 0
+    # Build per-recipient personalized messages
+    messages = []
+    recipient_by_email = {}
     for r in recipients:
-        # Substitute merge variables per recipient (subject + content)
         personalized_subject = _personalize_email(data.subject, r)
         personalized_content = _personalize_email(data.content, r)
         if data.plain_text:
             body = _html_to_plain(personalized_content)
         else:
             body = _wrap_email_html(personalized_subject, personalized_content)
-        try:
-            success = await send_templated_email(
-                r["email"], personalized_subject, body, is_plain=data.plain_text
-            )
-            if success:
-                sent += 1
-            else:
-                failed += 1
-        except Exception as e:
-            logging.warning(f"Failed to send email to {r['email']}: {e}")
-            failed += 1
+        messages.append({"to_email": r["email"], "subject": personalized_subject, "body": body})
+        recipient_by_email[r["email"]] = r
+
+    # Send using a single SMTP connection (avoids Gmail login throttling) in a worker thread
+    send_results = await asyncio.to_thread(send_bulk_emails_sync, messages, data.plain_text)
+
+    sent = sum(1 for x in send_results if x["success"])
+    failed = len(send_results) - sent
+
+    # Enrich results with recipient name for the CSV
+    results = []
+    for x in send_results:
+        r = recipient_by_email.get(x["email"], {})
+        results.append({
+            "email": x["email"],
+            "nombre_completo": r.get("nombre_completo", ""),
+            "success": x["success"],
+            "error": x["error"],
+        })
 
     # Log the send
     await database.email_log.insert_one({
@@ -2107,4 +2116,4 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
         "sent_at": datetime.now(timezone.utc),
     })
 
-    return {"success": True, "sent": sent, "failed": failed, "total": len(recipients)}
+    return {"success": True, "sent": sent, "failed": failed, "total": len(recipients), "results": results}

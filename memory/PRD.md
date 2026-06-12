@@ -386,6 +386,14 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Fix + Feature: Envío masivo confiable + CSV de resultados** (12 Junio 2026)
+  - CAUSA RAÍZ de fallos (91 ok / 51 fallidos): el código abría una conexión SMTP + login a Gmail por CADA correo → Gmail aplica throttling tras ~90 logins seguidos
+  - Nueva `send_bulk_emails_sync` (template_email_service.py): UNA sola conexión SMTP, reconexión cada 50 envíos y ante caídas, throttle 0.1s, captura motivo de error por destinatario. Ejecutada en hilo (asyncio.to_thread)
+  - `admin_send_email` ahora devuelve `results` (email, nombre, success, error)
+  - Frontend (EmailComposer.jsx): al terminar el envío descarga automáticamente CSV `resultado-envio-*.csv` (Correo, Nombre, Estado, Detalle) con BOM UTF-8
+  - Verificado por curl: envío manual devuelve results array; smoke test UI OK
+
+
 - [x] **Feature: Admin Perfiles — Activar cuenta y establecer contraseña** (09 Junio 2026)
   - En Admin → Perfiles, columna "Acciones": botón activar cuenta (✓, solo si email_verified=false) y botón nueva contraseña (🔑, modal)
   - Endpoints admin: `POST /api/athletes/admin/verify-account/{athlete_id}` (email_verified=true) y `POST /api/athletes/admin/set-password/{athlete_id}` (set password + activa cuenta, min 6 chars, reutiliza PBKDF2)

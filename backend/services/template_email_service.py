@@ -6,14 +6,91 @@ Centralized service for rendering and sending templated emails
 import smtplib
 import os
 import re
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
 GMAIL_USER = os.environ.get("GMAIL_USER")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
 BASE_URL = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+
+
+def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False) -> List[Dict[str, Any]]:
+    """
+    Send many emails reusing a single SMTP connection (avoids Gmail login throttling).
+
+    messages: list of {"to_email", "subject", "body"}
+    Returns per-recipient results: [{"email", "success", "error"}]
+
+    - Reconnects every RECONNECT_EVERY messages and whenever the connection drops.
+    - Small delay between sends to respect Gmail rate limits.
+    """
+    results: List[Dict[str, Any]] = []
+
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        return [{"email": m["to_email"], "success": False, "error": "Credenciales de correo no configuradas"} for m in messages]
+
+    RECONNECT_EVERY = 50
+    server = None
+    subtype = 'plain' if is_plain else 'html'
+
+    def _connect():
+        s = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30)
+        s.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        return s
+
+    try:
+        for idx, m in enumerate(messages):
+            to_email = m["to_email"]
+            try:
+                # (Re)connect if needed
+                if server is None or (idx > 0 and idx % RECONNECT_EVERY == 0):
+                    if server is not None:
+                        try:
+                            server.quit()
+                        except Exception:
+                            pass
+                    server = _connect()
+
+                msg = MIMEMultipart('alternative')
+                msg['Subject'] = m["subject"]
+                msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+                msg['To'] = to_email
+                msg.attach(MIMEText(m["body"], subtype, 'utf-8'))
+                server.sendmail(GMAIL_USER, to_email, msg.as_string())
+                results.append({"email": to_email, "success": True, "error": ""})
+
+            except (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, OSError) as conn_err:
+                # Connection issue: try a single reconnect + resend before failing
+                try:
+                    server = _connect()
+                    msg = MIMEMultipart('alternative')
+                    msg['Subject'] = m["subject"]
+                    msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+                    msg['To'] = to_email
+                    msg.attach(MIMEText(m["body"], subtype, 'utf-8'))
+                    server.sendmail(GMAIL_USER, to_email, msg.as_string())
+                    results.append({"email": to_email, "success": True, "error": ""})
+                except Exception as retry_err:
+                    results.append({"email": to_email, "success": False, "error": f"Conexión: {retry_err}"})
+                    server = None  # force reconnect next iteration
+            except smtplib.SMTPRecipientsRefused:
+                results.append({"email": to_email, "success": False, "error": "Dirección rechazada por el servidor"})
+            except Exception as ex:
+                results.append({"email": to_email, "success": False, "error": str(ex)})
+
+            # Throttle to avoid Gmail rate limiting
+            time.sleep(0.1)
+    finally:
+        if server is not None:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+    return results
 
 
 def render_template(template_str: str, data: Dict[str, Any]) -> str:
