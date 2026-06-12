@@ -1942,7 +1942,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
     # Athletes-based filters
     athletes = await database.athletes.find(
         {}, {"_id": 1, "email": 1, "nombre": 1, "apellidos": 1}
-    ).to_list(500)
+    ).sort("_id", 1).to_list(500)
 
     def build_athlete(a, source):
         nombre = a.get("nombre", "") or ""

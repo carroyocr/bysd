@@ -7,7 +7,7 @@ import { Textarea } from './ui/textarea';
 import { RichTextEditor } from './RichTextEditor';
 import {
   Send, Eye, Users, UserCheck, UserX, HandHelping, Mail, Loader2,
-  AtSign, X, ChevronDown, History, CheckCircle2, XCircle
+  AtSign, X, ChevronDown, History, CheckCircle2, XCircle, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -62,6 +62,27 @@ export default function EmailComposer() {
 
   const insertVariable = (tag) => {
     if (editorRef.current) editorRef.current.insertVariable(tag);
+  };
+
+  const downloadRecipientsCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['#', 'Correo', 'Nombre'];
+    const rows = recipients.map((r, i) => [
+      i + 1,
+      esc(r.email),
+      esc(r.nombre_completo || ''),
+    ].join(','));
+    const csv = '\uFEFF' + [header.map(esc).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    a.download = `orden-destinatarios-${filterType}-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const downloadResultsCsv = (results) => {
@@ -262,10 +283,20 @@ export default function EmailComposer() {
                   <span>{recipients.length} destinatario(s)</span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${showRecipients ? 'rotate-180' : ''}`} />
                 </button>
+                <Button
+                  size="sm" variant="outline"
+                  onClick={downloadRecipientsCsv}
+                  className="w-full mt-2 text-xs"
+                  data-testid="export-recipients-btn"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Exportar orden de envío (CSV)
+                </Button>
                 {showRecipients && (
                   <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                     {recipients.map((r, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs text-gray-600 py-1 border-b border-gray-50">
+                        <span className="text-gray-400 w-6 shrink-0 text-right">{i + 1}.</span>
                         <Mail className="w-3 h-3 text-gray-400 shrink-0" />
                         <span className="truncate">{r.email}</span>
                       </div>
