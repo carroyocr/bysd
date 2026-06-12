@@ -386,6 +386,12 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Historial de Envíos en Admin → Enviar Correos** (12 Junio 2026)
+  - Endpoint `GET /api/athletes/admin/email-history` (últimos 100 de email_log, más recientes primero, con filter_label)
+  - Panel colapsable en EmailComposer.jsx: tabla Fecha, Asunto, Destinatarios, Total, Enviados, Fallidos, Formato; se recarga tras cada envío
+  - Verificado por curl (3 registros) + screenshot
+
+
 - [x] **Fix + Feature: Envío masivo confiable + CSV de resultados** (12 Junio 2026)
   - CAUSA RAÍZ de fallos (91 ok / 51 fallidos): el código abría una conexión SMTP + login a Gmail por CADA correo → Gmail aplica throttling tras ~90 logins seguidos
   - Nueva `send_bulk_emails_sync` (template_email_service.py): UNA sola conexión SMTP, reconexión cada 50 envíos y ante caídas, throttle 0.1s, captura motivo de error por destinatario. Ejecutada en hilo (asyncio.to_thread)

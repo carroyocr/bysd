@@ -2117,3 +2117,39 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     })
 
     return {"success": True, "sent": sent, "failed": failed, "total": len(recipients), "results": results}
+
+
+@router.get("/admin/email-history")
+async def admin_email_history(authorization: str = Header(None)):
+    """Admin: Get history of mass email sends (most recent first)."""
+    from server import db as database
+
+    try:
+        token = authorization.replace("Bearer ", "") if authorization else ""
+        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="No autorizado")
+
+    FILTER_LABELS = {
+        "all_athletes": "Todos los atletas",
+        "inscribed": "Inscritos a carrera",
+        "not_inscribed": "No inscritos",
+        "volunteers": "Voluntarios",
+        "manual": "Correos específicos",
+    }
+
+    logs = await database.email_log.find({}).sort("sent_at", -1).to_list(100)
+    history = []
+    for log in logs:
+        sent_at = log.get("sent_at")
+        history.append({
+            "subject": log.get("subject", ""),
+            "filter_type": log.get("filter_type", ""),
+            "filter_label": FILTER_LABELS.get(log.get("filter_type", ""), log.get("filter_type", "")),
+            "plain_text": log.get("plain_text", False),
+            "total_recipients": log.get("total_recipients", 0),
+            "sent": log.get("sent", 0),
+            "failed": log.get("failed", 0),
+            "sent_at": sent_at.isoformat() if hasattr(sent_at, "isoformat") else sent_at,
+        })
+    return {"history": history}

@@ -7,7 +7,7 @@ import { Textarea } from './ui/textarea';
 import { RichTextEditor } from './RichTextEditor';
 import {
   Send, Eye, Users, UserCheck, UserX, HandHelping, Mail, Loader2,
-  AtSign, X, ChevronDown
+  AtSign, X, ChevronDown, History, CheckCircle2, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -42,9 +42,23 @@ export default function EmailComposer() {
   const [showRecipients, setShowRecipients] = useState(false);
   const [raceConfigs, setRaceConfigs] = useState([]);
   const [plainText, setPlainText] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const editorRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/athletes/admin/email-history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setHistory(data.history || []);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const insertVariable = (tag) => {
     if (editorRef.current) editorRef.current.insertVariable(tag);
@@ -158,6 +172,7 @@ export default function EmailComposer() {
         if (Array.isArray(data.results) && data.results.length > 0) {
           downloadResultsCsv(data.results);
         }
+        loadHistory();
       } else {
         toast.error(data.detail || 'Error al enviar');
       }
@@ -347,6 +362,80 @@ export default function EmailComposer() {
           </Card>
         </div>
       </div>
+
+      {/* Send History */}
+      <Card data-testid="email-history">
+        <CardHeader className="pb-3">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full flex items-center justify-between"
+            data-testid="toggle-history"
+          >
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="w-4 h-4 text-[#E8772E]" />
+              Historial de Envíos
+              {history.length > 0 && (
+                <Badge variant="outline" className="ml-1">{history.length}</Badge>
+              )}
+            </CardTitle>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+          </button>
+        </CardHeader>
+        {showHistory && (
+          <CardContent>
+            {history.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Aún no se han enviado correos.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="history-table">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-500 uppercase border-b">
+                      <th className="py-2 pr-3">Fecha</th>
+                      <th className="py-2 pr-3">Asunto</th>
+                      <th className="py-2 pr-3">Destinatarios</th>
+                      <th className="py-2 pr-3">Total</th>
+                      <th className="py-2 pr-3">Enviados</th>
+                      <th className="py-2 pr-3">Fallidos</th>
+                      <th className="py-2">Formato</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {history.map((h, i) => (
+                      <tr key={i} className="hover:bg-gray-50" data-testid={`history-row-${i}`}>
+                        <td className="py-2.5 pr-3 text-gray-500 text-xs whitespace-nowrap">
+                          {h.sent_at ? new Date(h.sent_at).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
+                        </td>
+                        <td className="py-2.5 pr-3 max-w-[260px] truncate">{h.subject || '—'}</td>
+                        <td className="py-2.5 pr-3 text-gray-600">{h.filter_label}</td>
+                        <td className="py-2.5 pr-3 font-medium">{h.total_recipients}</td>
+                        <td className="py-2.5 pr-3">
+                          <span className="inline-flex items-center gap-1 text-green-600">
+                            <CheckCircle2 className="w-3.5 h-3.5" />{h.sent}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pr-3">
+                          {h.failed > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-red-500">
+                              <XCircle className="w-3.5 h-3.5" />{h.failed}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">0</span>
+                          )}
+                        </td>
+                        <td className="py-2.5">
+                          <Badge variant="outline" className="text-xs">
+                            {h.plain_text ? 'Texto plano' : 'HTML'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* Preview Modal */}
       {showPreview && (
