@@ -358,6 +358,9 @@ app.include_router(email_templates_router, prefix="/api")
 from routes.athletes import router as athletes_router
 app.include_router(athletes_router, prefix="/api")
 
+from routes.tshirt import router as tshirt_router
+app.include_router(tshirt_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

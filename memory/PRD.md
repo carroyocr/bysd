@@ -386,6 +386,15 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Votación de Diseños de Camiseta** (19 Junio 2026)
+  - Página pública `/vota-camiseta` (en menú "Vota la Camiseta"): carrusel de propuestas con imagen, nombre, "Postulada por X", contador de votos y botón votar; debajo gráfico de ranking con barras
+  - Voto anónimo por dispositivo (localStorage `tshirt_voter_id`): un voto por persona, se puede cambiar (upsert)
+  - Imágenes almacenadas en base64 en MongoDB (deploy-safe), servidas vía `GET /api/tshirt/designs/{id}/image`
+  - Admin tab "Camisetas" (TshirtManagement.jsx): subir diseño (file + nombre + postulada por), grilla con votos y eliminar
+  - Endpoints (routes/tshirt.py): GET /designs, POST /vote, GET /designs/{id}/image, POST /admin/designs (multipart, JWT), DELETE /admin/designs/{id}
+  - Verificado por curl: upload+auth(401 sin token), voto, cambio de voto (1 por dispositivo), ranking, imagen servida; UI pública y admin por screenshot
+
+
 - [x] **Feature: Historial de Envíos en Admin → Enviar Correos** (12 Junio 2026)
   - Endpoint `GET /api/athletes/admin/email-history` (últimos 100 de email_log, más recientes primero, con filter_label)
   - Panel colapsable en EmailComposer.jsx: tabla Fecha, Asunto, Destinatarios, Total, Enviados, Fallidos, Formato; se recarga tras cada envío

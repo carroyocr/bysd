@@ -24,6 +24,7 @@ const staticNavLinks = [
   { href: '/voluntarios', label: 'Voluntarios' },
   { href: '/reglas', label: 'Reglas' },
   { href: '/logistica', label: 'Logística' },
+  { href: '/vota-camiseta', label: 'Vota la Camiseta' },
 ];
 
 const endNavLinks = [

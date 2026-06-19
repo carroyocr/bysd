@@ -29,6 +29,7 @@ import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
 import MyProfilePage from './pages/MyProfilePage';
+import TshirtVotePage from './pages/TshirtVotePage';
 import './App.css';
 
 export default function App() {
@@ -75,6 +76,8 @@ export default function App() {
                     <Route path="/comunidad/:raceCode" element={<ComunidadPage />} />
                     <Route path="/enviar-animo/:bib" element={<EnviarAnimoPage />} />
                     <Route path="/encuesta" element={<SurveyPage />} />
+                    {/* T-shirt design voting */}
+                    <Route path="/vota-camiseta" element={<TshirtVotePage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
                     {/* Cancel Registration */}

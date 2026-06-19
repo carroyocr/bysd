@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -19,6 +19,7 @@ import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
 import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
 import EmailComposer from '../components/EmailComposer';
+import TshirtManagement from '../components/TshirtManagement';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -36,6 +37,7 @@ const TAB_PERMISSIONS = {
   'results-2026': 'athletes', // Same permission as athletes
   'athlete-profiles': 'athletes', // Same permission as athletes
   'email-composer': 'emails', // Same permission as emails
+  'tshirt': 'config', // T-shirt voting management (config permission)
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
@@ -254,6 +256,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">Enviar</span>
               </TabsTrigger>
             )}
+            {/* 13. Camisetas */}
+            {hasAccess('tshirt') && (
+              <TabsTrigger value="tshirt" className="flex items-center gap-2" data-testid="tab-tshirt">
+                <Shirt className="w-4 h-4" />
+                <span className="hidden sm:inline">Camisetas</span>
+                <span className="sm:hidden">Camisetas</span>
+              </TabsTrigger>
+            )}
             {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -353,6 +363,12 @@ export default function AdminPage() {
           {hasAccess('email-composer') && (
             <TabsContent value="email-composer">
               <EmailComposer />
+            </TabsContent>
+          )}
+
+          {hasAccess('tshirt') && (
+            <TabsContent value="tshirt">
+              <TshirtManagement />
             </TabsContent>
           )}
         </Tabs>
