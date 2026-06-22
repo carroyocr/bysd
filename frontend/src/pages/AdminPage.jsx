@@ -153,9 +153,9 @@ export default function AdminPage() {
           </Button>
         </div>
 
-        {/* Tabs Navigation */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex flex-wrap gap-1 h-auto lg:inline-flex">
+        {/* Tabs Navigation - Sidebar layout */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex flex-col lg:flex-row gap-6 items-start">
+          <TabsList className="flex flex-col w-full lg:w-60 shrink-0 h-auto gap-1 bg-muted/40 p-2 rounded-xl [&>*]:w-full [&>*]:justify-start">
             {/* 1. Control */}
             {hasAccess('control') && (
               <TabsTrigger value="control" className="flex items-center gap-2">
@@ -190,6 +190,13 @@ export default function AdminPage() {
                 <UserPlus className="w-4 h-4" />
                 <span className="hidden sm:inline">Atletas</span>
                 <span className="sm:hidden">Atletas</span>
+              </TabsTrigger>
+            )}
+            {/* 4b. Finanzas */}
+            {hasAccess('finances') && (
+              <TabsTrigger value="finances" className="flex items-center gap-2" data-testid="tab-finances">
+                <Wallet className="w-4 h-4" />
+                <span>Finanzas</span>
               </TabsTrigger>
             )}
             {/* 5. Voluntarios (antes Asignaciones) */}
@@ -282,6 +289,7 @@ export default function AdminPage() {
             )}
           </TabsList>
 
+          <div className="flex-1 min-w-0 w-full">
           {hasAccess('control') && (
             <TabsContent value="control">
               <RaceControlPanel embedded={true} />
@@ -371,6 +379,7 @@ export default function AdminPage() {
               <TshirtManagement />
             </TabsContent>
           )}
+          </div>
         </Tabs>
       </div>
     </div>

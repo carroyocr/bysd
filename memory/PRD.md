@@ -386,6 +386,12 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Fix + UI: Tab Finanzas visible + Sidebar de navegación Admin** (22 Junio 2026)
+  - El tab Finanzas tenía TabsContent pero le faltaba el TabsTrigger → no se veía. Agregado trigger (data-testid="tab-finances", ícono Wallet)
+  - Reestructurado AdminPage: barra de tabs superior → sidebar vertical izquierdo (un acceso por línea). Tabs orientation=vertical, TabsList flex-col w-60, contenido en div flex-1
+  - Verificado por screenshot (Finanzas visible y funcional, sidebar con todos los accesos)
+
+
 - [x] **Feature: Votación de Diseños de Camiseta** (19 Junio 2026)
   - Página pública `/vota-camiseta` (en menú "Vota la Camiseta"): carrusel de propuestas con imagen, nombre, "Postulada por X", contador de votos y botón votar; debajo gráfico de ranking con barras
   - [ACTUALIZADO 22 Jun] Voto AHORA requiere login de atleta (un voto por perfil, antes era anónimo por dispositivo — cambiado por uso de bots). Vote keyed por athlete_id (JWT atleta). Se puede cambiar (upsert)
