@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Shirt, Upload, Trash2, Loader2, User, Vote, ImageIcon } from 'lucide-react';
+import { Shirt, Upload, Trash2, Loader2, User, Vote, ImageIcon, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,6 +14,7 @@ export default function TshirtManagement() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [resetting, setResetting] = useState(false);
   const [name, setName] = useState('');
   const [proposedBy, setProposedBy] = useState('');
   const [file, setFile] = useState(null);
@@ -83,6 +84,28 @@ export default function TshirtManagement() {
     }
   };
 
+  const handleReset = async () => {
+    if (!window.confirm('¿Reiniciar TODA la votación? Se eliminarán todos los votos (los diseños se conservan). Esta acción no se puede deshacer.')) return;
+    setResetting(true);
+    try {
+      const res = await fetch(`${API_URL}/api/tshirt/admin/reset-votes`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        toast.success(`Votación reiniciada (${d.deleted} votos eliminados)`);
+        loadDesigns();
+      } else {
+        toast.error('Error al reiniciar la votación');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="tshirt-management">
       {/* Upload form */}
@@ -119,11 +142,23 @@ export default function TshirtManagement() {
       {/* Designs list */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Shirt className="w-4 h-4 text-[#E8772E]" />
-            Diseños publicados
-            <span className="text-xs font-normal text-muted-foreground ml-1">({designs.length}) · {totalVotes} votos totales</span>
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shirt className="w-4 h-4 text-[#E8772E]" />
+              Diseños publicados
+              <span className="text-xs font-normal text-muted-foreground ml-1">({designs.length}) · {totalVotes} votos totales</span>
+            </CardTitle>
+            <Button
+              size="sm" variant="outline"
+              onClick={handleReset}
+              disabled={resetting || totalVotes === 0}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              data-testid="reset-votes-btn"
+            >
+              {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+              Reiniciar votación
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -388,11 +388,12 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 - [x] **Feature: Votación de Diseños de Camiseta** (19 Junio 2026)
   - Página pública `/vota-camiseta` (en menú "Vota la Camiseta"): carrusel de propuestas con imagen, nombre, "Postulada por X", contador de votos y botón votar; debajo gráfico de ranking con barras
-  - Voto anónimo por dispositivo (localStorage `tshirt_voter_id`): un voto por persona, se puede cambiar (upsert)
-  - Imágenes almacenadas en base64 en MongoDB (deploy-safe), servidas vía `GET /api/tshirt/designs/{id}/image`
-  - Admin tab "Camisetas" (TshirtManagement.jsx): subir diseño (file + nombre + postulada por), grilla con votos y eliminar
-  - Endpoints (routes/tshirt.py): GET /designs, POST /vote, GET /designs/{id}/image, POST /admin/designs (multipart, JWT), DELETE /admin/designs/{id}
-  - Verificado por curl: upload+auth(401 sin token), voto, cambio de voto (1 por dispositivo), ranking, imagen servida; UI pública y admin por screenshot
+  - [ACTUALIZADO 22 Jun] Voto AHORA requiere login de atleta (un voto por perfil, antes era anónimo por dispositivo — cambiado por uso de bots). Vote keyed por athlete_id (JWT atleta). Se puede cambiar (upsert)
+  - Página muestra aviso "Inicia sesión para votar" si no hay sesión; botón redirige a /mi-perfil
+  - Admin: botón "Reiniciar votación" (POST /api/tshirt/admin/reset-votes, elimina votos, conserva diseños)
+  - Imágenes en base64 en MongoDB (deploy-safe), servidas vía `GET /api/tshirt/designs/{id}/image`
+  - Endpoints (routes/tshirt.py): GET /designs (auth opcional→my_vote), POST /vote (requiere JWT atleta), GET /designs/{id}/image, POST/DELETE /admin/designs (JWT admin), POST /admin/reset-votes (JWT admin)
+  - Verificado por curl: voto sin sesión→401, voto con atleta, cambio de voto (1 por perfil), reset (admin) + 401 sin token
 
 
 - [x] **Feature: Historial de Envíos en Admin → Enviar Correos** (12 Junio 2026)

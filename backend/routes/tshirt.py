@@ -2,7 +2,7 @@
 T-shirt design voting: public carousel + voting + admin upload.
 Images are stored as base64 in MongoDB (deploy-safe, no static folder dependency).
 """
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form, Response, Query
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form, Response
 from typing import Optional
 from datetime import datetime, timezone
 import base64
@@ -21,9 +21,10 @@ def _verify_admin(authorization: Optional[str]):
 
 
 @router.get("/designs")
-async def get_designs(voter_id: Optional[str] = Query(None)):
-    """Public: list t-shirt designs with vote counts, ranking and the current voter's choice."""
+async def get_designs(authorization: Optional[str] = Header(None)):
+    """Public: list t-shirt designs with vote counts, ranking and the current athlete's choice."""
     from server import db as database
+    from routes.athletes import verify_athlete_token
 
     designs = await database.tshirt_designs.find(
         {}, {"image_data": 0}
@@ -34,12 +35,16 @@ async def get_designs(voter_id: Optional[str] = Query(None)):
     agg = await database.tshirt_votes.aggregate(pipeline).to_list(1000)
     counts = {c["_id"]: c["count"] for c in agg}
 
-    # Current voter's choice
+    # Current athlete's choice (if logged in)
     my_vote = None
-    if voter_id:
-        v = await database.tshirt_votes.find_one({"voter_id": voter_id})
-        if v:
-            my_vote = v["design_id"]
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            payload = verify_athlete_token(authorization.replace("Bearer ", ""))
+            v = await database.tshirt_votes.find_one({"athlete_id": payload["athlete_id"]})
+            if v:
+                my_vote = v["design_id"]
+        except Exception:
+            my_vote = None
 
     items = []
     for d in designs:
@@ -83,14 +88,23 @@ async def get_design_image(design_id: str):
 
 
 @router.post("/vote")
-async def vote(payload: dict):
-    """Public: cast or change a vote. One vote per voter_id (anonymous device id)."""
+async def vote(payload: dict, authorization: Optional[str] = Header(None)):
+    """Authenticated: cast or change a vote. One vote per athlete profile."""
     from server import db as database
     from bson import ObjectId
+    from routes.athletes import verify_athlete_token
 
-    voter_id = (payload.get("voter_id") or "").strip()
+    # Require athlete login
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Debes iniciar sesión para votar")
+    try:
+        token_payload = verify_athlete_token(authorization.replace("Bearer ", ""))
+    except Exception:
+        raise HTTPException(status_code=401, detail="Sesión inválida. Inicia sesión de nuevo")
+    athlete_id = token_payload["athlete_id"]
+
     design_id = (payload.get("design_id") or "").strip()
-    if not voter_id or not design_id:
+    if not design_id:
         raise HTTPException(status_code=400, detail="Datos incompletos")
 
     try:
@@ -101,9 +115,9 @@ async def vote(payload: dict):
     if not design:
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
 
-    # Upsert: one vote per voter, changing the design overwrites the previous choice
+    # Upsert: one vote per athlete, changing the design overwrites the previous choice
     await database.tshirt_votes.update_one(
-        {"voter_id": voter_id},
+        {"athlete_id": athlete_id},
         {"$set": {"design_id": design_id, "updated_at": datetime.now(timezone.utc)},
          "$setOnInsert": {"created_at": datetime.now(timezone.utc)}},
         upsert=True
@@ -156,3 +170,13 @@ async def delete_design(design_id: str, authorization: Optional[str] = Header(No
         raise HTTPException(status_code=404, detail="Diseño no encontrado")
     await database.tshirt_votes.delete_many({"design_id": design_id})
     return {"success": True}
+
+
+@router.post("/admin/reset-votes")
+async def reset_votes(authorization: Optional[str] = Header(None)):
+    """Admin: reset all votes (keeps the designs)."""
+    from server import db as database
+
+    _verify_admin(authorization)
+    res = await database.tshirt_votes.delete_many({})
+    return {"success": True, "deleted": res.deleted_count}

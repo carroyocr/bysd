@@ -1,35 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '../components/ui/carousel';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Shirt, Check, Trophy, Loader2, User, Vote } from 'lucide-react';
+import { Shirt, Check, Trophy, Loader2, User, Vote, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Anonymous per-device voter id (persists in localStorage, allows changing the vote)
-const getVoterId = () => {
-  let id = localStorage.getItem('tshirt_voter_id');
-  if (!id) {
-    id = (crypto.randomUUID ? crypto.randomUUID() : `v-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    localStorage.setItem('tshirt_voter_id', id);
-  }
-  return id;
-};
-
 const RANK_COLORS = ['bg-amber-400', 'bg-gray-300', 'bg-orange-400'];
 
 export default function TshirtVotePage() {
+  const navigate = useNavigate();
   const [designs, setDesigns] = useState([]);
   const [myVote, setMyVote] = useState(null);
   const [totalVotes, setTotalVotes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(null);
-  const voterId = getVoterId();
+  const token = localStorage.getItem('athlete_token');
+  const isLoggedIn = !!token;
 
   const loadDesigns = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/api/tshirt/designs?voter_id=${encodeURIComponent(voterId)}`);
+      const res = await fetch(`${API_URL}/api/tshirt/designs`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       const data = await res.json();
       setDesigns(data.designs || []);
       setMyVote(data.my_vote || null);
@@ -39,25 +34,35 @@ export default function TshirtVotePage() {
     } finally {
       setLoading(false);
     }
-  }, [voterId]);
+  }, [token]);
 
   useEffect(() => { loadDesigns(); }, [loadDesigns]);
 
   const handleVote = async (designId) => {
+    if (!isLoggedIn) {
+      toast.error('Inicia sesión en tu perfil para votar');
+      navigate('/mi-perfil');
+      return;
+    }
     if (myVote === designId) return;
     setVoting(designId);
     try {
       const res = await fetch(`${API_URL}/api/tshirt/vote`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voter_id: voterId, design_id: designId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ design_id: designId }),
       });
       if (res.ok) {
         toast.success(myVote ? '¡Voto actualizado!' : '¡Gracias por votar!');
         await loadDesigns();
       } else {
         const d = await res.json().catch(() => ({}));
-        toast.error(d.detail || 'No se pudo registrar el voto');
+        if (res.status === 401) {
+          toast.error('Tu sesión expiró. Inicia sesión de nuevo');
+          navigate('/mi-perfil');
+        } else {
+          toast.error(d.detail || 'No se pudo registrar el voto');
+        }
       }
     } catch {
       toast.error('Error de conexión');
@@ -80,8 +85,17 @@ export default function TshirtVotePage() {
           <h1 className="font-display text-4xl sm:text-5xl text-foreground mb-3">Vota la Camiseta</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Estas son las propuestas de camiseta para el evento. Vota por tu favorita —
-            puedes cambiar tu decisión en cualquier momento. Solo cuenta un voto por persona.
+            puedes cambiar tu decisión en cualquier momento. Solo cuenta un voto por perfil.
           </p>
+          {!loading && !isLoggedIn && (
+            <div className="mt-5 inline-flex items-center gap-3 bg-secondary border border-border rounded-xl px-4 py-3" data-testid="login-notice">
+              <LogIn className="w-5 h-5 text-primary shrink-0" />
+              <span className="text-sm text-foreground">Inicia sesión en tu perfil para poder votar.</span>
+              <Button size="sm" onClick={() => navigate('/mi-perfil')} className="bg-primary hover:bg-primary/90" data-testid="go-login-btn">
+                Iniciar sesión
+              </Button>
+            </div>
+          )}
         </div>
 
         {loading ? (
