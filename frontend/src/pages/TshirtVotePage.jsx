@@ -113,7 +113,7 @@ export default function TshirtVotePage() {
             <div className="px-12 mb-12">
               <Carousel opts={{ loop: true }} data-testid="tshirt-carousel">
                 <CarouselContent>
-                  {designs.map((d) => {
+                  {ranking.map((d) => {
                     const isMyVote = myVote === d.id;
                     return (
                       <CarouselItem key={d.id}>
