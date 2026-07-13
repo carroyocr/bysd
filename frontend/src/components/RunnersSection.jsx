@@ -127,7 +127,7 @@ export default function RunnersSection() {
             ) : (
               <>
                 {/* Stat Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <Card className="bg-card border-border shadow-soft" data-testid="stat-total">
                     <CardContent className="p-5 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -172,6 +172,18 @@ export default function RunnersSection() {
                       <div>
                         <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.plazas_disponibles ?? 0}</p>
                         <p className="text-sm text-muted-foreground mt-1">Plazas disponibles</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-card border-border shadow-soft" data-testid="stat-espera">
+                    <CardContent className="p-5 flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-6 h-6 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.waitlist_total ?? 0}</p>
+                        <p className="text-sm text-muted-foreground mt-1">En lista de espera</p>
                       </div>
                     </CardContent>
                   </Card>
