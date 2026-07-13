@@ -30,6 +30,7 @@ import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
 import MyProfilePage from './pages/MyProfilePage';
 import TshirtVotePage from './pages/TshirtVotePage';
+import AlbumPage from './pages/AlbumPage';
 import './App.css';
 
 export default function App() {
@@ -78,6 +79,8 @@ export default function App() {
                     <Route path="/encuesta" element={<SurveyPage />} />
                     {/* T-shirt design voting */}
                     <Route path="/vota-camiseta" element={<TshirtVotePage />} />
+                    {/* Event photo album 2026 */}
+                    <Route path="/album" element={<AlbumPage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
                     {/* Cancel Registration */}

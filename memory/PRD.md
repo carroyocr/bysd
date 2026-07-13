@@ -386,6 +386,13 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 ### 🟢 Completado Recientemente
 
+- [x] **Feature: Álbum de Fotos del Evento 2026 + ocultar Camiseta** (13 Julio 2026)
+  - Página `/album` (menú "Fotos 2026"): carrusel autoplay (3.5s) con prev/next + pausar/reproducir + descargar foto actual; vista múltiple (cuadrícula) con selección múltiple y descarga ZIP
+  - Backend (routes/album.py): scrape del álbum público de Google Photos (regex `/pw/` URLs, 300 fotos, cache 30min), GET /api/album/photos, GET /api/album/download?u= (proxy single, valida URL anti-SSRF), POST /api/album/download-zip (máx 60)
+  - Camiseta oculta del menú (link removido de Navigation.jsx; ruta /vota-camiseta se conserva)
+  - Verificado por curl: 300 fotos, descarga single (1.4MB JPEG), URL inválida→400, ZIP con originales; UI carrusel+grid por screenshot
+
+
 - [x] **Fix + UI: Tab Finanzas visible + Sidebar de navegación Admin** (22 Junio 2026)
   - El tab Finanzas tenía TabsContent pero le faltaba el TabsTrigger → no se veía. Agregado trigger (data-testid="tab-finances", ícono Wallet)
   - Reestructurado AdminPage: barra de tabs superior → sidebar vertical izquierdo (un acceso por línea). Tabs orientation=vertical, TabsList flex-col w-60, contenido en div flex-1

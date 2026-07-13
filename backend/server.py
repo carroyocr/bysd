@@ -361,6 +361,9 @@ app.include_router(athletes_router, prefix="/api")
 from routes.tshirt import router as tshirt_router
 app.include_router(tshirt_router, prefix="/api")
 
+from routes.album import router as album_router
+app.include_router(album_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
