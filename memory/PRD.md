@@ -388,7 +388,7 @@ El sistema soporta múltiples carreras con aislamiento de datos:
 
 - [x] **Feature: Álbum de Fotos del Evento 2026 + ocultar Camiseta** (13 Julio 2026)
   - Página `/album` (menú "Fotos 2026"): carrusel autoplay (3.5s) con prev/next + pausar/reproducir + descargar foto actual; vista múltiple (cuadrícula) con selección múltiple y descarga ZIP
-  - Backend (routes/album.py): scrape del álbum público de Google Photos (regex `/pw/` URLs, 300 fotos, cache 30min), GET /api/album/photos, GET /api/album/download?u= (proxy single, valida URL anti-SSRF), POST /api/album/download-zip (máx 60)
+  - Backend (routes/album.py): scrape del álbum público de Google Photos con PAGINACIÓN vía RPC `snAcKc` (batchexecute) → 709 fotos completas (antes solo 300 del primer lote). Cache 30min. GET /api/album/photos, GET /api/album/download?u= (proxy single, valida URL anti-SSRF), POST /api/album/download-zip (máx 60)
   - Camiseta oculta del menú (link removido de Navigation.jsx; ruta /vota-camiseta se conserva)
   - Verificado por curl: 300 fotos, descarga single (1.4MB JPEG), URL inválida→400, ZIP con originales; UI carrusel+grid por screenshot
 
