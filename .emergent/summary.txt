@@ -1,149 +1,156 @@
-<analysis>Here is the handover summary for the next agent:
-
-**original_problem_statement:** 
-The user wants to continue iterating on the Backyard Ultra Santo Domingo tracking and profile system. The requests include: resolving a production bug with legacy cheer messages, implementing dynamic OpenGraph meta tags for WhatsApp link sharing, automatically linking 2026 historical race results to athletes upon registration using an Excel mapping, building admin panels to manage these historical results and view athlete profiles, creating a new Campeonato Satélite por Equipos information page, fixing corrupted athlete names dynamically on PDF certificates, adding conditional UI and email logic based on payment timelines, and finally, building an Admin Mass Email Composer with rich text formatting and merge variables.
+<analysis>**original_problem_statement:** 
+The user requested continuous iteration on the Backyard Ultra Santo Domingo application. Core requests included: adding a Rich Text WYSIWYG editor and merge tags () to the Admin Email Composer, creating a Waitlist logic depending on a race's max capacity, modifying the UI layout of the Admin dashboard to a left sidebar, fixing mass email sending failures (SMTP throttling), creating a T-Shirt voting page (later hidden) with ranking, adding an automated Google Photos Album scraper for the 2026 race (Carousel + Grid + ZIP downloads), and finally, building a Capacitaciones (Trainings) module for admins to manage training sessions and for athletes to enroll (with PDF attendance lists).
 
 PRODUCT REQUIREMENTS:
 1. All emails sent from the system must use the existing HTML template module () and maintain a consistent format.
 2. All new pages or UI components must adhere to the project's existing design system.
 
-**User's preferred language**: Spanish (You MUST respond in the user's preferred language only)
+**User's preferred language**: Spanish (You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only). 
+*Instruction for Next Agent: Respond ONLY in Spanish.*
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB application for a race event. It handles athlete registration, race claiming (historical and active), certificates generation, admin management (race config, athletes, volunteers, results), and custom email templates.
+A full-stack React/FastAPI/MongoDB application for managing a race event. It handles athlete registration, waitlisting, certificates, admin management (race configs, finances, volunteers, results), custom mass email campaigns (with plain text toggle and history), a dynamic Google Photos scraper for event galleries, and a training sessions (Capacitaciones) module with PDF attendance generation.
 
 **Last working item**: 
-- Last item agent was working: The agent was actively building the Admin Mass Email Composer (). Basic UI and backend endpoints were created. The user just requested to add rich text formatting capabilities (bold, line breaks) and dynamic merge variables (like athlete name ) to the composer so personalized emails can be drafted.
-- Status: IN PROGRESS
-- Agent Testing Done: N
-- Which testing method agent to use?: Both (Frontend testing agent for the UI rich text editor, and curl/python script to ensure HTML payloads and merge variables are processed correctly by the backend email service).
-- User Testing Done: N
+    - Last item agent was working: Building the Capacitaciones (Trainings) module. The agent created the backend API (), Admin panel (), and an Athlete Profile tab (). Includes PDF generation for attendance using .
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y
+    - Which testing method agent to use?: Frontend testing agent/ curl / screenshot tool.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**: 
-There are no pending bug fixes at this moment.
-
-**In progress Task List**:
-Task 1: Add Rich Text and Merge Variables to Admin Email Composer (P0)
-
- Task Detail:
-  - Task 1: 
-     - Where to resume: Modify  to include an HTML formatting toolbar (bold, line breaks) and instructions/buttons to insert merge tags like . Update the backend endpoints  and  in  to properly process and substitute these merge tags per recipient using the .
-     - What will be achieved with this?: Admins will be able to send formatted, highly personalized mass emails to filtered groups of athletes directly from the dashboard.
-     - Status: IN PROGRESS
+There are no major bugs pending. The project is highly stable.
+  Issue 1: Validate Capacitaciones Module
+     - Attempted fixes: N/A
+     - Next debug checklist: Check if Admin can create trainings and athletes can register in their profiles. Verify  generates valid PDFs.
+     - Why fix this issue and what will be achieved with the fix?: Finalize the user's last requested feature.
+     - Status: USER VERIFICATION PENDING
+     - Is recurring issue? N
      - Should Test frontend/backend/both after fix?: Both
-     - Blocked on something: None
+     - Blocked on other issue: None
 
-**Upcoming and Future Tasks**:
-Upcoming Tasks:
-- Refactor : Break this massive file down into smaller routers (, , ). (P1)
-- Decompose : Break down this god component into smaller, reusable UI components. (P1)
-- Remove temporary diagnostic endpoint (). (P2)
+**In progress Task List**: 
+None currently in progress, all immediate requests were completed.
 
-Future Tasks:
-- Add push or email notifications when an athlete receives a new cheer message.
+**Upcoming and Future Tasks**
+  Upcoming Tasks:
+  - Refactor : Break this massive file (>2000 lines) down into smaller routers (, , ). (P1)
+  - Decompose : Break down this god component (>1400 lines) into smaller, reusable UI components. (P1)
+  - Configure Google Photos URL via Admin: Allow the admin to edit the Google Photos Album URL directly in the Race Configuration panel instead of keeping it hardcoded. (P1)
+  
+  Future Tasks:
+  - Add push or email notifications when an athlete receives a new cheer message. (P2)
+  - Remove temporary diagnostic endpoint (). (P2)
 
-**Completed work in this session**:
-- Fixed legacy 2026 cheer messages bug in production by querying both  and  (ignoring ). (DONE)
-- Implemented CRACO middleware () for dynamic OpenGraph meta tags based on active race config. (DONE)
-- Auto-claim 2026 race results on athlete registration based on a provided email mapping, including manual claim anti-duplicate logic. (DONE)
-- Added Resultados 2026 admin management tab (). (DONE)
-- Added conditional Inscripciones Abiertas card in Home and reminder note in Mi Perfil based on  config. (DONE)
-- Created Campeonato Satélite por Equipos page from user's PDF, fixed accents, removed Garmin link from Home. (DONE)
-- Fixed PDF certificates name corruption dynamically using PyMuPDF () text replacement upon file serving, and fixed UTF-8 filename encoding for downloads. (DONE)
-- Added Cédula/Pasaporte to payment receipt and a conditional payment timeline note. (DONE)
-- Added Perfiles de Atletas admin management tab (). (DONE)
-- Implemented conditional payment reminder logic in registration confirmation email template. (DONE)
-- Created foundational UI and endpoints for Admin Email Composer. (DONE)
+**Completed work in this session**
+- Added Rich Text WYSIWYG () and merge tags to Admin Email Composer (, ). (DONE)
+- Added Inscritos (Registered athletes) UI in the Corredores page. (DONE)
+- Implemented automated Waitlist feature based on  config, Waitlist UI in Corredores page, and an Admin Promote to registered button. (DONE)
+- Added Athlete Change Password and Admin Set New Password / Activate Account functionalities. (DONE)
+- Fixed Mass Email Composer bugs:  crash, and SMTP throttling/rate limits (Implemented singleton connection reuse, sleep delays, and CSV export for error tracking). (DONE)
+- Moved Admin Navigation to a Left Vertical Sidebar and restored the missing Finances Tab. (DONE)
+- Created T-Shirt Voting Module (1 vote per athlete profile, Base64 image storage), later hidden from UI menu per user request. (DONE)
+- Built Google Photos Album page (, ), reverse-engineering Google's internal  RPC  to scrape and paginate all 709 photos, with ZIP download support. (DONE)
+- Built Capacitaciones (Trainings) module for Admins & Athletes, including PDF attendance list generation. (DONE)
 
-**Earlier issues found/mentioned but not fixed**:
-None
+**Earlier issues found/mentioned but not fixed**
+None. All reported bugs were successfully addressed.
 
-**Known issue recurrence from previous fork**:
-- Issue recurrence in previous fork: Out-of-memory error reported in older forks.
-- Recurrence count: 1
-- Status: BLOCKED (Mitigated by a larger machine previously, no recent occurrences).
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: Out-of-memory error reported in older forks.
+  - Recurrence count: 1
+  - Status: BLOCKED (Mitigated by a larger machine previously, no recent occurrences).
 
-**Code Architecture**:
+**Code Architecture**
 
 
-**Key Technical Concepts**:
-- Frontend: React, Vite/CRACO, Tailwind CSS.
-- Backend: Python 3, FastAPI.
+**Key Technical Concepts**
+- Frontend: React, Vite/CRACO, Tailwind CSS, Embla Carousel.
+- Backend: Python 3, FastAPI,  (PDFs).
 - Database: MongoDB.
-- Dynamic Middleware: Express middleware inside CRACO config to serve dynamic raw HTML for social media crawlers.
-- PDF Manipulation:  () is used to dynamically replace strings in static PDFs in-memory before returning them via FastAPI.
+- Custom Scraping: Uses direct HTTP calls + payload parsing to fetch photos from Google Photos without an official API key.
+- SMTP Throttling Fix: Reusing SMTP connection instance for bulk sending.
+- Rich Text Editor: Hand-rolled  component (React 19 broke compatibility with ).
 
-**key DB schema**:
-- : Core user profiles.
--  / : Active and historical race results.
--  / : Support messages.
-- : Global settings managing UI toggles and active races.
+**key DB schema**
+  - : {email, password_hash, _id}
+  -  / : {bib, race_code, status}
+  - : {max_participants, registration_cost, date, code}
+  - : Audit logs for SMTP blasts.
+  - : {name, date, cost, enrolled_athletes}
+  - : {image_base64, votes, name}
 
-**changes in tech stack**:
-- Integrated CRACO local dev server middleware () to intercept HTML requests for OpenGraph previews.
-- Deepened usage of  (PyMuPDF) for dynamic text replacement over PDF redactions.
+**changes in tech stack**
+  - Added  for generating PDF attendance lists.
+  - Rolled custom  Rich Text Editor because React 19 is incompatible with older editors like .
 
-**All files of reference**:
-1.  (Currently working on this).
-2.  (Contains the mass email endpoints to update).
-3.  (Created for WhatsApp dynamic previews).
-4.  (Contains the dynamic PDF generation logic).
-5.  (Updated with new tabs).
+**All files of reference**
+  -  (New Trainings API)
+  -  (New Admin tab for Trainings)
+  -  (New Athlete profile tab for Trainings)
+  -  (Google Photos scraper logic using RPC )
+  -  (Gallery UI with Carousel & ZIP downloads)
+  -  (Modified to use a Left Vertical Sidebar layout)
+  -  (Modified for bulk connection reuse)
+  -  (Contains updated test accounts)
 
-**Areas that need refactoring**:
-- : Contains >1700 lines. Must be split into Auth, Admin, and Profile routers.
-- : Contains >1300 lines of complex multi-view state logic. 
+**Areas that need refactoring**
+-  (Exceeds 2000 lines).
+-  (Exceeds 1400 lines).
 
-**key api endpoints**:
-- : Sends emails to filtered athlete lists.
-- : Generates a preview payload for the email composer.
-- : Dynamically fixes and serves PDF certificates.
--  & : Admin data fetching endpoints.
+**key api endpoints**
+- : Handles bulk SMTP processing.
+- : Retrieves Google Photos URLs via backend caching.
+- : Fetches all trainings.
+- : Downloads PDF attendance sheet.
 
-**Critical Info for New Agent**:
-1. **PRODUCTION ENVIRONMENT DEPLOYED**: The user has deployed this app to a live production environment. If user reports issues going forward, you MUST clarify if the issue is in Preview or Production. **You can only fix code in Preview**; the user is responsible for redeploying to Production.
-2. **Static vs Dynamic Assets**: The PDF certificates in the backend  folder are corrupt. DO NOT attempt to rewrite the static PDFs using  redactions, as these files do not sync to production. The established fix dynamically replaces the corrupt strings *at the endpoint level* when the file is served. Do not deviate from this pattern.
-3. **Emails**: Always use  to compile and send HTML emails.
+**Critical Info for New Agent**
+1. **PRODUCTION ENVIRONMENT IS LIVE**: The user has deployed this app to  (and ). The Preview environment DB is completely independent of the Production DB. If user complains about missing data or missing features, remind them they must redeploy the app from the Preview environment.
+2. **Google Photos API**: The gallery relies on reverse-engineering Google Photos' internal  RPC () using . Do NOT alter this logic unless it breaks, as it handles the pagination of albums beyond 300 photos without OAuth.
+3. **SMTP Bulk Send**: Bulk email explicitly establishes a single SMTP connection and sleeps slightly between messages. Do NOT revert this to 1-connection-per-email, as Gmail rate limits will block the sending after 90 messages.
 
-**documents and test reports created in this job**:
--  (Updated)
--  to  (Available)
+**documents and test reports created in this job**
+  -  (Updated regularly)
+  -  (Created, contains Admin credentials)
 
-**Last 10 User Messages and any pending HUMAN messages**:
-1. *User*: El cambio no funciona en producción.
-2. *Agent (Ask Human)*: Clarified that static PDFs don't deploy, proposed dynamic endpoint fix.
-3. *User*: 1 (Approved)
-4. *User*: En los datos falta incluir el número de pasaporte que sería 109560676. (Provided image)
-5. *User*: Incluye un mensaje adicional que el pago no es requerido sino hasta 4 meses antes de la carrera...
-6. *User*: vamos a agrega una opción para poder consultar los atletas registrados en la sección de administrativo...
-7. *User*: (System Notif) Production deployment detected.
-8. *User*: El mensaje de confirmación no es consistente, Debería indicar, felicidades tu registro... (Provided conditional timeline rules for email).
-9. *User*: Vamos a agregar una sección en Adminsitración que me permita escribir correos a los perfiles...
-10. *User*: **(PENDING)** incluye la variables para agregar al correo, como nombre, agregar negitras, saltos de linea.
+**Last 10 User Messages and any pending HUMAN messages**
+ - *User*: Added Capacitaciones feature request: Admin creates trainings (name, date, cost, program), athletes register in their profile, Admin downloads PDF attendance list with signature blanks. (COMPLETED - VERIFICATION PENDING)
+ - *User*: Request to re-order the T-shirt voting page by highest votes. (COMPLETED)
+ - *User*: Request to hide T-Shirt voting page and instead create a Google Photos Album gallery with 700+ photos, carousel, and ZIP download. (COMPLETED)
+ - *User*: Admin UI tweaks - Sidebar navigation layout and reveal missing Finances Tab. (COMPLETED)
+ - *User*: T-Shirt voting requires Athlete Login due to bots. Max 1 vote per profile, allow changing votes, add Admin Reset button. (COMPLETED)
+ - *User*: Initial request to add a T-shirt Voting Page. (COMPLETED)
+ - *User*: Investigating 51 mass emails failing. Agent diagnosed Gmail SMTP throttle. Added CSV error report, connection reuse, and Email history pane. (COMPLETED)
+ - *User*: Email Composer crash on Inscritos filter. Also requested Plain Text option. (COMPLETED)
+ - *User*: Requested Admin ability to Set Password and Activate Accounts for athletes manually. (COMPLETED)
+ - *User*: Requested Change Password functionality inside Athlete Profile. (COMPLETED)
 
 **Project Health Check:**
 - Broken: None
 - Mocked: None
 
-**3rd Party Integrations**:
-- SMTP (Gmail) — Uses standard environment variables, no Emergent Key required.
+**3rd Party Integrations**
+- Gmail SMTP - Requires User App Password.
+- Google Photos (Public Web Scraping via batchexecute RPC) - No Keys required.
 
-**Testing status**:
-- Testing agent used after significant changes: YES
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: None
+**Testing status**
+  - Testing agent used after significant changes: YES
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: 
+  - Known regressions: None
 
-**Credentials to test flow**:
+**Credentials to test flow:**
 - Admin Preview:  / 
 - Athlete Preview:  / 
+*(Available in )*
 
-**What agent forgot to execute**:
-The agent viewed the  component but did not implement the user's final request: adding a rich text editor (bold, line breaks) and merge variable logic () before the session ended. This should be your immediate next step.
+**What agent forgot to execute**
+The agent successfully executed all user requests. The final implemented feature Capacitaciones (Trainings) just needs user confirmation.
 
 **Debugging checklist for current issue**
-    Issue: Email Composer needs rich text formatting and merge variable support.
+    Issue: Verification of Capacitaciones Module
     Frontend files to check: 
-    -  (Implement rich text/HTML textarea and insert variable buttons).
+    - 
+    - 
     Backend files to check: 
-    -  (Ensure  safely receives HTML and parses variables using the template renderer before dispatching).</analysis>
+    - </analysis>

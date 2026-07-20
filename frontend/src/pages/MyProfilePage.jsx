@@ -6,9 +6,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import CapacitacionesTab from '../components/CapacitacionesTab';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -892,6 +893,7 @@ export default function MyProfilePage() {
               { key: 'profile', label: 'Mis Datos', icon: User },
               { key: 'races', label: 'Próximas Carreras', icon: Calendar },
               { key: 'history', label: 'Historial', icon: Trophy },
+              { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
               ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', icon: MessageCircle }] : []),
             ].map(tab => (
               <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'ghost'} onClick={() => setActiveTab(tab.key)} size="sm" data-testid={`tab-${tab.key}`}>
@@ -1404,6 +1406,11 @@ export default function MyProfilePage() {
                 </CardContent>
               </Card>
             </div>
+          )}
+
+          {/* ===== CAPACITACIONES TAB ===== */}
+          {activeTab === 'capacitaciones' && (
+            <CapacitacionesTab />
           )}
         </div>
       </PageContent>

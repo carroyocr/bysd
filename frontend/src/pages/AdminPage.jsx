@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -20,6 +20,7 @@ import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
 import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
 import EmailComposer from '../components/EmailComposer';
 import TshirtManagement from '../components/TshirtManagement';
+import CapacitacionesManagement from '../components/CapacitacionesManagement';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -38,6 +39,7 @@ const TAB_PERMISSIONS = {
   'athlete-profiles': 'athletes', // Same permission as athletes
   'email-composer': 'emails', // Same permission as emails
   'tshirt': 'config', // T-shirt voting management (config permission)
+  'capacitaciones': 'config', // Trainings management
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
@@ -271,6 +273,13 @@ export default function AdminPage() {
                 <span className="sm:hidden">Camisetas</span>
               </TabsTrigger>
             )}
+            {/* 14. Capacitaciones */}
+            {hasAccess('capacitaciones') && (
+              <TabsTrigger value="capacitaciones" className="flex items-center gap-2" data-testid="tab-capacitaciones">
+                <GraduationCap className="w-4 h-4" />
+                <span>Capacitaciones</span>
+              </TabsTrigger>
+            )}
             {/* 10. Usuarios */}
             {hasAccess('users') && (
               <TabsTrigger value="users" className="flex items-center gap-2">
@@ -377,6 +386,12 @@ export default function AdminPage() {
           {hasAccess('tshirt') && (
             <TabsContent value="tshirt">
               <TshirtManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('capacitaciones') && (
+            <TabsContent value="capacitaciones">
+              <CapacitacionesManagement />
             </TabsContent>
           )}
           </div>
