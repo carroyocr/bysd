@@ -25,7 +25,8 @@ registrations_collection = db["registrations"]
 verification_tokens_collection = db["verification_tokens"]
 
 # Constants
-UPLOAD_DIR = "/app/backend/static/participant_photos"
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_DIR = os.path.join(BACKEND_DIR, "static", "participant_photos")
 MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10MB max
 MIN_PHOTO_SIZE = 1 * 1024 * 1024   # 1MB min for high resolution
 
@@ -1140,7 +1141,7 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
 
 # ============== PAYMENT REMINDER & RECEIPT ==============
 
-RECEIPTS_UPLOAD_DIR = "/app/backend/uploads/receipts"
+RECEIPTS_UPLOAD_DIR = os.path.join(BACKEND_DIR, "uploads", "receipts")
 os.makedirs(RECEIPTS_UPLOAD_DIR, exist_ok=True)
 
 

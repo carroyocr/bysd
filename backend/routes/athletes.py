@@ -662,7 +662,9 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
     return {"success": True, "message": "Perfil actualizado"}
 
 
-ATHLETE_PHOTO_DIR = "/app/backend/static/athlete_photos"
+ATHLETE_PHOTO_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "athlete_photos"
+)
 os.makedirs(ATHLETE_PHOTO_DIR, exist_ok=True)
 
 @router.post("/upload-photo")
