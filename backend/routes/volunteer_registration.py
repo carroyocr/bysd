@@ -7,6 +7,15 @@ import string
 
 router = APIRouter(prefix="/volunteer-registration", tags=["volunteer-registration"])
 
+VALID_EVENTOS = ["carrera", "campeonato"]
+
+
+def evento_query(evento: str) -> dict:
+    """Mongo filter fragment by event. Legacy docs (no 'evento') count as 'carrera'."""
+    if evento == "campeonato":
+        return {"evento": "campeonato"}
+    return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
+
 
 class VerificationRequest(BaseModel):
     email: EmailStr
@@ -33,6 +42,9 @@ class VolunteerRegistrationData(BaseModel):
     
     # Slot preferences - list of slot IDs the volunteer is interested in
     slots_interes: Optional[List[int]] = None
+    
+    # Event the volunteer is registering for ('carrera' or 'campeonato')
+    evento: Optional[str] = "carrera"
     
     # Medical
     tipo_sangre: Optional[str] = None
@@ -116,16 +128,18 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
 
 
 @router.get("/available-slots")
-async def get_available_slots():
-    """Get available volunteer slots grouped by position and shift (one per turno)"""
+async def get_available_slots(evento: Optional[str] = None):
+    """Get available volunteer slots grouped by position and shift (one per turno).
+    Optionally filtered by event ('carrera' or 'campeonato')."""
     from server import db
     
     # Get active race for the event date
     active_race = await db.race_configurations.find_one({"is_active": True})
     race_date = active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
     
-    # Get all slots from the correct collection
-    slots = await db.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
+    # Get all slots from the correct collection, filtered by event
+    query = evento_query(evento) if evento in VALID_EVENTOS else {}
+    slots = await db.volunteer_assignments.find(query, {"_id": 0}).to_list(1000)
     
     # Group by position and turno
     positions = {}
@@ -501,7 +515,44 @@ async def get_volunteer_registrations(race_code: Optional[str] = None):
         {"_id": 0, "edit_token": 0}
     ).to_list(1000)
     
+    # Normalize evento for legacy registrations
+    for r in registrations:
+        if not r.get("evento"):
+            r["evento"] = "carrera"
+    
     return {"registrations": registrations, "count": len(registrations)}
+
+
+class UpdateEventoRequest(BaseModel):
+    evento: str
+
+
+@router.put("/admin/registrations/{email}/evento")
+async def update_volunteer_evento(email: str, request: UpdateEventoRequest, race_code: Optional[str] = None):
+    """Update the event a volunteer belongs to (admin only)"""
+    from server import db
+    
+    email = email.lower()
+    evento = request.evento if request.evento in VALID_EVENTOS else "carrera"
+    
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+    
+    existing = await db.volunteer_registrations.find_one({
+        "email": email,
+        "race_code": race_code
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+    
+    await db.volunteer_registrations.update_one(
+        {"email": email, "race_code": race_code},
+        {"$set": {"evento": evento, "updated_at": datetime.now(timezone.utc)}}
+    )
+    
+    return {"message": "Evento actualizado exitosamente", "evento": evento}
 
 
 @router.delete("/admin/registrations/{email}")

@@ -5,6 +5,17 @@ from datetime import datetime, timezone
 
 router = APIRouter(prefix="/volunteer-config", tags=["volunteer-config"])
 
+VALID_EVENTOS = ["carrera", "campeonato"]
+
+
+def evento_query(evento: str) -> dict:
+    """Build a Mongo query fragment for filtering by event.
+    Legacy documents without 'evento' are treated as 'carrera'."""
+    if evento == "campeonato":
+        return {"evento": "campeonato"}
+    # carrera (default) includes legacy docs without the field
+    return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
+
 
 class ShiftConfig(BaseModel):
     turno: str  # A, B, C, etc.
@@ -18,21 +29,40 @@ class PositionCreate(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
     turnos: List[ShiftConfig]
+    evento: str = "carrera"
 
 
 class PositionUpdate(BaseModel):
     nombre: Optional[str] = None
     descripcion: Optional[str] = None
     turnos: Optional[List[ShiftConfig]] = None
+    evento: Optional[str] = None
 
 
 @router.get("/positions")
-async def get_positions():
-    """Get all volunteer positions with their shifts configuration"""
+async def get_positions(evento: Optional[str] = None):
+    """Get all volunteer positions with their shifts configuration.
+    Optionally filtered by event ('carrera' or 'campeonato')."""
     from server import db
     
-    positions = await db.volunteer_positions.find({}, {"_id": 0}).to_list(100)
+    query = evento_query(evento) if evento in VALID_EVENTOS else {}
+    positions = await db.volunteer_positions.find(query, {"_id": 0}).to_list(100)
+    # Normalize evento for legacy docs
+    for p in positions:
+        if not p.get("evento"):
+            p["evento"] = "carrera"
     return {"positions": positions}
+
+
+async def _find_position(db, nombre: str, evento: str):
+    """Find a position by name + event, with legacy fallback for carrera."""
+    existing = await db.volunteer_positions.find_one({"nombre": nombre, "evento": evento})
+    if not existing and evento == "carrera":
+        existing = await db.volunteer_positions.find_one({
+            "nombre": nombre,
+            "$or": [{"evento": {"$exists": False}}, {"evento": None}]
+        })
+    return existing
 
 
 @router.post("/positions")
@@ -40,15 +70,18 @@ async def create_position(data: PositionCreate):
     """Create a new volunteer position with shifts"""
     from server import db
     
-    # Check if position already exists
-    existing = await db.volunteer_positions.find_one({"nombre": data.nombre})
+    evento = data.evento if data.evento in VALID_EVENTOS else "carrera"
+    
+    # Check if position already exists within the same event
+    existing = await _find_position(db, data.nombre, evento)
     if existing:
-        raise HTTPException(status_code=400, detail="Esta posición ya existe")
+        raise HTTPException(status_code=400, detail="Esta posición ya existe en este evento")
     
     position = {
         "nombre": data.nombre,
         "descripcion": data.descripcion,
         "turnos": [t.dict() for t in data.turnos],
+        "evento": evento,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
@@ -56,21 +89,24 @@ async def create_position(data: PositionCreate):
     await db.volunteer_positions.insert_one(position)
     
     # Generate slots for this position
-    await _regenerate_slots_for_position(db, data.nombre, data.turnos)
+    await _regenerate_slots_for_position(db, data.nombre, data.turnos, evento=evento)
     
     return {"message": "Posición creada exitosamente", "position": data.nombre}
 
 
 @router.put("/positions/{nombre}")
-async def update_position(nombre: str, data: PositionUpdate):
+async def update_position(nombre: str, data: PositionUpdate, evento: str = "carrera"):
     """Update a volunteer position"""
     from server import db
     
-    existing = await db.volunteer_positions.find_one({"nombre": nombre})
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    
+    existing = await _find_position(db, nombre, evento)
     if not existing:
         raise HTTPException(status_code=404, detail="Posición no encontrada")
     
-    update_data = {"updated_at": datetime.now(timezone.utc)}
+    update_data = {"updated_at": datetime.now(timezone.utc), "evento": evento}
     
     if data.nombre is not None:
         update_data["nombre"] = data.nombre
@@ -79,10 +115,10 @@ async def update_position(nombre: str, data: PositionUpdate):
     if data.turnos is not None:
         update_data["turnos"] = [t.dict() for t in data.turnos]
         # Regenerate slots when shifts change
-        await _regenerate_slots_for_position(db, nombre, data.turnos, data.nombre or nombre)
+        await _regenerate_slots_for_position(db, nombre, data.turnos, data.nombre or nombre, evento=evento)
     
     await db.volunteer_positions.update_one(
-        {"nombre": nombre},
+        {"nombre": existing["nombre"], "evento": existing.get("evento", evento)} if existing.get("evento") else {"nombre": nombre},
         {"$set": update_data}
     )
     
@@ -90,20 +126,23 @@ async def update_position(nombre: str, data: PositionUpdate):
 
 
 @router.delete("/positions/{nombre}")
-async def delete_position(nombre: str):
+async def delete_position(nombre: str, evento: str = "carrera"):
     """Delete a volunteer position and its slots"""
     from server import db
     
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    
     # Check if position exists
-    existing = await db.volunteer_positions.find_one({"nombre": nombre})
+    existing = await _find_position(db, nombre, evento)
     if not existing:
         raise HTTPException(status_code=404, detail="Posición no encontrada")
     
     # Delete position
-    await db.volunteer_positions.delete_one({"nombre": nombre})
+    await db.volunteer_positions.delete_one({"_id": existing["_id"]})
     
-    # Delete associated slots
-    await db.volunteer_assignments.delete_many({"puesto": nombre})
+    # Delete associated slots for this position within the event
+    await db.volunteer_assignments.delete_many({"puesto": nombre, **evento_query(evento)})
     
     return {"message": "Posición eliminada exitosamente"}
 
@@ -129,7 +168,8 @@ async def regenerate_all_slots():
             db, 
             position["nombre"], 
             turnos,
-            preserve_assignments=True
+            preserve_assignments=True,
+            evento=position.get("evento", "carrera")
         )
         total_slots += slots_created
     
@@ -239,16 +279,18 @@ async def import_from_existing():
     }
 
 
-async def _regenerate_slots_for_position(db, position_name: str, turnos: List[ShiftConfig], new_name: str = None, preserve_assignments: bool = False):
+async def _regenerate_slots_for_position(db, position_name: str, turnos: List[ShiftConfig], new_name: str = None, preserve_assignments: bool = False, evento: str = "carrera"):
     """Helper function to regenerate slots for a position"""
     
     target_name = new_name or position_name
+    ev_filter = evento_query(evento)
     
     if not preserve_assignments:
-        # Delete existing unassigned slots for this position
+        # Delete existing unassigned slots for this position within the event
         await db.volunteer_assignments.delete_many({
             "puesto": position_name,
-            "email_asignado": {"$in": [None, ""]}
+            "email_asignado": {"$in": [None, ""]},
+            **ev_filter
         })
     
     # Get max ID for new slots
@@ -262,11 +304,12 @@ async def _regenerate_slots_for_position(db, position_name: str, turnos: List[Sh
         # Get dia_tipo (default to "carrera" for backward compatibility)
         dia_tipo = turno_dict.get("dia_tipo", "carrera")
         
-        # Check existing slots for this position+shift+dia_tipo
+        # Check existing slots for this position+shift+dia_tipo within the event
         existing_count = await db.volunteer_assignments.count_documents({
             "puesto": target_name,
             "turno": turno_dict["turno"],
-            "dia_tipo": dia_tipo
+            "dia_tipo": dia_tipo,
+            **ev_filter
         })
         
         slots_to_create = turno_dict["slots_count"] - existing_count
@@ -280,6 +323,7 @@ async def _regenerate_slots_for_position(db, position_name: str, turnos: List[Sh
                 "hora_inicio": turno_dict["hora_inicio"],
                 "hora_fin": turno_dict["hora_fin"],
                 "dia_tipo": dia_tipo,
+                "evento": evento,
                 "email_asignado": None,
                 "nombre_asignado": None
             }

@@ -25,6 +25,12 @@ const formatTime12h = (time24) => {
   return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
 };
 
+// Event options (volunteer can choose which event to volunteer for)
+const EVENTO_OPTIONS = [
+  { value: "carrera", label: "Carrera Activa" },
+  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+];
+
 // Form steps for volunteers
 const STEPS = [
   { id: 'verify', title: 'Verificación', icon: Mail },
@@ -75,6 +81,7 @@ export default function VoluntarioRegistroPage() {
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
+  const [selectedEvento, setSelectedEvento] = useState('carrera'); // Event chosen by volunteer
   
   // Check for edit token in URL
   useEffect(() => {
@@ -117,6 +124,7 @@ export default function VoluntarioRegistroPage() {
           comentarios: data.comentarios || '',
         });
         setSelectedSlots(data.slots_interes || []);
+        setSelectedEvento(data.evento || 'carrera');
         setEmailVerified(true);
         toast.success('Datos cargados correctamente');
       } else {
@@ -210,17 +218,17 @@ export default function VoluntarioRegistroPage() {
   // Get current step ID for conditional rendering
   const currentStepId = activeSteps[currentStep]?.id || '';
 
-  // Load available slots when entering slots step
+  // Load available slots when entering slots step or when event changes
   useEffect(() => {
     if (currentStepId === 'slots') {
       loadAvailableSlots();
     }
-  }, [currentStepId]);
+  }, [currentStepId, selectedEvento]);
 
   const loadAvailableSlots = async () => {
     setLoadingSlots(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/available-slots`);
+      const response = await fetch(`${API_URL}/api/volunteer-registration/available-slots?evento=${selectedEvento}`);
       if (response.ok) {
         const data = await response.json();
         setAvailableSlots(data);
@@ -231,6 +239,13 @@ export default function VoluntarioRegistroPage() {
     } finally {
       setLoadingSlots(false);
     }
+  };
+
+  // Change the selected event and reset any chosen shifts (they belong to the previous event)
+  const handleEventoChange = (evento) => {
+    if (evento === selectedEvento) return;
+    setSelectedEvento(evento);
+    setSelectedSlots([]);
   };
 
   // Check if two time slots conflict
@@ -468,7 +483,8 @@ export default function VoluntarioRegistroPage() {
     try {
       const submitData = {
         ...formData,
-        slots_interes: selectedSlots
+        slots_interes: selectedSlots,
+        evento: selectedEvento
       };
       
       let response;
@@ -907,6 +923,33 @@ export default function VoluntarioRegistroPage() {
                   </div>
                 ) : (
                   <>
+                    {/* Event selector */}
+                    <div className="space-y-2" data-testid="volunteer-reg-event-selector">
+                      <Label className="text-sm font-semibold">¿Para qué evento deseas ser voluntario?</Label>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {EVENTO_OPTIONS.map((ev) => {
+                          const label = ev.value === 'carrera' ? (raceName || 'Carrera Activa') : ev.label;
+                          const active = selectedEvento === ev.value;
+                          return (
+                            <button
+                              key={ev.value}
+                              type="button"
+                              data-testid={`reg-event-${ev.value}`}
+                              onClick={() => handleEventoChange(ev.value)}
+                              className={`p-3 rounded-lg border-2 text-sm font-medium text-left transition-all ${
+                                active
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-gray-200 hover:border-primary/50 text-muted-foreground'
+                              }`}
+                            >
+                              {active && <Check className="w-4 h-4 inline mr-2" />}
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <p className="text-sm text-blue-800">
                         <Info className="w-4 h-4 inline mr-2" />

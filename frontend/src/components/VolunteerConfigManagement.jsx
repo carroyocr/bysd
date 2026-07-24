@@ -39,6 +39,12 @@ const DIA_TIPO_OPTIONS = [
   { value: "carrera_dia3", label: "Día 3 Carrera", color: "orange" }
 ];
 
+// Event options (top-level grouping)
+const EVENTOS = [
+  { value: "carrera", label: "Carrera Activa" },
+  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+];
+
 // Helper to get day type display info
 const getDiaTipoInfo = (diaTipo) => {
   const option = DIA_TIPO_OPTIONS.find(o => o.value === diaTipo);
@@ -52,6 +58,10 @@ export default function VolunteerConfigManagement() {
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Selected event (top-level grouping)
+  const [selectedEvento, setSelectedEvento] = useState('carrera');
+  const [raceName, setRaceName] = useState('');
   
   // New position form
   const [showNewForm, setShowNewForm] = useState(false);
@@ -79,16 +89,31 @@ export default function VolunteerConfigManagement() {
     loadRaceDate();
   }, []);
 
+  useEffect(() => {
+    loadPositions();
+    setShowNewForm(false);
+    setEditingPosition(null);
+    setEditData(null);
+  }, [selectedEvento]);
+
   const loadRaceDate = async () => {
     try {
       const response = await fetch(`${API_URL}/api/race-config/active`);
       if (response.ok) {
         const data = await response.json();
         setRaceDate(data.date);
+        setRaceName(data.name || data.race_name || 'Carrera Activa');
       }
     } catch (error) {
       console.error('Error loading race date:', error);
     }
+  };
+
+  // Label for the current 'carrera' event uses the active race name
+  const getEventoLabel = (value) => {
+    if (value === 'carrera') return raceName || 'Carrera Activa';
+    const opt = EVENTOS.find(e => e.value === value);
+    return opt ? opt.label : value;
   };
 
   // Calculate the date for a shift based on its start time
@@ -113,7 +138,7 @@ export default function VolunteerConfigManagement() {
   const loadPositions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions`);
+      const response = await fetch(`${API_URL}/api/volunteer-config/positions?evento=${selectedEvento}`);
       if (response.ok) {
         const data = await response.json();
         setPositions(data.positions || []);
@@ -184,7 +209,7 @@ export default function VolunteerConfigManagement() {
       const response = await fetch(`${API_URL}/api/volunteer-config/positions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPosition)
+        body: JSON.stringify({ ...newPosition, evento: selectedEvento })
       });
       
       if (response.ok) {
@@ -208,7 +233,7 @@ export default function VolunteerConfigManagement() {
     
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}`, {
+      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData)
@@ -234,7 +259,7 @@ export default function VolunteerConfigManagement() {
     if (!window.confirm(`¿Eliminar la posición "${nombre}" y todos sus slots?`)) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}`, {
+      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
         method: 'DELETE'
       });
       
@@ -417,10 +442,10 @@ export default function VolunteerConfigManagement() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold">Configuración de Turnos</h2>
-          <p className="text-muted-foreground">Administra las posiciones y turnos disponibles para voluntarios</p>
+          <p className="text-muted-foreground">Posiciones y turnos para: <span className="font-medium text-foreground">{getEventoLabel(selectedEvento)}</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {positions.length === 0 && (
+          {positions.length === 0 && selectedEvento === 'carrera' && (
             <Button variant="outline" onClick={importFromExisting}>
               <Download className="w-4 h-4 mr-2" />
               Importar Existentes
@@ -444,6 +469,25 @@ export default function VolunteerConfigManagement() {
             Nueva Posición
           </Button>
         </div>
+      </div>
+
+      {/* Event Selector (top-level grouping) */}
+      <div className="flex flex-wrap gap-2 border-b pb-3" data-testid="volunteer-event-selector">
+        {EVENTOS.map((ev) => (
+          <button
+            key={ev.value}
+            type="button"
+            data-testid={`event-tab-${ev.value}`}
+            onClick={() => setSelectedEvento(ev.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedEvento === ev.value
+                ? 'bg-primary text-white shadow'
+                : 'bg-muted text-muted-foreground hover:bg-muted/70'
+            }`}
+          >
+            {getEventoLabel(ev.value)}
+          </button>
+        ))}
       </div>
 
       {/* Stats */}
@@ -529,10 +573,12 @@ export default function VolunteerConfigManagement() {
               Crea posiciones y turnos para que los voluntarios puedan seleccionarlos al registrarse.
             </p>
             <div className="flex justify-center gap-2">
-              <Button variant="outline" onClick={importFromExisting}>
-                <Download className="w-4 h-4 mr-2" />
-                Importar de Datos Existentes
-              </Button>
+              {selectedEvento === 'carrera' && (
+                <Button variant="outline" onClick={importFromExisting}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Importar de Datos Existentes
+                </Button>
+              )}
               <Button onClick={() => setShowNewForm(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Crear Primera Posición

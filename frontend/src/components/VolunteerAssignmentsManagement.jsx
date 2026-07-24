@@ -8,6 +8,12 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Event options
+const EVENTO_OPTIONS = [
+  { value: "carrera", label: "Carrera Activa" },
+  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+];
+
 // Day type display helpers
 const DIA_TIPO_CONFIG = {
   'previo': { label: 'Día Previo', color: 'purple', bgClass: 'border-purple-300 bg-purple-50 text-purple-700' },
@@ -37,14 +43,24 @@ export default function VolunteerAssignmentsManagement() {
   const [selectedSlotToRemove, setSelectedSlotToRemove] = useState(null);
   const [selectedSlotToAdd, setSelectedSlotToAdd] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [eventoFilter, setEventoFilter] = useState('all');
+  const [raceName, setRaceName] = useState('');
+  const [changingEventoEmail, setChangingEventoEmail] = useState(null);
+
+  const getEventoLabel = (value) => {
+    if (value === 'carrera') return raceName || 'Carrera Activa';
+    const opt = EVENTO_OPTIONS.find(e => e.value === value);
+    return opt ? opt.label : value;
+  };
 
   // Load data
   const loadData = async () => {
     setLoading(true);
     try {
-      const [volunteersRes, slotsRes] = await Promise.all([
+      const [volunteersRes, slotsRes, raceRes] = await Promise.all([
         fetch(`${API_URL}/api/volunteer-registration/admin/registrations`),
-        fetch(`${API_URL}/api/volunteers/slots`)
+        fetch(`${API_URL}/api/volunteers/slots`),
+        fetch(`${API_URL}/api/race-config/active`)
       ]);
       
       if (volunteersRes.ok) {
@@ -55,6 +71,11 @@ export default function VolunteerAssignmentsManagement() {
       if (slotsRes.ok) {
         const slotsData = await slotsRes.json();
         setAvailableSlots(slotsData || []);
+      }
+
+      if (raceRes.ok) {
+        const raceData = await raceRes.json();
+        setRaceName(raceData.name || raceData.race_name || 'Carrera Activa');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -88,9 +109,37 @@ export default function VolunteerAssignmentsManagement() {
     return availableSlots.find(s => s.id === slotId);
   };
 
-  // Get available slots for adding (not assigned to anyone)
+  // Get available slots for adding (not assigned, matching the volunteer's event)
   const getAvailableSlotsForVolunteer = () => {
-    return availableSlots.filter(slot => !slot.email_asignado);
+    const ev = selectedVolunteer?.evento || 'carrera';
+    return availableSlots.filter(slot => !slot.email_asignado && (slot.evento || 'carrera') === ev);
+  };
+
+  // Change a volunteer's event
+  const handleChangeEvento = async (volunteer, evento) => {
+    if ((volunteer.evento || 'carrera') === evento) return;
+    setChangingEventoEmail(volunteer.email);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(volunteer.email)}/evento`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ evento })
+        }
+      );
+      if (response.ok) {
+        toast.success('Evento actualizado');
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al actualizar evento');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setChangingEventoEmail(null);
+    }
   };
 
   // Group available slots by position and day type
@@ -114,10 +163,13 @@ export default function VolunteerAssignmentsManagement() {
   // Filter volunteers
   const filteredVolunteers = volunteers.filter(v => {
     const term = searchTerm.toLowerCase();
-    return !searchTerm || 
+    const matchesSearch = !searchTerm || 
       (v.nombre && v.nombre.toLowerCase().includes(term)) ||
       (v.apellidos && v.apellidos.toLowerCase().includes(term)) ||
       (v.email && v.email.toLowerCase().includes(term));
+    const vEvento = v.evento || 'carrera';
+    const matchesEvento = eventoFilter === 'all' || vEvento === eventoFilter;
+    return matchesSearch && matchesEvento;
   });
 
   // Handle add assignment
@@ -318,6 +370,33 @@ export default function VolunteerAssignmentsManagement() {
         </div>
       </div>
 
+      {/* Event Filter */}
+      <div className="flex flex-wrap gap-2" data-testid="assignments-event-filter">
+        <button
+          type="button"
+          data-testid="filter-event-all"
+          onClick={() => setEventoFilter('all')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            eventoFilter === 'all' ? 'bg-primary text-white shadow' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+          }`}
+        >
+          Todos
+        </button>
+        {EVENTO_OPTIONS.map((ev) => (
+          <button
+            key={ev.value}
+            type="button"
+            data-testid={`filter-event-${ev.value}`}
+            onClick={() => setEventoFilter(ev.value)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              eventoFilter === ev.value ? 'bg-primary text-white shadow' : 'bg-muted text-muted-foreground hover:bg-muted/70'
+            }`}
+          >
+            {getEventoLabel(ev.value)}
+          </button>
+        ))}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="bg-blue-50 border-blue-200">
@@ -406,6 +485,9 @@ export default function VolunteerAssignmentsManagement() {
                         <div>
                           <div className="font-medium">{volunteer.nombre} {volunteer.apellidos}</div>
                           <div className="text-sm text-muted-foreground">{volunteer.email}</div>
+                          <Badge variant="outline" className="mt-1 text-xs border-primary/40 text-primary">
+                            {getEventoLabel(volunteer.evento || 'carrera')}
+                          </Badge>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -434,6 +516,32 @@ export default function VolunteerAssignmentsManagement() {
                     {isExpanded && (
                       <div className="px-4 pb-4 bg-muted/20">
                         <div className="ml-14 space-y-4">
+                          {/* Event Editor */}
+                          <div className="py-3 border-b" data-testid={`volunteer-evento-editor-${volunteer.email}`}>
+                            <span className="text-sm font-semibold">Evento</span>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {EVENTO_OPTIONS.map((ev) => {
+                                const active = (volunteer.evento || 'carrera') === ev.value;
+                                return (
+                                  <Button
+                                    key={ev.value}
+                                    size="sm"
+                                    variant={active ? 'default' : 'outline'}
+                                    disabled={changingEventoEmail === volunteer.email}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleChangeEvento(volunteer, ev.value);
+                                    }}
+                                    data-testid={`set-evento-${ev.value}-${volunteer.email}`}
+                                  >
+                                    {active && <CheckCircle className="w-4 h-4 mr-1" />}
+                                    {getEventoLabel(ev.value)}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                           {/* Contact Info */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm py-3 border-b">
                             <div>

@@ -166,3 +166,7 @@ frontend/node_modules/.cache/default-development/1.pack_
 frontend/node_modules/.cache/default-development/13.pack_
 frontend/node_modules/.cache/default-development/20.pack
 frontend/node_modules/.cache/default-development/20.pack
+
+# migracion temporal - NO subir
+bysd_migracion.tar.gz
+_export/

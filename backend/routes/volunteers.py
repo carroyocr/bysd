@@ -6,6 +6,15 @@ from datetime import datetime
 
 router = APIRouter()
 
+VALID_EVENTOS = ["carrera", "campeonato"]
+
+
+def evento_query(evento: str) -> dict:
+    """Mongo filter fragment by event. Legacy docs (no 'evento') count as 'carrera'."""
+    if evento == "campeonato":
+        return {"evento": "campeonato"}
+    return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
+
 # ============================================================================
 # HARDCODED DATA - Embedded from Excel files
 # ============================================================================
@@ -196,13 +205,17 @@ class AssignmentResponse(BaseModel):
 # ============================================================================
 
 @router.get("/slots")
-async def get_assignment_slots():
-    """Get all assignment slots with assigned volunteer names"""
+async def get_assignment_slots(evento: Optional[str] = None):
+    """Get all assignment slots with assigned volunteer names.
+    Optionally filtered by event ('carrera' or 'campeonato')."""
     from server import db as database
     
-    slots = await database.volunteer_assignments.find({}, {"_id": 0}).to_list(1000)
+    query = evento_query(evento) if evento in VALID_EVENTOS else {}
+    slots = await database.volunteer_assignments.find(query, {"_id": 0}).to_list(1000)
     
     for slot in slots:
+        if not slot.get("evento"):
+            slot["evento"] = "carrera"
         if slot.get("email_asignado"):
             volunteer = await database.volunteers.find_one(
                 {"email": slot["email_asignado"]},
