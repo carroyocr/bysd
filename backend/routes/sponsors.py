@@ -3,7 +3,6 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
-import aiofiles
 from pathlib import Path
 
 router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
@@ -158,13 +157,13 @@ async def upload_sponsor_logo(
     safe_name = re.sub(r'-+', '-', safe_name).strip('-')
     
     filename = f"{race_code.upper()}_{safe_name}.{ext}"
-    filepath = UPLOADS_DIR / filename
-    
-    # Save file
-    async with aiofiles.open(filepath, 'wb') as f:
-        content = await file.read()
-        await f.write(content)
-    
+
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    content = await file.read()
+    await file_storage.save(filename, content, file.content_type, file_storage.FOLDER_SPONSORS)
+
     # Update sponsor with logo URL - use /api/uploads for correct routing
     logo_url = f"/api/uploads/sponsors/{filename}"
     await db.sponsors.update_one(

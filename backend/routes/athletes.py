@@ -662,10 +662,8 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
     return {"success": True, "message": "Perfil actualizado"}
 
 
-ATHLETE_PHOTO_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "athlete_photos"
-)
-os.makedirs(ATHLETE_PHOTO_DIR, exist_ok=True)
+MAX_ATHLETE_PHOTO_SIZE = 10 * 1024 * 1024  # 10MB
+
 
 @router.post("/upload-photo")
 async def upload_athlete_photo(
@@ -675,29 +673,39 @@ async def upload_athlete_photo(
     """Upload athlete profile photo"""
     from server import db as database
     from bson import ObjectId
+    from services import file_storage
     import uuid
-    
+
     payload = await get_current_athlete(authorization)
     athlete_id = payload["athlete_id"]
-    
+
     if not photo.content_type or not photo.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="El archivo debe ser una imagen")
-    
-    ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
-    filename = f"{athlete_id}_{uuid.uuid4().hex[:8]}.{ext}"
-    filepath = os.path.join(ATHLETE_PHOTO_DIR, filename)
-    
+
     content = await photo.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
-    
+    if len(content) > MAX_ATHLETE_PHOTO_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El archivo es demasiado grande (maximo 10MB). Tu archivo tiene {len(content) / 1024 / 1024:.2f}MB."
+        )
+
+    content, ext, content_type = file_storage.compress_image(content)
+    filename = f"{athlete_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    await file_storage.save(filename, content, content_type, file_storage.FOLDER_ATHLETE_PHOTOS)
+
     photo_url = f"/api/static/athlete_photos/{filename}"
-    
-    await database.athletes.update_one(
+
+    anterior = await database.athletes.find_one_and_update(
         {"_id": ObjectId(athlete_id)},
-        {"$set": {"photo_url": photo_url, "updated_at": datetime.now(timezone.utc)}}
+        {"$set": {"photo_url": photo_url, "updated_at": datetime.now(timezone.utc)}},
+        projection={"photo_url": 1}
     )
-    
+
+    # Borrar la foto que se reemplaza para no acumular huerfanos en GridFS.
+    url_anterior = (anterior or {}).get("photo_url")
+    if url_anterior and url_anterior != photo_url:
+        await file_storage.delete(url_anterior.rsplit("/", 1)[-1])
+
     return {"success": True, "photo_url": photo_url}
 
 

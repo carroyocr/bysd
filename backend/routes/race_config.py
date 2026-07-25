@@ -1,10 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Header
-from fastapi.responses import FileResponse
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 import os
-import shutil
 from pathlib import Path
 
 router = APIRouter(prefix="/api/race-config", tags=["race-config"])
@@ -379,12 +377,12 @@ async def upload_logo(
     # Generate filename
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"
     filename = f"logo_{code}.{ext}"
-    filepath = LOGOS_DIR / filename
-    
-    # Save file
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
+
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    await file_storage.save(filename, await file.read(), file.content_type, file_storage.FOLDER_LOGOS)
+
     # Update database with logo URL
     logo_url = f"/api/race-config/logo/{filename}"
     await database.race_configurations.update_one(
@@ -435,12 +433,12 @@ async def upload_race_image(
     # Generate filename based on type
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"
     filename = f"{image_type}_{code}.{ext}"
-    filepath = LOGOS_DIR / filename
-    
-    # Save file
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
+
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    await file_storage.save(filename, await file.read(), file.content_type, file_storage.FOLDER_LOGOS)
+
     # Build the URL
     image_url = f"/api/race-config/logo/{filename}"
     
@@ -475,12 +473,11 @@ async def upload_race_image(
 @router.get("/logo/{filename}")
 async def get_logo(filename: str):
     """Serve a logo file"""
-    filepath = LOGOS_DIR / filename
-    
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail="Logo no encontrado")
-    
-    return FileResponse(filepath)
+    from services import file_storage
+
+    # Cache corta: el nombre del logo es fijo, asi que al reemplazarlo el
+    # navegador tiene que volver a pedirlo.
+    return await file_storage.serve(filename, disk_dir=LOGOS_DIR, max_age=300)
 
 
 @router.post("/archive-data/{code}")
@@ -773,12 +770,12 @@ async def upload_manual(
     
     # Generate filename
     filename = f"manual_{manual_type}_{code}.pdf"
-    filepath = MANUALS_DIR / filename
-    
-    # Save file
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
+
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    await file_storage.save(filename, await file.read(), "application/pdf", file_storage.FOLDER_MANUALS)
+
     # Update database with manual URL
     manual_url = f"/api/race-config/manual/{filename}"
     field_name = f"manual_{manual_type}_url"
@@ -812,12 +809,15 @@ async def delete_manual(
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     # Delete file if exists
+    from services import file_storage
+
     filename = f"manual_{manual_type}_{code}.pdf"
+    await file_storage.delete(filename)
+
     filepath = MANUALS_DIR / filename
-    
     if filepath.exists():
         os.remove(filepath)
-    
+
     # Remove URL from database
     field_name = f"manual_{manual_type}_url"
     await database.race_configurations.update_one(
@@ -831,12 +831,12 @@ async def delete_manual(
 @router.get("/manual/{filename}")
 async def get_manual(filename: str):
     """Serve a manual PDF file"""
-    filepath = MANUALS_DIR / filename
-    
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail="Manual no encontrado")
-    
-    return FileResponse(filepath, media_type="application/pdf")
+    from services import file_storage
+
+    # Cache corta: el nombre del manual es fijo y se reemplaza al subir uno nuevo.
+    return await file_storage.serve(
+        filename, disk_dir=MANUALS_DIR, media_type="application/pdf", max_age=300
+    )
 
 
 @router.get("/manuals/{code}")

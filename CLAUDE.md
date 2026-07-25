@@ -25,6 +25,7 @@ Este es un sitio **en producción en vivo** (`backyardultrasantodomingo.com`). L
 - Stack: FastAPI (Python 3.11) + MongoDB Atlas (base `backyard_ultra`) + React (CRA/craco).
 - Backend en Render: `bysd-backend` (Starter). Frontend: `bysd-frontend` (static).
 - El frontend llama al backend vía `REACT_APP_BACKEND_URL` (se hornea en build; si cambia, requiere rebuild del frontend en Render).
+- **Los archivos que sube un usuario NUNCA se guardan en disco.** El sistema de archivos del contenedor en Render es efímero: se borra completo en cada despliegue y en cada reinicio. Todo (fotos de perfil y de participantes, comprobantes de pago, logos, manuales) va a **GridFS** vía `backend/services/file_storage.py`, y se sirve por las rutas de `backend/routes/files.py`, que caen al disco solo como respaldo para los archivos que llegan commiteados con el build. Si agregas un endpoint de subida, usa `file_storage.save()`; no uses `open(..., "wb")`.
 - `CORS_ORIGINS` del backend debe listar los orígenes separados por coma **sin espacios**.
 
 Ver **WORKFLOW.md** para el detalle completo del flujo de desarrollo y despliegue.

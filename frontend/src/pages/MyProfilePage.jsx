@@ -83,7 +83,9 @@ export default function MyProfilePage() {
   });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  
+  // Si la imagen no carga, se muestra el icono en vez de dejar la imagen rota.
+  const [photoFailed, setPhotoFailed] = useState(false);
+
   // Dashboard state
   const [myRaces, setMyRaces] = useState([]);
   const [raceHistory, setRaceHistory] = useState([]);
@@ -922,8 +924,8 @@ export default function MyProfilePage() {
                     {/* Photo + Name Header */}
                     <div className="flex items-center gap-6 pb-4 border-b">
                       <div className="relative group">
-                        {athlete.photo_url ? (
-                          <img src={`${API_URL}${athlete.photo_url}`} alt={athlete.nombre} className="w-24 h-24 rounded-full object-cover border-2 border-primary/20" data-testid="profile-photo" />
+                        {athlete.photo_url && !photoFailed ? (
+                          <img src={`${API_URL}${athlete.photo_url}`} alt={athlete.nombre} onError={() => setPhotoFailed(true)} className="w-24 h-24 rounded-full object-cover border-2 border-primary/20" data-testid="profile-photo" />
                         ) : (
                           <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20" data-testid="profile-photo-placeholder">
                             <User className="w-10 h-10 text-primary/50" />
@@ -940,7 +942,7 @@ export default function MyProfilePage() {
                             const xhr = new XMLHttpRequest();
                             xhr.open('POST', `${API_URL}/api/athletes/upload-photo`, true);
                             xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('athlete_token')}`);
-                            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { toast.success('Foto actualizada'); fetchProfile(); } else { toast.error('Error al subir foto'); } };
+                            xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { toast.success('Foto actualizada'); setPhotoFailed(false); fetchProfile(); } else { toast.error('Error al subir foto'); } };
                             xhr.send(formData);
                           }} data-testid="profile-photo-upload" />
                         </label>
