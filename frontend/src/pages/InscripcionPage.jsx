@@ -1229,6 +1229,7 @@ export default function InscripcionPage() {
                     src={photoPreview || `${API_URL}${existingPhotoUrl}`}
                     alt="Preview"
                     className="w-48 h-48 object-cover rounded-lg shadow-medium"
+                    onError={() => setExistingPhotoUrl(null)}
                   />
                   {photoFile && (
                     <Badge className="absolute -top-2 -right-2 bg-green-500">

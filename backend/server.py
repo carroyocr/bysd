@@ -23,6 +23,12 @@ db = client[os.environ['DB_NAME']]
 # Create the main app without a prefix
 app = FastAPI()
 
+# Rutas de archivos subidos (GridFS con respaldo en disco). Van ANTES de los
+# mounts de StaticFiles: Starlette resuelve en orden de registro, y estas rutas
+# deben ganarle al mount para poder buscar primero en GridFS.
+from routes.files import router as files_router
+app.include_router(files_router)
+
 # Mount receipts upload directory (must be before general uploads mount)
 RECEIPTS_DIR = ROOT_DIR / "uploads" / "receipts"
 RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)

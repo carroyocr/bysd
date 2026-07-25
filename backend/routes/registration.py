@@ -7,7 +7,6 @@ from bson import ObjectId
 import os
 import secrets
 import hashlib
-import aiofiles
 
 router = APIRouter(prefix="/api/registration", tags=["registration"])
 
@@ -429,26 +428,30 @@ async def upload_photo(
             detail=f"El archivo es demasiado grande (máximo 10MB). Tu archivo tiene {file_size / 1024 / 1024:.2f}MB."
         )
     
-    # Generate unique filename
-    ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    ext_original = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+    contenido, ext, content_type = file_storage.compress_image(content, ext_original, photo.content_type)
     filename = f"{registration['race_code']}_{registration['bib']}_{secrets.token_hex(8)}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
-    # Save file
-    async with aiofiles.open(filepath, 'wb') as f:
-        await f.write(content)
-    
+    await file_storage.save(filename, contenido, content_type, file_storage.FOLDER_PARTICIPANT_PHOTOS)
+
     # Update registration with photo URL
-    photo_url = f"/static/participant_photos/{filename}"
-    await registrations_collection.update_one(
+    photo_url = f"/api/static/participant_photos/{filename}"
+    anterior = await registrations_collection.find_one_and_update(
         {"edit_token": token},
         {
             "$set": {
                 "photo_url": photo_url,
                 "updated_at": datetime.now(timezone.utc)
             }
-        }
+        },
+        projection={"photo_url": 1}
     )
+
+    url_anterior = (anterior or {}).get("photo_url")
+    if url_anterior and url_anterior != photo_url:
+        await file_storage.delete(url_anterior.rsplit("/", 1)[-1])
     
     return {
         "message": "Foto subida exitosamente",
@@ -1301,15 +1304,21 @@ async def submit_payment_receipt(
             detail=f"El archivo es demasiado grande (máximo 10MB). Tu archivo tiene {file_size / 1024 / 1024:.2f}MB."
         )
     
-    # Generate filename
+    # Guardar en GridFS: el disco del contenedor se borra en cada despliegue y un
+    # comprobante de pago perdido no se puede recuperar.
+    from services import file_storage
+
     ext = receipt_image.filename.split(".")[-1] if "." in receipt_image.filename else "jpg"
+    content_type = receipt_image.content_type
+
+    # Los PDF se guardan tal cual. Las capturas de celular se comprimen: a 1600px
+    # el numero de transferencia sigue siendo legible y pesan mucho menos.
+    if content_type != "application/pdf":
+        content, ext, content_type = file_storage.compress_image(content, ext, content_type)
+
     filename = f"receipt_{registration['race_code']}_{registration['email'].replace('@', '_')}_{secrets.token_hex(6)}.{ext}"
-    filepath = os.path.join(RECEIPTS_UPLOAD_DIR, filename)
-    
-    # Save file
-    async with aiofiles.open(filepath, 'wb') as f:
-        await f.write(content)
-    
+    await file_storage.save(filename, content, content_type, file_storage.FOLDER_RECEIPTS)
+
     # Update registration with payment receipt info
     receipt_info = {
         "image_path": f"/api/uploads/receipts/{filename}",
