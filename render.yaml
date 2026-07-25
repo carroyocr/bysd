@@ -1,0 +1,55 @@
+# Configuración de despliegue para Render (Blueprint)
+# Define 2 servicios: backend (FastAPI) y frontend (React estático).
+# Los secretos (MONGO_URL, contraseñas) se cargan en el dashboard de Render,
+# no aquí, para no exponerlos en git.
+services:
+  # ---------- BACKEND (FastAPI + Python) ----------
+  - type: web
+    name: bysd-backend
+    runtime: python
+    region: virginia
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.15"
+      - key: DB_NAME
+        value: backyard_ultra
+      - key: MONGO_URL
+        sync: false          # se pega en el dashboard (URI de Atlas)
+      - key: CORS_ORIGINS
+        sync: false          # se pega en el dashboard (dominio del frontend)
+      - key: FRONTEND_URL
+        sync: false
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: TWITTER_CONSUMER_KEY
+        sync: false
+      - key: TWITTER_CONSUMER_SECRET
+        sync: false
+      - key: TWITTER_BEARER_TOKEN
+        sync: false
+      - key: TWITTER_ACCESS_TOKEN
+        sync: false
+      - key: TWITTER_ACCESS_TOKEN_SECRET
+        sync: false
+
+  # ---------- FRONTEND (React / CRA) ----------
+  - type: web
+    name: bysd-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: yarn install && yarn build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        sync: false          # se pega en el dashboard (URL del backend en Render)
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
