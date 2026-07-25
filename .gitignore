@@ -170,3 +170,6 @@ frontend/node_modules/.cache/default-development/20.pack
 # migracion temporal - NO subir
 bysd_migracion.tar.gz
 _export/
+
+# Helper local temporal de migración (NO subir a producción)
+backend/routes/migration_export.py
