@@ -173,3 +173,6 @@ _export/
 
 # Helper local temporal de migración (NO subir a producción)
 backend/routes/migration_export.py
+
+# Config local de Claude Code (permisos, launch.json) - machine-specific
+.claude/
