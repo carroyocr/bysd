@@ -11,7 +11,7 @@ Guía para hacer cambios al sitio de forma segura.
 | Frontend (React) | Render — servicio `bysd-frontend` (static site) |
 | Base de datos | MongoDB Atlas propio — base `backyard_ultra` |
 | Dominio | `backyardultrasantodomingo.com` (registrado en GoDaddy, apunta a Render) |
-| Secretos / `.env` / dumps | Local: `~/backyard/bysd-secretos/` (NO están en git) |
+| Secretos / `.env` / dumps | Local: `~/Proyectos/bysd-secretos/` (NO están en git) |
 
 **Auto-Deploy activo:** cada `git push origin main` dispara un despliegue automático en Render (~1-3 min).
 
@@ -21,7 +21,7 @@ Guía para hacer cambios al sitio de forma segura.
 
 ### 1. Empezar (partir de lo último y crear rama de trabajo)
 ```bash
-cd ~/backyard/bysd
+cd ~/Proyectos/bysd
 git checkout main && git pull
 git checkout -b mejora-X          # nombre descriptivo
 ```
@@ -29,10 +29,10 @@ git checkout -b mejora-X          # nombre descriptivo
 ### 2. Probar localmente
 ```bash
 # Terminal 1 — backend
-cd ~/backyard/bysd/backend && .venv/bin/uvicorn server:app --port 8001
+cd ~/Proyectos/bysd/backend && .venv/bin/uvicorn server:app --port 8001
 
 # Terminal 2 — frontend
-cd ~/backyard/bysd/frontend && yarn start
+cd ~/Proyectos/bysd/frontend && yarn start
 ```
 Abrir `http://localhost:3000`. Producción no se toca mientras tanto.
 
@@ -69,13 +69,13 @@ Render → servicio → **Deploys** → **Rollback** en el deploy anterior. Vuel
 
 ```bash
 # Backend
-cd ~/backyard/bysd/backend
+cd ~/Proyectos/bysd/backend
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-# crear backend/.env (copiar de ~/backyard/bysd-secretos/backend.env.txt y ajustar MONGO_URL)
+# crear backend/.env (copiar de ~/Proyectos/bysd-secretos/backend.env.txt y ajustar MONGO_URL)
 
 # Frontend
-cd ~/backyard/bysd/frontend
+cd ~/Proyectos/bysd/frontend
 yarn install
 # crear frontend/.env con REACT_APP_BACKEND_URL=http://localhost:8001
 

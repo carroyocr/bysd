@@ -14,7 +14,7 @@ Este es un sitio **en producción en vivo** (`backyardultrasantodomingo.com`). L
    - Backend: `cd backend && .venv/bin/uvicorn server:app --port 8001`
    - Frontend: `cd frontend && yarn start` (abre `http://localhost:3000`)
 
-3. **Secretos y variables de entorno NO van al repo.** Viven en el dashboard de Render (Environment) y en `~/backyard/bysd-secretos/` localmente. Nunca commitees `.env`, URIs de base de datos, contraseñas ni llaves.
+3. **Secretos y variables de entorno NO van al repo.** Viven en el dashboard de Render (Environment) y en `~/Proyectos/bysd-secretos/` localmente. Nunca commitees `.env`, URIs de base de datos, contraseñas ni llaves.
 
 4. **Antes de tocar datos de la base, haz respaldo** (`mongodump` del Atlas).
 
