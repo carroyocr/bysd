@@ -431,7 +431,8 @@ async def upload_photo(
     # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
     from services import file_storage
 
-    contenido, ext, content_type = file_storage.compress_image(content)
+    ext_original = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+    contenido, ext, content_type = file_storage.compress_image(content, ext_original, photo.content_type)
     filename = f"{registration['race_code']}_{registration['bib']}_{secrets.token_hex(8)}.{ext}"
     await file_storage.save(filename, contenido, content_type, file_storage.FOLDER_PARTICIPANT_PHOTOS)
 
@@ -1303,15 +1304,20 @@ async def submit_payment_receipt(
             detail=f"El archivo es demasiado grande (máximo 10MB). Tu archivo tiene {file_size / 1024 / 1024:.2f}MB."
         )
     
-    # Generate filename
-    ext = receipt_image.filename.split(".")[-1] if "." in receipt_image.filename else "jpg"
-    filename = f"receipt_{registration['race_code']}_{registration['email'].replace('@', '_')}_{secrets.token_hex(6)}.{ext}"
-
     # Guardar en GridFS: el disco del contenedor se borra en cada despliegue y un
     # comprobante de pago perdido no se puede recuperar.
     from services import file_storage
 
-    await file_storage.save(filename, content, receipt_image.content_type, file_storage.FOLDER_RECEIPTS)
+    ext = receipt_image.filename.split(".")[-1] if "." in receipt_image.filename else "jpg"
+    content_type = receipt_image.content_type
+
+    # Los PDF se guardan tal cual. Las capturas de celular se comprimen: a 1600px
+    # el numero de transferencia sigue siendo legible y pesan mucho menos.
+    if content_type != "application/pdf":
+        content, ext, content_type = file_storage.compress_image(content, ext, content_type)
+
+    filename = f"receipt_{registration['race_code']}_{registration['email'].replace('@', '_')}_{secrets.token_hex(6)}.{ext}"
+    await file_storage.save(filename, content, content_type, file_storage.FOLDER_RECEIPTS)
 
     # Update registration with payment receipt info
     receipt_info = {

@@ -689,7 +689,8 @@ async def upload_athlete_photo(
             detail=f"El archivo es demasiado grande (maximo 10MB). Tu archivo tiene {len(content) / 1024 / 1024:.2f}MB."
         )
 
-    content, ext, content_type = file_storage.compress_image(content)
+    ext_original = photo.filename.split(".")[-1] if photo.filename and "." in photo.filename else "jpg"
+    content, ext, content_type = file_storage.compress_image(content, ext_original, photo.content_type)
     filename = f"{athlete_id}_{uuid.uuid4().hex[:8]}.{ext}"
     await file_storage.save(filename, content, content_type, file_storage.FOLDER_ATHLETE_PHOTOS)
 

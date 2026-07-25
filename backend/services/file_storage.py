@@ -120,8 +120,16 @@ async def serve(
     raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
 
-def compress_image(content: bytes) -> Tuple[bytes, str, str]:
+def compress_image(
+    content: bytes,
+    ext_original: str = "jpg",
+    content_type_original: str = "image/jpeg",
+) -> Tuple[bytes, str, str]:
     """Reescala y comprime una foto. Devuelve (contenido, extension, content_type).
+
+    Se queda con la version mas liviana de las dos: pasar a JPEG casi siempre
+    gana con fotos de camara, pero una captura de pantalla con colores planos
+    puede pesar menos como PNG, y ahi convertirla seria contraproducente.
 
     Si la imagen no se puede procesar, devuelve el original sin tocar para no
     perder la subida del usuario por un formato raro.
@@ -138,7 +146,11 @@ def compress_image(content: bytes) -> Tuple[bytes, str, str]:
 
         salida = io.BytesIO()
         imagen.save(salida, format="JPEG", quality=PHOTO_QUALITY, optimize=True, progressive=True)
-        return salida.getvalue(), "jpg", "image/jpeg"
+        comprimida = salida.getvalue()
+
+        if len(comprimida) >= len(content):
+            return content, ext_original, content_type_original
+        return comprimida, "jpg", "image/jpeg"
     except Exception as e:
         logger.warning(f"No se pudo comprimir la imagen, se guarda el original: {e}")
-        return content, "jpg", "image/jpeg"
+        return content, ext_original, content_type_original
