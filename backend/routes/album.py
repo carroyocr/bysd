@@ -17,6 +17,8 @@ import zipfile
 import time
 import asyncio
 import json
+import logging
+import threading
 
 router = APIRouter(prefix="/album", tags=["album"])
 
@@ -29,6 +31,9 @@ _ALLOWED_RE = re.compile(r"^https://lh3\.googleusercontent\.com/pw/[A-Za-z0-9_\-
 # In-memory cache
 _cache = {"urls": [], "ts": 0.0}
 _CACHE_TTL = 60 * 30  # 30 minutes
+# El scraping tarda varios segundos: sin candado cada visita simultanea lanzaria
+# el suyo y ninguna terminaria a tiempo.
+_scrape_lock = threading.Lock()
 
 
 def _http(url: str, data: bytes = None, headers: dict = None, timeout: int = 30):
@@ -59,18 +64,30 @@ def _bracket_match(s: str, start: int):
 
 
 def _initial_block(html: str):
-    """Find the AF_initDataCallback data array that contains the media items."""
+    """Find the AF_initDataCallback data array that contains the media items.
+
+    La página trae varios bloques `data:` con URLs de fotos y su orden cambia
+    entre respuestas, así que no vale quedarse con el primero: se escoge el que
+    de verdad contiene la lista de fotos (el que más URLs aporta).
+    """
+    best = None
+    best_count = 0
     for m in re.finditer(r"data:", html):
         start = html.find("[", m.end())
         if start < 0:
             continue
         blk = _bracket_match(html, start)
-        if blk and "googleusercontent.com/pw" in blk:
-            try:
-                return json.loads(blk)
-            except Exception:
-                continue
-    return None
+        if not blk or "googleusercontent.com/pw" not in blk:
+            continue
+        try:
+            parsed = json.loads(blk)
+        except Exception:
+            continue
+        media = parsed[1] if isinstance(parsed, list) and len(parsed) > 1 and isinstance(parsed[1], list) else []
+        count = len(_extract_urls(media))
+        if count > best_count:
+            best, best_count = parsed, count
+    return best
 
 
 def _extract_urls(media_items: list) -> list:
@@ -85,6 +102,15 @@ def _extract_urls(media_items: list) -> list:
     return urls
 
 
+def _urls_from_html(html: str) -> list:
+    """Último recurso: sacar las URLs del HTML sin entender su estructura."""
+    seen = set(); out = []
+    for u in re.findall(r"https://lh3\.googleusercontent\.com/pw/[A-Za-z0-9_\-]+", html):
+        if u not in seen:
+            seen.add(u); out.append(u)
+    return out
+
+
 def _scrape_album() -> list:
     """Fetch ALL photos from the public shared album, following pagination."""
     raw, resp = _http(ALBUM_SHARE_URL)
@@ -94,12 +120,7 @@ def _scrape_album() -> list:
     m = re.search(r"/share/([^?/]+)\?key=([^&\"]+)", final)
     if not m:
         # Album may have no key; fall back to simple regex extraction
-        found = re.findall(r"https://lh3\.googleusercontent\.com/pw/[A-Za-z0-9_\-]+", html)
-        seen = set(); out = []
-        for u in found:
-            if u not in seen:
-                seen.add(u); out.append(u)
-        return out
+        return _urls_from_html(html)
 
     album_key, auth_key = m.group(1), m.group(2)
     path = urllib.parse.urlparse(final).path
@@ -111,7 +132,7 @@ def _scrape_album() -> list:
 
     arr = _initial_block(html)
     if not arr:
-        return []
+        return _urls_from_html(html)
     media_all = list(arr[1]) if len(arr) > 1 and isinstance(arr[1], list) else []
     token = arr[2] if len(arr) > 2 else None
 
@@ -149,24 +170,45 @@ def _scrape_album() -> list:
     return out
 
 
+def _is_fresh() -> bool:
+    return bool(_cache["urls"]) and (time.time() - _cache["ts"]) <= _CACHE_TTL
+
+
 def _get_photos(force: bool = False) -> list:
-    now = time.time()
-    if force or not _cache["urls"] or (now - _cache["ts"]) > _CACHE_TTL:
+    if _is_fresh() and not force:
+        return _cache["urls"]
+
+    with _scrape_lock:
+        # Otra petición pudo haber refrescado la caché mientras esperábamos aquí.
+        if _is_fresh() and not force:
+            return _cache["urls"]
         try:
             urls = _scrape_album()
             if urls:
                 _cache["urls"] = urls
-                _cache["ts"] = now
+                _cache["ts"] = time.time()
         except Exception as e:
-            if not _cache["urls"]:
-                raise HTTPException(status_code=502, detail=f"No se pudo cargar el álbum: {e}")
-    return _cache["urls"]
+            logging.warning(f"Album: fallo al leer el álbum compartido: {e}")
+        return _cache["urls"]
+
+
+def prewarm_cache():
+    """Llenar la caché al arrancar para que la primera visita no espere el scraping."""
+    try:
+        urls = _get_photos()
+        logging.info(f"Album: caché precargada con {len(urls)} fotos")
+    except Exception as e:
+        logging.warning(f"Album: no se pudo precargar la caché: {e}")
 
 
 @router.get("/photos")
 async def get_photos(refresh: bool = Query(False)):
     """Return the list of photo base URLs from the shared album."""
     urls = await asyncio.to_thread(_get_photos, refresh)
+    # Sin fotos no distinguimos "álbum vacío" de "no se pudo leer": devolvemos 503
+    # para que el frontend reintente en vez de anunciar que no hay fotos.
+    if not urls:
+        raise HTTPException(status_code=503, detail="El álbum aún no está disponible, inténtalo en unos segundos")
     photos = [{"index": i, "url": u} for i, u in enumerate(urls)]
     return {"photos": photos, "count": len(photos)}
 

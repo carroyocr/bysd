@@ -20,15 +20,36 @@ export default function AlbumPage() {
   const [downloading, setDownloading] = useState(false);
   const intervalRef = useRef(null);
 
+  // El backend puede tardar unos segundos en leer el álbum la primera vez, así
+  // que se reintenta en lugar de anunciar de inmediato que no hay fotos.
   const loadPhotos = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/album/photos`);
-      const data = await res.json();
-      setPhotos(data.photos || []);
-    } catch {
-      toast.error('No se pudieron cargar las fotos');
-    } finally {
-      setLoading(false);
+    const MAX_ATTEMPTS = 4;
+    const RETRY_DELAY = 3000;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(`${API_URL}/api/album/photos`);
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.photos || [];
+          if (list.length > 0 || attempt === MAX_ATTEMPTS) {
+            setPhotos(list);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Sin conexión o error de red: se reintenta igual que un 503.
+      }
+
+      if (attempt === MAX_ATTEMPTS) {
+        toast.error('No se pudieron cargar las fotos');
+        setPhotos([]);
+        setLoading(false);
+        return;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
     }
   }, []);
 
