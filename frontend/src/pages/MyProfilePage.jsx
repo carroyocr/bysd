@@ -35,7 +35,7 @@ const REG_STEPS = [
 // Page wrapper (matches CorredoresPage structure: pt-20 for nav clearance + py-20 section)
 const PageContent = ({ children }) => (
   <div className="pt-16">
-    <section className="pt-10 pb-2.5 sm:py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
+    <section className="pt-[30px] pb-2.5 sm:py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {children}
@@ -912,7 +912,7 @@ export default function MyProfilePage() {
           )}
 
           {/* Encabezado compacto: solo celular (en escritorio ya está el saludo) */}
-          <div className="sm:hidden rounded-lg bg-muted py-2 px-3 mb-5 text-center">
+          <div className="sm:hidden rounded-lg bg-muted py-2 px-3 mb-[15px] text-center">
             <h2 className="font-display text-lg text-foreground leading-tight">Perfil del Atleta</h2>
           </div>
 
@@ -926,7 +926,7 @@ export default function MyProfilePage() {
               ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', short: 'Mensajes', icon: MessageCircle }] : []),
             ];
             return (
-              <div className="border-b pb-2">
+              <div className="sm:border-b pb-[15px] sm:pb-2">
                 {/* Celular: cuadricula de iconos (incluye Salir), sin scroll horizontal */}
                 <div className={`grid gap-1 sm:hidden ${tabs.length === 5 ? 'grid-cols-6' : 'grid-cols-5'}`}>
                   {tabs.map(tab => (
