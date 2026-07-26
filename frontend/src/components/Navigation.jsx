@@ -4,6 +4,7 @@ import { Menu, X, ChevronDown, ChevronRight, History, User } from 'lucide-react'
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import useHasSponsors from '../hooks/useHasSponsors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,6 +142,9 @@ export default function Navigation() {
   // Get active race code for direct links
   const activeRaceCode = activeRace?.code?.toLowerCase() || config?.code?.toLowerCase() || 'bysd-2027';
 
+  // Solo se enseña Patrocinadores si la carrera activa ya tiene alguno publicado
+  const { hasSponsors: activeRaceHasSponsors } = useHasSponsors(activeRaceCode);
+
   const isPatrocinadoresActive = location.pathname.includes('/patrocinadores');
   const isResultadosActive = location.pathname.includes('/resultados') || location.pathname === '/en-vivo';
   const isComunidadActive = location.pathname.includes('/comunidad');
@@ -194,17 +198,19 @@ export default function Navigation() {
               </Link>
             ))}
 
-            {/* Direct link to active race Patrocinadores */}
-            <Link
-              to={`/patrocinadores/${activeRaceCode}`}
-              className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
-                isPatrocinadoresActive && location.pathname.includes(activeRaceCode)
-                  ? 'text-primary bg-secondary'
-                  : 'text-foreground hover:text-primary hover:bg-secondary'
-              }`}
-            >
-              Patrocinadores
-            </Link>
+            {/* Direct link to active race Patrocinadores - Only show if the race has sponsors */}
+            {activeRaceHasSponsors && (
+              <Link
+                to={`/patrocinadores/${activeRaceCode}`}
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                  isPatrocinadoresActive && location.pathname.includes(activeRaceCode)
+                    ? 'text-primary bg-secondary'
+                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                }`}
+              >
+                Patrocinadores
+              </Link>
+            )}
 
             {/* Direct link to active race Resultados - Only show if tracking page is enabled */}
             {pageVisibility.showTracking && (
@@ -342,17 +348,19 @@ export default function Navigation() {
                   ))}
 
                   {/* Direct links to active race pages */}
-                  <Link
-                    to={`/patrocinadores/${activeRaceCode}`}
-                    onClick={handleLinkClick}
-                    className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
-                      isPatrocinadoresActive && location.pathname.includes(activeRaceCode)
-                        ? 'text-primary bg-secondary'
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
-                    }`}
-                  >
-                    Patrocinadores
-                  </Link>
+                  {activeRaceHasSponsors && (
+                    <Link
+                      to={`/patrocinadores/${activeRaceCode}`}
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        isPatrocinadoresActive && location.pathname.includes(activeRaceCode)
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Patrocinadores
+                    </Link>
+                  )}
 
                   {pageVisibility.showTracking && (
                     <Link

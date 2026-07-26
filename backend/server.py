@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
@@ -67,9 +68,17 @@ async def startup_db_indexes():
         
         # Initialize volunteer email scheduler
         await initialize_volunteer_scheduler()
-        
+
     except Exception as e:
         logging.warning(f"Index creation warning (may already exist): {e}")
+
+    # Precargar el álbum en segundo plano: el scraping tarda varios segundos y
+    # así la primera visita a /album ya lo encuentra en caché.
+    try:
+        from routes.album import prewarm_cache
+        asyncio.create_task(asyncio.to_thread(prewarm_cache))
+    except Exception as e:
+        logging.warning(f"Album prewarm warning: {e}")
 
 
 async def run_migrations():

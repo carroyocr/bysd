@@ -31,6 +31,25 @@ const DEFAULT_SHIFTS = [
   { turno: "F", hora_inicio: "04:00", hora_fin: "08:00", slots_count: 2, dia_tipo: "carrera_dia2" },
 ];
 
+// Orden cronológico de los días, para avanzar al siguiente cuando un turno cruza la medianoche
+const DIA_TIPO_SECUENCIA = ["previo", "carrera_dia1", "carrera_dia2", "carrera_dia3"];
+
+const toMinutos = (hora) => {
+  const [h, m] = (hora || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+const toHora = (minutos) => {
+  const m = ((minutos % 1440) + 1440) % 1440;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+
+const siguienteDiaTipo = (diaTipo) => {
+  const i = DIA_TIPO_SECUENCIA.indexOf(diaTipo);
+  if (i === -1) return diaTipo; // valor antiguo ("carrera"): se deja como está
+  return DIA_TIPO_SECUENCIA[Math.min(i + 1, DIA_TIPO_SECUENCIA.length - 1)];
+};
+
 // Day type options
 const DIA_TIPO_OPTIONS = [
   { value: "previo", label: "Día Previo", color: "purple" },
@@ -302,17 +321,37 @@ export default function VolunteerConfigManagement() {
     setTurnos(updated);
   };
 
+  // El turno nuevo continúa la secuencia: arranca donde terminó el anterior y
+  // dura lo mismo. Si el anterior cruzó la medianoche, el nuevo cae al día siguiente.
   const addShift = (turnos, setTurnos) => {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const usedLetters = turnos.map(t => t.turno);
     const nextLetter = letters.split('').find(l => !usedLetters.includes(l)) || 'X';
-    
+
+    const anterior = turnos[turnos.length - 1];
+    let horaInicio = '08:00';
+    let horaFin = '12:00';
+    let diaTipo = 'carrera_dia1';
+
+    if (anterior) {
+      const inicioPrev = toMinutos(anterior.hora_inicio);
+      const finPrev = toMinutos(anterior.hora_fin);
+      const cruzaMedianoche = finPrev <= inicioPrev;
+      const duracion = cruzaMedianoche ? finPrev - inicioPrev + 1440 : finPrev - inicioPrev;
+
+      horaInicio = toHora(finPrev);
+      horaFin = toHora(finPrev + duracion);
+      diaTipo = cruzaMedianoche
+        ? siguienteDiaTipo(anterior.dia_tipo || 'carrera_dia1')
+        : (anterior.dia_tipo || 'carrera_dia1');
+    }
+
     setTurnos([...turnos, {
       turno: nextLetter,
-      hora_inicio: '08:00',
-      hora_fin: '12:00',
+      hora_inicio: horaInicio,
+      hora_fin: horaFin,
       slots_count: 2,
-      dia_tipo: 'carrera_dia1'
+      dia_tipo: diaTipo
     }]);
   };
 
