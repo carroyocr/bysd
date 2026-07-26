@@ -1829,6 +1829,14 @@ class AdminSetPasswordRequest(BaseModel):
     new_password: str
 
 
+class AdminUpdateAthleteRequest(BaseModel):
+    nombre: Optional[str] = None
+    apellidos: Optional[str] = None
+    telefono: Optional[str] = None
+    sexo: Optional[str] = None
+    nacionalidad: Optional[str] = None
+
+
 @router.post("/admin/verify-account/{athlete_id}")
 async def admin_verify_account(athlete_id: str, authorization: str = Header(None)):
     """Admin: Activate (verify) an athlete account."""
@@ -1889,6 +1897,49 @@ async def admin_set_password(athlete_id: str, data: AdminSetPasswordRequest, aut
         }}
     )
     return {"success": True, "message": "Contraseña actualizada"}
+
+
+@router.put("/admin/athlete-profile/{athlete_id}")
+async def admin_update_athlete_profile(
+    athlete_id: str,
+    data: AdminUpdateAthleteRequest,
+    authorization: str = Header(None),
+):
+    """Admin: Edit basic data (name, phone, sex, country) of an athlete profile."""
+    from server import db as database
+    from bson import ObjectId
+
+    _verify_admin_token(authorization)
+
+    try:
+        oid = ObjectId(athlete_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    athlete = await database.athletes.find_one({"_id": oid})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    update_data = {}
+    for field in ("nombre", "apellidos", "telefono", "sexo", "nacionalidad"):
+        value = getattr(data, field, None)
+        if value is not None:
+            update_data[field] = value.strip()
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+
+    if "nombre" in update_data and not update_data["nombre"]:
+        raise HTTPException(status_code=400, detail="El nombre no puede quedar vacío")
+    if "apellidos" in update_data and not update_data["apellidos"]:
+        raise HTTPException(status_code=400, detail="Los apellidos no pueden quedar vacíos")
+    if update_data.get("sexo") and update_data["sexo"] not in ("Masculino", "Femenino"):
+        raise HTTPException(status_code=400, detail="Sexo inválido")
+
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    await database.athletes.update_one({"_id": oid}, {"$set": update_data})
+
+    return {"success": True, "message": "Perfil actualizado"}
 
 
 # ==================== ADMIN: EMAIL COMPOSER ====================

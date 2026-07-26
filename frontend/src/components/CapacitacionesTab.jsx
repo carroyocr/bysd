@@ -1,10 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
-import { GraduationCap, Calendar, Clock, DollarSign, Users, Check, Loader2 } from 'lucide-react';
+import { GraduationCap, Calendar, DollarSign, Users, Check, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// La duracion se captura como texto libre ("2", "2 horas", "90 min", "1:30").
+// Devuelve los minutos, o null si no se puede interpretar.
+const parseDurationMinutes = (raw) => {
+  if (raw === null || raw === undefined) return null;
+  const s = String(raw).trim().toLowerCase().replace(',', '.');
+  if (!s) return null;
+
+  const hm = s.match(/^(\d{1,2}):([0-5]\d)$/);
+  if (hm) return Number(hm[1]) * 60 + Number(hm[2]);
+
+  let minutes = 0;
+  let found = false;
+  const horas = s.match(/(\d+(?:\.\d+)?)\s*(?:h\b|hr|hrs|hora|horas)/);
+  if (horas) { minutes += parseFloat(horas[1]) * 60; found = true; }
+  const mins = s.match(/(\d+)\s*(?:m\b|min|mins|minuto|minutos)/);
+  if (mins) { minutes += parseInt(mins[1], 10); found = true; }
+
+  // Solo un numero: se asume que son horas
+  if (!found && /^\d+(?:\.\d+)?$/.test(s)) { minutes = parseFloat(s) * 60; found = true; }
+
+  return found && minutes > 0 ? Math.round(minutes) : null;
+};
+
+// Hora en que termina = inicio + duracion. null si falta o no se puede calcular.
+const getEndTime = (iso, duration) => {
+  const minutes = parseDurationMinutes(duration);
+  if (!iso || minutes === null) return null;
+  const start = new Date(iso);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime() + minutes * 60000);
+  return end.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
+};
 
 export default function CapacitacionesTab() {
   const [items, setItems] = useState([]);
@@ -74,39 +107,85 @@ export default function CapacitacionesTab() {
   return (
     <div className="space-y-4" data-testid="capacitaciones-tab">
       {items.map((c) => (
-        <Card key={c.id} className={c.my_registered ? 'border-green-300 bg-green-50/30' : ''} data-testid={`cap-item-${c.id}`}>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-lg text-foreground">{c.name}</h3>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{fmtDate(c.datetime)}</span>
-                  {c.duration && <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{c.duration}</span>}
-                  <span className="flex items-center gap-1 font-medium">
-                    <DollarSign className="w-4 h-4" />
-                    {c.is_free ? <span className="text-green-600">Gratis</span> : `RD$${(c.cost || 0).toLocaleString('es-DO')}`}
-                  </span>
-                  <span className="flex items-center gap-1"><Users className="w-4 h-4" />{c.registered_count} inscritos</span>
-                </div>
-                {c.program && <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{c.program}</p>}
-              </div>
-              <Button
-                onClick={() => toggleRegister(c)}
-                disabled={acting === c.id}
-                className={c.my_registered ? 'bg-green-600 hover:bg-green-700' : 'bg-primary hover:bg-primary/90'}
-                data-testid={`register-cap-${c.id}`}
-              >
-                {acting === c.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  : c.my_registered ? <Check className="w-4 h-4 mr-2" /> : null}
-                {c.my_registered ? 'Inscrito' : 'Inscribirme'}
-              </Button>
-            </div>
-            {c.my_registered && (
-              <p className="text-xs text-green-600 mt-3">Estás inscrito. Puedes cancelar tu inscripción con el botón.</p>
-            )}
-          </CardContent>
-        </Card>
+        <CapacitacionCard
+          key={c.id}
+          cap={c}
+          fmtDate={fmtDate}
+          acting={acting === c.id}
+          onToggle={() => toggleRegister(c)}
+        />
       ))}
     </div>
+  );
+}
+
+// Tarjeta de capacitacion: en celular los datos van en dos columnas,
+// el programa se despliega bajo demanda y el boton ocupa todo el ancho
+function CapacitacionCard({ cap: c, fmtDate, acting, onToggle }) {
+  const [showProgram, setShowProgram] = useState(false);
+  const endTime = getEndTime(c.datetime, c.duration);
+
+  return (
+    <Card className={c.my_registered ? 'border-green-300 bg-green-50/30' : ''} data-testid={`cap-item-${c.id}`}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0 space-y-3">
+            <div className="flex items-start gap-2">
+              <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <h3 className="font-semibold text-base sm:text-lg text-foreground leading-snug">{c.name}</h3>
+              {c.my_registered && (
+                <span className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 text-[11px] font-medium px-2 py-0.5">
+                  <Check className="w-3 h-3" />Inscrito
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-muted-foreground sm:flex sm:flex-wrap sm:gap-x-4 sm:gap-y-1">
+              <span className="flex items-start gap-1.5 col-span-2 sm:col-auto">
+                <Calendar className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  {fmtDate(c.datetime)}
+                  {endTime ? ` a ${endTime}` : c.duration ? ` · ${c.duration}` : ''}
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <DollarSign className="w-4 h-4 shrink-0" />
+                {c.is_free ? <span className="text-green-600">Gratis</span> : `RD$${(c.cost || 0).toLocaleString('es-DO')}`}
+              </span>
+              <span className="flex items-center gap-1.5"><Users className="w-4 h-4 shrink-0" />{c.registered_count} inscritos</span>
+            </div>
+
+            {c.program && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowProgram(v => !v)}
+                  className="sm:hidden flex items-center gap-1 text-xs font-medium text-primary"
+                  aria-expanded={showProgram}
+                  data-testid={`cap-program-toggle-${c.id}`}
+                >
+                  {showProgram ? 'Ocultar programa' : 'Ver programa'}
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showProgram ? 'rotate-180' : ''}`} />
+                </button>
+                <p className={`${showProgram ? 'block' : 'hidden'} sm:block text-sm text-muted-foreground mt-2 whitespace-pre-wrap leading-relaxed`}>
+                  {c.program}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <Button
+            onClick={onToggle}
+            disabled={acting}
+            className={`w-full sm:w-auto shrink-0 ${c.my_registered ? 'bg-green-600 hover:bg-green-700' : 'bg-primary hover:bg-primary/90'}`}
+            data-testid={`register-cap-${c.id}`}
+          >
+            {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              : c.my_registered ? <Check className="w-4 h-4 mr-2" /> : null}
+            {c.my_registered ? 'Cancelar inscripción' : 'Inscribirme'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
