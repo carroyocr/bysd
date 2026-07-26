@@ -686,9 +686,6 @@ export default function MyProfilePage() {
         <div className="max-w-md mx-auto" data-testid="landing-card">
           <Card>
             <CardContent className="pt-6 space-y-4">
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800" data-testid="login-profile-note">
-                <span className="font-semibold">Nota:</span> Debes completar tu perfil de atleta para poder inscribirte en una carrera.
-              </div>
               <Button className="w-full" size="lg" onClick={() => setCurrentView(VIEW_LOGIN)} data-testid="go-to-login-btn">
                 <Lock className="w-4 h-4 mr-2" /> Iniciar Sesion
               </Button>
@@ -699,6 +696,9 @@ export default function MyProfilePage() {
                 <button className="text-sm text-muted-foreground hover:text-primary transition-colors" onClick={() => setCurrentView(VIEW_FORGOT)} data-testid="go-to-forgot-btn">
                   Olvidaste tu contrasena?
                 </button>
+              </div>
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800" data-testid="login-profile-note">
+                <span className="font-semibold">Nota:</span> Debes completar tu perfil de atleta para poder inscribirte en una carrera.
               </div>
             </CardContent>
           </Card>
@@ -741,9 +741,6 @@ export default function MyProfilePage() {
                 </Button>
                 <div className="text-center">
                   <button type="button" className="text-sm text-muted-foreground hover:text-primary" onClick={() => setCurrentView(VIEW_FORGOT)} data-testid="login-forgot-link">Olvidaste tu contrasena?</button>
-                </div>
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800" data-testid="login-form-profile-note">
-                  <span className="font-semibold">Nota:</span> Debes completar tu perfil de atleta para poder inscribirte en una carrera.
                 </div>
               </form>
             </CardContent>
