@@ -20,9 +20,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-background/95 backdrop-blur-md border-t border-border">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 pt-2 pb-8 sm:py-16">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          {/* Bloque principal: oculto en celular */}
+          <div className="hidden sm:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             {/* Logo and Description */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-3">
@@ -119,14 +120,14 @@ export default function Footer() {
             </div>
           </div>
 
-          <Separator className="my-8" />
+          <Separator className="my-8 hidden sm:block" />
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>
               © {currentYear} Backyard Ultra Santo Domingo. Todos los derechos reservados.
             </p>
-            <div className="flex items-center gap-6">
+            <div className="hidden sm:flex items-center gap-6">
               <span className="text-xs">Evento sin fines de lucro</span>
               <span className="text-xs">|</span>
               <span className="text-xs">Preservación ambiental prioritaria</span>

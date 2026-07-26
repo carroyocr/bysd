@@ -473,6 +473,14 @@ export default function PreRegistrationManagement() {
     setEditForm(prev => ({ ...prev, bib: nextBib }));
   };
 
+  // Deja el teléfono solo con dígitos y le antepone el código 1 a los números dominicanos
+  const normalizePhone = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (/^(809|829|849)/.test(digits)) return `1${digits}`;
+    return digits;
+  };
+
   const exportToCSV = () => {
     if (filteredRegistrations.length === 0) {
       toast.error('No hay registros para exportar');
@@ -490,7 +498,7 @@ export default function PreRegistrationManagement() {
       reg.nombre,
       reg.apellidos,
       reg.email,
-      reg.telefono,
+      normalizePhone(reg.telefono),
       reg.nacionalidad,
       reg.ciudad_residencia,
       reg.fecha_nacimiento,

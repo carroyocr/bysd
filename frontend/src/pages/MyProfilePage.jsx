@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap, ChevronDown } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
@@ -35,15 +35,34 @@ const REG_STEPS = [
 // Page wrapper (matches CorredoresPage structure: pt-20 for nav clearance + py-20 section)
 const PageContent = ({ children }) => (
   <div className="pt-16">
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
+    <section className="pt-10 pb-2.5 sm:py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
       <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {children}
         </div>
       </div>
     </section>
   </div>
 );
+
+// Seccion del perfil: plegable en celular, siempre abierta desde tablet en adelante
+const ProfileSection = ({ title, children, className = '', defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 text-left md:pointer-events-none"
+        aria-expanded={open}
+      >
+        <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{title}</h4>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 md:hidden transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div className={`${open ? 'block' : 'hidden'} md:block mt-3`}>{children}</div>
+    </div>
+  );
+};
 
 const SectionHeader = ({ title, subtitle }) => (
   <div className="text-center space-y-4">
@@ -723,6 +742,9 @@ export default function MyProfilePage() {
                 <div className="text-center">
                   <button type="button" className="text-sm text-muted-foreground hover:text-primary" onClick={() => setCurrentView(VIEW_FORGOT)} data-testid="login-forgot-link">Olvidaste tu contrasena?</button>
                 </div>
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800" data-testid="login-form-profile-note">
+                  <span className="font-semibold">Nota:</span> Debes completar tu perfil de atleta para poder inscribirte en una carrera.
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -867,13 +889,16 @@ export default function MyProfilePage() {
     return (
       <PageContent>
         <div data-testid="athlete-dashboard">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-display text-3xl sm:text-4xl text-foreground">Hola, {athlete.nombre}!</h2>
-              <p className="text-muted-foreground">{athlete.email}</p>
+          {/* Header: en celular el saludo se oculta y Salir vive en la fila de pestañas */}
+          <div className="hidden sm:flex flex-row items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-display text-2xl sm:text-4xl text-foreground truncate">Hola, {athlete.nombre}!</h2>
+              <p className="text-sm sm:text-base text-muted-foreground truncate">{athlete.email}</p>
             </div>
-            <Button variant="outline" onClick={handleLogout} data-testid="logout-btn"><LogOut className="w-4 h-4 mr-2" /> Cerrar Sesion</Button>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="shrink-0 sm:h-10 sm:px-4" data-testid="logout-btn">
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Cerrar Sesion</span>
+            </Button>
           </div>
 
           {/* Profile incomplete banner */}
@@ -889,50 +914,91 @@ export default function MyProfilePage() {
             </div>
           )}
 
-          {/* Tabs */}
-          <div className="flex gap-2 border-b pb-2 overflow-x-auto">
-            {[
-              { key: 'profile', label: 'Mis Datos', icon: User },
-              { key: 'races', label: 'Próximas Carreras', icon: Calendar },
-              { key: 'history', label: 'Historial', icon: Trophy },
-              { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
-              ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', icon: MessageCircle }] : []),
-            ].map(tab => (
-              <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'ghost'} onClick={() => setActiveTab(tab.key)} size="sm" data-testid={`tab-${tab.key}`}>
-                <tab.icon className="w-4 h-4 mr-2" />{tab.label}
-              </Button>
-            ))}
+          {/* Encabezado compacto: solo celular (en escritorio ya está el saludo) */}
+          <div className="sm:hidden rounded-lg bg-muted py-2 px-3 mb-5 text-center">
+            <h2 className="font-display text-lg text-foreground leading-tight">Perfil del Atleta</h2>
           </div>
+
+          {/* Tabs */}
+          {(() => {
+            const tabs = [
+              { key: 'profile', label: 'Mis Datos', short: 'Datos', icon: User },
+              { key: 'races', label: 'Próximas Carreras', short: 'Carreras', icon: Calendar },
+              { key: 'history', label: 'Historial', short: 'Historial', icon: Trophy },
+              { key: 'capacitaciones', label: 'Capacitaciones', short: 'Cursos', icon: GraduationCap },
+              ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', short: 'Mensajes', icon: MessageCircle }] : []),
+            ];
+            return (
+              <div className="border-b pb-2">
+                {/* Celular: cuadricula de iconos (incluye Salir), sin scroll horizontal */}
+                <div className={`grid gap-1 sm:hidden ${tabs.length === 5 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight transition-colors ${activeTab === tab.key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                      data-testid={`tab-${tab.key}-mobile`}
+                    >
+                      <tab.icon className="w-4 h-4 shrink-0" />
+                      <span className="w-full truncate text-center">{tab.short}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight text-muted-foreground hover:bg-muted transition-colors"
+                    data-testid="logout-btn-mobile"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span className="w-full truncate text-center">Salir</span>
+                  </button>
+                </div>
+                {/* Tablet y escritorio: fila con etiquetas completas */}
+                <div className="hidden sm:flex gap-2 flex-wrap">
+                  {tabs.map(tab => (
+                    <Button key={tab.key} variant={activeTab === tab.key ? 'default' : 'ghost'} onClick={() => setActiveTab(tab.key)} size="sm" data-testid={`tab-${tab.key}`}>
+                      <tab.icon className="w-4 h-4 mr-2" />{tab.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ===== PROFILE TAB ===== */}
           {activeTab === 'profile' && (
             <Card data-testid="profile-card">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 p-4 sm:p-6">
                 <CardTitle className="flex items-center gap-2"><User className="w-5 h-5 text-primary" /> Mis Datos</CardTitle>
                 {!editMode ? (
-                  <Button variant="outline" size="sm" onClick={startEdit} data-testid="edit-profile-btn"><Edit2 className="w-4 h-4 mr-2" />Editar</Button>
+                  <Button variant="outline" size="sm" onClick={startEdit} className="shrink-0" data-testid="edit-profile-btn"><Edit2 className="w-4 h-4 mr-2" />Editar</Button>
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <Button variant="ghost" size="sm" onClick={() => setEditMode(false)} data-testid="cancel-edit-btn">Cancelar</Button>
                     <Button size="sm" onClick={handleSaveProfile} disabled={loading} data-testid="save-profile-btn">{loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Guardar</Button>
                   </div>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                 {!editMode ? (
                   <div className="space-y-6">
                     {/* Photo + Name Header */}
-                    <div className="flex items-center gap-6 pb-4 border-b">
-                      <div className="relative group">
+                    <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-3 sm:gap-6 pb-4 border-b">
+                      <div className="relative group shrink-0">
                         {athlete.photo_url && !photoFailed ? (
-                          <img src={`${API_URL}${athlete.photo_url}`} alt={athlete.nombre} onError={() => setPhotoFailed(true)} className="w-24 h-24 rounded-full object-cover border-2 border-primary/20" data-testid="profile-photo" />
+                          <img src={`${API_URL}${athlete.photo_url}`} alt={athlete.nombre} onError={() => setPhotoFailed(true)} className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-primary/20" data-testid="profile-photo" />
                         ) : (
-                          <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20" data-testid="profile-photo-placeholder">
-                            <User className="w-10 h-10 text-primary/50" />
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20" data-testid="profile-photo-placeholder">
+                            <User className="w-8 h-8 sm:w-10 sm:h-10 text-primary/50" />
                           </div>
                         )}
                         <label className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/30 flex items-center justify-center cursor-pointer transition-colors">
-                          <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <Camera className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+                          {/* En celular no hay hover: badge siempre visible */}
+                          <span className="sm:hidden absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 shadow">
+                            <Camera className="w-3 h-3" />
+                          </span>
                           <input type="file" className="hidden" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={async (e) => {
                             const file = e.target.files[0];
                             if (!file) return;
@@ -947,16 +1013,14 @@ export default function MyProfilePage() {
                           }} data-testid="profile-photo-upload" />
                         </label>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-bold">{athlete.nombre} {athlete.apellidos}</h3>
-                        <p className="text-muted-foreground flex items-center gap-2">{athlete.email} {athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500" />}</p>
-                        {athlete.personalizacion_camiseta && <Badge variant="outline" className="mt-1 uppercase">{athlete.personalizacion_camiseta}</Badge>}
+                      <div className="min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold">{athlete.nombre} {athlete.apellidos}</h3>
+                        <p className="text-sm sm:text-base text-muted-foreground flex items-center justify-center sm:justify-start gap-2 break-all">{athlete.email} {athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />}</p>
                       </div>
                     </div>
                     {/* Personal */}
-                    <div className="pb-6 border-b">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Datos Personales</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ProfileSection title="Datos Personales" className="pb-6 border-b">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                         <div data-testid="profile-nombre"><Label className="text-muted-foreground text-xs">Nombre completo</Label><p className="font-medium">{athlete.nombre} {athlete.apellidos}</p></div>
                         <div data-testid="profile-email"><Label className="text-muted-foreground text-xs">Email</Label><p className="font-medium flex items-center gap-2">{athlete.email}{athlete.email_verified && <CheckCircle className="w-4 h-4 text-green-500" />}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Telefono</Label><p className="font-medium">{athlete.telefono || '-'}</p></div>
@@ -964,45 +1028,44 @@ export default function MyProfilePage() {
                         <div><Label className="text-muted-foreground text-xs">Sexo</Label><p className="font-medium">{athlete.sexo || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Nacionalidad / Ciudad</Label><p className="font-medium">{athlete.nacionalidad || '-'}{athlete.ciudad_residencia ? ` / ${athlete.ciudad_residencia}` : ''}</p></div>
                       </div>
-                    </div>
+                    </ProfileSection>
                     {/* Medical */}
-                    <div className="pb-6 border-b">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Informacion Medica</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ProfileSection title="Informacion Medica" className="pb-6 border-b">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                         <div><Label className="text-muted-foreground text-xs">Tipo de Sangre</Label><p className="font-medium">{athlete.tipo_sangre || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Condicion Medica</Label><p className="font-medium">{athlete.condicion_medica || 'No'}{athlete.condicion_medica_detalle ? ` - ${athlete.condicion_medica_detalle}` : ''}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Alergias</Label><p className="font-medium">{athlete.alergias || 'No'}{athlete.alergias_detalle ? ` - ${athlete.alergias_detalle}` : ''}</p></div>
                       </div>
-                    </div>
+                    </ProfileSection>
                     {/* Emergency */}
-                    <div className="pb-6 border-b">
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contacto de Emergencia</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ProfileSection title="Contacto de Emergencia" className="pb-6 border-b">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                         <div><Label className="text-muted-foreground text-xs">Nombre</Label><p className="font-medium">{athlete.contacto_emergencia_nombre || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Relacion</Label><p className="font-medium">{athlete.contacto_emergencia_relacion || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Telefono</Label><p className="font-medium">{athlete.contacto_emergencia_telefono || '-'}</p></div>
                       </div>
-                    </div>
+                    </ProfileSection>
                     {/* Preferences */}
-                    <div>
-                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Preferencias</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <ProfileSection title="Preferencias">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                         <div><Label className="text-muted-foreground text-xs">Talla Camiseta</Label><p className="font-medium">{athlete.talla_camiseta || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Personalizacion BIB</Label><p className="font-medium uppercase">{athlete.personalizacion_camiseta || '-'}</p></div>
                         <div><Label className="text-muted-foreground text-xs">Como se entero</Label><p className="font-medium">{athlete.como_se_entero || '-'}</p></div>
                       </div>
-                    </div>
+                    </ProfileSection>
 
                     {/* Security / Change Password */}
                     <div className="pt-6 border-t">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Lock className="w-4 h-4 text-primary" />
                           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Seguridad</h4>
                         </div>
                         {!showPwdForm && (
-                          <Button variant="outline" size="sm" onClick={() => setShowPwdForm(true)} data-testid="open-change-password-btn">
-                            <Lock className="w-4 h-4 mr-2" />Cambiar Contraseña
+                          <Button variant="outline" size="sm" onClick={() => setShowPwdForm(true)} className="shrink-0" data-testid="open-change-password-btn">
+                            <Lock className="w-4 h-4 mr-2" />
+                            <span className="sm:hidden">Cambiar</span>
+                            <span className="hidden sm:inline">Cambiar Contraseña</span>
                           </Button>
                         )}
                       </div>

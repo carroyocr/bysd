@@ -5,9 +5,10 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
   Search, Users, UserCheck, UserX, Loader2, Download, ArrowUpDown,
-  Mail, MailCheck, ClipboardList, ShieldCheck, KeyRound, CheckCircle2, X
+  Mail, MailCheck, ClipboardList, ShieldCheck, KeyRound, CheckCircle2, X, Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { COUNTRIES } from '../data/countries';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -23,8 +24,40 @@ export default function AthleteProfilesManagement() {
   const [pwdModal, setPwdModal] = useState(null); // athlete object
   const [newPwd, setNewPwd] = useState('');
   const [savingPwd, setSavingPwd] = useState(false);
+  const [editModal, setEditModal] = useState(null); // athlete object
+  const [editForm, setEditForm] = useState({ nombre: '', apellidos: '', telefono: '', sexo: '', nacionalidad: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const token = localStorage.getItem('admin_token');
+
+  const openEditModal = (athlete) => {
+    setEditForm({
+      nombre: athlete.nombre || '',
+      apellidos: athlete.apellidos || '',
+      telefono: athlete.telefono || '',
+      sexo: athlete.sexo || '',
+      nacionalidad: athlete.nacionalidad || '',
+    });
+    setEditModal(athlete);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.nombre.trim() || !editForm.apellidos.trim()) {
+      toast.error('Nombre y apellidos son obligatorios');
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${API_URL}/api/athletes/admin/athlete-profile/${editModal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(editForm),
+      });
+      if (res.ok) { toast.success('Perfil actualizado'); setEditModal(null); loadData(); }
+      else { const d = await res.json().catch(() => ({})); toast.error(d.detail || 'Error al actualizar'); }
+    } catch { toast.error('Error de conexión'); }
+    finally { setSavingEdit(false); }
+  };
 
   const activateAccount = async (athlete) => {
     if (!window.confirm(`¿Activar la cuenta de ${athlete.nombre} ${athlete.apellidos}?`)) return;
@@ -297,6 +330,15 @@ export default function AthleteProfilesManagement() {
                         )}
                         <Button
                           size="sm" variant="ghost"
+                          onClick={() => openEditModal(a)}
+                          className="h-8 text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                          title="Editar datos"
+                          data-testid={`edit-btn-${a.id}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
                           onClick={() => { setPwdModal(a); setNewPwd(''); }}
                           className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                           title="Crear nueva contraseña"
@@ -320,6 +362,84 @@ export default function AthleteProfilesManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Profile Modal */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="edit-profile-modal">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-[#E8772E]" />
+                <h3 className="text-lg font-semibold">Editar datos del atleta</h3>
+              </div>
+              <button onClick={() => setEditModal(null)} className="text-gray-400 hover:text-gray-600" data-testid="close-edit-modal">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">{editModal.email}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">Nombre</label>
+                <Input
+                  value={editForm.nombre}
+                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                  data-testid="edit-nombre-input"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">Apellidos</label>
+                <Input
+                  value={editForm.apellidos}
+                  onChange={(e) => setEditForm({ ...editForm, apellidos: e.target.value })}
+                  data-testid="edit-apellidos-input"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">Teléfono</label>
+                <Input
+                  value={editForm.telefono}
+                  onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })}
+                  data-testid="edit-telefono-input"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">Sexo</label>
+                <select
+                  value={editForm.sexo}
+                  onChange={(e) => setEditForm({ ...editForm, sexo: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  data-testid="edit-sexo-select"
+                >
+                  <option value="">Seleccionar</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <label className="text-xs font-medium text-gray-600">País</label>
+                <select
+                  value={editForm.nacionalidad}
+                  onChange={(e) => setEditForm({ ...editForm, nacionalidad: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  data-testid="edit-nacionalidad-select"
+                >
+                  <option value="">Seleccionar</option>
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
+                  {editForm.nacionalidad && !COUNTRIES.some((c) => c.name === editForm.nacionalidad) && (
+                    <option value={editForm.nacionalidad}>{editForm.nacionalidad}</option>
+                  )}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setEditModal(null)} data-testid="cancel-edit-btn">Cancelar</Button>
+              <Button onClick={saveEdit} disabled={savingEdit} className="bg-[#E8772E] hover:bg-[#d06a28]" data-testid="confirm-edit-btn">
+                {savingEdit && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Guardar Cambios
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Set Password Modal */}
       {pwdModal && (
