@@ -122,6 +122,57 @@ async def get_template_by_id(db, template_id: str) -> Optional[Dict]:
     return await db.email_templates.find_one({"id": template_id}, {"_id": 0})
 
 
+async def send_templated_email_with_error(
+    to_email: str,
+    subject: str,
+    html_content: str,
+    is_plain: bool = False
+) -> tuple:
+    """
+    Send an email and report why it failed.
+
+    Returns (success, error_message). error_message is "" on success.
+    """
+
+    missing = [
+        name for name, value in (("GMAIL_USER", GMAIL_USER), ("GMAIL_APP_PASSWORD", GMAIL_APP_PASSWORD))
+        if not value
+    ]
+    if missing:
+        error = f"Credenciales de correo no configuradas en el servidor (falta {', '.join(missing)})"
+        print(error)
+        return False, error
+
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
+        msg['To'] = to_email
+
+        part = MIMEText(html_content, 'plain' if is_plain else 'html', 'utf-8')
+        msg.attach(part)
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.sendmail(GMAIL_USER, to_email, msg.as_string())
+
+        print(f"Templated email sent to {to_email}")
+        return True, ""
+
+    except smtplib.SMTPAuthenticationError as e:
+        error = f"Gmail rechazó las credenciales ({GMAIL_USER}): {e}"
+        print(f"Error sending templated email to {to_email}: {error}")
+        return False, error
+    except (TimeoutError, OSError) as e:
+        error = f"No se pudo conectar a smtp.gmail.com:465 ({type(e).__name__}: {e})"
+        print(f"Error sending templated email to {to_email}: {error}")
+        return False, error
+    except Exception as e:
+        error = f"{type(e).__name__}: {e}"
+        print(f"Error sending templated email to {to_email}: {error}")
+        return False, error
+
+
 async def send_templated_email(
     to_email: str,
     subject: str,
@@ -129,30 +180,9 @@ async def send_templated_email(
     is_plain: bool = False
 ) -> bool:
     """Send an email with rendered HTML content (or plain text if is_plain=True)"""
-    
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        print("Gmail credentials not configured")
-        return False
-    
-    try:
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
-        msg['To'] = to_email
-        
-        part = MIMEText(html_content, 'plain' if is_plain else 'html', 'utf-8')
-        msg.attach(part)
-        
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        
-        print(f"Templated email sent to {to_email}")
-        return True
-        
-    except Exception as e:
-        print(f"Error sending templated email to {to_email}: {str(e)}")
-        return False
+
+    success, _ = await send_templated_email_with_error(to_email, subject, html_content, is_plain)
+    return success
 
 
 async def send_email_with_template(
