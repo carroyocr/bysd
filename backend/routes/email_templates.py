@@ -937,8 +937,8 @@ async def reset_template(template_id: str, db=Depends(get_db)):
 @router.post("/test")
 async def send_test_email(request: TestEmailRequest, db=Depends(get_db)):
     """Send a test email with sample data"""
-    from services.template_email_service import render_template, send_templated_email
-    
+    from services.template_email_service import render_template, send_templated_email_with_error
+
     template = await db.email_templates.find_one({"id": request.template_id}, {"_id": 0})
     
     if not template:
@@ -1004,16 +1004,16 @@ async def send_test_email(request: TestEmailRequest, db=Depends(get_db)):
     rendered_content = render_template(template["content"], sample_data)
     
     # Send test email
-    success = await send_templated_email(
+    success, error = await send_templated_email_with_error(
         to_email=request.to_email,
         subject=f"[PRUEBA] {rendered_subject}",
         html_content=rendered_content
     )
-    
+
     if success:
         return {"message": f"Correo de prueba enviado a {request.to_email}"}
     else:
-        raise HTTPException(status_code=500, detail="Error al enviar el correo de prueba")
+        raise HTTPException(status_code=500, detail=f"Error al enviar el correo de prueba. {error}")
 
 
 @router.post("/preview")
