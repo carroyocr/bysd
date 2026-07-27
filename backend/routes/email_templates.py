@@ -790,6 +790,41 @@ DEFAULT_TEMPLATES = [
     </div>
 </div>
 """
+    },
+    {
+        "id": "password_reset",
+        "name": "Recuperación de Contraseña",
+        "description": "Se envía con el código para restablecer la contraseña del perfil",
+        "subject": "🔐 Código para restablecer tu contraseña - {{race_name}}",
+        "category": "sistema",
+        "merge_sources": ["race", "athlete", "general"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Restablecer Contraseña</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Recibimos una solicitud para restablecer la contraseña de tu perfil. Usa este código para crear una nueva contraseña:
+        </p>
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="font-size: 36px; font-weight: bold; color: #ea580c; margin: 0; letter-spacing: 8px;">{{verification_code}}</p>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+            Este código expira en 30 minutos.
+        </p>
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 20px;">
+            <p style="margin: 0; color: #92400e; font-size: 14px;">
+                Si no solicitaste este cambio, puedes ignorar este correo: tu contraseña actual seguirá funcionando.
+            </p>
+        </div>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p>
+    </div>
+</div>
+"""
     }
 ]
 

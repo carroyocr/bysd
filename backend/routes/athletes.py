@@ -485,24 +485,53 @@ async def forgot_password(data: ForgotPasswordRequest):
     
     # Send email using template
     try:
-        from services.template_email_service import send_email_with_template, build_race_data
-        
+        from services.template_email_service import (
+            send_email_with_template,
+            send_templated_email,
+            build_race_data,
+            build_athlete_data,
+            build_general_data,
+        )
+
         active_race = await database.race_configurations.find_one({"is_active": True})
         race_data = build_race_data(active_race) if active_race else {"race_name": "Backyard Ultra Santo Domingo"}
-        
+
         email_data = {
             **race_data,
+            **build_athlete_data(athlete),
+            **build_general_data(verification_code=reset_code),
             "nombre": athlete["nombre"],
             "reset_code": reset_code,
             "expires_minutes": str(CODE_EXPIRATION_MINUTES)
         }
-        
-        await send_email_with_template(
+
+        sent = await send_email_with_template(
             database,
             "password_reset",
             data.email,
             email_data
         )
+
+        # If the template is missing or failed, send a minimal fallback so the
+        # user always receives the code
+        if not sent:
+            race_name = race_data.get("race_name", "Backyard Ultra Santo Domingo")
+            fallback_html = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2 style="color: #ea580c;">Restablecer contraseña</h2>
+    <p>Hola {athlete.get('nombre', '')},</p>
+    <p>Tu código para restablecer la contraseña es:</p>
+    <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #ea580c;">{reset_code}</p>
+    <p>Este código expira en {CODE_EXPIRATION_MINUTES} minutos.</p>
+    <p style="color: #6b7280; font-size: 13px;">Si no solicitaste este cambio, ignora este correo.</p>
+    <p style="color: #9ca3af; font-size: 12px;">{race_name}</p>
+</div>
+"""
+            await send_templated_email(
+                data.email,
+                f"Código para restablecer tu contraseña - {race_name}",
+                fallback_html
+            )
     except Exception as e:
         print(f"Error sending reset email: {e}")
     
