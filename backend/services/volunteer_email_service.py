@@ -1,15 +1,17 @@
 import smtplib
 import os
+
+from services.env_utils import get_env
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from datetime import datetime
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+GMAIL_USER = get_env("GMAIL_USER")
+GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
 
 # Base URL for the application - use environment variable for production
-BASE_URL = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+BASE_URL = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
 LOGO_URL = f"{BASE_URL}/icon-bu.png"
 
 
