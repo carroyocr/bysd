@@ -1,18 +1,20 @@
 import smtplib
 import os
+
+from services.env_utils import get_env
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from datetime import datetime
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+GMAIL_USER = get_env("GMAIL_USER")
+GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
 
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
     """Generate HTML email template with race branding - Mobile optimized with cards"""
     
     # Base URL for community page - use environment variable for production
-    base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+    base_url = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
     
     # Generate athlete cards (mobile-friendly vertical layout)
     athletes_cards = ""
@@ -132,7 +134,7 @@ async def send_notification_email(
         return False
     
     try:
-        base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+        base_url = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
         unsubscribe_link = f"{base_url}/api/race/unsubscribe/{subscription_id}"
         
         msg = MIMEMultipart('alternative')
@@ -278,7 +280,7 @@ def get_manual_notification_template(
 ) -> str:
     """Generate HTML email template for manual availability notification"""
     
-    base_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+    base_url = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
     logo_url = f"{base_url}/icon-bu.png"
     
     if manual_type == "runners":

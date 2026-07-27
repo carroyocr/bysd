@@ -6,15 +6,17 @@ import logging
 import tweepy
 from urllib.parse import unquote
 
+from services.env_utils import get_env
+
 logger = logging.getLogger(__name__)
 
 # Twitter API credentials
-CONSUMER_KEY = os.getenv("TWITTER_CONSUMER_KEY")
-CONSUMER_SECRET = os.getenv("TWITTER_CONSUMER_SECRET")
-ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
-ACCESS_TOKEN_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
+CONSUMER_KEY = get_env("TWITTER_CONSUMER_KEY")
+CONSUMER_SECRET = get_env("TWITTER_CONSUMER_SECRET")
+ACCESS_TOKEN = get_env("TWITTER_ACCESS_TOKEN")
+ACCESS_TOKEN_SECRET = get_env("TWITTER_ACCESS_TOKEN_SECRET")
 # Decode Bearer Token if URL encoded
-BEARER_TOKEN = unquote(os.getenv("TWITTER_BEARER_TOKEN", ""))
+BEARER_TOKEN = unquote(get_env("TWITTER_BEARER_TOKEN", "") or "")
 
 def get_twitter_client():
     """

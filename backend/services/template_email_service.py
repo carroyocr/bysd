@@ -5,6 +5,8 @@ Centralized service for rendering and sending templated emails
 
 import smtplib
 import os
+
+from services.env_utils import get_env
 import re
 import time
 from email.mime.text import MIMEText
@@ -12,9 +14,9 @@ from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
-BASE_URL = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+GMAIL_USER = get_env("GMAIL_USER")
+GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
+BASE_URL = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
 
 
 def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False) -> List[Dict[str, Any]]:

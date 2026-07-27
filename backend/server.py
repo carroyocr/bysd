@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List
+from services.env_utils import get_env
 import uuid
 from datetime import datetime, timezone
 
@@ -385,7 +386,7 @@ app.include_router(capacitaciones_router, prefix="/api")
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Error-Detail"],
