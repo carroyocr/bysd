@@ -88,9 +88,20 @@ brew services start mongodb-community@7.0
 ## Variables de entorno en Render
 
 **Backend** (`bysd-backend`):
-`MONGO_URL`, `DB_NAME=backyard_ultra`, `CORS_ORIGINS`, `FRONTEND_URL`,
+`MONGO_URL`, `DB_NAME=backyard_ultra`, `JWT_SECRET_KEY`, `CORS_ORIGINS`, `FRONTEND_URL`,
 `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `TWITTER_*`
 
+- **`JWT_SECRET_KEY` es obligatoria.** Firma los tokens del panel y de los atletas.
+  Si falta, el backend **no arranca** (a propósito: antes había un valor por
+  defecto escrito en el código y cualquiera podía emitirse un token de admin).
+  Generar una con:
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+  ```
+  Cambiarla cierra todas las sesiones abiertas: hacerlo fuera del día de carrera.
+- `ADMIN_INITIAL_PASSWORD` (opcional): solo se usa para crear el usuario `admin`
+  en una base vacía. Si no está, se genera una al azar y se escribe en el log de
+  arranque.
 - `CORS_ORIGINS` debe ser: los orígenes permitidos **separados por coma, sin espacios**:
   `https://backyardultrasantodomingo.com,https://www.backyardultrasantodomingo.com,https://bysd-frontend.onrender.com`
 

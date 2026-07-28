@@ -10,6 +10,8 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { Html5Qrcode } from 'html5-qrcode';
+import { adminToken, scanKey } from '../lib/adminApi';
+import ScanKeyGate from '../components/ScanKeyGate';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -23,6 +25,9 @@ export default function QRScannerPage() {
   const [manualBib, setManualBib] = useState('');
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  // Sin clave de escaneo (o sesion del panel) no se puede registrar nada:
+  // se pide aqui, al entrar, en vez de fallar al confirmar la vuelta.
+  const [hasScanAccess, setHasScanAccess] = useState(() => !!adminToken() || !!scanKey());
   const [timeRemaining, setTimeRemaining] = useState(0);
   
   // Load race status
@@ -164,6 +169,14 @@ export default function QRScannerPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-white" />
+      </div>
+    );
+  }
+
+  if (!hasScanAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 safe-area-inset">
+        <ScanKeyGate onReady={() => setHasScanAccess(true)} />
       </div>
     );
   }

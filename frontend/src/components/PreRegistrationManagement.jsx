@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -59,11 +60,11 @@ export default function PreRegistrationManagement() {
     setLoading(true);
     try {
       const [regsRes, statsRes, bibRes, countRes, receiptsRes] = await Promise.all([
-        fetch(`${API_URL}/api/registration/admin/list/${raceCode}`),
-        fetch(`${API_URL}/api/registration/admin/stats/${raceCode}`),
-        fetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`),
-        fetch(`${API_URL}/api/registration/admin/active-athletes-count/${raceCode}`),
-        fetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`)
+        adminFetch(`${API_URL}/api/registration/admin/list/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/stats/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/active-athletes-count/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`)
       ]);
       
       if (regsRes.ok) {
@@ -116,7 +117,7 @@ export default function PreRegistrationManagement() {
     
     setSendingReminder(true);
     try {
-      const response = await fetch(`${API_URL}/api/registration/admin/send-payment-reminder/${raceCode}`, {
+      const response = await adminFetch(`${API_URL}/api/registration/admin/send-payment-reminder/${raceCode}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -148,7 +149,7 @@ export default function PreRegistrationManagement() {
     if (!confirmed) return;
     
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/review-receipt/${email}?race_code=${raceCode}&approved=${approved}`,
         {
           method: 'PUT',
@@ -180,7 +181,7 @@ export default function PreRegistrationManagement() {
     
     setRemovingBib(email);
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/remove-bib/${email}?race_code=${raceCode}`,
         {
           method: 'PUT',
@@ -237,7 +238,7 @@ export default function PreRegistrationManagement() {
     
     setAutoAssigningBibs(true);
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/auto-assign-bibs/${raceCode}?start_bib=${startBibNum}`,
         {
           method: 'POST',
@@ -283,7 +284,7 @@ export default function PreRegistrationManagement() {
     
     setRemovingAllBibs(true);
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/remove-all-bibs/${raceCode}`,
         {
           method: 'DELETE',
@@ -383,7 +384,7 @@ export default function PreRegistrationManagement() {
         cleanedForm.bib = parseInt(cleanedForm.bib);
       }
 
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/registration/${editingEmail}?race_code=${raceCode}`,
         {
           method: 'PUT',
@@ -417,7 +418,7 @@ export default function PreRegistrationManagement() {
     }
     
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/registration/${email}?race_code=${raceCode}`,
         {
           method: 'DELETE',
@@ -446,7 +447,7 @@ export default function PreRegistrationManagement() {
     }
     setPromotingEmail(email);
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/registration/admin/promote-waitlist/${email}?race_code=${raceCode}`,
         {
           method: 'POST',

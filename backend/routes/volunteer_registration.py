@@ -5,7 +5,16 @@ from datetime import datetime, timezone, timedelta
 import random
 import string
 
+from services.auth import require_permission
+
 router = APIRouter(prefix="/volunteer-registration", tags=["volunteer-registration"])
+
+# Listar, editar y borrar voluntarios exige el permiso "volunteers".
+admin_router = APIRouter(
+    prefix="/admin",
+    tags=["volunteer-registration-admin"],
+    dependencies=[Depends(require_permission("volunteers"))],
+)
 
 VALID_EVENTOS = ["carrera", "campeonato"]
 
@@ -500,7 +509,7 @@ async def request_edit_link(request: EditLinkRequest):
     return {"message": "Link de edición enviado a tu correo"}
 
 
-@router.get("/admin/registrations")
+@admin_router.get("/registrations")
 async def get_volunteer_registrations(race_code: Optional[str] = None):
     """Get all volunteer registrations for admin"""
     from server import db
@@ -527,7 +536,7 @@ class UpdateEventoRequest(BaseModel):
     evento: str
 
 
-@router.put("/admin/registrations/{email}/evento")
+@admin_router.put("/registrations/{email}/evento")
 async def update_volunteer_evento(email: str, request: UpdateEventoRequest, race_code: Optional[str] = None):
     """Update the event a volunteer belongs to (admin only)"""
     from server import db
@@ -555,7 +564,7 @@ async def update_volunteer_evento(email: str, request: UpdateEventoRequest, race
     return {"message": "Evento actualizado exitosamente", "evento": evento}
 
 
-@router.delete("/admin/registrations/{email}")
+@admin_router.delete("/registrations/{email}")
 async def delete_volunteer_registration(email: str, race_code: Optional[str] = None):
     """Delete a volunteer registration (admin only)"""
     from server import db
@@ -611,3 +620,6 @@ async def check_volunteer_registration(email: str, race_code: Optional[str] = No
     })
     
     return {"registered": existing is not None}
+
+
+router.include_router(admin_router)

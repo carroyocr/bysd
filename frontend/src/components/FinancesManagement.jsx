@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -75,7 +76,7 @@ export default function FinancesManagement() {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/finances/movements/${raceCode}`, {
+      const response = await adminFetch(`${API_URL}/api/finances/movements/${raceCode}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -144,7 +145,7 @@ export default function FinancesManagement() {
         race_code: raceCode
       };
       
-      const response = await fetch(url, {
+      const response = await adminFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +188,7 @@ export default function FinancesManagement() {
     if (!window.confirm('¿Está seguro de eliminar este movimiento?')) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/finances/movements/${id}`, {
+      const response = await adminFetch(`${API_URL}/api/finances/movements/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -209,7 +210,7 @@ export default function FinancesManagement() {
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/finances/movements/${movementId}/partial-payment`, {
+      const response = await adminFetch(`${API_URL}/api/finances/movements/${movementId}/partial-payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +248,7 @@ export default function FinancesManagement() {
     if (!window.confirm('¿Eliminar este pago parcial?')) return;
 
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/finances/movements/${movementId}/partial-payment/${paymentId}`,
         {
           method: 'DELETE',
@@ -266,7 +267,7 @@ export default function FinancesManagement() {
 
   const handleMarkAsPaid = async (movement) => {
     try {
-      const response = await fetch(`${API_URL}/api/finances/movements/${movement.id}`, {
+      const response = await adminFetch(`${API_URL}/api/finances/movements/${movement.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

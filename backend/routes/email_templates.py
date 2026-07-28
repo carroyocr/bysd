@@ -9,7 +9,15 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 import re
 
-router = APIRouter(prefix="/email-templates", tags=["Email Templates"])
+from services.auth import require_permission
+
+# Las plantillas definen el contenido de todos los correos que envia el sitio,
+# y /test manda correo desde la cuenta oficial: solo el permiso "emails".
+router = APIRouter(
+    prefix="/email-templates",
+    tags=["Email Templates"],
+    dependencies=[Depends(require_permission("emails"))],
+)
 
 # Merge field definitions by source
 MERGE_FIELDS = {

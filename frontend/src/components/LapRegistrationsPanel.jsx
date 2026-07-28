@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -51,10 +52,10 @@ export default function LapRegistrationsPanel() {
       if (filters.scanned_by) params.append('scanned_by', filters.scanned_by);
       
       const [regsRes, summaryRes] = await Promise.all([
-        fetch(`${API_URL}/api/qr-scan/lap-registrations?${params}`, {
+        adminFetch(`${API_URL}/api/qr-scan/lap-registrations?${params}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`${API_URL}/api/qr-scan/lap-registrations/summary?race_code=${raceCode}`, {
+        adminFetch(`${API_URL}/api/qr-scan/lap-registrations/summary?race_code=${raceCode}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -91,7 +92,7 @@ export default function LapRegistrationsPanel() {
       if (filters.athlete_name) params.append('athlete_name', filters.athlete_name);
       if (filters.scanned_by) params.append('scanned_by', filters.scanned_by);
       
-      const response = await fetch(`${API_URL}/api/qr-scan/lap-registrations/export?${params}`, {
+      const response = await adminFetch(`${API_URL}/api/qr-scan/lap-registrations/export?${params}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       

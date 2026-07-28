@@ -6,18 +6,17 @@ from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form, Re
 from typing import Optional
 from datetime import datetime, timezone
 import base64
-import os
-import jwt
+
+from services.auth import has_permission, verify_admin_token
 
 router = APIRouter(prefix="/tshirt", tags=["tshirt"])
 
 
 def _verify_admin(authorization: Optional[str]):
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    payload = verify_admin_token(authorization)
+    if not has_permission(payload, "config"):
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta operacion")
+    return payload
 
 
 @router.get("/designs")

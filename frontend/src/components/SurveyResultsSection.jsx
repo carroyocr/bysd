@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ClipboardList, Users, Heart, Eye, RefreshCw, Star, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -259,10 +260,10 @@ export default function SurveyResultsSection() {
     setLoading(true);
     try {
       const [statsRes, athletesRes, volunteersRes, spectatorsRes] = await Promise.all([
-        fetch(`${API_URL}/api/surveys/stats`),
-        fetch(`${API_URL}/api/surveys/athletes/responses`),
-        fetch(`${API_URL}/api/surveys/volunteers/responses`),
-        fetch(`${API_URL}/api/surveys/spectators/responses`)
+        adminFetch(`${API_URL}/api/surveys/stats`),
+        adminFetch(`${API_URL}/api/surveys/athletes/responses`),
+        adminFetch(`${API_URL}/api/surveys/volunteers/responses`),
+        adminFetch(`${API_URL}/api/surveys/spectators/responses`)
       ]);
 
       const statsData = await statsRes.json();

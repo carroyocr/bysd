@@ -139,13 +139,29 @@ async def initialize_race_data():
     # Create admin user if doesn't exist
     admin_exists = await db.admin_users.find_one({"username": "admin"})
     if not admin_exists:
-        hashed_password = bcrypt.hashpw("Backyard2026!".encode('utf-8'), bcrypt.gensalt())
+        # La contrasena inicial ya no esta escrita en el codigo: sale de
+        # ADMIN_INITIAL_PASSWORD y, si no esta definida, se genera una al azar
+        # y se escribe una sola vez en el log de arranque.
+        import secrets
+
+        initial_password = get_env("ADMIN_INITIAL_PASSWORD")
+        generada = initial_password is None
+        if generada:
+            initial_password = secrets.token_urlsafe(12)
+
+        hashed_password = bcrypt.hashpw(initial_password.encode('utf-8'), bcrypt.gensalt())
         await db.admin_users.insert_one({
             "username": "admin",
             "password": hashed_password.decode('utf-8'),
             "created_at": datetime.now(timezone.utc)
         })
-        logging.info("Admin user created")
+        if generada:
+            logging.warning(
+                "Usuario 'admin' creado con una contrasena generada al azar: %s "
+                "-- cambiala tras el primer acceso.", initial_password
+            )
+        else:
+            logging.info("Admin user created")
     
     # Initialize race config if doesn't exist
     config_exists = await db.race_config.find_one({})
@@ -383,14 +399,25 @@ app.include_router(album_router, prefix="/api")
 from routes.capacitaciones import router as capacitaciones_router
 app.include_router(capacitaciones_router, prefix="/api")
 
+cors_origins = [o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()],
+    # La sesion viaja en la cabecera Authorization, no en cookies, asi que no
+    # hacen falta credenciales entre origenes. Con "*" ademas serian una mala
+    # combinacion: cualquier web podria hablar con la API en nombre del usuario.
+    allow_credentials=False,
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Error-Detail"],
 )
+
+if cors_origins == ['*']:
+    logging.warning(
+        "CORS_ORIGINS no esta definido: la API acepta peticiones de cualquier "
+        "origen. Define el dominio del frontend en el dashboard de Render."
+    )
 
 # Configure logging
 logging.basicConfig(

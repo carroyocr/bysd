@@ -7,7 +7,10 @@ from typing import Optional, List
 from datetime import datetime, timezone
 from bson import ObjectId
 
-router = APIRouter()
+from services.auth import require_permission
+
+# Toda la contabilidad del evento exige el permiso "finances".
+router = APIRouter(dependencies=[Depends(require_permission("finances"))])
 
 # Payment status options
 PAYMENT_STATUS = {

@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { toast } from 'sonner';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -58,9 +59,9 @@ export default function VolunteerAssignmentsManagement() {
     setLoading(true);
     try {
       const [volunteersRes, slotsRes, raceRes] = await Promise.all([
-        fetch(`${API_URL}/api/volunteer-registration/admin/registrations`),
-        fetch(`${API_URL}/api/volunteers/slots`),
-        fetch(`${API_URL}/api/race-config/active`)
+        adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations`),
+        adminFetch(`${API_URL}/api/volunteers/slots`),
+        adminFetch(`${API_URL}/api/race-config/active`)
       ]);
       
       if (volunteersRes.ok) {
@@ -120,7 +121,7 @@ export default function VolunteerAssignmentsManagement() {
     if ((volunteer.evento || 'carrera') === evento) return;
     setChangingEventoEmail(volunteer.email);
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(volunteer.email)}/evento`,
         {
           method: 'PUT',
@@ -178,7 +179,7 @@ export default function VolunteerAssignmentsManagement() {
     
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteers/assign/${selectedSlotToAdd.id}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteers/assign/${selectedSlotToAdd.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: selectedVolunteer.email })
@@ -207,7 +208,7 @@ export default function VolunteerAssignmentsManagement() {
     
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteers/unassign/${selectedSlotToRemove.id}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteers/unassign/${selectedSlotToRemove.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: selectedVolunteer.email })
@@ -236,7 +237,7 @@ export default function VolunteerAssignmentsManagement() {
     
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}`, {
         method: 'DELETE'
       });
       
@@ -269,7 +270,7 @@ export default function VolunteerAssignmentsManagement() {
     try {
       for (const slotId of selectedVolunteer.slots_interes) {
         try {
-          const response = await fetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
+          const response = await adminFetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: selectedVolunteer.email })
@@ -306,7 +307,7 @@ export default function VolunteerAssignmentsManagement() {
   const handleConfirmSingleSlot = async (volunteer, slotId) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: volunteer.email })

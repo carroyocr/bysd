@@ -12,6 +12,7 @@ import {
   Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -67,8 +68,8 @@ export default function RaceConfigPanel() {
     setLoading(true);
     try {
       const [activeRes, allRes] = await Promise.all([
-        fetch(`${API_URL}/api/race-config/active`),
-        fetch(`${API_URL}/api/race-config/all`)
+        adminFetch(`${API_URL}/api/race-config/active`),
+        adminFetch(`${API_URL}/api/race-config/all`)
       ]);
       
       const activeData = await activeRes.json();
@@ -114,10 +115,10 @@ export default function RaceConfigPanel() {
   const loadNotificationCounts = async (code) => {
     try {
       const [runnersRes, volunteersRes] = await Promise.all([
-        fetch(`${API_URL}/api/race-config/notify-runners-count/${code}`, {
+        adminFetch(`${API_URL}/api/race-config/notify-runners-count/${code}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch(`${API_URL}/api/race-config/notify-volunteers-count/${code}`, {
+        adminFetch(`${API_URL}/api/race-config/notify-volunteers-count/${code}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -157,7 +158,7 @@ export default function RaceConfigPanel() {
         ? `/api/race-config/notify-runners-manual/${activeRace.code}`
         : `/api/race-config/notify-volunteers-manual/${activeRace.code}`;
       
-      const response = await fetch(`${API_URL}${endpoint}`, {
+      const response = await adminFetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -197,7 +198,7 @@ export default function RaceConfigPanel() {
       // Archive current race data if option is selected and there's an active race
       if (archiveOnCreate && activeRace && !activeRace.is_default && !activeRace.data_archived) {
         toast.info('Archivando datos de la carrera anterior...');
-        const archiveResponse = await fetch(`${API_URL}/api/race-config/archive-data/${activeRace.code}`, {
+        const archiveResponse = await adminFetch(`${API_URL}/api/race-config/archive-data/${activeRace.code}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -211,7 +212,7 @@ export default function RaceConfigPanel() {
       }
       
       // Create new race
-      const response = await fetch(`${API_URL}/api/race-config/create`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -245,7 +246,7 @@ export default function RaceConfigPanel() {
     
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/race-config/update/${activeRace.code}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/update/${activeRace.code}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -282,7 +283,7 @@ export default function RaceConfigPanel() {
     
     setUploadingLogo(true);
     try {
-      const response = await fetch(`${API_URL}/api/race-config/upload-logo/${activeRace.code}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/upload-logo/${activeRace.code}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -324,7 +325,7 @@ export default function RaceConfigPanel() {
     
     setUploadingLogo(true);
     try {
-      const response = await fetch(`${API_URL}/api/race-config/upload-image/${activeRace.code}/${imageType}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/upload-image/${activeRace.code}/${imageType}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -366,7 +367,7 @@ export default function RaceConfigPanel() {
     
     setUploadingManual(manualType);
     try {
-      const response = await fetch(`${API_URL}/api/race-config/upload-manual/${activeRace.code}/${manualType}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/upload-manual/${activeRace.code}/${manualType}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -396,7 +397,7 @@ export default function RaceConfigPanel() {
     }
     
     try {
-      const response = await fetch(`${API_URL}/api/race-config/delete-manual/${activeRace.code}/${manualType}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/delete-manual/${activeRace.code}/${manualType}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -418,7 +419,7 @@ export default function RaceConfigPanel() {
   const handleActivateRace = async (code) => {
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/race-config/activate/${code}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/activate/${code}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -444,7 +445,7 @@ export default function RaceConfigPanel() {
     
     try {
       // First, get data summary
-      const summaryResponse = await fetch(`${API_URL}/api/race-config/data-summary/${code}`);
+      const summaryResponse = await adminFetch(`${API_URL}/api/race-config/data-summary/${code}`);
       if (!summaryResponse.ok) {
         throw new Error('Error al obtener resumen de datos');
       }
@@ -476,7 +477,7 @@ export default function RaceConfigPanel() {
         return;
       }
       
-      const response = await fetch(`${API_URL}/api/race-config/archive-data/${code}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/archive-data/${code}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -3,13 +3,14 @@ QR Code Scanning System for Race Lap Control
 Allows scanning athlete QR codes to register lap completions
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Header, HTTPException, Depends, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 import os
 import qrcode
+import secrets
 from io import BytesIO
 import base64
 from pathlib import Path
@@ -17,11 +18,103 @@ import zipfile
 import csv
 import io
 
+from services.auth import has_permission, require_permission, verify_admin_token
+from services.file_storage import safe_filename
+
 router = APIRouter(prefix="/api/qr-scan", tags=["qr-scan"])
+
+# Los reportes de vueltas y la generacion de QR son parte del panel de control.
+solo_control = Depends(require_permission("control"))
 
 # Directory for QR codes
 QR_CODES_DIR = Path(__file__).parent.parent / "static" / "qrcodes"
 QR_CODES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ============= CLAVE DE ESCANEO =============
+#
+# Registrar vueltas y marcar DNF estaba abierto a cualquiera que conociera la
+# URL. Exigir el login del panel en cada dispositivo el dia de la carrera es
+# demasiada friccion, asi que cada carrera tiene su propia clave de escaneo:
+# el personal la escribe una vez en el telefono y queda guardada. Un token del
+# panel tambien sirve, para que el equipo de organizacion no tenga que buscarla.
+
+SCAN_KEY_LENGTH = 5
+
+
+def generar_scan_key() -> str:
+    """Clave corta, en mayusculas, facil de dictar por radio o WhatsApp."""
+    alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sin I, O, 0, 1
+    return "".join(secrets.choice(alfabeto) for _ in range(SCAN_KEY_LENGTH))
+
+
+async def obtener_scan_key(database, race_code: Optional[str] = None) -> tuple:
+    """Devuelve (carrera, clave), creandola la primera vez que hace falta."""
+    if race_code:
+        carrera = await database.race_configurations.find_one({"code": race_code})
+    else:
+        carrera = await database.race_configurations.find_one({"is_active": True})
+
+    if not carrera:
+        raise HTTPException(status_code=400, detail="No hay carrera activa")
+
+    clave = carrera.get("scan_key")
+    if not clave:
+        clave = generar_scan_key()
+        await database.race_configurations.update_one(
+            {"_id": carrera["_id"]}, {"$set": {"scan_key": clave}}
+        )
+
+    return carrera, clave
+
+
+async def require_scan_access(
+    race_code: Optional[str] = None,
+    x_scan_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Deja pasar con la clave de escaneo de la carrera o con token del panel."""
+    from server import db as database
+
+    if authorization:
+        payload = verify_admin_token(authorization)
+        if has_permission(payload, "scanner") or has_permission(payload, "control"):
+            return payload
+        raise HTTPException(status_code=403, detail="No tienes permiso para escanear")
+
+    if not x_scan_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Falta la clave de escaneo. Pidesela a la organizacion.",
+        )
+
+    _, clave = await obtener_scan_key(database, race_code)
+    if not secrets.compare_digest(x_scan_key.strip().upper(), clave):
+        raise HTTPException(status_code=401, detail="Clave de escaneo incorrecta")
+
+    return {"scan_key": True}
+
+
+@router.get("/scan-key", dependencies=[solo_control])
+async def ver_scan_key(race_code: Optional[str] = None):
+    """Panel: consultar la clave de escaneo vigente de la carrera."""
+    from server import db as database
+
+    carrera, clave = await obtener_scan_key(database, race_code)
+    return {"race_code": carrera.get("code"), "scan_key": clave}
+
+
+@router.post("/scan-key/regenerate", dependencies=[solo_control])
+async def regenerar_scan_key(race_code: Optional[str] = None):
+    """Panel: cambiar la clave (invalida los dispositivos que tenian la vieja)."""
+    from server import db as database
+
+    carrera, _ = await obtener_scan_key(database, race_code)
+    clave = generar_scan_key()
+    await database.race_configurations.update_one(
+        {"_id": carrera["_id"]}, {"$set": {"scan_key": clave}}
+    )
+    return {"race_code": carrera.get("code"), "scan_key": clave}
 
 # Constants
 LAP_DURATION_MINUTES = 60  # Backyard Ultra: 1 hour per lap
@@ -205,10 +298,10 @@ def generate_qr_code_base64(bib: str, race_code: str, frontend_url: str) -> str:
     return f"data:image/png;base64,{img_str}"
 
 
-@router.get("/image/{filename}")
+@router.get("/image/{filename}", dependencies=[solo_control])
 async def get_qr_image(filename: str):
     """Serve QR code image"""
-    filepath = QR_CODES_DIR / filename
+    filepath = QR_CODES_DIR / safe_filename(filename)
     
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="QR code no encontrado")
@@ -217,7 +310,11 @@ async def get_qr_image(filename: str):
 
 
 @router.get("/athlete/{bib}")
-async def get_athlete_for_scan(bib: str, race_code: Optional[str] = None):
+async def get_athlete_for_scan(
+    bib: str,
+    race_code: Optional[str] = None,
+    _acceso=Depends(require_scan_access),
+):
     """
     Get athlete information for QR scan confirmation.
     Calculates current lap and whether athlete can complete.
@@ -365,7 +462,10 @@ async def get_athlete_for_scan(bib: str, race_code: Optional[str] = None):
 
 
 @router.post("/confirm")
-async def confirm_lap(request: LapConfirmRequest):
+async def confirm_lap(
+    request: LapConfirmRequest,
+    _acceso=Depends(require_scan_access),
+):
     """
     Confirm a lap completion or mark as DNF.
     """
@@ -659,7 +759,7 @@ async def get_race_status():
 
 # ============= LAP REGISTRATIONS ENDPOINTS =============
 
-@router.get("/lap-registrations")
+@router.get("/lap-registrations", dependencies=[solo_control])
 async def get_lap_registrations(
     race_code: Optional[str] = None,
     lap_number: Optional[int] = None,
@@ -709,7 +809,7 @@ async def get_lap_registrations(
     }
 
 
-@router.get("/lap-registrations/export")
+@router.get("/lap-registrations/export", dependencies=[solo_control])
 async def export_lap_registrations(
     race_code: Optional[str] = None,
     lap_number: Optional[int] = None,
@@ -805,7 +905,7 @@ async def export_lap_registrations(
     )
 
 
-@router.get("/lap-registrations/summary")
+@router.get("/lap-registrations/summary", dependencies=[solo_control])
 async def get_lap_registrations_summary(race_code: Optional[str] = None):
     """Get summary statistics for lap registrations"""
     from server import db as database
@@ -854,7 +954,7 @@ async def get_lap_registrations_summary(race_code: Optional[str] = None):
     }
 
 
-@router.post("/generate-qr/{bib}")
+@router.post("/generate-qr/{bib}", dependencies=[solo_control])
 async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
     """Generate QR code for an athlete"""
     from server import db as database
@@ -904,7 +1004,7 @@ async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
     }
 
 
-@router.get("/generate-all-qr")
+@router.get("/generate-all-qr", dependencies=[solo_control])
 async def generate_all_qr_codes(race_code: Optional[str] = None):
     """Generate QR codes for all active athletes"""
     from server import db as database
@@ -945,7 +1045,7 @@ async def generate_all_qr_codes(race_code: Optional[str] = None):
     }
 
 
-@router.get("/download-all-qr")
+@router.get("/download-all-qr", dependencies=[solo_control])
 async def download_all_qr_codes(race_code: Optional[str] = None):
     """Download all QR codes as a ZIP file"""
     from server import db as database

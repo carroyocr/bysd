@@ -4,7 +4,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
-router = APIRouter()
+from services.auth import require_permission
+
+# Asignaciones y envios masivos de correo a voluntarios: permiso "volunteers".
+router = APIRouter(dependencies=[Depends(require_permission("volunteers"))])
 
 VALID_EVENTOS = ["carrera", "campeonato"]
 

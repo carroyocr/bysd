@@ -3,7 +3,13 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, timezone
 
+from services.auth import require_permission
+
 router = APIRouter()
+
+# Cualquiera puede responder una encuesta; leer las respuestas (con nombre y
+# correo de quien contesto) exige el permiso "surveys".
+solo_encuestas = Depends(require_permission("surveys"))
 
 # ============================================================================
 # MODELS
@@ -147,7 +153,7 @@ async def submit_spectators_survey(survey: SpectatorsSurvey):
 # ENDPOINTS - GET SURVEYS (ADMIN)
 # ============================================================================
 
-@router.get("/athletes/responses")
+@router.get("/athletes/responses", dependencies=[solo_encuestas])
 async def get_athletes_responses():
     """Get all athlete survey responses"""
     from server import db as database
@@ -163,7 +169,7 @@ async def get_athletes_responses():
     }
 
 
-@router.get("/volunteers/responses")
+@router.get("/volunteers/responses", dependencies=[solo_encuestas])
 async def get_volunteers_responses():
     """Get all volunteer survey responses"""
     from server import db as database
@@ -179,7 +185,7 @@ async def get_volunteers_responses():
     }
 
 
-@router.get("/spectators/responses")
+@router.get("/spectators/responses", dependencies=[solo_encuestas])
 async def get_spectators_responses():
     """Get all spectator survey responses"""
     from server import db as database
@@ -195,7 +201,7 @@ async def get_spectators_responses():
     }
 
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[solo_encuestas])
 async def get_surveys_stats():
     """Get survey statistics"""
     from server import db as database
