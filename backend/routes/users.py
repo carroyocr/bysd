@@ -3,18 +3,20 @@ User Management for Admin Panel
 Handles user creation, permissions, and authentication
 """
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
 import bcrypt
-import jwt
-import os
 
-router = APIRouter(prefix="/api/users", tags=["users"])
+from services.auth import require_permission
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026")
-ALGORITHM = "HS256"
+# La gestion de usuarios es la operacion mas sensible del panel: crear un
+# usuario aqui equivale a repartir acceso al resto. Se exige el permiso
+# "users", no solo un token valido.
+solo_usuarios = Depends(require_permission("users"))
+
+router = APIRouter(prefix="/api/users", tags=["users"], dependencies=[solo_usuarios])
 
 
 class UserCreate(BaseModel):
@@ -43,23 +45,9 @@ class UserResponse(BaseModel):
     created_at: Optional[datetime] = None
 
 
-def verify_admin_token(authorization: str = Header(...)):
-    """Verify JWT token and check if user is admin"""
-    try:
-        token = authorization.replace("Bearer ", "")
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token inválido")
-
-
 @router.get("")
-async def get_users(authorization: str = Header(...)):
+async def get_users():
     """Get all users"""
-    verify_admin_token(authorization)
-    
     from server import db
     
     users = await db.admin_users.find(
@@ -82,10 +70,8 @@ async def get_users(authorization: str = Header(...)):
 
 
 @router.post("")
-async def create_user(user: UserCreate, authorization: str = Header(...)):
+async def create_user(user: UserCreate):
     """Create a new user"""
-    verify_admin_token(authorization)
-    
     from server import db
     
     # Check if username already exists
@@ -149,10 +135,8 @@ async def create_user(user: UserCreate, authorization: str = Header(...)):
 
 
 @router.put("/{username}/permissions")
-async def update_permissions(username: str, update: PermissionsUpdate, authorization: str = Header(...)):
+async def update_permissions(username: str, update: PermissionsUpdate):
     """Update user permissions"""
-    verify_admin_token(authorization)
-    
     from server import db
     
     # Don't allow modifying admin user
@@ -176,10 +160,8 @@ async def update_permissions(username: str, update: PermissionsUpdate, authoriza
 
 
 @router.delete("/{username}")
-async def delete_user(username: str, authorization: str = Header(...)):
+async def delete_user(username: str):
     """Delete a user"""
-    verify_admin_token(authorization)
-    
     from server import db
     
     # Don't allow deleting admin user
@@ -195,10 +177,8 @@ async def delete_user(username: str, authorization: str = Header(...)):
 
 
 @router.put("/{username}")
-async def update_user(username: str, update: UserUpdate, authorization: str = Header(...)):
+async def update_user(username: str, update: UserUpdate):
     """Update user info (name, email)"""
-    verify_admin_token(authorization)
-    
     from server import db
     
     update_data = {"updated_at": datetime.now(timezone.utc)}

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
+import { scanHeaders } from '../lib/adminApi';
+import ScanKeyGate from '../components/ScanKeyGate';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -26,6 +28,8 @@ export default function ScanConfirmPage() {
   const [completedAction, setCompletedAction] = useState(null);
   
   // DNF confirmation
+  const [needsKey, setNeedsKey] = useState(false);
+  const [keyReloads, setKeyReloads] = useState(0);
   const [showDnfConfirm, setShowDnfConfirm] = useState(false);
   const [dnfInput, setDnfInput] = useState('');
   
@@ -52,6 +56,7 @@ export default function ScanConfirmPage() {
       
       xhr = new XMLHttpRequest();
       xhr.open('GET', url, true);
+      Object.entries(scanHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
       
       xhr.onload = function() {
         if (!isMounted) return;
@@ -65,6 +70,12 @@ export default function ScanConfirmPage() {
           return;
         }
         
+        if (xhr.status === 401 || xhr.status === 403) {
+          setNeedsKey(true);
+          setLoading(false);
+          return;
+        }
+
         if (xhr.status >= 400) {
           setError(data.detail || 'Error al cargar datos del atleta');
           setLoading(false);
@@ -103,7 +114,7 @@ export default function ScanConfirmPage() {
         xhr.abort();
       }
     };
-  }, [bib, raceCode]);
+  }, [bib, raceCode, keyReloads]);
   
   // Countdown timer
   useEffect(() => {
@@ -127,6 +138,7 @@ export default function ScanConfirmPage() {
     
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
+    Object.entries(scanHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     
     xhr.onload = function() {
       let data;
@@ -138,6 +150,12 @@ export default function ScanConfirmPage() {
         return;
       }
       
+      if (xhr.status === 401 || xhr.status === 403) {
+        setNeedsKey(true);
+        setLoading(false);
+        return;
+      }
+
       if (xhr.status >= 400) {
         setError(data.detail || 'Error al cargar datos del atleta');
         setLoading(false);
@@ -164,7 +182,7 @@ export default function ScanConfirmPage() {
     try {
       const response = await fetch(`${API_URL}/api/qr-scan/confirm`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: scanHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           bib: athlete.bib,
           confirmed_lap: athlete.lap_to_complete,
@@ -192,6 +210,8 @@ export default function ScanConfirmPage() {
         } else if (data.action === 'auto_dnf' || data.action === 'dnf_early_return' || data.action === 'dnf_timeout') {
           toast.warning(data.message);
         }
+      } else if (response.status === 401 || response.status === 403) {
+        setNeedsKey(true);
       } else {
         toast.error(data.detail || 'Error al confirmar vuelta');
       }
@@ -215,7 +235,7 @@ export default function ScanConfirmPage() {
     try {
       const response = await fetch(`${API_URL}/api/qr-scan/confirm`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: scanHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           bib: athlete.bib,
           confirmed_lap: athlete.lap_to_complete,
@@ -231,6 +251,8 @@ export default function ScanConfirmPage() {
         setCompleted(true);
         setCompletedAction(data);
         toast.success(data.message);
+      } else if (response.status === 401 || response.status === 403) {
+        setNeedsKey(true);
       } else {
         toast.error(data.detail || 'Error al marcar DNF');
       }
@@ -257,6 +279,22 @@ export default function ScanConfirmPage() {
     navigate('/');
   };
   
+  // Sin clave de escaneo válida no se puede consultar ni registrar nada
+  if (needsKey) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 safe-area-inset">
+        <ScanKeyGate
+          mensaje="Escribe la clave de escaneo de la carrera para registrar vueltas."
+          onReady={() => {
+            setNeedsKey(false);
+            setLoading(true);
+            setKeyReloads((n) => n + 1);
+          }}
+        />
+      </div>
+    );
+  }
+
   // Loading state
   if (loading) {
     return (

@@ -14,21 +14,15 @@ LOGOS_DIR.mkdir(parents=True, exist_ok=True)
 MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
-# JWT verification (reuse from race.py)
-import jwt
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026")
-ALGORITHM = "HS256"
+from services.auth import require_permission, verify_admin_token
 
-async def verify_token(authorization: str = Header(...)):
+# Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
+solo_config = Depends(require_permission("config"))
+
+
+async def verify_token(authorization: Optional[str] = Header(None)):
     """Verify JWT token from Authorization header"""
-    try:
-        token = authorization.replace("Bearer ", "")
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+    return verify_admin_token(authorization)
 
 
 class PaymentInfoModel(BaseModel):
@@ -84,7 +78,7 @@ async def get_active_race(db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"is_active": True}, 
-        {"_id": 0}
+        {"_id": 0, "scan_key": 0}
     )
     
     if not config:
@@ -190,7 +184,7 @@ async def get_all_races(db=Depends(lambda: None)):
     
     races = await database.race_configurations.find(
         {}, 
-        {"_id": 0}
+        {"_id": 0, "scan_key": 0}
     ).sort("created_at", -1).to_list(100)
     
     # Ensure legacy race BYSD-2026 is always included for historical results
@@ -227,7 +221,7 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"code": code}, 
-        {"_id": 0}
+        {"_id": 0, "scan_key": 0}
     )
     
     # If not found in DB, check if it's a legacy race
@@ -651,7 +645,7 @@ async def prepare_new_race(
     }
 
 
-@router.get("/data-summary/{code}")
+@router.get("/data-summary/{code}", dependencies=[solo_config])
 async def get_race_data_summary(
     code: str,
     db=Depends(lambda: None)

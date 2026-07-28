@@ -176,3 +176,6 @@ backend/routes/migration_export.py
 
 # Config local de Claude Code (permisos, launch.json) - machine-specific
 .claude/
+
+# Credenciales de prueba: no van al repositorio
+memory/test_credentials.md

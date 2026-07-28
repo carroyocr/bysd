@@ -8,7 +8,18 @@ import os
 import secrets
 import hashlib
 
+from services.auth import require_permission
+
 router = APIRouter(prefix="/api/registration", tags=["registration"])
+
+# Todo lo que cuelga de /admin exige un token del panel con permiso sobre
+# atletas. Antes estaba abierto: cualquiera podia listar los inscritos con
+# sus datos medicos y de contacto, borrarlos o aprobar comprobantes de pago.
+admin_router = APIRouter(
+    prefix="/admin",
+    tags=["registration-admin"],
+    dependencies=[Depends(require_permission("athletes"))],
+)
 
 # Get MongoDB from server
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -627,7 +638,7 @@ async def resend_edit_link(email: str):
 
 
 # Admin endpoints
-@router.get("/admin/list/{race_code}")
+@admin_router.get("/list/{race_code}")
 async def list_registrations(race_code: str, status: Optional[str] = None):
     """List all registrations for a race (admin only)"""
     query = {"race_code": race_code}
@@ -653,7 +664,7 @@ async def list_registrations(race_code: str, status: Optional[str] = None):
     }
 
 
-@router.get("/admin/stats/{race_code}")
+@admin_router.get("/stats/{race_code}")
 async def get_registration_stats(race_code: str):
     """Get registration statistics for a race"""
     pipeline = [
@@ -782,7 +793,7 @@ async def public_participants(race_code: str):
     }
 
 
-@router.post("/admin/promote-waitlist/{email}")
+@admin_router.post("/promote-waitlist/{email}")
 async def promote_waitlist(email: str, race_code: str):
     """Admin: Promote a waitlisted athlete to confirmed registration and send confirmation email."""
     registration = await registrations_collection.find_one({
@@ -873,7 +884,7 @@ class AdminRegistrationUpdate(BaseModel):
     payment_status: Optional[Literal["pending", "paid"]] = None
 
 
-@router.get("/admin/registration/{email}")
+@admin_router.get("/registration/{email}")
 async def get_registration_admin(email: str, race_code: str):
     """Get single registration by email (admin only)"""
     registration = await registrations_collection.find_one(
@@ -893,7 +904,7 @@ async def get_registration_admin(email: str, race_code: str):
     return registration
 
 
-@router.put("/admin/registration/{email}")
+@admin_router.put("/registration/{email}")
 async def update_registration_admin(email: str, race_code: str, updates: AdminRegistrationUpdate):
     """Update registration data (admin only)"""
     registration = await registrations_collection.find_one({
@@ -945,7 +956,7 @@ async def update_registration_admin(email: str, race_code: str, updates: AdminRe
     return {"message": "Registro actualizado exitosamente"}
 
 
-@router.delete("/admin/registration/{email}")
+@admin_router.delete("/registration/{email}")
 async def delete_registration_admin(email: str, race_code: str):
     """Delete a registration (admin only)"""
     result = await registrations_collection.delete_one({
@@ -959,7 +970,7 @@ async def delete_registration_admin(email: str, race_code: str):
     return {"message": "Registro eliminado exitosamente"}
 
 
-@router.get("/admin/next-bib/{race_code}")
+@admin_router.get("/next-bib/{race_code}")
 async def get_next_bib(race_code: str):
     """Get the next available BIB number for a race"""
     # Find the highest BIB number currently assigned
@@ -1026,7 +1037,7 @@ async def cancel_registration(token: str, cancellation: CancellationRequest):
     return {"message": "Registro cancelado y eliminado exitosamente"}
 
 
-@router.put("/admin/remove-bib/{email}")
+@admin_router.put("/remove-bib/{email}")
 async def remove_bib_assignment(email: str, race_code: str):
     """Remove BIB assignment from an athlete"""
     result = await registrations_collection.update_one(
@@ -1040,7 +1051,7 @@ async def remove_bib_assignment(email: str, race_code: str):
     return {"message": "Asignación de BIB eliminada", "email": email}
 
 
-@router.delete("/admin/remove-all-bibs/{race_code}")
+@admin_router.delete("/remove-all-bibs/{race_code}")
 async def remove_all_bib_assignments(race_code: str):
     """Remove all BIB assignments for a race"""
     result = await registrations_collection.update_many(
@@ -1054,7 +1065,7 @@ async def remove_all_bib_assignments(race_code: str):
     }
 
 
-@router.post("/admin/auto-assign-bibs/{race_code}")
+@admin_router.post("/auto-assign-bibs/{race_code}")
 async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
     """Auto-assign BIB numbers to active+paid athletes based on experience score"""
     
@@ -1155,7 +1166,7 @@ class PaymentReceiptSubmission(BaseModel):
     transfer_number: Optional[str] = None  # Optional transfer/reference number
 
 
-@router.get("/admin/active-athletes-count/{race_code}")
+@admin_router.get("/active-athletes-count/{race_code}")
 async def get_active_athletes_count(race_code: str):
     """Get count of active athletes who need payment reminder"""
     count = await registrations_collection.count_documents({
@@ -1167,7 +1178,7 @@ async def get_active_athletes_count(race_code: str):
     return {"count": count, "race_code": race_code}
 
 
-@router.post("/admin/send-payment-reminder/{race_code}")
+@admin_router.post("/send-payment-reminder/{race_code}")
 async def send_payment_reminder(race_code: str):
     """Send payment reminder email to all active athletes with pending payment"""
     from services.template_email_service import (
@@ -1370,7 +1381,7 @@ async def submit_payment_receipt(
     }
 
 
-@router.get("/admin/pending-receipts/{race_code}")
+@admin_router.get("/pending-receipts/{race_code}")
 async def get_pending_receipts(race_code: str):
     """Get all registrations with pending payment receipts"""
     registrations = await registrations_collection.find(
@@ -1398,7 +1409,7 @@ async def get_pending_receipts(race_code: str):
     }
 
 
-@router.put("/admin/review-receipt/{email}")
+@admin_router.put("/review-receipt/{email}")
 async def review_payment_receipt(email: str, race_code: str, approved: bool):
     """Approve or reject a payment receipt"""
     registration = await registrations_collection.find_one({
@@ -1488,3 +1499,7 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         "message": f"Comprobante {'aprobado' if approved else 'rechazado'}",
         "payment_status": payment_status
     }
+
+
+# El sub-router admin se monta al final, cuando ya estan definidas sus rutas.
+router.include_router(admin_router)

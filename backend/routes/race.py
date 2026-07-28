@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends, Header, Query
 from fastapi.responses import FileResponse
 from typing import Optional, List
 import bcrypt
-import jwt
 from datetime import datetime, timedelta, timezone
 import os
 import urllib.parse
@@ -16,11 +15,10 @@ from models.race import (
     CheerMessage, CheerMessageRequest, AdjustLapsRequest, EditParticipantRequest
 )
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
+from services.auth import encode_admin_token, require_permission, verify_admin_token
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026")
-ALGORITHM = "HS256"
 KM_PER_LAP = 6.7
 CERTIFICATES_DIR = Path(__file__).parent.parent / "static" / "certificates" / "individual"
 
@@ -36,17 +34,7 @@ async def get_active_race_code(database) -> str:
 
 # Helper function to verify JWT token
 def verify_token(authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="No autorizado")
-    
-    token = authorization.replace("Bearer ", "")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Token inválido")
+    return verify_admin_token(authorization)
 
 @router.post("/auth/admin-login")
 async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
@@ -71,9 +59,9 @@ async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
         "username": credentials.username,
         "is_admin": is_admin,
         "permissions": permissions if not is_admin else ["all"],
-        "exp": datetime.utcnow() + timedelta(hours=12)
+        "exp": datetime.now(timezone.utc) + timedelta(hours=12)
     }
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+    token = encode_admin_token(token_data)
     
     return {
         "token": token, 

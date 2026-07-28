@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   QrCode, Camera, Clock, Users, AlertTriangle, 
-  Loader2, RefreshCw, ChevronRight, Timer, ExternalLink
+  Loader2, RefreshCw, ChevronRight, Timer, ExternalLink, KeyRound
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -19,13 +20,49 @@ export default function QRScannerPanel() {
   const [loading, setLoading] = useState(true);
   const [manualBib, setManualBib] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [claveEscaneo, setClaveEscaneo] = useState(null);
+  const [regenerando, setRegenerando] = useState(false);
   
   // Load race status
   useEffect(() => {
     loadRaceStatus();
+    cargarClaveEscaneo();
     const interval = setInterval(loadRaceStatus, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const cargarClaveEscaneo = async () => {
+    try {
+      const res = await adminFetch(`${API_URL}/api/qr-scan/scan-key`);
+      if (res.ok) {
+        const data = await res.json();
+        setClaveEscaneo(data.scan_key);
+      }
+    } catch (err) {
+      console.error('Error cargando la clave de escaneo:', err);
+    }
+  };
+
+  const regenerarClave = async () => {
+    if (!window.confirm('Al cambiar la clave, los dispositivos que ya la tenían dejarán de poder registrar vueltas. ¿Continuar?')) {
+      return;
+    }
+    setRegenerando(true);
+    try {
+      const res = await adminFetch(`${API_URL}/api/qr-scan/scan-key/regenerate`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setClaveEscaneo(data.scan_key);
+        toast.success('Clave de escaneo actualizada');
+      } else {
+        toast.error(data.detail || 'No se pudo cambiar la clave');
+      }
+    } catch (err) {
+      toast.error('Error de conexión');
+    } finally {
+      setRegenerando(false);
+    }
+  };
   
   // Countdown timer
   useEffect(() => {
@@ -99,6 +136,32 @@ export default function QRScannerPanel() {
           Abrir Escáner Completo
         </Button>
       </div>
+
+      {/* Clave de escaneo: se la damos al personal que registra vueltas */}
+      <Card className="border-amber-300 bg-amber-50/40">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <KeyRound className="w-5 h-5" />
+            Clave de escaneo
+          </CardTitle>
+          <CardDescription>
+            El personal la escribe una vez en su teléfono para poder registrar vueltas.
+            Quien haya entrado al panel no necesita escribirla.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-4">
+          <span
+            className="font-mono text-3xl tracking-[0.3em] font-bold"
+            data-testid="text-scan-key"
+          >
+            {claveEscaneo || '—'}
+          </span>
+          <Button variant="outline" onClick={regenerarClave} disabled={regenerando}>
+            {regenerando ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Cambiar clave
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Race Status */}

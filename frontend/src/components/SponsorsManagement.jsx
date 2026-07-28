@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -33,7 +34,7 @@ export default function SponsorsManagement() {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
+      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
       if (response.ok) {
         const data = await response.json();
         setSponsors(data.sponsors || []);
@@ -68,7 +69,7 @@ export default function SponsorsManagement() {
     try {
       if (editingSponsor) {
         // Update existing sponsor
-        const response = await fetch(
+        const response = await adminFetch(
           `${API_URL}/api/sponsors/update/${encodeURIComponent(editingSponsor)}?race_code=${raceCode}`,
           {
             method: 'PUT',
@@ -91,7 +92,7 @@ export default function SponsorsManagement() {
         }
       } else {
         // Create new sponsor
-        const response = await fetch(`${API_URL}/api/sponsors/create`, {
+        const response = await adminFetch(`${API_URL}/api/sponsors/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -133,7 +134,7 @@ export default function SponsorsManagement() {
     if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Esta acción no se puede deshacer.`)) return;
     
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
         { method: 'DELETE' }
       );
@@ -160,7 +161,7 @@ export default function SponsorsManagement() {
     formData.append('file', file);
     
     try {
-      const response = await fetch(
+      const response = await adminFetch(
         `${API_URL}/api/sponsors/upload-logo/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
         {
           method: 'POST',

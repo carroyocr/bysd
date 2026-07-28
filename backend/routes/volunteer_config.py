@@ -1,9 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
 
-router = APIRouter(prefix="/volunteer-config", tags=["volunteer-config"])
+from services.auth import require_permission
+
+# Configurar puestos y turnos es parte de la gestion de voluntarios.
+router = APIRouter(
+    prefix="/volunteer-config",
+    tags=["volunteer-config"],
+    dependencies=[Depends(require_permission("volunteers"))],
+)
 
 VALID_EVENTOS = ["carrera", "campeonato"]
 

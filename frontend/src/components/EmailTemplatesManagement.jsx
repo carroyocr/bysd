@@ -12,6 +12,7 @@ import {
   AlignLeft, AlignCenter, Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -146,7 +147,7 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
   const loadPreview = async (templateId) => {
     setLoadingPreview(true);
     try {
-      const response = await fetch(`${API_URL}/api/email-templates/preview?template_id=${templateId}`, {
+      const response = await adminFetch(`${API_URL}/api/email-templates/preview?template_id=${templateId}`, {
         method: 'POST'
       });
 
@@ -182,7 +183,7 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/email-templates/${template.id}`, {
+      const response = await adminFetch(`${API_URL}/api/email-templates/${template.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, content })
@@ -207,7 +208,7 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/email-templates/reset/${template.id}`, {
+      const response = await adminFetch(`${API_URL}/api/email-templates/reset/${template.id}`, {
         method: 'POST'
       });
 
@@ -230,7 +231,7 @@ const TemplateEditor = ({ template, onSave, onReset }) => {
 
     setSendingTest(true);
     try {
-      const response = await fetch(`${API_URL}/api/email-templates/test`, {
+      const response = await adminFetch(`${API_URL}/api/email-templates/test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,8 +412,8 @@ export default function EmailTemplatesManagement() {
     setLoading(true);
     try {
       const [templatesRes, fieldsRes] = await Promise.all([
-        fetch(`${API_URL}/api/email-templates/`),
-        fetch(`${API_URL}/api/email-templates/merge-fields`)
+        adminFetch(`${API_URL}/api/email-templates/`),
+        adminFetch(`${API_URL}/api/email-templates/merge-fields`)
       ]);
 
       if (templatesRes.ok && fieldsRes.ok) {

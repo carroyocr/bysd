@@ -5,7 +5,13 @@ from datetime import datetime, timezone
 import os
 from pathlib import Path
 
+from services.auth import require_permission
+
 router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
+
+# El listado publico de la web es el unico endpoint abierto; el resto (crear,
+# editar, borrar, subir logos) exige el permiso "sponsors".
+solo_sponsors = Depends(require_permission("sponsors"))
 
 # Uploads directory for sponsor logos
 UPLOADS_DIR = Path(__file__).parent.parent / "static" / "uploads" / "sponsors"
@@ -44,7 +50,7 @@ async def get_sponsors_by_race(race_code: str, db=Depends(get_db)):
     return {"sponsors": sponsors, "race_code": race_code.upper()}
 
 
-@router.get("/admin/race/{race_code}")
+@router.get("/admin/race/{race_code}", dependencies=[solo_sponsors])
 async def get_sponsors_admin(race_code: str, db=Depends(get_db)):
     """Get all sponsors for admin (including inactive)"""
     sponsors = await db.sponsors.find(
@@ -55,7 +61,7 @@ async def get_sponsors_admin(race_code: str, db=Depends(get_db)):
     return {"sponsors": sponsors, "race_code": race_code.upper()}
 
 
-@router.post("/create")
+@router.post("/create", dependencies=[solo_sponsors])
 async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     """Create a new sponsor"""
     # Check if sponsor with same name exists for this race
@@ -93,7 +99,7 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     return {"message": "Patrocinador creado exitosamente", "sponsor": sponsor_data}
 
 
-@router.put("/update/{sponsor_name}")
+@router.put("/update/{sponsor_name}", dependencies=[solo_sponsors])
 async def update_sponsor(
     sponsor_name: str,
     race_code: str,
@@ -124,7 +130,7 @@ async def update_sponsor(
     return {"message": "Patrocinador actualizado exitosamente"}
 
 
-@router.post("/upload-logo/{sponsor_name}")
+@router.post("/upload-logo/{sponsor_name}", dependencies=[solo_sponsors])
 async def upload_sponsor_logo(
     sponsor_name: str,
     race_code: str,
@@ -174,7 +180,7 @@ async def upload_sponsor_logo(
     return {"message": "Logo subido exitosamente", "logo_url": logo_url}
 
 
-@router.delete("/delete/{sponsor_name}")
+@router.delete("/delete/{sponsor_name}", dependencies=[solo_sponsors])
 async def delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_db)):
     """Delete a sponsor (soft delete - sets is_active to false)"""
     result = await db.sponsors.update_one(
@@ -188,7 +194,7 @@ async def delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_db)):
     return {"message": "Patrocinador eliminado exitosamente"}
 
 
-@router.delete("/hard-delete/{sponsor_name}")
+@router.delete("/hard-delete/{sponsor_name}", dependencies=[solo_sponsors])
 async def hard_delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_db)):
     """Permanently delete a sponsor"""
     result = await db.sponsors.delete_one({
@@ -202,7 +208,7 @@ async def hard_delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_
     return {"message": "Patrocinador eliminado permanentemente"}
 
 
-@router.post("/reorder")
+@router.post("/reorder", dependencies=[solo_sponsors])
 async def reorder_sponsors(
     race_code: str,
     sponsor_orders: List[dict],  # [{"name": "Sponsor1", "order": 1}, ...]

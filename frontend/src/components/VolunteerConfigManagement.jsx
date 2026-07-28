@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -117,7 +118,7 @@ export default function VolunteerConfigManagement() {
 
   const loadRaceDate = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/race-config/active`);
+      const response = await adminFetch(`${API_URL}/api/race-config/active`);
       if (response.ok) {
         const data = await response.json();
         setRaceDate(data.date);
@@ -157,7 +158,7 @@ export default function VolunteerConfigManagement() {
   const loadPositions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions?evento=${selectedEvento}`);
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/positions?evento=${selectedEvento}`);
       if (response.ok) {
         const data = await response.json();
         setPositions(data.positions || []);
@@ -172,7 +173,7 @@ export default function VolunteerConfigManagement() {
 
   const importFromExisting = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/import-from-existing`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/import-from-existing`, {
         method: 'POST'
       });
       const data = await response.json();
@@ -195,7 +196,7 @@ export default function VolunteerConfigManagement() {
     
     setClearing(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/clear-assignments`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/clear-assignments`, {
         method: 'POST'
       });
       const data = await response.json();
@@ -225,7 +226,7 @@ export default function VolunteerConfigManagement() {
     
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/positions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newPosition, evento: selectedEvento })
@@ -252,7 +253,7 @@ export default function VolunteerConfigManagement() {
     
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData)
@@ -278,7 +279,7 @@ export default function VolunteerConfigManagement() {
     if (!window.confirm(`¿Eliminar la posición "${nombre}" y todos sus slots?`)) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/positions/${encodeURIComponent(nombre)}?evento=${selectedEvento}`, {
         method: 'DELETE'
       });
       

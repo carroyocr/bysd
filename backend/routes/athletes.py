@@ -9,15 +9,22 @@ import secrets
 import hashlib
 import jwt
 import logging
-import os
-import random
 import re
+
+from services.auth import (
+    ALGORITHM,
+    ATHLETE_SECRET_KEY,
+    has_permission,
+    verify_admin_token,
+)
 
 router = APIRouter(prefix="/athletes", tags=["athletes"])
 
-# JWT Secret for athletes (different from admin)
-ATHLETE_JWT_SECRET = os.environ.get("JWT_SECRET", "backyard-ultra-secret-2024") + "-athletes"
-ATHLETE_JWT_ALGORITHM = "HS256"
+# El secreto de atleta se deriva del unico secreto del proyecto (services.auth),
+# no de una variable propia con valor por defecto: asi no hay forma de que se
+# quede sin configurar.
+ATHLETE_JWT_SECRET = ATHLETE_SECRET_KEY
+ATHLETE_JWT_ALGORITHM = ALGORITHM
 ATHLETE_JWT_EXPIRATION_HOURS = 72
 
 # Verification code expiration
@@ -118,7 +125,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
     try:
         salt, pwd_hash = stored_hash.split(':')
         new_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
-        return new_hash.hex() == pwd_hash
+        return secrets.compare_digest(new_hash.hex(), pwd_hash)
     except:
         return False
 
@@ -145,8 +152,39 @@ def verify_athlete_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail="Token inválido")
 
 def generate_verification_code() -> str:
-    """Generate 6-digit verification code"""
-    return str(random.randint(100000, 999999))
+    """Generate 6-digit verification code.
+
+    `secrets` y no `random`: el generador de `random` es un Mersenne Twister,
+    predecible a partir de sus salidas anteriores, y estos codigos sirven para
+    restablecer contrasenas.
+    """
+    return "".join(str(secrets.randbelow(10)) for _ in range(6))
+
+
+# Un codigo de 6 digitos son un millon de combinaciones: sin limite de intentos
+# se agota en minutos. Al quinto fallo el codigo se anula y hay que pedir otro.
+MAX_CODE_ATTEMPTS = 5
+
+
+async def _registrar_intento_fallido(database, athlete: dict, campo_codigo: str, campo_intentos: str):
+    """Suma un intento fallido y anula el codigo si se pasa del limite."""
+    intentos = (athlete.get(campo_intentos) or 0) + 1
+
+    if intentos >= MAX_CODE_ATTEMPTS:
+        await database.athletes.update_one(
+            {"_id": athlete["_id"]},
+            {"$set": {campo_codigo: None, campo_intentos: 0}},
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados intentos fallidos. Solicita un codigo nuevo.",
+        )
+
+    await database.athletes.update_one(
+        {"_id": athlete["_id"]},
+        {"$set": {campo_intentos: intentos}},
+    )
+    raise HTTPException(status_code=400, detail="Código incorrecto")
 
 
 
@@ -215,6 +253,7 @@ async def register_athlete(data: AthleteRegisterRequest):
         "email_verified": False,
         "verification_code": verification_code,
         "verification_code_expires": code_expires,
+        "verification_attempts": 0,
         "claimed_results": [],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
@@ -299,16 +338,18 @@ async def verify_email(data: VerifyEmailRequest):
     stored_code = athlete.get("verification_code")
     code_expires = athlete.get("verification_code_expires")
     
-    if not stored_code or stored_code != data.code:
-        raise HTTPException(status_code=400, detail="Código incorrecto")
-    
+    if not stored_code or not secrets.compare_digest(str(stored_code), data.code):
+        await _registrar_intento_fallido(
+            database, athlete, "verification_code", "verification_attempts"
+        )
+
     if code_expires:
         # Handle both naive and aware datetimes from MongoDB
         if code_expires.tzinfo is None:
             code_expires = code_expires.replace(tzinfo=timezone.utc)
         if datetime.now(timezone.utc) > code_expires:
             raise HTTPException(status_code=400, detail="Código expirado. Solicita uno nuevo.")
-    
+
     # Mark as verified
     await database.athletes.update_one(
         {"_id": athlete["_id"]},
@@ -317,6 +358,7 @@ async def verify_email(data: VerifyEmailRequest):
                 "email_verified": True,
                 "verification_code": None,
                 "verification_code_expires": None,
+                "verification_attempts": 0,
                 "updated_at": datetime.now(timezone.utc)
             }
         }
@@ -359,7 +401,8 @@ async def resend_verification_code(data: ForgotPasswordRequest):
         {
             "$set": {
                 "verification_code": verification_code,
-                "verification_code_expires": code_expires
+                "verification_code_expires": code_expires,
+                "verification_attempts": 0
             }
         }
     )
@@ -412,7 +455,8 @@ async def login_athlete(data: AthleteLoginRequest):
             {
                 "$set": {
                     "verification_code": verification_code,
-                    "verification_code_expires": code_expires
+                    "verification_code_expires": code_expires,
+                    "verification_attempts": 0
                 }
             }
         )
@@ -478,7 +522,8 @@ async def forgot_password(data: ForgotPasswordRequest):
         {
             "$set": {
                 "reset_code": reset_code,
-                "reset_code_expires": code_expires
+                "reset_code_expires": code_expires,
+                "reset_attempts": 0
             }
         }
     )
@@ -543,23 +588,31 @@ async def reset_password(data: ResetPasswordRequest):
     """Reset password with code"""
     from server import db as database
     
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
-        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
-    
+        # Mismo mensaje que un codigo equivocado: si aqui dijeramos "cuenta no
+        # encontrada" se podria averiguar que correos estan registrados, que es
+        # justo lo que evita el mensaje generico de /forgot-password.
+        raise HTTPException(status_code=400, detail="Código incorrecto")
+
     # Check code
     stored_code = athlete.get("reset_code")
     code_expires = athlete.get("reset_code_expires")
-    
-    if not stored_code or stored_code != data.code:
-        raise HTTPException(status_code=400, detail="Código incorrecto")
-    
+
+    if not stored_code or not secrets.compare_digest(str(stored_code), data.code):
+        await _registrar_intento_fallido(
+            database, athlete, "reset_code", "reset_attempts"
+        )
+
     if code_expires:
         if code_expires.tzinfo is None:
             code_expires = code_expires.replace(tzinfo=timezone.utc)
         if datetime.now(timezone.utc) > code_expires:
             raise HTTPException(status_code=400, detail="Código expirado")
-    
+
     # Update password
     await database.athletes.update_one(
         {"_id": athlete["_id"]},
@@ -568,6 +621,7 @@ async def reset_password(data: ResetPasswordRequest):
                 "password_hash": hash_password(data.new_password),
                 "reset_code": None,
                 "reset_code_expires": None,
+                "reset_attempts": 0,
                 "email_verified": True,  # Also verify email
                 "updated_at": datetime.now(timezone.utc)
             }
@@ -993,61 +1047,6 @@ async def cancel_race_registration(registration_id: str, authorization: str = He
 
 
 # ==================== CHEER MESSAGES ====================
-
-
-@router.get("/debug-messages/{bib}")
-async def debug_messages(bib: str):
-    """Temporary diagnostic endpoint - remove after debugging"""
-    from server import db as database
-    stripped = bib.lstrip("0") or "0"
-    bib_variants = [bib, stripped, stripped.zfill(3), stripped.zfill(2)]
-    int_variants = []
-    for b in bib_variants:
-        try:
-            int_variants.append(int(b))
-        except:
-            pass
-    all_variants = list(set(bib_variants)) + int_variants
-    
-    result = {"bib_input": bib, "search_variants": [str(v) for v in all_variants]}
-    
-    # Check ALL collections that could have messages
-    for coll_name in ["archived_cheer_messages", "cheer_messages", "cheers", "messages"]:
-        try:
-            coll = database[coll_name]
-            total = await coll.count_documents({})
-            if total == 0:
-                result[coll_name] = {"total_docs": 0}
-                continue
-            by_athlete_bib = await coll.count_documents({"athlete_bib": {"$in": all_variants}})
-            # Also try without race_code filter (legacy)
-            legacy_query = {"$or": [{"race_code": {"$exists": False}}, {"race_code": None}, {"race_code": ""}]}
-            legacy_count = await coll.count_documents(legacy_query)
-            legacy_with_bib = await coll.count_documents({"$and": [legacy_query, {"athlete_bib": {"$in": all_variants}}]})
-            sample = await coll.find_one({}, {"_id": 0})
-            fields = list(sample.keys()) if sample else []
-            distinct_bibs = await coll.distinct("athlete_bib")
-            result[coll_name] = {
-                "total_docs": total,
-                "found_by_athlete_bib": by_athlete_bib,
-                "legacy_no_race_code": legacy_count,
-                "legacy_with_bib": legacy_with_bib,
-                "fields": fields,
-                "distinct_bibs_count": len(distinct_bibs),
-                "distinct_bibs_sample": [str(b) for b in distinct_bibs[:20]],
-                "bib_type": type(distinct_bibs[0]).__name__ if distinct_bibs else "N/A"
-            }
-        except Exception as e:
-            result[coll_name] = {"error": str(e)}
-    
-    # Check race config
-    active = await database.race_configurations.find_one({"is_active": True}, {"_id": 0, "code": 1, "name": 1, "data_archived": 1})
-    result["active_race"] = active if active else "not found"
-    
-    archived = await database.race_configurations.find_one({"code": "BYSD-2026"}, {"_id": 0, "code": 1, "data_archived": 1})
-    result["bysd2026_config"] = archived if archived else "not found"
-    
-    return result
 
 
 @router.get("/my-messages")
@@ -1667,11 +1666,7 @@ async def admin_get_2026_results(authorization: str = Header(None)):
     from bson import ObjectId
 
     # Verify admin token
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    payload = _verify_admin_token(authorization)
 
     results = []
 
@@ -1750,11 +1745,7 @@ async def admin_unclaim_2026(data: ConfirmClaimRequest, authorization: str = Hea
     from bson import ObjectId
 
     # Verify admin token
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        payload = jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    payload = _verify_admin_token(authorization)
 
     obj_id = ObjectId(data.result_id)
 
@@ -1788,11 +1779,7 @@ async def admin_get_athlete_profiles(authorization: str = Header(None)):
     from server import db as database
     from bson import ObjectId
 
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    _verify_admin_token(authorization)
 
     athletes = await database.athletes.find(
         {}, {"password_hash": 0, "verification_code": 0, "reset_code": 0,
@@ -1846,12 +1833,21 @@ async def admin_get_athlete_profiles(authorization: str = Header(None)):
     }
 
 
+def _require_admin_permission(authorization: str, permission: str):
+    payload = verify_admin_token(authorization)
+    if not has_permission(payload, permission):
+        raise HTTPException(status_code=403, detail="No tienes permiso para esta operacion")
+    return payload
+
+
 def _verify_admin_token(authorization: str):
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    """Exige un token del panel con permiso sobre atletas."""
+    return _require_admin_permission(authorization, "athletes")
+
+
+def _verify_email_admin(authorization: str):
+    """El compositor de correos masivos usa su propio permiso ("emails")."""
+    return _require_admin_permission(authorization, "emails")
 
 
 class AdminSetPasswordRequest(BaseModel):
@@ -1995,11 +1991,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
     """Admin: Get list of email recipients based on filter"""
     from server import db as database
 
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    _verify_email_admin(authorization)
 
     recipients = []
 
@@ -2119,11 +2111,7 @@ def _html_to_plain(html: str) -> str:
 @router.post("/admin/email-preview")
 async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
     """Admin: Preview email as it would appear (with sample variable values)"""
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    _verify_email_admin(authorization)
 
     # Sample recipient so the admin sees how merge variables render
     sample = {
@@ -2152,11 +2140,7 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     from server import db as database
     from services.template_email_service import send_bulk_emails_sync
 
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    _verify_email_admin(authorization)
 
     # Get recipients
     recipients_resp = await admin_get_email_recipients(data.recipients, authorization)
@@ -2215,11 +2199,7 @@ async def admin_email_history(authorization: str = Header(None)):
     """Admin: Get history of mass email sends (most recent first)."""
     from server import db as database
 
-    try:
-        token = authorization.replace("Bearer ", "") if authorization else ""
-        jwt.decode(token, os.getenv("JWT_SECRET_KEY", "backyard-ultra-secret-2026"), algorithms=["HS256"])
-    except Exception:
-        raise HTTPException(status_code=401, detail="No autorizado")
+    _verify_email_admin(authorization)
 
     FILTER_LABELS = {
         "all_athletes": "Todos los atletas",

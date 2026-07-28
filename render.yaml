@@ -20,6 +20,13 @@ services:
         value: backyard_ultra
       - key: MONGO_URL
         sync: false          # se pega en el dashboard (URI de Atlas)
+      - key: JWT_SECRET_KEY
+        sync: false          # OBLIGATORIA: firma los tokens del panel y de atletas.
+                             # Generar con:
+                             #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+                             # Sin ella el backend no arranca (a proposito).
+      - key: ADMIN_INITIAL_PASSWORD
+        sync: false          # solo se usa al crear el usuario 'admin' en una base vacia
       - key: CORS_ORIGINS
         sync: false          # se pega en el dashboard (dominio del frontend)
       - key: FRONTEND_URL
