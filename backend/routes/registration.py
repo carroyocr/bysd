@@ -831,8 +831,8 @@ async def promote_waitlist(email: str, race_code: str):
                 <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
                     <strong>¡Buenas noticias!</strong> Se ha liberado un cupo y tu registro a la carrera está confirmado.
                 </p>
-                <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-                    <p style="margin: 0; color: #1e40af; line-height: 1.6;">
+                <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+                    <p style="margin: 0; color: #374151; line-height: 1.6;">
                         4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
                     </p>
                 </div>

@@ -990,8 +990,8 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
                     <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
                         <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
                     </p>
-                    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-                        <p style="margin: 0; color: #1e40af; line-height: 1.6;">
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+                        <p style="margin: 0; color: #374151; line-height: 1.6;">
                             4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
                         </p>
                     </div>
@@ -2157,7 +2157,7 @@ def _personalize_email(text: str, recipient: dict, escape: bool = True) -> str:
 def _wrap_email_html(subject: str, content: str) -> str:
     return f"""
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 22px;">{subject}</h1>
     </div>
     <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; color: #374151; line-height: 1.6;">
