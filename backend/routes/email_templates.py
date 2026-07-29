@@ -467,6 +467,83 @@ DEFAULT_TEMPLATES = [
 """
     },
     {
+        "id": "payment_period_opening",
+        "name": "Apertura del Período de Pagos",
+        "description": "Anuncia el inicio del período de pagos de la inscripción, con fecha límite del 15 de septiembre",
+        "subject": "💳 Inicia el período de pagos - {{race_name}}",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete", "payment"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">💳 ¡Inicia el Período de Pagos!</h1>
+    </div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Te informamos que queda abierto el proceso de pagos de la inscripción para <strong>{{race_name}}</strong>.
+        </p>
+
+        <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; border: 2px solid #f59e0b;">
+            <p style="font-size: 14px; color: #92400e; margin: 0 0 10px 0;">Tienes tiempo para completar tu pago hasta el:</p>
+            <p style="font-size: 28px; font-weight: bold; color: #ea580c; margin: 0;">15 de septiembre</p>
+        </div>
+
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0 0 15px 0;">📋 Datos para el pago:</p>
+            <table style="width: 100%; font-size: 14px;">
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Monto:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #ea580c;">{{payment_amount}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Banco:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_bank_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Titular:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_name}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Tipo de cuenta:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_type}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #ea580c;">{{payment_account_number}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 25px 0 10px 0;">¿Cómo notificar tu pago?</p>
+        <ol style="font-size: 14px; color: #4b5563; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <li>Realiza el pago con los datos indicados arriba.</li>
+            <li>Ingresa a tu <strong>perfil</strong> en nuestro sitio web.</li>
+            <li>Ve a la sección <strong>Carreras Inscritas</strong>.</li>
+            <li>Pulsa <strong>Notificar pago</strong> y adjunta tu comprobante de pago.</li>
+        </ol>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{{frontend_url}}/mi-perfil" style="display: inline-block; background: #ea580c; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                Ir a mi Perfil
+            </a>
+        </div>
+
+        <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
+                ⚠️ <strong>Importante:</strong> a partir del <strong>15 de septiembre</strong>, si no hemos recibido tu pago,
+                tu inscripción será <strong>cancelada</strong> y tu espacio se reasignará a las personas que se encuentran
+                en la lista de espera.
+            </p>
+        </div>
+    </div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p>
+    </div>
+</div>
+"""
+    },
+    {
         "id": "email_verification",
         "name": "Verificación de Email",
         "description": "Se envía con el código de verificación",
@@ -998,7 +1075,13 @@ async def send_test_email(request: TestEmailRequest, db=Depends(get_db)):
         "payment_reference": "REF-123456",
         "payment_date": "15 de Enero, 2027",
         "payment_status": "Confirmado",
-        
+        "payment_bank_name": "Banco Popular",
+        "payment_account_name": "Backyard Ultra SD",
+        "payment_account_number": "123-456789-0",
+        "payment_account_type": "Corriente",
+        "payment_upload_url": "https://backyardultrasantodomingo.com/subir-comprobante",
+        "payment_cancel_url": "https://backyardultrasantodomingo.com/cancelar-registro",
+
         # General data
         "current_date": datetime.now().strftime("%d de %B, %Y"),
         "current_year": str(datetime.now().year),
@@ -1061,6 +1144,12 @@ async def preview_template(template_id: str, db=Depends(get_db)):
         "payment_amount": "RD$ 3,500.00",
         "payment_reference": "REF-123456",
         "payment_date": "15 de Enero, 2027",
+        "payment_bank_name": "Banco Popular",
+        "payment_account_name": "Backyard Ultra SD",
+        "payment_account_number": "123-456789-0",
+        "payment_account_type": "Corriente",
+        "payment_upload_url": "https://backyardultrasantodomingo.com/subir-comprobante",
+        "payment_cancel_url": "https://backyardultrasantodomingo.com/cancelar-registro",
         "verification_code": "123456",
         "username": "usuario.ejemplo",
         "password": "********",

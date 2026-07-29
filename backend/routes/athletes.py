@@ -2244,3 +2244,126 @@ async def admin_email_history(authorization: str = Header(None)):
             "sent_at": sent_at.isoformat() if hasattr(sent_at, "isoformat") else sent_at,
         })
     return {"history": history}
+
+
+# ==================== ADMIN: WHATSAPP COMPOSER ====================
+
+class WhatsAppRecipientFilter(BaseModel):
+    filter_type: str  # 'all_athletes', 'inscribed', 'waitlist', 'not_inscribed', 'volunteers', 'manual'
+    race_code: Optional[str] = None
+    manual_entries: Optional[list] = None  # líneas "teléfono, nombre, apellidos, correo"
+
+
+def _whatsapp_phone_digits(telefono: Optional[str]) -> str:
+    """Normaliza un teléfono al formato de solo dígitos que exige api.whatsapp.com/send?phone=.
+
+    Devuelve cadena vacía si el número no parece utilizable.
+    """
+    digits = re.sub(r"\D", "", telefono or "")
+    # Prefijo internacional escrito como 00
+    if digits.startswith("00"):
+        digits = digits[2:]
+    # Números dominicanos de 10 dígitos: anteponer el código de país (1)
+    if len(digits) == 10 and digits[:3] in ("809", "829", "849"):
+        digits = "1" + digits
+    if 8 <= len(digits) <= 15:
+        return digits
+    return ""
+
+
+@router.post("/admin/whatsapp-recipients")
+async def admin_get_whatsapp_recipients(data: WhatsAppRecipientFilter, authorization: str = Header(None)):
+    """Admin: destinatarios (con teléfono) para envíos manuales por WhatsApp."""
+    from server import db as database
+
+    _verify_email_admin(authorization)
+
+    def build_recipient(doc, source):
+        nombre = doc.get("nombre", "") or ""
+        apellidos = doc.get("apellidos", "") or ""
+        telefono = doc.get("telefono", "") or ""
+        return {
+            "email": doc.get("email", "") or "",
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "nombre_completo": f"{nombre} {apellidos}".strip(),
+            "telefono": telefono,
+            "whatsapp_phone": _whatsapp_phone_digits(telefono),
+            "source": source,
+        }
+
+    recipients = []
+
+    if data.filter_type == "manual":
+        # Cada línea empieza con el teléfono; los campos siguientes (separados por
+        # coma, punto y coma o tabulador, p. ej. pegados desde Excel) son nombre,
+        # apellidos y correo. El correo se detecta por la @ en cualquier posición.
+        for line in (data.manual_entries or [])[:500]:
+            if not isinstance(line, str):
+                continue
+            tokens = [t.strip() for t in re.split(r"[\t;,]", line) if t.strip()]
+            if not tokens:
+                continue
+            telefono = tokens[0]
+            email = ""
+            names = []
+            for tok in tokens[1:]:
+                if "@" in tok and not email:
+                    email = tok.lower()
+                else:
+                    names.append(tok)
+            nombre = names[0] if names else ""
+            apellidos = " ".join(names[1:])
+            recipients.append({
+                "email": email,
+                "nombre": nombre,
+                "apellidos": apellidos,
+                "nombre_completo": f"{nombre} {apellidos}".strip(),
+                "telefono": telefono,
+                "whatsapp_phone": _whatsapp_phone_digits(telefono),
+                "source": "manual",
+            })
+    elif data.filter_type == "volunteers":
+        vols = await database.volunteers.find(
+            {}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1, "telefono": 1}
+        ).to_list(500)
+        recipients = [build_recipient(v, "voluntario") for v in vols]
+    else:
+        athletes = await database.athletes.find(
+            {}, {"_id": 1, "email": 1, "nombre": 1, "apellidos": 1, "telefono": 1}
+        ).sort("_id", 1).to_list(500)
+
+        if data.filter_type == "all_athletes":
+            recipients = [build_recipient(a, "atleta") for a in athletes]
+        elif data.filter_type in ("inscribed", "waitlist", "not_inscribed"):
+            query = {"race_code": data.race_code} if data.race_code else {}
+            if data.filter_type == "inscribed":
+                query["status"] = {"$nin": ["cancelled", "waitlist"]}
+            elif data.filter_type == "waitlist":
+                query["status"] = "waitlist"
+            else:  # not_inscribed: se excluyen las inscripciones canceladas
+                query["status"] = {"$ne": "cancelled"}
+            regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
+            matched_ids = {r["athlete_id"] for r in regs if r.get("athlete_id")}
+
+            source_labels = {
+                "inscribed": "inscrito",
+                "waitlist": "lista de espera",
+                "not_inscribed": "no inscrito",
+            }
+            for a in athletes:
+                is_match = str(a["_id"]) in matched_ids
+                if data.filter_type == "not_inscribed":
+                    is_match = not is_match
+                if is_match:
+                    recipients.append(build_recipient(a, source_labels[data.filter_type]))
+        else:
+            raise HTTPException(status_code=400, detail="Filtro inválido")
+
+    with_phone = sum(1 for r in recipients if r["whatsapp_phone"])
+    return {
+        "recipients": recipients,
+        "total": len(recipients),
+        "with_phone": with_phone,
+        "without_phone": len(recipients) - with_phone,
+    }
