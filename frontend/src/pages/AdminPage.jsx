@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -19,6 +19,7 @@ import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
 import ClaimedResultsManagement from '../components/ClaimedResultsManagement';
 import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
 import EmailComposer from '../components/EmailComposer';
+import WhatsAppComposer from '../components/WhatsAppComposer';
 import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
@@ -39,6 +40,7 @@ const TAB_PERMISSIONS = {
   'results-2026': 'athletes', // Same permission as athletes
   'athlete-profiles': 'athletes', // Same permission as athletes
   'email-composer': 'emails', // Same permission as emails
+  'whatsapp': 'emails', // WhatsApp sender uses the emails permission
   'tshirt': 'config', // T-shirt voting management (config permission)
   'capacitaciones': 'config', // Trainings management
 };
@@ -269,6 +271,13 @@ export default function AdminPage() {
                 <span className="sm:hidden">Enviar</span>
               </TabsTrigger>
             )}
+            {/* 12b. WhatsApp */}
+            {hasAccess('whatsapp') && (
+              <TabsTrigger value="whatsapp" className="flex items-center gap-2" data-testid="tab-whatsapp">
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </TabsTrigger>
+            )}
             {/* 13. Camisetas */}
             {hasAccess('tshirt') && (
               <TabsTrigger value="tshirt" className="flex items-center gap-2" data-testid="tab-tshirt">
@@ -384,6 +393,12 @@ export default function AdminPage() {
           {hasAccess('email-composer') && (
             <TabsContent value="email-composer">
               <EmailComposer />
+            </TabsContent>
+          )}
+
+          {hasAccess('whatsapp') && (
+            <TabsContent value="whatsapp">
+              <WhatsAppComposer />
             </TabsContent>
           )}
 
