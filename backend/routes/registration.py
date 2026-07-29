@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File, Form, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, Literal
@@ -8,6 +8,7 @@ import os
 import secrets
 import hashlib
 
+from services import rate_limit
 from services.auth import require_permission
 
 router = APIRouter(prefix="/api/registration", tags=["registration"])
@@ -213,8 +214,9 @@ async def send_confirmation_email(email: str, registration: dict, edit_token: st
 # API Endpoints
 
 @router.post("/send-verification")
-async def send_verification(request: EmailVerificationRequest):
+async def send_verification(request: EmailVerificationRequest, http_request: Request = None):
     """Send verification code to email"""
+    rate_limit.limitar_envio_codigo(http_request)
     email = request.email.lower()
     
     # Check if email already registered for active race
@@ -259,8 +261,9 @@ async def send_verification(request: EmailVerificationRequest):
 
 
 @router.post("/verify-email")
-async def verify_email(request: EmailVerificationConfirm):
+async def verify_email(request: EmailVerificationConfirm, http_request: Request = None):
     """Verify email with code"""
+    rate_limit.limitar_verificacion(http_request)
     email = request.email.lower()
     
     # Find verification token
@@ -497,8 +500,9 @@ class AccessVerify(BaseModel):
 
 
 @router.post("/request-access")
-async def request_access(request: AccessRequest):
+async def request_access(request: AccessRequest, http_request: Request = None):
     """Request access to edit registration via email verification"""
+    rate_limit.limitar_envio_codigo(http_request)
     email = request.email.lower()
     
     # Find registration by email
@@ -561,8 +565,9 @@ async def request_access(request: AccessRequest):
 
 
 @router.post("/verify-access")
-async def verify_access(request: AccessVerify):
+async def verify_access(request: AccessVerify, http_request: Request = None):
     """Verify access code and return edit token"""
+    rate_limit.limitar_verificacion(http_request)
     email = request.email.lower()
     
     # Find verification token
@@ -608,8 +613,9 @@ async def verify_access(request: AccessVerify):
 
 
 @router.get("/resend-edit-link")
-async def resend_edit_link(email: str):
+async def resend_edit_link(email: str, http_request: Request = None):
     """Resend edit link to email"""
+    rate_limit.limitar_envio_codigo(http_request)
     registration = await registrations_collection.find_one({"email": email.lower()})
     
     if not registration:
@@ -1232,7 +1238,7 @@ async def send_payment_reminder(race_code: str):
         }
         
         # Render template
-        rendered_subject = render_template(template["subject"], merge_data)
+        rendered_subject = render_template(template["subject"], merge_data, escape=False)
         rendered_content = render_template(template["content"], merge_data)
         
         try:

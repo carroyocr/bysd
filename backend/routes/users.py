@@ -3,13 +3,14 @@ User Management for Admin Panel
 Handles user creation, permissions, and authentication
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
 import bcrypt
 
-from services.auth import require_permission
+from services import rate_limit
+from services.auth import require_admin, require_permission
 
 # La gestion de usuarios es la operacion mas sensible del panel: crear un
 # usuario aqui equivale a repartir acceso al resto. Se exige el permiso
@@ -17,6 +18,60 @@ from services.auth import require_permission
 solo_usuarios = Depends(require_permission("users"))
 
 router = APIRouter(prefix="/api/users", tags=["users"], dependencies=[solo_usuarios])
+
+# Cambiar la propia contrasena no es "gestionar usuarios": lo tiene que poder
+# hacer cualquiera que entre al panel, con su propia sesion. Por eso va en un
+# router aparte, sin el permiso "users".
+cuenta_router = APIRouter(prefix="/api/cuenta", tags=["cuenta"])
+
+
+class CambioPasswordRequest(BaseModel):
+    password_actual: str
+    password_nueva: str
+
+
+MIN_PASSWORD = 12
+
+
+@cuenta_router.post("/cambiar-password")
+async def cambiar_password(
+    datos: CambioPasswordRequest,
+    request: Request = None,
+    usuario=Depends(require_admin),
+):
+    """Cambia la contrasena del usuario que hace la peticion.
+
+    Antes no habia forma de hacerlo desde el panel: cambiar la contrasena de
+    'admin' obligaba a escribir el hash a mano en la base de datos.
+    """
+    from server import db
+
+    rate_limit.limitar_login(request, usuario.get("username", ""))
+
+    username = (usuario.get("username") or "").lower()
+    registro = await db.admin_users.find_one({"username": username})
+    if not registro:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if not bcrypt.checkpw(datos.password_actual.encode("utf-8"), registro["password"].encode("utf-8")):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+    if len(datos.password_nueva) < MIN_PASSWORD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La contraseña nueva debe tener al menos {MIN_PASSWORD} caracteres",
+        )
+
+    if bcrypt.checkpw(datos.password_nueva.encode("utf-8"), registro["password"].encode("utf-8")):
+        raise HTTPException(status_code=400, detail="La contraseña nueva debe ser distinta de la actual")
+
+    hashed = bcrypt.hashpw(datos.password_nueva.encode("utf-8"), bcrypt.gensalt())
+    await db.admin_users.update_one(
+        {"username": username},
+        {"$set": {"password": hashed.decode("utf-8"), "updated_at": datetime.now(timezone.utc)}},
+    )
+
+    return {"message": "Contraseña actualizada. Vuelve a iniciar sesión."}
 
 
 class UserCreate(BaseModel):

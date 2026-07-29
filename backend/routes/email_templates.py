@@ -1008,7 +1008,7 @@ async def send_test_email(request: TestEmailRequest, db=Depends(get_db)):
     }
     
     # Render template
-    rendered_subject = render_template(template["subject"], sample_data)
+    rendered_subject = render_template(template["subject"], sample_data, escape=False)
     rendered_content = render_template(template["content"], sample_data)
     
     # Send test email
@@ -1068,7 +1068,7 @@ async def preview_template(template_id: str, db=Depends(get_db)):
         "current_year": str(datetime.now().year),
     }
     
-    rendered_subject = render_template(template["subject"], sample_data)
+    rendered_subject = render_template(template["subject"], sample_data, escape=False)
     rendered_content = render_template(template["content"], sample_data)
     
     return {

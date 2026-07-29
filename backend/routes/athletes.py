@@ -1,16 +1,18 @@
 """
 Athletes authentication and profile management
 """
-from fastapi import APIRouter, HTTPException, Depends, Header, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, Header, Request, UploadFile, File, Form
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 import secrets
 import hashlib
 import jwt
+import html
 import logging
 import re
 
+from services import rate_limit
 from services.auth import (
     ALGORITHM,
     ATHLETE_SECRET_KEY,
@@ -214,9 +216,11 @@ async def get_current_athlete(authorization: str = Header(None)):
 # ==================== AUTHENTICATION ENDPOINTS ====================
 
 @router.post("/register")
-async def register_athlete(data: AthleteRegisterRequest):
+async def register_athlete(data: AthleteRegisterRequest, request: Request = None):
     """Register a new athlete profile"""
     from server import db as database
+
+    rate_limit.limitar_envio_codigo(request)
     
     # Check if email already exists
     existing = await database.athletes.find_one({"email": data.email.lower()})
@@ -323,9 +327,11 @@ async def register_athlete(data: AthleteRegisterRequest):
 
 
 @router.post("/verify-email")
-async def verify_email(data: VerifyEmailRequest):
+async def verify_email(data: VerifyEmailRequest, request: Request = None):
     """Verify email with code"""
     from server import db as database
+
+    rate_limit.limitar_verificacion(request)
     
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
@@ -381,9 +387,11 @@ async def verify_email(data: VerifyEmailRequest):
 
 
 @router.post("/resend-code")
-async def resend_verification_code(data: ForgotPasswordRequest):
+async def resend_verification_code(data: ForgotPasswordRequest, request: Request = None):
     """Resend verification code"""
     from server import db as database
+
+    rate_limit.limitar_envio_codigo(request)
     
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
@@ -434,9 +442,11 @@ async def resend_verification_code(data: ForgotPasswordRequest):
 
 
 @router.post("/login")
-async def login_athlete(data: AthleteLoginRequest):
+async def login_athlete(data: AthleteLoginRequest, request: Request = None):
     """Login athlete"""
     from server import db as database
+
+    ip = rate_limit.limitar_login(request, data.email)
     
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
@@ -490,7 +500,8 @@ async def login_athlete(data: AthleteLoginRequest):
     
     # Generate token
     token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
-    
+    rate_limit.olvidar("login", ip)
+
     return {
         "success": True,
         "token": token,
@@ -504,9 +515,11 @@ async def login_athlete(data: AthleteLoginRequest):
 
 
 @router.post("/forgot-password")
-async def forgot_password(data: ForgotPasswordRequest):
+async def forgot_password(data: ForgotPasswordRequest, request: Request = None):
     """Request password reset"""
     from server import db as database
+
+    rate_limit.limitar_envio_codigo(request)
     
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
@@ -584,9 +597,11 @@ async def forgot_password(data: ForgotPasswordRequest):
 
 
 @router.post("/reset-password")
-async def reset_password(data: ResetPasswordRequest):
+async def reset_password(data: ResetPasswordRequest, request: Request = None):
     """Reset password with code"""
     from server import db as database
+
+    rate_limit.limitar_verificacion(request)
     
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
@@ -2056,8 +2071,13 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
     return {"recipients": recipients, "total": len(recipients)}
 
 
-def _personalize_email(text: str, recipient: dict) -> str:
-    """Substitute merge variables with recipient data. Longer tags first to avoid partial matches."""
+def _personalize_email(text: str, recipient: dict, escape: bool = True) -> str:
+    """Substitute merge variables with recipient data. Longer tags first to avoid partial matches.
+
+    El nombre lo escribe el propio atleta al inscribirse, asi que se escapa
+    antes de meterlo en el HTML del correo. El asunto va como cabecera de texto
+    plano: ahi se pasa escape=False.
+    """
     if not text:
         return text
     replacements = [
@@ -2067,7 +2087,7 @@ def _personalize_email(text: str, recipient: dict) -> str:
         ("{{email}}", recipient.get("email", "") or ""),
     ]
     for tag, value in replacements:
-        text = text.replace(tag, value)
+        text = text.replace(tag, html.escape(str(value), quote=True) if escape else str(value))
     return text
 
 
@@ -2120,7 +2140,7 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
         "nombre_completo": "Juan Pérez",
         "email": "juan.perez@ejemplo.com",
     }
-    preview_subject = _personalize_email(data.subject, sample)
+    preview_subject = _personalize_email(data.subject, sample, escape=False)
     preview_content = _personalize_email(data.content, sample)
 
     if data.plain_text:
@@ -2153,7 +2173,7 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     messages = []
     recipient_by_email = {}
     for r in recipients:
-        personalized_subject = _personalize_email(data.subject, r)
+        personalized_subject = _personalize_email(data.subject, r, escape=False)
         personalized_content = _personalize_email(data.content, r)
         if data.plain_text:
             body = _html_to_plain(personalized_content)
