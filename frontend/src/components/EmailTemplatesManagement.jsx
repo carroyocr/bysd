@@ -446,6 +446,25 @@ export default function EmailTemplatesManagement() {
     }
   };
 
+  const handleResetAll = async () => {
+    if (!window.confirm('Esto restablecerá TODAS las plantillas a sus valores por defecto y descartará cualquier edición manual. ¿Continuar?')) {
+      return;
+    }
+    try {
+      const response = await adminFetch(`${API_URL}/api/email-templates/reset-all`, { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || 'Plantillas restablecidas');
+        setSelectedTemplate(null);
+        await loadData();
+      } else {
+        toast.error('Error al restablecer las plantillas');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    }
+  };
+
   const filteredTemplates = templates.filter(t => {
     const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           t.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -471,6 +490,10 @@ export default function EmailTemplatesManagement() {
             Personaliza los correos que se envían automáticamente
           </p>
         </div>
+        <Button variant="outline" size="sm" onClick={handleResetAll} data-testid="reset-all-templates">
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Restablecer todas
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

@@ -338,6 +338,7 @@ def build_payment_data(payment: Dict = None, race_config: Dict = None, edit_toke
         "payment_account_name": "",
         "payment_account_number": "",
         "payment_account_type": "",
+        "payment_account_id": "",
         "payment_upload_url": "",
         "payment_cancel_url": "",
     }
@@ -358,6 +359,7 @@ def build_payment_data(payment: Dict = None, race_config: Dict = None, edit_toke
         data["payment_account_name"] = race_config.get("payment_account_name", "")
         data["payment_account_number"] = race_config.get("payment_account_number", "")
         data["payment_account_type"] = race_config.get("payment_account_type", "")
+        data["payment_account_id"] = race_config.get("payment_account_id", "")
     
     # Build URLs if edit_token provided
     if edit_token:

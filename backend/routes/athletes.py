@@ -990,8 +990,8 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
                     <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
                         <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
                     </p>
-                    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-                        <p style="margin: 0; color: #1e40af; line-height: 1.6;">
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+                        <p style="margin: 0; color: #374151; line-height: 1.6;">
                             4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
                         </p>
                     </div>
@@ -2021,11 +2021,44 @@ class AdminEmailRequest(BaseModel):
     content: str
     recipients: EmailRecipientFilter
     plain_text: bool = False
+    template_mode: bool = False  # el contenido viene de una plantilla: trae su propio diseño
 
 class AdminEmailPreviewRequest(BaseModel):
     subject: str
     content: str
     plain_text: bool = False
+    template_mode: bool = False
+
+
+async def _template_global_data(database) -> dict:
+    """Datos de combinación globales (carrera activa, pago, generales) para
+    enviar plantillas desde el compositor."""
+    from services.template_email_service import build_race_data, build_payment_data, build_general_data
+
+    race_config = await database.race_configurations.find_one({"is_active": True}, {"_id": 0})
+    return {
+        **build_race_data(race_config),
+        **build_payment_data(race_config=race_config),
+        **build_general_data(),
+    }
+
+
+def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
+    """Combina los datos globales con los del destinatario, exponiendo tanto las
+    variables del compositor ({{nombre}}) como las de plantilla ({{athlete_*}})."""
+    nombre = recipient.get("nombre", "") or ""
+    apellidos = recipient.get("apellidos", "") or ""
+    return {
+        **global_data,
+        "nombre": nombre,
+        "apellidos": apellidos,
+        "nombre_completo": recipient.get("nombre_completo", "") or "",
+        "email": recipient.get("email", "") or "",
+        "athlete_nombre": nombre,
+        "athlete_apellidos": apellidos,
+        "athlete_nombre_completo": recipient.get("nombre_completo", "") or "",
+        "athlete_email": recipient.get("email", "") or "",
+    }
 
 
 @router.post("/admin/email-recipients")
@@ -2124,7 +2157,7 @@ def _personalize_email(text: str, recipient: dict, escape: bool = True) -> str:
 def _wrap_email_html(subject: str, content: str) -> str:
     return f"""
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
         <h1 style="color: white; margin: 0; font-size: 22px;">{subject}</h1>
     </div>
     <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; color: #374151; line-height: 1.6;">
@@ -2161,6 +2194,8 @@ def _html_to_plain(html: str) -> str:
 @router.post("/admin/email-preview")
 async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str = Header(None)):
     """Admin: Preview email as it would appear (with sample variable values)"""
+    from server import db as database
+
     _verify_email_admin(authorization)
 
     # Sample recipient so the admin sees how merge variables render
@@ -2170,8 +2205,16 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
         "nombre_completo": "Juan Pérez",
         "email": "juan.perez@ejemplo.com",
     }
-    preview_subject = _personalize_email(data.subject, sample, escape=False)
-    preview_content = _personalize_email(data.content, sample)
+
+    if data.template_mode:
+        from services.template_email_service import render_template
+
+        merge_data = _template_recipient_data(await _template_global_data(database), sample)
+        preview_subject = render_template(data.subject, merge_data, escape=False)
+        preview_content = render_template(data.content, merge_data)
+    else:
+        preview_subject = _personalize_email(data.subject, sample, escape=False)
+        preview_content = _personalize_email(data.content, sample)
 
     if data.plain_text:
         plain = _html_to_plain(preview_content)
@@ -2179,7 +2222,8 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
         html = f'<div style="padding:24px;font-family:monospace;white-space:pre-wrap;color:#1f2937;font-size:14px;">{plain}</div>'
         return {"html": html, "subject": preview_subject, "plain_text": True}
 
-    html = _wrap_email_html(preview_subject, preview_content)
+    # Las plantillas ya traen su propio diseño; el correo redactado a mano se envuelve
+    html = preview_content if data.template_mode else _wrap_email_html(preview_subject, preview_content)
     return {"html": html, "subject": preview_subject}
 
 
@@ -2200,13 +2244,25 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
         raise HTTPException(status_code=400, detail="No hay destinatarios")
 
     # Build per-recipient personalized messages
+    template_global = None
+    if data.template_mode:
+        from services.template_email_service import render_template
+        template_global = await _template_global_data(database)
+
     messages = []
     recipient_by_email = {}
     for r in recipients:
-        personalized_subject = _personalize_email(data.subject, r, escape=False)
-        personalized_content = _personalize_email(data.content, r)
+        if data.template_mode:
+            merge_data = _template_recipient_data(template_global, r)
+            personalized_subject = render_template(data.subject, merge_data, escape=False)
+            personalized_content = render_template(data.content, merge_data)
+        else:
+            personalized_subject = _personalize_email(data.subject, r, escape=False)
+            personalized_content = _personalize_email(data.content, r)
         if data.plain_text:
             body = _html_to_plain(personalized_content)
+        elif data.template_mode:
+            body = personalized_content  # la plantilla ya trae su propio diseño
         else:
             body = _wrap_email_html(personalized_subject, personalized_content)
         messages.append({"to_email": r["email"], "subject": personalized_subject, "body": body})
