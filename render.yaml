@@ -8,7 +8,14 @@ services:
     name: bysd-backend
     runtime: python
     region: virginia
-    plan: free
+    # Starter, no free: en el plan gratuito Render apaga la instancia por
+    # inactividad, y con ella se va el planificador de correos de voluntarios
+    # (el aviso del viernes y los recordatorios se agendan dentro del proceso,
+    # ver services/volunteer_scheduler.py). Ademas la primera peticion tras el
+    # apagado tarda ~50 s, lo que en el dia de carrera se nota al escanear.
+    # Dejarlo escrito aqui evita que una sincronizacion del Blueprint devuelva
+    # el servicio a free, que es lo que paso el 28/07/2026.
+    plan: starter
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
