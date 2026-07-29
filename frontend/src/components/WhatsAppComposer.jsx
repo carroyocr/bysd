@@ -81,6 +81,12 @@ export default function WhatsAppComposer() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
+      if (res.status === 401 || res.status === 403) {
+        toast.error('Tu sesión expiró o no tienes permiso. Vuelve a iniciar sesión.');
+        setRecipients([]);
+        setWithoutPhone([]);
+        return;
+      }
       const data = await res.json();
       const all = data.recipients || [];
       setRecipients(all.filter(r => r.whatsapp_phone));
