@@ -77,6 +77,7 @@ MERGE_FIELDS = {
             {"key": "{{payment_account_name}}", "label": "Titular de cuenta", "example": "Backyard Ultra SD"},
             {"key": "{{payment_account_number}}", "label": "Número de cuenta", "example": "123-456789-0"},
             {"key": "{{payment_account_type}}", "label": "Tipo de cuenta", "example": "Corriente"},
+            {"key": "{{payment_account_id}}", "label": "Identificación (Cédula/RNC)", "example": "001-1234567-8"},
             {"key": "{{payment_upload_url}}", "label": "Link subir comprobante", "example": "https://.../subir-comprobante"},
             {"key": "{{payment_cancel_url}}", "label": "Link cancelar registro", "example": "https://.../cancelar"},
         ]
@@ -310,6 +311,10 @@ DEFAULT_TEMPLATES = [
                     <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
                     <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #ea580c;">{{payment_account_number}}</td>
                 </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Número de Pasaporte:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_id}}</td>
+                </tr>
             </table>
         </div>
         
@@ -511,6 +516,10 @@ DEFAULT_TEMPLATES = [
                 <tr>
                     <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
                     <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #ea580c;">{{payment_account_number}}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">Número de Pasaporte:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_id}}</td>
                 </tr>
             </table>
         </div>
@@ -1079,6 +1088,7 @@ async def send_test_email(request: TestEmailRequest, db=Depends(get_db)):
         "payment_account_name": "Backyard Ultra SD",
         "payment_account_number": "123-456789-0",
         "payment_account_type": "Corriente",
+        "payment_account_id": "001-1234567-8",
         "payment_upload_url": "https://backyardultrasantodomingo.com/subir-comprobante",
         "payment_cancel_url": "https://backyardultrasantodomingo.com/cancelar-registro",
 
@@ -1148,6 +1158,7 @@ async def preview_template(template_id: str, db=Depends(get_db)):
         "payment_account_name": "Backyard Ultra SD",
         "payment_account_number": "123-456789-0",
         "payment_account_type": "Corriente",
+        "payment_account_id": "001-1234567-8",
         "payment_upload_url": "https://backyardultrasantodomingo.com/subir-comprobante",
         "payment_cancel_url": "https://backyardultrasantodomingo.com/cancelar-registro",
         "verification_code": "123456",

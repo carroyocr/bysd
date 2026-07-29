@@ -64,6 +64,8 @@ export default function EmailComposer() {
   const [plainText, setPlainText] = useState(false);
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templateId, setTemplateId] = useState('');
   const editorRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
@@ -132,7 +134,29 @@ export default function EmailComposer() {
       .then(r => r.json())
       .then(data => setRaceConfigs(Array.isArray(data) ? data : (data?.races || [])))
       .catch(() => {});
+    fetch(`${API_URL}/api/email-templates/`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setTemplates(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, [token]);
+
+  const handleTemplateChange = (id) => {
+    const hasContent = subject.trim() || content.replace(/<[^>]*>/g, '').trim();
+    if (hasContent && !window.confirm('Esto reemplazará el asunto y el contenido actuales. ¿Continuar?')) {
+      return;
+    }
+    setTemplateId(id);
+    if (!id) {
+      setSubject('');
+      setContent('');
+      return;
+    }
+    const t = templates.find(x => x.id === id);
+    if (t) {
+      setSubject(t.subject || '');
+      setContent(t.content || '');
+    }
+  };
 
   const loadRecipients = useCallback(async () => {
     setLoadingRecipients(true);
@@ -171,7 +195,7 @@ export default function EmailComposer() {
       const res = await fetch(`${API_URL}/api/athletes/admin/email-preview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ subject, content, plain_text: plainText }),
+        body: JSON.stringify({ subject, content, plain_text: plainText, template_mode: !!templateId }),
       });
       const data = await res.json();
       setPreviewHtml(data.html);
@@ -198,6 +222,7 @@ export default function EmailComposer() {
         subject,
         content,
         plain_text: plainText,
+        template_mode: !!templateId,
         recipients: {
           filter_type: filterType,
           race_code: filterType === 'inscribed' ? raceCode : null,
@@ -364,6 +389,26 @@ export default function EmailComposer() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Plantilla</label>
+                <select
+                  value={templateId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  data-testid="template-select"
+                >
+                  <option value="">✏️ Redactar desde cero</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}{t.category ? ` — ${t.category}` : ''}</option>
+                  ))}
+                </select>
+                {templateId && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Las variables de la plantilla (carrera, pago, atleta) se completan automáticamente
+                    con la carrera activa y los datos de cada destinatario. Puedes editar el contenido antes de enviar.
+                  </p>
+                )}
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">Asunto</label>
                 <Input
