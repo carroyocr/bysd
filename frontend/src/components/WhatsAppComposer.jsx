@@ -8,6 +8,7 @@ import {
   ChevronDown, Download, MessageCircle, Eye, X, CheckCircle2, AlertTriangle, RotateCcw, ClipboardPaste
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { REG_STATUS_OPTIONS, PAYMENT_OPTIONS } from './EmailComposer';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -47,6 +48,8 @@ export default function WhatsAppComposer() {
   const [message, setMessage] = useState('');
   const [filterType, setFilterType] = useState('all_athletes');
   const [raceCode, setRaceCode] = useState('');
+  const [regStatus, setRegStatus] = useState('');
+  const [payment, setPayment] = useState('');
   const [manualList, setManualList] = useState('');
   const [recipients, setRecipients] = useState([]);
   const [withoutPhone, setWithoutPhone] = useState([]);
@@ -72,6 +75,8 @@ export default function WhatsAppComposer() {
       const body = {
         filter_type: filterType,
         race_code: ['inscribed', 'waitlist'].includes(filterType) ? raceCode || null : null,
+        reg_status: filterType === 'inscribed' ? regStatus || null : null,
+        payment: filterType === 'inscribed' ? payment || null : null,
         manual_entries: filterType === 'manual'
           ? manualList.split(/\n+/).map(l => l.trim()).filter(Boolean)
           : null,
@@ -97,7 +102,7 @@ export default function WhatsAppComposer() {
     } finally {
       setLoadingRecipients(false);
     }
-  }, [filterType, raceCode, manualList, token]);
+  }, [filterType, raceCode, regStatus, payment, manualList, token]);
 
   useEffect(() => {
     if (filterType !== 'manual') loadRecipients();
@@ -223,17 +228,43 @@ export default function WhatsAppComposer() {
               )}
 
               {['inscribed', 'waitlist'].includes(filterType) && (
-                <select
-                  value={raceCode}
-                  onChange={(e) => setRaceCode(e.target.value)}
-                  className="w-full mt-2 border rounded-lg px-3 py-2 text-sm"
-                  data-testid="wa-race-select"
-                >
-                  <option value="">Todas las carreras</option>
-                  {(Array.isArray(raceConfigs) ? raceConfigs : []).map(rc => (
-                    <option key={rc.code} value={rc.code}>{rc.name}</option>
-                  ))}
-                </select>
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={raceCode}
+                    onChange={(e) => setRaceCode(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="wa-race-select"
+                  >
+                    <option value="">Todas las carreras</option>
+                    {(Array.isArray(raceConfigs) ? raceConfigs : []).map(rc => (
+                      <option key={rc.code} value={rc.code}>{rc.name}</option>
+                    ))}
+                  </select>
+                  {filterType === 'inscribed' && (
+                    <>
+                      <select
+                        value={regStatus}
+                        onChange={(e) => setRegStatus(e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        data-testid="wa-reg-status-select"
+                      >
+                        {REG_STATUS_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={payment}
+                        onChange={(e) => setPayment(e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 text-sm"
+                        data-testid="wa-payment-select"
+                      >
+                        {PAYMENT_OPTIONS.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

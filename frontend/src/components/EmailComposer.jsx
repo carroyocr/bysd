@@ -28,11 +28,31 @@ const MERGE_VARIABLES = [
   { tag: '{{email}}', label: 'Correo' },
 ];
 
+export const REG_STATUS_OPTIONS = [
+  { value: '', label: 'Todos los estados' },
+  { value: 'pre_registered', label: 'Pre-registrado' },
+  { value: 'registered', label: 'Registrado' },
+  { value: 'confirmed', label: 'Confirmado' },
+  { value: 'active', label: 'Activo' },
+  { value: 'retired', label: 'Retirado' },
+  { value: 'dns', label: 'No se presentó (DNS)' },
+  { value: 'winner', label: 'Ganador' },
+];
+
+export const PAYMENT_OPTIONS = [
+  { value: '', label: 'Cualquier estado de pago' },
+  { value: 'paid', label: 'Pagado' },
+  { value: 'pending', label: 'Pendiente (sin comprobante)' },
+  { value: 'in_review', label: 'Comprobante en revisión' },
+];
+
 export default function EmailComposer() {
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
   const [filterType, setFilterType] = useState('all_athletes');
   const [raceCode, setRaceCode] = useState('');
+  const [regStatus, setRegStatus] = useState('');
+  const [payment, setPayment] = useState('');
   const [manualEmails, setManualEmails] = useState('');
   const [recipients, setRecipients] = useState([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
@@ -120,6 +140,8 @@ export default function EmailComposer() {
       const body = {
         filter_type: filterType,
         race_code: filterType === 'inscribed' ? raceCode : null,
+        reg_status: filterType === 'inscribed' ? regStatus || null : null,
+        payment: filterType === 'inscribed' ? payment || null : null,
         manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
       };
       const res = await fetch(`${API_URL}/api/athletes/admin/email-recipients`, {
@@ -134,7 +156,7 @@ export default function EmailComposer() {
     } finally {
       setLoadingRecipients(false);
     }
-  }, [filterType, raceCode, manualEmails, token]);
+  }, [filterType, raceCode, regStatus, payment, manualEmails, token]);
 
   useEffect(() => {
     if (filterType !== 'manual') loadRecipients();
@@ -179,6 +201,8 @@ export default function EmailComposer() {
         recipients: {
           filter_type: filterType,
           race_code: filterType === 'inscribed' ? raceCode : null,
+          reg_status: filterType === 'inscribed' ? regStatus || null : null,
+          payment: filterType === 'inscribed' ? payment || null : null,
           manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
         },
       };
@@ -240,17 +264,39 @@ export default function EmailComposer() {
               ))}
 
               {filterType === 'inscribed' && (
-                <select
-                  value={raceCode}
-                  onChange={(e) => setRaceCode(e.target.value)}
-                  className="w-full mt-2 border rounded-lg px-3 py-2 text-sm"
-                  data-testid="race-select"
-                >
-                  <option value="">Todas las carreras</option>
-                  {(Array.isArray(raceConfigs) ? raceConfigs : []).map(rc => (
-                    <option key={rc.code} value={rc.code}>{rc.name}</option>
-                  ))}
-                </select>
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={raceCode}
+                    onChange={(e) => setRaceCode(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="race-select"
+                  >
+                    <option value="">Todas las carreras</option>
+                    {(Array.isArray(raceConfigs) ? raceConfigs : []).map(rc => (
+                      <option key={rc.code} value={rc.code}>{rc.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={regStatus}
+                    onChange={(e) => setRegStatus(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="reg-status-select"
+                  >
+                    {REG_STATUS_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={payment}
+                    onChange={(e) => setPayment(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="payment-select"
+                  >
+                    {PAYMENT_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               {filterType === 'manual' && (

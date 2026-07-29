@@ -1988,6 +1988,33 @@ class EmailRecipientFilter(BaseModel):
     filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'manual'
     race_code: Optional[str] = None
     manual_emails: Optional[list] = None
+    reg_status: Optional[str] = None  # estado de la inscripción (solo filtro 'inscribed')
+    payment: Optional[str] = None  # 'paid', 'pending', 'in_review' (solo filtro 'inscribed')
+
+
+REG_STATUSES = {"pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"}
+
+
+def _inscribed_registration_query(race_code, reg_status, payment):
+    """Consulta de inscripciones activas con filtros opcionales de estado y pago."""
+    query = {"race_code": race_code} if race_code else {}
+    if reg_status:
+        if reg_status not in REG_STATUSES:
+            raise HTTPException(status_code=400, detail="Estado de inscripción inválido")
+        query["status"] = reg_status
+    else:
+        query["status"] = {"$nin": ["cancelled", "waitlist"]}
+    if payment == "paid":
+        query["payment_status"] = "paid"
+    elif payment == "pending":
+        query["payment_status"] = {"$ne": "paid"}
+        query["payment_receipt.status"] = {"$ne": "pending_review"}
+    elif payment == "in_review":
+        query["payment_status"] = {"$ne": "paid"}
+        query["payment_receipt.status"] = "pending_review"
+    elif payment:
+        raise HTTPException(status_code=400, detail="Filtro de pago inválido")
+    return query
 
 class AdminEmailRequest(BaseModel):
     subject: str
@@ -2056,17 +2083,20 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
     if data.filter_type == "all_athletes":
         for a in athletes:
             recipients.append(build_athlete(a, "atleta"))
-    elif data.filter_type in ("inscribed", "not_inscribed"):
+    elif data.filter_type == "inscribed":
+        query = _inscribed_registration_query(data.race_code, data.reg_status, data.payment)
+        regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
+        inscribed_ids = {r["athlete_id"] for r in regs if r.get("athlete_id")}
+        for a in athletes:
+            if str(a["_id"]) in inscribed_ids:
+                recipients.append(build_athlete(a, "inscrito"))
+    elif data.filter_type == "not_inscribed":
         query = {"race_code": data.race_code} if data.race_code else {}
         regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
         inscribed_ids = {r["athlete_id"] for r in regs if r.get("athlete_id")}
-
         for a in athletes:
-            aid = str(a["_id"])
-            is_inscribed = aid in inscribed_ids
-            if (data.filter_type == "inscribed" and is_inscribed) or \
-               (data.filter_type == "not_inscribed" and not is_inscribed):
-                recipients.append(build_athlete(a, "inscrito" if is_inscribed else "no inscrito"))
+            if str(a["_id"]) not in inscribed_ids:
+                recipients.append(build_athlete(a, "no inscrito"))
 
     return {"recipients": recipients, "total": len(recipients)}
 
@@ -2252,6 +2282,8 @@ class WhatsAppRecipientFilter(BaseModel):
     filter_type: str  # 'all_athletes', 'inscribed', 'waitlist', 'not_inscribed', 'volunteers', 'manual'
     race_code: Optional[str] = None
     manual_entries: Optional[list] = None  # líneas "teléfono, nombre, apellidos, correo"
+    reg_status: Optional[str] = None  # estado de la inscripción (solo filtro 'inscribed')
+    payment: Optional[str] = None  # 'paid', 'pending', 'in_review' (solo filtro 'inscribed')
 
 
 def _whatsapp_phone_digits(telefono: Optional[str]) -> str:
@@ -2336,13 +2368,14 @@ async def admin_get_whatsapp_recipients(data: WhatsAppRecipientFilter, authoriza
         if data.filter_type == "all_athletes":
             recipients = [build_recipient(a, "atleta") for a in athletes]
         elif data.filter_type in ("inscribed", "waitlist", "not_inscribed"):
-            query = {"race_code": data.race_code} if data.race_code else {}
             if data.filter_type == "inscribed":
-                query["status"] = {"$nin": ["cancelled", "waitlist"]}
-            elif data.filter_type == "waitlist":
-                query["status"] = "waitlist"
-            else:  # not_inscribed: se excluyen las inscripciones canceladas
-                query["status"] = {"$ne": "cancelled"}
+                query = _inscribed_registration_query(data.race_code, data.reg_status, data.payment)
+            else:
+                query = {"race_code": data.race_code} if data.race_code else {}
+                if data.filter_type == "waitlist":
+                    query["status"] = "waitlist"
+                else:  # not_inscribed: se excluyen las inscripciones canceladas
+                    query["status"] = {"$ne": "cancelled"}
             regs = await database.registrations.find(query, {"athlete_id": 1}).to_list(1000)
             matched_ids = {r["athlete_id"] for r in regs if r.get("athlete_id")}
 
