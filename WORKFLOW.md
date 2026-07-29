@@ -7,8 +7,8 @@ Guía para hacer cambios al sitio de forma segura.
 | Pieza | Dónde |
 |---|---|
 | Código | GitHub: `carroyocr/bysd` (rama `main` = producción) |
-| Backend (FastAPI/Python) | Render — servicio `bysd-backend` (plan Starter) |
-| Frontend (React) | Render — servicio `bysd-frontend` (static site) |
+| Backend (FastAPI/Python) | Render — servicio `bysd-backend` (plan **Starter**, ~$7/mes) |
+| Frontend (React) | Render — servicio `bysd-frontend` (static site, gratis) |
 | Base de datos | MongoDB Atlas propio — base `backyard_ultra` |
 | Dominio | `backyardultrasantodomingo.com` (registrado en GoDaddy, apunta a Render) |
 | Secretos / `.env` / dumps | Local: `~/Proyectos/bysd-secretos/` (NO están en git) |
@@ -113,4 +113,11 @@ brew services start mongodb-community@7.0
 ## Pendientes conocidos
 
 - **Uploads en runtime son efímeros:** las fotos/recibos que suban los usuarios después se pierden al redeploy de Render (no hay disco persistente). Si el evento recibirá subidas nuevas, agregar un Render Disk o mover almacenamiento a un servicio externo (S3).
-- **Costo mensual:** Render Starter (~$7) + Atlas (free) ≈ $7/mes.
+- **Costo mensual:** Render Starter del backend (~$7) + Atlas (free) ≈ $7/mes. El
+  frontend es un static site y no cuesta nada: no hay plan que contratar ni que
+  cancelar ahí. El plan de instancia se paga **por servicio**, no por cuenta.
+- **El backend no debe volver a `free`.** En free, Render apaga la instancia por
+  inactividad y con ella el planificador que envía los correos de voluntarios
+  (el masivo del viernes y los recordatorios de una hora antes). El plan está
+  fijado en `render.yaml`; si alguien lo cambia desde el dashboard a free, la
+  siguiente sincronización del Blueprint lo devolverá a starter.
