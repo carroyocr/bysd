@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import {
   Users, UserCheck, UserX, Clock, HandHelping, Loader2, Phone,
-  ChevronDown, Download, MessageCircle, Eye, X, CheckCircle2, AlertTriangle, RotateCcw
+  ChevronDown, Download, MessageCircle, Eye, X, CheckCircle2, AlertTriangle, RotateCcw, ClipboardPaste
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -17,6 +17,7 @@ const FILTER_OPTIONS = [
   { key: 'waitlist', label: 'Lista de espera', icon: Clock, color: 'text-amber-600' },
   { key: 'not_inscribed', label: 'No inscritos', icon: UserX, color: 'text-red-500' },
   { key: 'volunteers', label: 'Voluntarios', icon: HandHelping, color: 'text-purple-600' },
+  { key: 'manual', label: 'Lista pegada', icon: ClipboardPaste, color: 'text-gray-600' },
 ];
 
 const MERGE_VARIABLES = [
@@ -46,6 +47,7 @@ export default function WhatsAppComposer() {
   const [message, setMessage] = useState('');
   const [filterType, setFilterType] = useState('all_athletes');
   const [raceCode, setRaceCode] = useState('');
+  const [manualList, setManualList] = useState('');
   const [recipients, setRecipients] = useState([]);
   const [withoutPhone, setWithoutPhone] = useState([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
@@ -70,6 +72,9 @@ export default function WhatsAppComposer() {
       const body = {
         filter_type: filterType,
         race_code: ['inscribed', 'waitlist'].includes(filterType) ? raceCode || null : null,
+        manual_entries: filterType === 'manual'
+          ? manualList.split(/\n+/).map(l => l.trim()).filter(Boolean)
+          : null,
       };
       const res = await fetch(`${API_URL}/api/athletes/admin/whatsapp-recipients`, {
         method: 'POST',
@@ -86,9 +91,11 @@ export default function WhatsAppComposer() {
     } finally {
       setLoadingRecipients(false);
     }
-  }, [filterType, raceCode, token]);
+  }, [filterType, raceCode, manualList, token]);
 
-  useEffect(() => { loadRecipients(); }, [loadRecipients]);
+  useEffect(() => {
+    if (filterType !== 'manual') loadRecipients();
+  }, [filterType, raceCode, loadRecipients]);
 
   const insertVariable = (tag) => {
     const el = textareaRef.current;
@@ -188,6 +195,26 @@ export default function WhatsAppComposer() {
                   )}
                 </button>
               ))}
+
+              {filterType === 'manual' && (
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder={'Un destinatario por línea, empezando por el teléfono:\n809-555-1234, Juan, Pérez, juan@ejemplo.com\n8295551234, María'}
+                    value={manualList}
+                    onChange={(e) => setManualList(e.target.value)}
+                    rows={6}
+                    className="text-sm"
+                    data-testid="wa-manual-list"
+                  />
+                  <p className="text-xs text-gray-400">
+                    Formato: teléfono, nombre, apellidos, correo (separados por coma, punto y coma
+                    o tabulador; puedes pegar desde Excel). Solo el teléfono es obligatorio.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={loadRecipients} data-testid="wa-load-manual-btn">
+                    Cargar destinatarios
+                  </Button>
+                </div>
+              )}
 
               {['inscribed', 'waitlist'].includes(filterType) && (
                 <select

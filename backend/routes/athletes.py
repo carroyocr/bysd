@@ -2249,8 +2249,9 @@ async def admin_email_history(authorization: str = Header(None)):
 # ==================== ADMIN: WHATSAPP COMPOSER ====================
 
 class WhatsAppRecipientFilter(BaseModel):
-    filter_type: str  # 'all_athletes', 'inscribed', 'waitlist', 'not_inscribed', 'volunteers'
+    filter_type: str  # 'all_athletes', 'inscribed', 'waitlist', 'not_inscribed', 'volunteers', 'manual'
     race_code: Optional[str] = None
+    manual_entries: Optional[list] = None  # líneas "teléfono, nombre, apellidos, correo"
 
 
 def _whatsapp_phone_digits(telefono: Optional[str]) -> str:
@@ -2293,7 +2294,36 @@ async def admin_get_whatsapp_recipients(data: WhatsAppRecipientFilter, authoriza
 
     recipients = []
 
-    if data.filter_type == "volunteers":
+    if data.filter_type == "manual":
+        # Cada línea empieza con el teléfono; los campos siguientes (separados por
+        # coma, punto y coma o tabulador, p. ej. pegados desde Excel) son nombre,
+        # apellidos y correo. El correo se detecta por la @ en cualquier posición.
+        for line in (data.manual_entries or [])[:500]:
+            if not isinstance(line, str):
+                continue
+            tokens = [t.strip() for t in re.split(r"[\t;,]", line) if t.strip()]
+            if not tokens:
+                continue
+            telefono = tokens[0]
+            email = ""
+            names = []
+            for tok in tokens[1:]:
+                if "@" in tok and not email:
+                    email = tok.lower()
+                else:
+                    names.append(tok)
+            nombre = names[0] if names else ""
+            apellidos = " ".join(names[1:])
+            recipients.append({
+                "email": email,
+                "nombre": nombre,
+                "apellidos": apellidos,
+                "nombre_completo": f"{nombre} {apellidos}".strip(),
+                "telefono": telefono,
+                "whatsapp_phone": _whatsapp_phone_digits(telefono),
+                "source": "manual",
+            })
+    elif data.filter_type == "volunteers":
         vols = await database.volunteers.find(
             {}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1, "telefono": 1}
         ).to_list(500)
