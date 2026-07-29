@@ -21,6 +21,7 @@ import AthleteProfilesManagement from '../components/AthleteProfilesManagement';
 import EmailComposer from '../components/EmailComposer';
 import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
+import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
 // Map of tab IDs to permission IDs
 const TAB_PERMISSIONS = {
@@ -149,10 +150,13 @@ export default function AdminPage() {
             </Button>
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar Sesión
-          </Button>
+          <div className="flex items-center gap-2">
+            <ChangePasswordDialog />
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
 
         {/* Tabs Navigation - Sidebar layout */}

@@ -364,9 +364,12 @@ async def upload_logo(
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     # Validate file type
-    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"]
+    # SVG fuera: un SVG puede llevar JavaScript dentro y se sirve desde el
+    # dominio del backend, asi que abrirlo ejecutaria ese script en nuestro
+    # origen. Los formatos de imagen normales no tienen ese problema.
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP o SVG")
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG o WEBP")
     
     # Generate filename
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"
@@ -420,9 +423,10 @@ async def upload_race_image(
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     # Validate file type
-    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"]
+    # Sin SVG, por lo mismo que en upload-logo.
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"]
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP, SVG o ICO")
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP o ICO")
     
     # Generate filename based on type
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"

@@ -379,8 +379,9 @@ from routes.qr_scan import router as qr_scan_router
 app.include_router(qr_scan_router)
 
 # Include users routes
-from routes.users import router as users_router
+from routes.users import router as users_router, cuenta_router
 app.include_router(users_router)
+app.include_router(cuenta_router)
 
 # Include email templates routes
 from routes.email_templates import router as email_templates_router

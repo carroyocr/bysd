@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Header, Query
+from fastapi import APIRouter, HTTPException, Depends, Header, Query, Request
 from fastapi.responses import FileResponse
 from typing import Optional, List
 import bcrypt
@@ -16,6 +16,7 @@ from models.race import (
 )
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 from services.auth import encode_admin_token, require_permission, verify_admin_token
+from services import rate_limit
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
@@ -37,9 +38,11 @@ def verify_token(authorization: Optional[str] = Header(None)):
     return verify_admin_token(authorization)
 
 @router.post("/auth/admin-login")
-async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
+async def admin_login(credentials: AdminLogin, request: Request = None, db=Depends(lambda: None)):
     from server import db as database
-    
+
+    ip = rate_limit.limitar_login(request, credentials.username)
+
     # Find admin user
     admin = await database.admin_users.find_one({"username": credentials.username}, {"_id": 0})
     
@@ -62,7 +65,10 @@ async def admin_login(credentials: AdminLogin, db=Depends(lambda: None)):
         "exp": datetime.now(timezone.utc) + timedelta(hours=12)
     }
     token = encode_admin_token(token_data)
-    
+
+    # Quien acierta no arrastra los fallos previos
+    rate_limit.olvidar("login", ip)
+
     return {
         "token": token, 
         "username": credentials.username,

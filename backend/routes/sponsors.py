@@ -147,7 +147,9 @@ async def upload_sponsor_logo(
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
     
     # Validate file type
-    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"]
+    # Sin SVG: puede llevar JavaScript dentro y se sirve desde el dominio del
+    # backend, asi que abrirlo ejecutaria ese script en nuestro origen.
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP o SVG")
     

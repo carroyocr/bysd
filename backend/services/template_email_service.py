@@ -7,6 +7,7 @@ import smtplib
 import os
 
 from services.env_utils import get_env
+import html
 import re
 import time
 from email.mime.text import MIMEText
@@ -95,27 +96,39 @@ def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False
     return results
 
 
-def render_template(template_str: str, data: Dict[str, Any]) -> str:
+def render_template(template_str: str, data: Dict[str, Any], escape: bool = True) -> str:
     """
     Render a template string by replacing merge fields with actual data.
-    
+
     Merge fields are in the format {{field_name}}
+
+    escape=True (por defecto) para cuerpos HTML. Pasar escape=False solo para
+    el asunto, que viaja como cabecera de texto plano: ahi un "&" escapado se
+    leeria literalmente como "&amp;".
     """
     if not template_str:
         return ""
-    
+
     result = template_str
-    
+
     # Replace all {{field_name}} patterns
     pattern = r'\{\{(\w+)\}\}'
-    
+
     def replacer(match):
         field_name = match.group(1)
         value = data.get(field_name, "")
-        return str(value) if value is not None else ""
-    
+        if value is None:
+            return ""
+        # Los valores se escapan; la plantilla no. Sin esto, un atleta que se
+        # llame '<b>x' o algo peor inyecta HTML en los correos que salen a
+        # terceros (y los nombres los escribe cualquiera en la inscripcion).
+        # Ningun campo de fusion es HTML a proposito: son textos y URLs, y
+        # escapar una URL es correcto dentro de href/src.
+        texto = str(value)
+        return html.escape(texto, quote=True) if escape else texto
+
     result = re.sub(pattern, replacer, result)
-    
+
     return result
 
 
@@ -216,7 +229,7 @@ async def send_email_with_template(
         return False
     
     # Render template
-    rendered_subject = render_template(template["subject"], data)
+    rendered_subject = render_template(template["subject"], data, escape=False)
     rendered_content = render_template(template["content"], data)
     
     if subject_prefix:

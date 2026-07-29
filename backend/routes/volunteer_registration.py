@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Literal, List
 from datetime import datetime, timezone, timedelta
 import random
 import string
 
+from services import rate_limit
 from services.auth import require_permission
 
 router = APIRouter(prefix="/volunteer-registration", tags=["volunteer-registration"])
@@ -228,8 +229,9 @@ def generate_edit_token():
 
 
 @router.post("/send-verification")
-async def send_verification(request: VerificationRequest):
+async def send_verification(request: VerificationRequest, http_request: Request = None):
     """Send verification code to volunteer's email"""
+    rate_limit.limitar_envio_codigo(http_request)
     from server import db
     
     email = request.email.lower()
@@ -284,8 +286,9 @@ async def send_verification(request: VerificationRequest):
 
 
 @router.post("/verify-code")
-async def verify_code(request: VerificationConfirm):
+async def verify_code(request: VerificationConfirm, http_request: Request = None):
     """Verify the email code"""
+    rate_limit.limitar_verificacion(http_request)
     from server import db
     
     email = request.email.lower()
@@ -449,8 +452,9 @@ class EditLinkRequest(BaseModel):
 
 
 @router.post("/request-edit-link")
-async def request_edit_link(request: EditLinkRequest):
+async def request_edit_link(request: EditLinkRequest, http_request: Request = None):
     """Request an edit link to be sent to the volunteer's email"""
+    rate_limit.limitar_envio_codigo(http_request)
     from server import db
     
     email = request.email.lower()
