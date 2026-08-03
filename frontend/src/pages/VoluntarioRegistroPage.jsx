@@ -724,32 +724,20 @@ export default function VoluntarioRegistroPage() {
         </div>
       </div>
 
-      {/* Progress Steps: ocultos en la pantalla inicial de correo */}
+      {/* Indicador del paso actual: un solo icono centrado */}
       {(editMode || currentStepId !== 'verify') && (
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-              {activeSteps.map((step, index) => {
-                const Icon = step.icon;
-                const isActive = index === currentStep;
-                const isCompleted = index < currentStep;
-
-                return (
-                  <div key={step.id} className="flex flex-col items-center min-w-[56px] sm:min-w-[70px]">
-                    <div className={`
-                      w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all
-                      ${isCompleted ? 'bg-green-500 text-white' :
-                        isActive ? 'bg-primary text-white' :
-                        'bg-gray-200 text-gray-500'}
-                    `}>
-                      {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                    </div>
-                    <span className={`text-[10px] sm:text-xs mt-2 text-center ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
-                      {step.title}
-                    </span>
-                  </div>
-                );
-              })}
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center">
+                {React.createElement(activeSteps[currentStep]?.icon || User, { className: 'w-5 h-5' })}
+              </div>
+              <span className="text-xs mt-2 text-primary font-medium text-center">
+                {activeSteps[currentStep]?.title}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                Paso {currentStep + 1} de {activeSteps.length}
+              </span>
             </div>
           </div>
         </div>
