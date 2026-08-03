@@ -1359,7 +1359,7 @@ export default function VoluntarioRegistroPage() {
                       ) : (
                         <>
                           <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                          {editMode ? 'Guardar Cambios' : 'Completar Registro'}
+                          {editMode ? 'Guardar Cambios' : 'Completar'}
                         </>
                       )}
                     </Button>
