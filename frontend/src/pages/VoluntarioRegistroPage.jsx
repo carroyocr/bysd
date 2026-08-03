@@ -642,7 +642,7 @@ export default function VoluntarioRegistroPage() {
               </p>
               
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
-                <h3 className="font-semibold text-amber-800 mb-2">📧 Revisa tu Correo</h3>
+                <h3 className="font-semibold text-amber-800 mb-2">Revisa tu Correo</h3>
                 <p className="text-sm text-amber-700">
                   Te enviamos un correo de confirmación con un enlace para editar tu postulación si lo necesitas.
                 </p>
@@ -650,7 +650,7 @@ export default function VoluntarioRegistroPage() {
               
               {selectedInfo.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Seleccionados</h3>
+                  <h3 className="font-semibold text-blue-800 mb-2">Turnos de Interés Seleccionados</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
@@ -699,7 +699,7 @@ export default function VoluntarioRegistroPage() {
               
               {selectedInfo.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Actualizados</h3>
+                  <h3 className="font-semibold text-blue-800 mb-2">Turnos de Interés Actualizados</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
