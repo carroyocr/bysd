@@ -835,17 +835,20 @@ export default function SponsorsManagement() {
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto space-y-4">
               {/* Add note */}
-              <div className="flex gap-2">
-                <Input
+              <div className="space-y-2">
+                <textarea
                   placeholder="Registrar contacto (llamada, correo, reunión...)"
                   value={bitacoraNota}
                   onChange={(e) => setBitacoraNota(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddNota(); }}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
                   data-testid="bitacora-nota-input"
                 />
-                <Button onClick={handleAddNota} disabled={savingNota} data-testid="bitacora-add-btn">
-                  {savingNota ? 'Guardando...' : 'Registrar'}
-                </Button>
+                <div className="flex justify-end">
+                  <Button onClick={handleAddNota} disabled={savingNota} data-testid="bitacora-add-btn">
+                    {savingNota ? 'Guardando...' : 'Registrar'}
+                  </Button>
+                </div>
               </div>
 
               {/* Entries (newest first) */}
