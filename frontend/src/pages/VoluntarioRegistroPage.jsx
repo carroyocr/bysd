@@ -1318,17 +1318,17 @@ export default function VoluntarioRegistroPage() {
                   </Button>
 
                   {currentStep < activeSteps.length - 1 ? (
-                    <Button onClick={nextStep}>
+                    <Button onClick={nextStep} className="flex-1 sm:flex-initial min-w-0">
                       Siguiente
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      <ArrowRight className="w-4 h-4 ml-2 flex-shrink-0" />
                     </Button>
                   ) : (
-                    <Button onClick={handleSubmit} disabled={submitting} data-testid="volunteer-submit-btn">
+                    <Button onClick={handleSubmit} disabled={submitting} className="flex-1 sm:flex-initial min-w-0" data-testid="volunteer-submit-btn">
                       {submitting ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
                       ) : (
                         <>
-                          <CheckCircle className="w-4 h-4 mr-2" />
+                          <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                           {editMode ? 'Guardar Cambios' : 'Completar Registro'}
                         </>
                       )}
