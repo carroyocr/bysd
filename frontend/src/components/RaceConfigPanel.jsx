@@ -59,7 +59,8 @@ export default function RaceConfigPanel() {
     // Page visibility
     show_tracking_page: true,
     show_community_page: true,
-    show_preregistration: true
+    show_preregistration: true,
+    show_volunteer_carrera: false
   });
 
   const token = localStorage.getItem('admin_token');
@@ -97,7 +98,9 @@ export default function RaceConfigPanel() {
         // Page visibility
         show_tracking_page: activeData.show_tracking_page !== false,
         show_community_page: activeData.show_community_page !== false,
-        show_preregistration: activeData.show_preregistration !== false
+        show_preregistration: activeData.show_preregistration !== false,
+        // Apagado salvo que esté explícitamente encendido
+        show_volunteer_carrera: activeData.show_volunteer_carrera === true
       });
       
       // Load notification counts if race has manuals
@@ -1161,6 +1164,35 @@ export default function RaceConfigPanel() {
                           <><Eye className="w-3 h-3 text-green-600" /> Activo - Boton "Inscribirme" visible en Mi Perfil</>
                         ) : (
                           <><EyeOff className="w-3 h-3 text-gray-500" /> Inactivo - Muestra "Proximamente" en Mi Perfil</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Volunteer Registration (carrera) Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_volunteer_carrera ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_volunteer_carrera ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Users className={`w-5 h-5 ${editForm.show_volunteer_carrera ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Voluntarios del Backyard Ultra</h4>
+                          <p className="text-sm text-muted-foreground">Postulaciones para la carrera</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_volunteer_carrera}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_volunteer_carrera: checked})}
+                        data-testid="toggle-volunteer-carrera"
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_volunteer_carrera ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se puede postular a la carrera y al campeonato</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - Solo se reciben voluntarios del Campeonato Mundial</>
                         )}
                       </p>
                     </div>

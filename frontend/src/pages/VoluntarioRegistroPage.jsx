@@ -118,11 +118,23 @@ export default function VoluntarioRegistroPage() {
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
-  const [selectedEvento, setSelectedEvento] = useState('carrera'); // Event chosen by volunteer
+  // Evento elegido por el voluntario. El campeonato siempre está abierto, así
+  // que sirve como valor inicial seguro.
+  const [selectedEvento, setSelectedEvento] = useState('campeonato');
   // Posiciones expandidas en el acordeón de turnos (cargan contraídas)
   const [expandedPositions, setExpandedPositions] = useState({});
   // Posiciones con la descripción visible (botón de información)
   const [openInfoPositions, setOpenInfoPositions] = useState({});
+
+  // Eventos que aceptan postulaciones nuevas. El registro de voluntarios para
+  // la carrera se enciende desde el panel (Configuración de Carrera); mientras
+  // esté apagado solo se recibe gente para el campeonato mundial.
+  const eventosHabilitados = React.useMemo(
+    () => EVENTO_OPTIONS
+      .map(ev => ev.value)
+      .filter(value => value !== 'carrera' || config?.show_volunteer_carrera === true),
+    [config?.show_volunteer_carrera]
+  );
 
   const togglePosition = (puesto) => {
     setExpandedPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
@@ -240,6 +252,16 @@ export default function VoluntarioRegistroPage() {
   // Get current step ID for conditional rendering
   const currentStepId = activeSteps[currentStep]?.id || '';
 
+  // Si el evento elegido dejó de aceptar postulaciones, mover la selección al
+  // primero que sí esté abierto (al editar se respeta el evento existente)
+  useEffect(() => {
+    if (editMode) return;
+    if (!eventosHabilitados.includes(selectedEvento)) {
+      setSelectedEvento(eventosHabilitados[0] || 'campeonato');
+      setSelectedSlots([]);
+    }
+  }, [eventosHabilitados, editMode, selectedEvento]);
+
   // Load available slots when entering slots step or when event changes
   useEffect(() => {
     if (currentStepId === 'slots') {
@@ -338,6 +360,12 @@ export default function VoluntarioRegistroPage() {
     }
     return info;
   };
+
+  // Eventos que se pueden elegir en el formulario: los abiertos, más el de la
+  // postulación que se está editando (aunque su registro ya esté cerrado)
+  const eventosSeleccionables = EVENTO_OPTIONS.filter(
+    (ev) => eventosHabilitados.includes(ev.value) || (editMode && ev.value === selectedEvento)
+  );
 
   // Label for an event ('carrera' uses the active race name)
   const getEventoLabel = (value) => {
@@ -985,11 +1013,20 @@ export default function VoluntarioRegistroPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Event selector */}
+                    {/* Event selector: solo cuando hay más de un evento abierto.
+                        Con uno solo se muestra el nombre, sin opciones que confundan. */}
+                    {eventosSeleccionables.length <= 1 ? (
+                      <div className="space-y-1" data-testid="volunteer-reg-event-fixed">
+                        <Label className="text-sm font-semibold">Evento</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Turnos de <strong className="text-foreground">{getEventoLabel(selectedEvento)}</strong>
+                        </p>
+                      </div>
+                    ) : (
                     <div className="space-y-2" data-testid="volunteer-reg-event-selector">
                       <Label className="text-sm font-semibold">¿Para qué evento deseas ser voluntario?</Label>
                       <div className="grid sm:grid-cols-2 gap-3">
-                        {EVENTO_OPTIONS.map((ev) => {
+                        {eventosSeleccionables.map((ev) => {
                           const label = ev.value === 'carrera' ? (raceName || 'Carrera Activa') : ev.label;
                           const active = selectedEvento === ev.value;
                           // En un registro nuevo no se puede elegir un evento
@@ -1020,6 +1057,7 @@ export default function VoluntarioRegistroPage() {
                         })}
                       </div>
                     </div>
+                    )}
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <p className="text-sm text-blue-800">

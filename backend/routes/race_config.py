@@ -69,6 +69,10 @@ class RaceConfigUpdate(BaseModel):
     show_tracking_page: Optional[bool] = None
     show_community_page: Optional[bool] = None
     show_preregistration: Optional[bool] = None
+    # Registro publico de voluntarios para la carrera (el campeonato mundial
+    # siempre esta abierto). Apagado mientras solo se reclutan voluntarios
+    # para el campeonato.
+    show_volunteer_carrera: Optional[bool] = None
 
 
 @router.get("/active")
@@ -110,7 +114,10 @@ async def get_active_race(db=Depends(lambda: None)):
         config["show_community_page"] = True
     if "show_preregistration" not in config:
         config["show_preregistration"] = True
-    
+    # Por defecto apagado: solo se reciben voluntarios del campeonato mundial
+    if "show_volunteer_carrera" not in config:
+        config["show_volunteer_carrera"] = False
+
     return config
 
 
@@ -155,23 +162,25 @@ async def get_page_visibility(db=Depends(lambda: None)):
     from server import db as database
     
     config = await database.race_configurations.find_one(
-        {"is_active": True}, 
-        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "name": 1, "code": 1}
+        {"is_active": True},
+        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_volunteer_carrera": 1, "name": 1, "code": 1}
     )
-    
+
     if not config:
         return {
             "show_tracking_page": True,
             "show_community_page": True,
             "show_preregistration": True,
+            "show_volunteer_carrera": False,
             "race_name": "Backyard Ultra Santo Domingo",
             "race_code": ""
         }
-    
+
     return {
         "show_tracking_page": config.get("show_tracking_page", True),
         "show_community_page": config.get("show_community_page", True),
         "show_preregistration": config.get("show_preregistration", True),
+        "show_volunteer_carrera": config.get("show_volunteer_carrera", False) is True,
         "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
         "race_code": config.get("code", "")
     }
