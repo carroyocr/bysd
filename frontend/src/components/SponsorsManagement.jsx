@@ -803,7 +803,28 @@ export default function SponsorsManagement() {
                           Bitácora de Contactos
                         </h4>
 
-                        {/* Registrar contacto */}
+                        {/* Entradas en orden cronológico, la más nueva al final (estilo chat) */}
+                        {(sponsor.bitacora || []).length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            Aún no hay contactos registrados con este patrocinador
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {(sponsor.bitacora || []).map((entrada) => (
+                              <div
+                                key={entrada.id}
+                                className={`p-3 rounded-lg border text-sm ${
+                                  entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
+                                }`}
+                              >
+                                <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
+                                <div className="mt-0.5">{entrada.nota}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Registrar contacto (abajo, como un chat) */}
                         <div className="space-y-2">
                           <textarea
                             placeholder="Registrar contacto (llamada, correo, reunión...)"
@@ -824,27 +845,6 @@ export default function SponsorsManagement() {
                             </Button>
                           </div>
                         </div>
-
-                        {/* Entradas (más recientes primero) */}
-                        {(sponsor.bitacora || []).length === 0 ? (
-                          <p className="text-sm text-muted-foreground italic">
-                            Aún no hay contactos registrados con este patrocinador
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {[...(sponsor.bitacora || [])].reverse().map((entrada) => (
-                              <div
-                                key={entrada.id}
-                                className={`p-3 rounded-lg border text-sm ${
-                                  entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
-                                }`}
-                              >
-                                <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
-                                <div className="mt-0.5">{entrada.nota}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
