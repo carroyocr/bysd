@@ -40,8 +40,8 @@ const getStatusInfo = (status) =>
 
 const isPublished = (sponsor) => {
   if (!sponsor.is_active) return false;
-  if (!sponsor.status) return true; // legacy, sin pipeline
-  const idx = PIPELINE_ORDER.indexOf(sponsor.status);
+  // Publicación apagada por defecto: sin status cuenta como "prospecto"
+  const idx = PIPELINE_ORDER.indexOf(sponsor.status || 'prospecto');
   if (idx === -1) return false; // declinado
   let threshold = PIPELINE_ORDER.indexOf(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE);
   if (threshold === -1) threshold = PIPELINE_ORDER.indexOf(DEFAULT_PUBLICAR_DESDE);

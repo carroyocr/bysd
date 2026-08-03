@@ -43,16 +43,15 @@ STATUS_LABELS = {
 
 # Orden del pipeline (sin "declinado", que nunca se publica). Cada
 # patrocinador define en "publicar_desde" el momento del proceso a partir
-# del cual aparece en el sitio (por defecto "cierre"). Los documentos
-# viejos sin status siguen publicados (legacy).
+# del cual aparece en el sitio (por defecto "cierre"). La publicacion esta
+# apagada por defecto: un documento sin status cuenta como "prospecto" y
+# NO se publica hasta que el proceso avance al momento configurado.
 ORDERED_PIPELINE = [s for s in SPONSOR_STATUSES if s != "declinado"]
 DEFAULT_PUBLICAR_DESDE = "cierre"
 
 
 def sponsor_esta_publicado(doc: dict) -> bool:
-    status = doc.get("status")
-    if status is None:
-        return True  # legacy, sin pipeline
+    status = doc.get("status") or "prospecto"
     if status not in ORDERED_PIPELINE:
         return False  # declinado o valor desconocido
     threshold = doc.get("publicar_desde") or DEFAULT_PUBLICAR_DESDE
