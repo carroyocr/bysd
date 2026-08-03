@@ -12,17 +12,19 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Available permissions
+// Available permissions. Cada permiso abre uno o varios tabs del panel;
+// la descripción lista los tabs que cubre (ver TAB_PERMISSIONS en AdminPage).
 const PERMISSIONS = [
-  { id: 'control', label: 'Panel de Control', description: 'Ver y gestionar la carrera en tiempo real' },
-  { id: 'athletes', label: 'Atletas', description: 'Gestionar inscripciones y BIBs' },
-  { id: 'finances', label: 'Finanzas', description: 'Ver y gestionar ingresos y gastos' },
-  { id: 'volunteers', label: 'Voluntarios', description: 'Gestionar turnos y asignaciones' },
-  { id: 'sponsors', label: 'Patrocinadores', description: 'Gestionar patrocinadores' },
-  { id: 'surveys', label: 'Encuestas', description: 'Ver resultados de encuestas' },
-  { id: 'config', label: 'Configuración', description: 'Configurar carrera y manuales' },
+  { id: 'control', label: 'Panel de Control', description: 'Tabs Control y Vueltas: gestión de la carrera en tiempo real' },
+  { id: 'athletes', label: 'Atletas', description: 'Tabs Atletas, Resultados 2026, Perfiles y Seleccionados' },
+  { id: 'finances', label: 'Finanzas', description: 'Tab Finanzas: ingresos y gastos' },
+  { id: 'volunteers', label: 'Voluntarios', description: 'Tabs Voluntarios (asignaciones) y Turnos' },
+  { id: 'sponsors', label: 'Patrocinadores', description: 'Tab Patrocinadores: gestión y proceso de cierre' },
+  { id: 'surveys', label: 'Encuestas', description: 'Tab Encuesta: ver resultados' },
+  { id: 'emails', label: 'Correos', description: 'Tabs Correos, Enviar Correos, WhatsApp y Prensa' },
+  { id: 'config', label: 'Configuración', description: 'Tabs Carrera, Camisetas y Capacitaciones' },
   { id: 'scanner', label: 'Escáner QR', description: 'Registrar vueltas con QR' },
-  { id: 'users', label: 'Usuarios', description: 'Gestionar usuarios y permisos' },
+  { id: 'users', label: 'Usuarios', description: 'Tab Usuarios: gestionar usuarios y permisos' },
 ];
 
 export default function UserManagement() {
