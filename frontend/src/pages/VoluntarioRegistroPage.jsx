@@ -780,44 +780,30 @@ export default function VoluntarioRegistroPage() {
                       </p>
                     </div>
 
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-amber-800">Ya tienes una postulación como voluntario</p>
-                          <p className="text-sm text-amber-700 mt-1 break-words">
-                            Registrado para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>. ¿Qué deseas hacer?
-                          </p>
-
-                          <div className="mt-3 flex flex-col gap-2">
-                            {existingRegistrations.map((reg) => (
-                              <Button
-                                key={reg.evento}
-                                variant="outline"
-                                size="sm"
-                                onClick={() => startDirectEdit(reg)}
-                                className="w-full h-auto min-h-9 whitespace-normal border-amber-300 text-amber-800 hover:bg-amber-100"
-                                data-testid={`edit-registration-${reg.evento}`}
-                              >
-                                <Edit2 className="w-4 h-4 mr-2 flex-shrink-0" />
-                                Editar mi postulación de {getEventoLabel(reg.evento)}
-                              </Button>
-                            ))}
-                            {eventosDisponibles.map((ev) => (
-                              <Button
-                                key={ev}
-                                size="sm"
-                                onClick={() => startNewRegistration(ev)}
-                                className="w-full h-auto min-h-9 whitespace-normal"
-                                data-testid={`new-registration-${ev}`}
-                              >
-                                <ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" />
-                                Crear nueva postulación para {getEventoLabel(ev)}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="max-w-sm mx-auto flex flex-col gap-2">
+                      {existingRegistrations.map((reg) => (
+                        <Button
+                          key={reg.evento}
+                          variant="outline"
+                          onClick={() => startDirectEdit(reg)}
+                          className="w-full h-auto min-h-10 whitespace-normal"
+                          data-testid={`edit-registration-${reg.evento}`}
+                        >
+                          <Edit2 className="w-4 h-4 mr-2 flex-shrink-0" />
+                          Editar mi postulación de {getEventoLabel(reg.evento)}
+                        </Button>
+                      ))}
+                      {eventosDisponibles.map((ev) => (
+                        <Button
+                          key={ev}
+                          onClick={() => startNewRegistration(ev)}
+                          className="w-full h-auto min-h-10 whitespace-normal"
+                          data-testid={`new-registration-${ev}`}
+                        >
+                          <ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" />
+                          Crear nueva postulación para {getEventoLabel(ev)}
+                        </Button>
+                      ))}
                     </div>
                   </div>
                 ) : (
