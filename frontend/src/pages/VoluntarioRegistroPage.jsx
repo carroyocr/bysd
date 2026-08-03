@@ -773,8 +773,8 @@ export default function VoluntarioRegistroPage() {
                   /* Correo verificado con postulaciones previas: elegir entre
                      editar la existente o crear una nueva para el otro evento */
                   <div className="space-y-4">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
+                    <div className="max-w-sm mx-auto p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800 text-center break-words">
                         <CheckCircle className="w-4 h-4 inline mr-1" />
                         Correo verificado: <strong>{email}</strong>
                       </p>
