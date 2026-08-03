@@ -153,6 +153,10 @@ async def get_available_slots(evento: Optional[str] = None):
     # Get all slots from the correct collection, filtered by event
     query = evento_query(evento) if evento in VALID_EVENTOS else {}
     slots = await db.volunteer_assignments.find(query, {"_id": 0}).to_list(1000)
+
+    # Descripcion de cada posicion, para mostrarla en el registro publico
+    position_docs = await db.volunteer_positions.find(query, {"_id": 0, "nombre": 1, "descripcion": 1}).to_list(200)
+    descripciones = {p["nombre"]: (p.get("descripcion") or "") for p in position_docs}
     
     # Group by position and turno
     positions = {}
@@ -213,6 +217,7 @@ async def get_available_slots(evento: Optional[str] = None):
         if turnos_list:  # Only include positions with available shifts
             positions_list.append({
                 "puesto": puesto,
+                "descripcion": descripciones.get(puesto, ""),
                 "turnos": turnos_list
             })
     

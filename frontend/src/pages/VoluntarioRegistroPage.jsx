@@ -121,9 +121,15 @@ export default function VoluntarioRegistroPage() {
   const [selectedEvento, setSelectedEvento] = useState('carrera'); // Event chosen by volunteer
   // Posiciones expandidas en el acordeón de turnos (cargan contraídas)
   const [expandedPositions, setExpandedPositions] = useState({});
+  // Posiciones con la descripción visible (botón de información)
+  const [openInfoPositions, setOpenInfoPositions] = useState({});
 
   const togglePosition = (puesto) => {
     setExpandedPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
+  };
+
+  const togglePositionInfo = (puesto) => {
+    setOpenInfoPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
   };
   
   // Check for edit token in URL
@@ -1041,13 +1047,32 @@ export default function VoluntarioRegistroPage() {
                               onClick={() => togglePosition(position.puesto)}
                               data-testid={`position-accordion-${position.puesto}`}
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <CardTitle className="text-base font-semibold">{position.puesto}</CardTitle>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {seleccionadosEnPosicion > 0 && (
-                                    <Badge className="text-xs">{seleccionadosEnPosicion} seleccionado{seleccionadosEnPosicion > 1 ? 's' : ''}</Badge>
-                                  )}
-                                  <Badge variant="outline" className="text-xs">{position.turnos.length} turnos</Badge>
+                              <div className="flex items-start justify-between gap-2">
+                                {/* Tres líneas: nombre, cantidad de turnos y seleccionados */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <CardTitle className="text-base font-semibold break-words">{position.puesto}</CardTitle>
+                                    {position.descripcion && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          togglePositionInfo(position.puesto);
+                                        }}
+                                        className="text-primary flex-shrink-0"
+                                        title="Ver en qué consiste esta posición"
+                                        data-testid={`position-info-${position.puesto}`}
+                                      >
+                                        <Info className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">{position.turnos.length} turnos</div>
+                                  <div className={`text-xs ${seleccionadosEnPosicion > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                                    {seleccionadosEnPosicion} seleccionado{seleccionadosEnPosicion !== 1 ? 's' : ''}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 mt-1">
                                   {isOpen ? (
                                     <ChevronUp className="w-5 h-5 text-muted-foreground" />
                                   ) : (
@@ -1055,6 +1080,11 @@ export default function VoluntarioRegistroPage() {
                                   )}
                                 </div>
                               </div>
+                              {openInfoPositions[position.puesto] && position.descripcion && (
+                                <p className="text-sm text-muted-foreground mt-2 pt-2 border-t break-words">
+                                  {position.descripcion}
+                                </p>
+                              )}
                             </CardHeader>
                             {isOpen && (
                             <CardContent className="p-4">
