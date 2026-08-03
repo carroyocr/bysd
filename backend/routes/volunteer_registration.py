@@ -27,6 +27,14 @@ def evento_query(evento: str) -> dict:
     return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
 
 
+def nombre_evento(active_race: Optional[dict], evento: Optional[str]) -> str:
+    """Human name of the event a volunteer registered for: the active race's
+    name for 'carrera', or the satellite championship label."""
+    if evento == "campeonato":
+        return "Campeonato Satélite por Equipos"
+    return (active_race or {}).get("name") or "Backyard Ultra Santo Domingo"
+
+
 class VerificationRequest(BaseModel):
     email: EmailStr
 
@@ -121,11 +129,14 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
         )
         
         race_config = await db.race_configurations.find_one({"code": race_code}) if race_code else await db.race_configurations.find_one({"is_active": True})
-        
+
+        evento_nombre = nombre_evento(race_config, registration.get("evento"))
         merge_data = {
             **build_race_data(race_config),
             **build_volunteer_data(registration),
             "cancellation_reason": reason_text,
+            "race_name": evento_nombre,
+            "event_name": evento_nombre,
         }
         
         await send_email_with_template(
@@ -418,12 +429,17 @@ async def register_volunteer(
         frontend_url = os.environ.get('FRONTEND_URL', 'https://admin-dashboard-v2-66.preview.emergentagent.com')
         edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
         
+        evento_nombre = nombre_evento(active_race, evento)
         merge_data = {
             **build_race_data(active_race),
             **build_volunteer_data(registration, edit_token=edit_token),
             "volunteer_edit_link": edit_url,
+            # Las plantillas dicen "para {{race_name}}": para el campeonato se
+            # sustituye por el nombre del evento al que realmente se registró
+            "race_name": evento_nombre,
+            "event_name": evento_nombre,
         }
-        
+
         await send_email_with_template(
             db=db,
             template_id="volunteer_registration_confirmation",
@@ -541,10 +557,13 @@ async def request_edit_link(request: EditLinkRequest, http_request: Request = No
             frontend_url = os.environ.get('FRONTEND_URL', 'https://admin-dashboard-v2-66.preview.emergentagent.com')
             edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
 
+            evento_nombre = nombre_evento(active_race, registration.get("evento"))
             merge_data = {
                 **build_race_data(active_race),
                 **build_volunteer_data(registration, edit_token=edit_token),
                 "volunteer_edit_link": edit_url,
+                "race_name": evento_nombre,
+                "event_name": evento_nombre,
             }
 
             await send_email_with_template(

@@ -638,7 +638,7 @@ export default function VoluntarioRegistroPage() {
               </h2>
               
               <p className="text-muted-foreground">
-                Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
+                Tu registro como voluntario para <strong className="text-foreground">{getEventoLabel(selectedEvento)}</strong> ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
               </p>
               
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
@@ -694,7 +694,7 @@ export default function VoluntarioRegistroPage() {
               </h2>
               
               <p className="text-muted-foreground">
-                Tus cambios han sido guardados correctamente.
+                Tu postulación para <strong className="text-foreground">{getEventoLabel(selectedEvento)}</strong> ha sido actualizada correctamente.
               </p>
               
               {selectedInfo.length > 0 && (
