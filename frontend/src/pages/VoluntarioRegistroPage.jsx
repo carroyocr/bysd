@@ -74,8 +74,12 @@ export default function VoluntarioRegistroPage() {
   const [verifying, setVerifying] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   
-  // State for showing "already registered" message
+  // State for showing "already registered" options
   const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  const [registeredEventos, setRegisteredEventos] = useState([]);
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [requestingEditLink, setRequestingEditLink] = useState(false);
+  const [editLinkSent, setEditLinkSent] = useState(false);
   
   // Available slots data
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
@@ -316,19 +320,28 @@ export default function VoluntarioRegistroPage() {
     return info;
   };
 
-  const sendVerificationCode = async () => {
+  // Label for an event ('carrera' uses the active race name)
+  const getEventoLabel = (value) => {
+    if (value === 'carrera') return raceName || 'Carrera Activa';
+    const opt = EVENTO_OPTIONS.find(e => e.value === value);
+    return opt ? opt.label : value;
+  };
+
+  // continuarConEvento: cuando el correo ya está registrado en un evento y el
+  // voluntario elige registrarse para el otro, se reenvía con ese evento.
+  const sendVerificationCode = async (continuarConEvento = null) => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
       return;
     }
-    
+
     setEmailAlreadyRegistered(false);
     setSendingCode(true);
-    
+
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}/api/volunteer-registration/send-verification`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
-    
+
     xhr.onload = function() {
       setSendingCode(false);
       let data;
@@ -337,13 +350,24 @@ export default function VoluntarioRegistroPage() {
       } catch (e) {
         data = { detail: xhr.responseText };
       }
-      
+
       if (xhr.status === 200) {
+        if (data.status === 'already_registered') {
+          setEmailAlreadyRegistered(true);
+          setRegisteredEventos(data.registered_eventos || []);
+          setEventosDisponibles(data.eventos_disponibles || []);
+          toast.info('Este correo ya está registrado como voluntario');
+          return;
+        }
+        if (continuarConEvento) {
+          setSelectedEvento(continuarConEvento);
+          setSelectedSlots([]);
+        }
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
         const errorMessage = data.detail || 'Error enviando código';
-        
+
         if (errorMessage.includes('ya está registrado')) {
           setEmailAlreadyRegistered(true);
           toast.info('Este correo ya está registrado como voluntario');
@@ -352,13 +376,38 @@ export default function VoluntarioRegistroPage() {
         }
       }
     };
-    
+
     xhr.onerror = function() {
       setSendingCode(false);
       toast.error('Error de conexión. Intenta de nuevo.');
     };
-    
-    xhr.send(JSON.stringify({ email }));
+
+    xhr.send(JSON.stringify({ email, continuar_con_evento: continuarConEvento }));
+  };
+
+  // Pide al backend que envíe por correo el enlace de edición de la(s)
+  // postulación(es) existente(s)
+  const requestEditLink = async () => {
+    setRequestingEditLink(true);
+    try {
+      const response = await fetch(`${API_URL}/api/volunteer-registration/request-edit-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setEditLinkSent(true);
+        toast.success('Enlace de edición enviado a tu correo');
+      } else {
+        toast.error(data.detail || 'Error enviando el enlace');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setRequestingEditLink(false);
+    }
   };
 
   const verifyCode = async () => {
@@ -741,6 +790,7 @@ export default function VoluntarioRegistroPage() {
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setEmailAlreadyRegistered(false);
+                      setEditLinkSent(false);
                     }}
                     placeholder="tu@email.com"
                     disabled={codeSent}
@@ -750,8 +800,8 @@ export default function VoluntarioRegistroPage() {
 
                 {!codeSent ? (
                   <>
-                    <Button 
-                      onClick={sendVerificationCode} 
+                    <Button
+                      onClick={() => sendVerificationCode()}
                       disabled={sendingCode}
                       className="w-full"
                       data-testid="volunteer-send-code-btn"
@@ -767,11 +817,54 @@ export default function VoluntarioRegistroPage() {
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="flex items-start gap-3">
                           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium text-amber-800">Este correo ya está registrado</p>
                             <p className="text-sm text-amber-700 mt-1">
-                              Ya tienes un registro como voluntario para este evento.
+                              {registeredEventos.length > 0
+                                ? <>Ya tienes un registro como voluntario para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>.</>
+                                : 'Ya tienes un registro como voluntario para este evento.'}
                             </p>
+
+                            {editLinkSent ? (
+                              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-sm text-green-800">
+                                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                                  Te enviamos el enlace de edición a tu correo. Revísalo (incluyendo spam) para editar tu postulación.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={requestEditLink}
+                                  disabled={requestingEditLink || sendingCode}
+                                  className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                                  data-testid="edit-previous-registration-btn"
+                                >
+                                  {requestingEditLink ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando enlace...</>
+                                  ) : (
+                                    <><Edit2 className="w-4 h-4 mr-2" /> Editar mi postulación</>
+                                  )}
+                                </Button>
+                                {eventosDisponibles.map((ev) => (
+                                  <Button
+                                    key={ev}
+                                    size="sm"
+                                    onClick={() => sendVerificationCode(ev)}
+                                    disabled={sendingCode || requestingEditLink}
+                                    data-testid={`register-other-event-${ev}`}
+                                  >
+                                    {sendingCode ? (
+                                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando código...</>
+                                    ) : (
+                                      <><ArrowRight className="w-4 h-4 mr-2" /> Registrarme para {getEventoLabel(ev)}</>
+                                    )}
+                                  </Button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -930,20 +1023,29 @@ export default function VoluntarioRegistroPage() {
                         {EVENTO_OPTIONS.map((ev) => {
                           const label = ev.value === 'carrera' ? (raceName || 'Carrera Activa') : ev.label;
                           const active = selectedEvento === ev.value;
+                          // En un registro nuevo no se puede elegir un evento
+                          // donde este correo ya tiene una postulación
+                          const yaRegistrado = !editMode && registeredEventos.includes(ev.value);
                           return (
                             <button
                               key={ev.value}
                               type="button"
                               data-testid={`reg-event-${ev.value}`}
-                              onClick={() => handleEventoChange(ev.value)}
+                              onClick={() => !yaRegistrado && handleEventoChange(ev.value)}
+                              disabled={yaRegistrado}
                               className={`p-3 rounded-lg border-2 text-sm font-medium text-left transition-all ${
                                 active
                                   ? 'border-primary bg-primary/10 text-primary'
-                                  : 'border-gray-200 hover:border-primary/50 text-muted-foreground'
+                                  : yaRegistrado
+                                    ? 'border-gray-200 bg-gray-100 text-muted-foreground opacity-60 cursor-not-allowed'
+                                    : 'border-gray-200 hover:border-primary/50 text-muted-foreground'
                               }`}
                             >
                               {active && <Check className="w-4 h-4 inline mr-2" />}
                               {label}
+                              {yaRegistrado && (
+                                <span className="block text-xs mt-1">Ya estás registrado en este evento</span>
+                              )}
                             </button>
                           );
                         })}

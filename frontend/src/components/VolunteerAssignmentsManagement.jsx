@@ -122,7 +122,7 @@ export default function VolunteerAssignmentsManagement() {
     setChangingEventoEmail(volunteer.email);
     try {
       const response = await adminFetch(
-        `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(volunteer.email)}/evento`,
+        `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(volunteer.email)}/evento?evento_actual=${volunteer.evento || 'carrera'}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -237,7 +237,7 @@ export default function VolunteerAssignmentsManagement() {
     
     setActionLoading(true);
     try {
-      const response = await adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}?evento=${selectedVolunteer.evento || 'carrera'}`, {
         method: 'DELETE'
       });
       
@@ -465,17 +465,23 @@ export default function VolunteerAssignmentsManagement() {
           ) : (
             <div className="divide-y">
               {filteredVolunteers.map((volunteer) => {
-                const isExpanded = expandedVolunteer === volunteer.email;
-                const assignedSlots = availableSlots.filter(s => s.email_asignado === volunteer.email);
+                // Un mismo correo puede tener un registro por evento: la fila
+                // se identifica por email + evento
+                const volunteerKey = `${volunteer.email}|${volunteer.evento || 'carrera'}`;
+                const isExpanded = expandedVolunteer === volunteerKey;
+                const assignedSlots = availableSlots.filter(s =>
+                  s.email_asignado === volunteer.email &&
+                  (s.evento || 'carrera') === (volunteer.evento || 'carrera')
+                );
                 const interestSlots = volunteer.slots_interes || [];
                 const totalSlots = assignedSlots.length + interestSlots.length;
-                
+
                 return (
-                  <div key={volunteer.email} className="hover:bg-muted/30">
+                  <div key={volunteerKey} className="hover:bg-muted/30">
                     {/* Volunteer Header */}
-                    <div 
+                    <div
                       className="p-4 flex items-center justify-between cursor-pointer"
-                      onClick={() => setExpandedVolunteer(isExpanded ? null : volunteer.email)}
+                      onClick={() => setExpandedVolunteer(isExpanded ? null : volunteerKey)}
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

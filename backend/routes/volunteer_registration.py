@@ -29,6 +29,10 @@ def evento_query(evento: str) -> dict:
 
 class VerificationRequest(BaseModel):
     email: EmailStr
+    # Cuando el correo ya tiene registro en un evento y el voluntario quiere
+    # registrarse para el otro, el frontend reenvia con este campo para
+    # continuar el flujo normal de verificacion.
+    continuar_con_evento: Optional[str] = None
 
 
 class VerificationConfirm(BaseModel):
@@ -97,20 +101,23 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
     email = registration.get("email", "").lower()
     race_code = registration.get("race_code", "")
-    
-    # Remove any slot assignments for this volunteer
+
+    # Remove slot assignments for this volunteer, only within this
+    # registration's event (they may also volunteer for the other one)
     await db.volunteer_assignments.update_many(
-        {"email_asignado": email},
+        {"email_asignado": email, **evento_query(registration.get("evento") or "carrera")},
         {"$set": {"email_asignado": None, "nombre_asignado": None}}
     )
     
     # Delete the registration completely
     await db.volunteer_registrations.delete_one({"edit_token": token})
     
-    # Clean up related data
-    await db.volunteer_verification_tokens.delete_many({"email": email})
-    await db.volunteer_sessions.delete_many({"email": email})
-    
+    # Clean up related data (only if no other registration remains)
+    remaining = await db.volunteer_registrations.count_documents({"email": email})
+    if remaining == 0:
+        await db.volunteer_verification_tokens.delete_many({"email": email})
+        await db.volunteer_sessions.delete_many({"email": email})
+
     # Send cancellation confirmation email using template system
     try:
         from services.template_email_service import (
@@ -240,16 +247,33 @@ async def send_verification(request: VerificationRequest, http_request: Request 
     active_race = await db.race_configurations.find_one({"is_active": True})
     race_code = active_race["code"] if active_race else "BYSD-2027"
     
-    # Check if already registered as volunteer for this race
-    existing = await db.volunteer_registrations.find_one({
+    # Check existing registrations for this race. A volunteer can register
+    # once per event ('carrera' y 'campeonato'), so instead of a flat error
+    # we tell the frontend which events are taken and which remain.
+    existing_regs = await db.volunteer_registrations.find({
         "email": email,
         "race_code": race_code,
         "email_verified": True
-    })
-    
-    if existing:
-        raise HTTPException(status_code=400, detail="Este correo ya está registrado como voluntario para esta carrera")
-    
+    }).to_list(10)
+
+    registered_eventos = sorted({(r.get("evento") or "carrera") for r in existing_regs})
+    eventos_disponibles = [e for e in VALID_EVENTOS if e not in registered_eventos]
+
+    if registered_eventos:
+        quiere_otro = (
+            request.continuar_con_evento in eventos_disponibles
+            if request.continuar_con_evento else False
+        )
+        if not quiere_otro:
+            # No code is sent yet: the frontend asks whether to edit the
+            # previous registration or sign up for the remaining event.
+            return {
+                "status": "already_registered",
+                "registered_eventos": registered_eventos,
+                "eventos_disponibles": eventos_disponibles,
+                "email": email
+            }
+
     # Generate and store verification code
     code = generate_verification_code()
     
@@ -282,7 +306,7 @@ async def send_verification(request: VerificationRequest, http_request: Request 
         print(f"Error sending email: {e}")
         # Continue anyway for development
     
-    return {"message": "Código de verificación enviado", "email": email}
+    return {"message": "Código de verificación enviado", "email": email, "status": "code_sent"}
 
 
 @router.post("/verify-code")
@@ -345,14 +369,16 @@ async def register_volunteer(
     active_race = await db.race_configurations.find_one({"is_active": True})
     race_code = active_race["code"] if active_race else "BYSD-2027"
     
-    # Check if already registered
+    # Check if already registered for this specific event
+    evento = data.evento if data.evento in VALID_EVENTOS else "carrera"
     existing = await db.volunteer_registrations.find_one({
         "email": email,
-        "race_code": race_code
+        "race_code": race_code,
+        **evento_query(evento)
     })
-    
+
     if existing:
-        raise HTTPException(status_code=400, detail="Ya estás registrado como voluntario")
+        raise HTTPException(status_code=400, detail="Ya estás registrado como voluntario para este evento")
     
     # Generate edit token
     edit_token = generate_edit_token()
@@ -360,6 +386,7 @@ async def register_volunteer(
     # Create registration
     registration = {
         **data.dict(),
+        "evento": evento,
         "email": email,
         "race_code": race_code,
         "email_verified": True,
@@ -429,13 +456,26 @@ async def update_volunteer_registration(token: str, data: VolunteerRegistrationD
     
     # Find existing registration
     existing = await db.volunteer_registrations.find_one({"edit_token": token})
-    
+
     if not existing:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
-    
+
+    # Al editar no se permite cambiar a un evento donde el mismo correo
+    # ya tiene otro registro
+    evento = data.evento if data.evento in VALID_EVENTOS else "carrera"
+    otro = await db.volunteer_registrations.find_one({
+        "email": existing.get("email"),
+        "race_code": existing.get("race_code"),
+        "edit_token": {"$ne": token},
+        **evento_query(evento)
+    })
+    if otro:
+        raise HTTPException(status_code=400, detail="Ya tienes otro registro para ese evento")
+
     # Update registration
     update_data = {
         **data.dict(),
+        "evento": evento,
         "updated_at": datetime.now(timezone.utc)
     }
     
@@ -463,53 +503,54 @@ async def request_edit_link(request: EditLinkRequest, http_request: Request = No
     active_race = await db.race_configurations.find_one({"is_active": True})
     race_code = active_race["code"] if active_race else "BYSD-2027"
     
-    # Find the registration
-    registration = await db.volunteer_registrations.find_one({
+    # Find the registrations (a volunteer can have one per event)
+    registrations = await db.volunteer_registrations.find({
         "email": email,
         "race_code": race_code
-    })
-    
-    if not registration:
+    }).to_list(10)
+
+    if not registrations:
         raise HTTPException(status_code=404, detail="No encontramos un registro con este correo electrónico")
-    
-    # Get the edit token
-    edit_token = registration.get("edit_token")
-    
-    if not edit_token:
-        # Generate a new edit token if it doesn't exist
-        edit_token = generate_edit_token()
-        await db.volunteer_registrations.update_one(
-            {"email": email, "race_code": race_code},
-            {"$set": {"edit_token": edit_token}}
-        )
-    
-    # Send email with edit link using template system
-    try:
-        from services.template_email_service import (
-            send_email_with_template, build_race_data, build_volunteer_data
-        )
-        import os
-        
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://admin-dashboard-v2-66.preview.emergentagent.com')
-        edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
-        
-        merge_data = {
-            **build_race_data(active_race),
-            **build_volunteer_data(registration, edit_token=edit_token),
-            "volunteer_edit_link": edit_url,
-        }
-        
-        await send_email_with_template(
-            db=db,
-            template_id="volunteer_edit_link",
-            to_email=email,
-            data=merge_data
-        )
-        print(f"Edit link email sent to {email}")
-    except Exception as e:
-        print(f"Error sending edit link email: {e}")
-        # Continue anyway - the link was generated
-    
+
+    for registration in registrations:
+        # Get the edit token
+        edit_token = registration.get("edit_token")
+
+        if not edit_token:
+            # Generate a new edit token if it doesn't exist
+            edit_token = generate_edit_token()
+            await db.volunteer_registrations.update_one(
+                {"_id": registration["_id"]},
+                {"$set": {"edit_token": edit_token}}
+            )
+
+        # Send email with edit link using template system
+        try:
+            from services.template_email_service import (
+                send_email_with_template, build_race_data, build_volunteer_data
+            )
+            import os
+
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://admin-dashboard-v2-66.preview.emergentagent.com')
+            edit_url = f"{frontend_url}/voluntarios/registro?token={edit_token}"
+
+            merge_data = {
+                **build_race_data(active_race),
+                **build_volunteer_data(registration, edit_token=edit_token),
+                "volunteer_edit_link": edit_url,
+            }
+
+            await send_email_with_template(
+                db=db,
+                template_id="volunteer_edit_link",
+                to_email=email,
+                data=merge_data
+            )
+            print(f"Edit link email sent to {email}")
+        except Exception as e:
+            print(f"Error sending edit link email: {e}")
+            # Continue anyway - the link was generated
+
     return {"message": "Link de edición enviado a tu correo"}
 
 
@@ -541,69 +582,84 @@ class UpdateEventoRequest(BaseModel):
 
 
 @admin_router.put("/registrations/{email}/evento")
-async def update_volunteer_evento(email: str, request: UpdateEventoRequest, race_code: Optional[str] = None):
-    """Update the event a volunteer belongs to (admin only)"""
+async def update_volunteer_evento(email: str, request: UpdateEventoRequest, race_code: Optional[str] = None, evento_actual: Optional[str] = None):
+    """Update the event a volunteer belongs to (admin only).
+    'evento_actual' identifies which registration to move when the volunteer
+    has one per event."""
     from server import db
-    
+
     email = email.lower()
     evento = request.evento if request.evento in VALID_EVENTOS else "carrera"
-    
+
     if not race_code:
         active_race = await db.race_configurations.find_one({"is_active": True})
         race_code = active_race["code"] if active_race else "BYSD-2027"
-    
-    existing = await db.volunteer_registrations.find_one({
-        "email": email,
-        "race_code": race_code
-    })
-    
+
+    query = {"email": email, "race_code": race_code}
+    if evento_actual in VALID_EVENTOS:
+        query.update(evento_query(evento_actual))
+
+    existing = await db.volunteer_registrations.find_one(query)
+
     if not existing:
         raise HTTPException(status_code=404, detail="Voluntario no encontrado")
-    
+
+    if (existing.get("evento") or "carrera") != evento:
+        # No mover el registro a un evento donde el correo ya tiene otro
+        otro = await db.volunteer_registrations.find_one({
+            "email": email,
+            "race_code": race_code,
+            "_id": {"$ne": existing["_id"]},
+            **evento_query(evento)
+        })
+        if otro:
+            raise HTTPException(status_code=400, detail="Este voluntario ya tiene un registro en ese evento")
+
     await db.volunteer_registrations.update_one(
-        {"email": email, "race_code": race_code},
+        {"_id": existing["_id"]},
         {"$set": {"evento": evento, "updated_at": datetime.now(timezone.utc)}}
     )
-    
+
     return {"message": "Evento actualizado exitosamente", "evento": evento}
 
 
 @admin_router.delete("/registrations/{email}")
-async def delete_volunteer_registration(email: str, race_code: Optional[str] = None):
-    """Delete a volunteer registration (admin only)"""
+async def delete_volunteer_registration(email: str, race_code: Optional[str] = None, evento: Optional[str] = None):
+    """Delete a volunteer registration (admin only).
+    If 'evento' is provided, only that event's registration is deleted."""
     from server import db
-    
+
     email = email.lower()
-    
+
     if not race_code:
         active_race = await db.race_configurations.find_one({"is_active": True})
         race_code = active_race["code"] if active_race else "BYSD-2027"
-    
+
+    query = {"email": email, "race_code": race_code}
+    if evento in VALID_EVENTOS:
+        query.update(evento_query(evento))
+
     # Check if volunteer exists
-    existing = await db.volunteer_registrations.find_one({
-        "email": email,
-        "race_code": race_code
-    })
-    
+    existing = await db.volunteer_registrations.find_one(query)
+
     if not existing:
         raise HTTPException(status_code=404, detail="Voluntario no encontrado")
-    
-    # Remove any assignments for this volunteer
+
+    # Remove assignments for this volunteer within the registration's event
     await db.volunteer_assignments.update_many(
-        {"email_asignado": email},
+        {"email_asignado": email, **evento_query(existing.get("evento") or "carrera")},
         {"$set": {"email_asignado": None, "nombre_asignado": None}}
     )
-    
+
     # Delete the registration
-    await db.volunteer_registrations.delete_one({
-        "email": email,
-        "race_code": race_code
-    })
-    
-    # Clean up related data
-    await db.volunteer_verification_tokens.delete_many({"email": email})
-    await db.volunteer_sessions.delete_many({"email": email})
-    
+    await db.volunteer_registrations.delete_one({"_id": existing["_id"]})
+
+    # Clean up related data (only if no other registration remains)
+    remaining = await db.volunteer_registrations.count_documents({"email": email})
+    if remaining == 0:
+        await db.volunteer_verification_tokens.delete_many({"email": email})
+        await db.volunteer_sessions.delete_many({"email": email})
+
     return {"message": "Voluntario eliminado correctamente"}
 
 
