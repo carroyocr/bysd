@@ -161,16 +161,21 @@ export default function VolunteerAssignmentsManagement() {
     return grouped;
   };
 
+  // Volunteers and slots restricted to the selected event
+  const eventVolunteers = volunteers.filter(v =>
+    eventoFilter === 'all' || (v.evento || 'carrera') === eventoFilter
+  );
+  const eventSlots = availableSlots.filter(s =>
+    eventoFilter === 'all' || (s.evento || 'carrera') === eventoFilter
+  );
+
   // Filter volunteers
-  const filteredVolunteers = volunteers.filter(v => {
+  const filteredVolunteers = eventVolunteers.filter(v => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || 
+    return !searchTerm ||
       (v.nombre && v.nombre.toLowerCase().includes(term)) ||
       (v.apellidos && v.apellidos.toLowerCase().includes(term)) ||
       (v.email && v.email.toLowerCase().includes(term));
-    const vEvento = v.evento || 'carrera';
-    const matchesEvento = eventoFilter === 'all' || vEvento === eventoFilter;
-    return matchesSearch && matchesEvento;
   });
 
   // Handle add assignment
@@ -355,11 +360,11 @@ export default function VolunteerAssignmentsManagement() {
     setShowConfirmModal(true);
   };
 
-  // Statistics
-  const totalVolunteers = volunteers.length;
-  const totalFormalAssignments = availableSlots.filter(s => s.email_asignado).length;
-  const totalInterestSlots = volunteers.reduce((sum, v) => sum + (v.slots_interes?.length || 0), 0);
-  const volunteersWithInterest = volunteers.filter(v => v.slots_interes && v.slots_interes.length > 0).length;
+  // Statistics (scoped to the selected event)
+  const totalVolunteers = eventVolunteers.length;
+  const totalFormalAssignments = eventSlots.filter(s => s.email_asignado).length;
+  const totalInterestSlots = eventVolunteers.reduce((sum, v) => sum + (v.slots_interes?.length || 0), 0);
+  const volunteersWithInterest = eventVolunteers.filter(v => v.slots_interes && v.slots_interes.length > 0).length;
 
   return (
     <div className="space-y-6">
