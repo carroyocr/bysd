@@ -52,6 +52,7 @@ MERGE_FIELDS = {
     "volunteer": {
         "label": "Voluntario",
         "fields": [
+            {"key": "{{event_name}}", "label": "Evento del voluntario (carrera o campeonato)", "example": "Campeonato Satélite por Equipos"},
             {"key": "{{volunteer_nombre}}", "label": "Nombre", "example": "María"},
             {"key": "{{volunteer_apellidos}}", "label": "Apellidos", "example": "López Díaz"},
             {"key": "{{volunteer_nombre_completo}}", "label": "Nombre completo", "example": "María López Díaz"},

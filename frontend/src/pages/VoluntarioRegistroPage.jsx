@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
-  Loader2, Info, Users, Clipboard, Clock, Check, Edit2, XCircle
+  Loader2, Info, Users, Clipboard, Clock, Check, Edit2, XCircle,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -42,6 +43,39 @@ const STEPS = [
   { id: 'preferences', title: 'Preferencias', icon: Shirt },
 ];
 
+// Formulario vacío (estado inicial y "crear nueva postulación")
+const FORM_VACIO = {
+  // Personal
+  nombre: '',
+  apellidos: '',
+  fecha_nacimiento: '',
+  sexo: '',
+  nacionalidad: '',
+  telefono: '',
+  ciudad_residencia: '',
+
+  // Experience
+  experiencia_voluntariado: 'No',
+  experiencia_voluntariado_detalle: '',
+
+  // Medical
+  tipo_sangre: '',
+  condicion_medica: 'No',
+  condicion_medica_detalle: '',
+  alergias: 'No',
+  alergias_detalle: '',
+
+  // Emergency
+  contacto_emergencia_nombre: '',
+  contacto_emergencia_relacion: '',
+  contacto_emergencia_telefono: '',
+
+  // Preferences
+  talla_camiseta: '',
+  como_se_entero: '',
+  comentarios: '',
+};
+
 // Edit mode steps (skip verification)
 const EDIT_STEPS = [
   { id: 'personal', title: 'Datos Personales', icon: User },
@@ -74,18 +108,29 @@ export default function VoluntarioRegistroPage() {
   const [verifying, setVerifying] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   
-  // State for showing "already registered" options
-  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  // Postulaciones existentes del correo verificado (para ofrecer editar o
+  // crear una nueva en el otro evento)
   const [registeredEventos, setRegisteredEventos] = useState([]);
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [requestingEditLink, setRequestingEditLink] = useState(false);
-  const [editLinkSent, setEditLinkSent] = useState(false);
+  const [existingRegistrations, setExistingRegistrations] = useState([]);
   
   // Available slots data
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
   const [selectedEvento, setSelectedEvento] = useState('carrera'); // Event chosen by volunteer
+  // Posiciones expandidas en el acordeón de turnos (cargan contraídas)
+  const [expandedPositions, setExpandedPositions] = useState({});
+  // Posiciones con la descripción visible (botón de información)
+  const [openInfoPositions, setOpenInfoPositions] = useState({});
+
+  const togglePosition = (puesto) => {
+    setExpandedPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
+  };
+
+  const togglePositionInfo = (puesto) => {
+    setOpenInfoPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
+  };
   
   // Check for edit token in URL
   useEffect(() => {
@@ -97,36 +142,39 @@ export default function VoluntarioRegistroPage() {
     }
   }, [searchParams]);
   
+  // Mapea una postulación del backend a los campos del formulario
+  const mapRegistrationToForm = (data) => ({
+    nombre: data.nombre || '',
+    apellidos: data.apellidos || '',
+    fecha_nacimiento: data.fecha_nacimiento || '',
+    sexo: data.sexo || '',
+    nacionalidad: data.nacionalidad || '',
+    telefono: data.telefono || '',
+    ciudad_residencia: data.ciudad_residencia || '',
+    experiencia_voluntariado: data.experiencia_voluntariado || 'No',
+    experiencia_voluntariado_detalle: data.experiencia_voluntariado_detalle || '',
+    tipo_sangre: data.tipo_sangre || '',
+    condicion_medica: data.condicion_medica || 'No',
+    condicion_medica_detalle: data.condicion_medica_detalle || '',
+    alergias: data.alergias || 'No',
+    alergias_detalle: data.alergias_detalle || '',
+    contacto_emergencia_nombre: data.contacto_emergencia_nombre || '',
+    contacto_emergencia_relacion: data.contacto_emergencia_relacion || '',
+    contacto_emergencia_telefono: data.contacto_emergencia_telefono || '',
+    talla_camiseta: data.talla_camiseta || '',
+    como_se_entero: data.como_se_entero || '',
+    comentarios: data.comentarios || '',
+  });
+
   const loadExistingRegistration = async (token) => {
     setLoadingExisting(true);
     try {
       const response = await fetch(`${API_URL}/api/volunteer-registration/by-token/${token}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setEmail(data.email || '');
-        setFormData({
-          nombre: data.nombre || '',
-          apellidos: data.apellidos || '',
-          fecha_nacimiento: data.fecha_nacimiento || '',
-          sexo: data.sexo || '',
-          nacionalidad: data.nacionalidad || '',
-          telefono: data.telefono || '',
-          ciudad_residencia: data.ciudad_residencia || '',
-          experiencia_voluntariado: data.experiencia_voluntariado || 'No',
-          experiencia_voluntariado_detalle: data.experiencia_voluntariado_detalle || '',
-          tipo_sangre: data.tipo_sangre || '',
-          condicion_medica: data.condicion_medica || 'No',
-          condicion_medica_detalle: data.condicion_medica_detalle || '',
-          alergias: data.alergias || 'No',
-          alergias_detalle: data.alergias_detalle || '',
-          contacto_emergencia_nombre: data.contacto_emergencia_nombre || '',
-          contacto_emergencia_relacion: data.contacto_emergencia_relacion || '',
-          contacto_emergencia_telefono: data.contacto_emergencia_telefono || '',
-          talla_camiseta: data.talla_camiseta || '',
-          como_se_entero: data.como_se_entero || '',
-          comentarios: data.comentarios || '',
-        });
+        setFormData(mapRegistrationToForm(data));
         setSelectedSlots(data.slots_interes || []);
         setSelectedEvento(data.evento || 'carrera');
         setEmailVerified(true);
@@ -166,37 +214,7 @@ export default function VoluntarioRegistroPage() {
   };
   
   // Form data
-  const [formData, setFormData] = useState({
-    // Personal
-    nombre: '',
-    apellidos: '',
-    fecha_nacimiento: '',
-    sexo: '',
-    nacionalidad: '',
-    telefono: '',
-    ciudad_residencia: '',
-    
-    // Experience
-    experiencia_voluntariado: 'No',
-    experiencia_voluntariado_detalle: '',
-    
-    // Medical
-    tipo_sangre: '',
-    condicion_medica: 'No',
-    condicion_medica_detalle: '',
-    alergias: 'No',
-    alergias_detalle: '',
-    
-    // Emergency
-    contacto_emergencia_nombre: '',
-    contacto_emergencia_relacion: '',
-    contacto_emergencia_telefono: '',
-    
-    // Preferences
-    talla_camiseta: '',
-    como_se_entero: '',
-    comentarios: '',
-  });
+  const [formData, setFormData] = useState({ ...FORM_VACIO });
   
   // Submission
   const [submitting, setSubmitting] = useState(false);
@@ -250,6 +268,7 @@ export default function VoluntarioRegistroPage() {
     if (evento === selectedEvento) return;
     setSelectedEvento(evento);
     setSelectedSlots([]);
+    setExpandedPositions({});
   };
 
   // Check if two time slots conflict
@@ -327,15 +346,12 @@ export default function VoluntarioRegistroPage() {
     return opt ? opt.label : value;
   };
 
-  // continuarConEvento: cuando el correo ya está registrado en un evento y el
-  // voluntario elige registrarse para el otro, se reenvía con ese evento.
-  const sendVerificationCode = async (continuarConEvento = null) => {
+  const sendVerificationCode = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
       return;
     }
 
-    setEmailAlreadyRegistered(false);
     setSendingCode(true);
 
     const xhr = new XMLHttpRequest();
@@ -352,28 +368,10 @@ export default function VoluntarioRegistroPage() {
       }
 
       if (xhr.status === 200) {
-        if (data.status === 'already_registered') {
-          setEmailAlreadyRegistered(true);
-          setRegisteredEventos(data.registered_eventos || []);
-          setEventosDisponibles(data.eventos_disponibles || []);
-          toast.info('Este correo ya está registrado como voluntario');
-          return;
-        }
-        if (continuarConEvento) {
-          setSelectedEvento(continuarConEvento);
-          setSelectedSlots([]);
-        }
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
-        const errorMessage = data.detail || 'Error enviando código';
-
-        if (errorMessage.includes('ya está registrado')) {
-          setEmailAlreadyRegistered(true);
-          toast.info('Este correo ya está registrado como voluntario');
-        } else {
-          toast.error(errorMessage);
-        }
+        toast.error(data.detail || 'Error enviando código');
       }
     };
 
@@ -382,33 +380,61 @@ export default function VoluntarioRegistroPage() {
       toast.error('Error de conexión. Intenta de nuevo.');
     };
 
-    xhr.send(JSON.stringify({ email, continuar_con_evento: continuarConEvento }));
+    xhr.send(JSON.stringify({ email }));
   };
 
-  // Pide al backend que envíe por correo el enlace de edición de la(s)
-  // postulación(es) existente(s)
-  const requestEditLink = async () => {
-    setRequestingEditLink(true);
-    try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/request-edit-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await response.json();
+  // Abre directamente el formulario de edición de una postulación existente
+  // (el correo ya fue verificado, no hace falta enlace por email)
+  const startDirectEdit = (registration) => {
+    setEditToken(registration.edit_token);
+    setEditMode(true);
+    setCurrentStep(0);
+    loadExistingRegistration(registration.edit_token);
+  };
 
-      if (response.ok) {
-        setEditLinkSent(true);
-        toast.success('Enlace de edición enviado a tu correo');
-      } else {
-        toast.error(data.detail || 'Error enviando el enlace');
+  // Inicia una postulación nueva para el evento indicado. Los datos de la
+  // postulación existente se precargan para solo confirmarlos; lo único que
+  // queda pendiente es elegir los turnos del nuevo evento.
+  const startNewRegistration = async (evento) => {
+    setEditMode(false);
+    setEditToken(null);
+    setSelectedEvento(evento);
+    setSelectedSlots([]);
+
+    const base = existingRegistrations[0];
+    if (base?.edit_token) {
+      setLoadingExisting(true);
+      try {
+        const response = await fetch(`${API_URL}/api/volunteer-registration/by-token/${base.edit_token}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFormData(mapRegistrationToForm(data));
+          toast.success('Datos precargados de tu postulación anterior; confírmalos y elige los turnos');
+        } else {
+          setFormData({ ...FORM_VACIO });
+        }
+      } catch (error) {
+        setFormData({ ...FORM_VACIO });
+      } finally {
+        setLoadingExisting(false);
       }
-    } catch (error) {
-      toast.error('Error de conexión');
-    } finally {
-      setRequestingEditLink(false);
+    } else {
+      setFormData({ ...FORM_VACIO });
     }
+
+    setCurrentStep(1);
   };
+
+  // Vuelve a la pantalla de selección (editar o crear) tras verificar el correo
+  const backToChoice = () => {
+    setEditMode(false);
+    setEditToken(null);
+    setCurrentStep(0);
+  };
+
+  // Si se llegó al formulario desde la pantalla de selección, "Anterior" en el
+  // primer paso regresa a esa pantalla (aplica al editar directamente)
+  const canReturnToChoice = existingRegistrations.length > 0;
 
   const verifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
@@ -429,8 +455,22 @@ export default function VoluntarioRegistroPage() {
       if (response.ok) {
         setEmailVerified(true);
         setSessionToken(data.session_token);
-        setCurrentStep(1);
         toast.success('Email verificado correctamente');
+
+        const regs = data.registrations || [];
+        setExistingRegistrations(regs);
+        setRegisteredEventos(regs.map(r => r.evento));
+        setEventosDisponibles(data.eventos_disponibles || []);
+
+        if (regs.length === 0) {
+          // Sin postulaciones previas: sigue el flujo normal
+          setCurrentStep(1);
+          if (data.eventos_disponibles?.length) {
+            setSelectedEvento(data.eventos_disponibles[0]);
+          }
+        }
+        // Con postulaciones previas se queda en este paso mostrando las
+        // opciones: editar la existente o crear una nueva para el otro evento
       } else {
         toast.error(data.detail || 'Código inválido');
       }
@@ -585,7 +625,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -598,11 +638,11 @@ export default function VoluntarioRegistroPage() {
               </h2>
               
               <p className="text-muted-foreground">
-                Tu registro ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
+                Tu registro como voluntario para <strong className="text-foreground">{getEventoLabel(selectedEvento)}</strong> ha sido recibido. Nos pondremos en contacto contigo pronto con más información.
               </p>
               
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
-                <h3 className="font-semibold text-amber-800 mb-2">📧 Revisa tu Correo</h3>
+                <h3 className="font-semibold text-amber-800 mb-2">Revisa tu Correo</h3>
                 <p className="text-sm text-amber-700">
                   Te enviamos un correo de confirmación con un enlace para editar tu postulación si lo necesitas.
                 </p>
@@ -610,7 +650,7 @@ export default function VoluntarioRegistroPage() {
               
               {selectedInfo.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Seleccionados</h3>
+                  <h3 className="font-semibold text-blue-800 mb-2">Turnos de Interés Seleccionados</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
@@ -641,7 +681,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -654,12 +694,12 @@ export default function VoluntarioRegistroPage() {
               </h2>
               
               <p className="text-muted-foreground">
-                Tus cambios han sido guardados correctamente.
+                Tu postulación para <strong className="text-foreground">{getEventoLabel(selectedEvento)}</strong> ha sido actualizada correctamente.
               </p>
               
               {selectedInfo.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                  <h3 className="font-semibold text-blue-800 mb-2">📋 Turnos de Interés Actualizados</h3>
+                  <h3 className="font-semibold text-blue-800 mb-2">Turnos de Interés Actualizados</h3>
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
@@ -688,7 +728,7 @@ export default function VoluntarioRegistroPage() {
   // Loading state for edit mode
   if (loadingExisting) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando tu postulación...</p>
@@ -698,77 +738,30 @@ export default function VoluntarioRegistroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
-            {editMode ? 'Editar Postulación' : 'Registro de Voluntarios'}
-          </h1>
-          <p className="text-center text-purple-100 mb-4">
-            {raceName || 'Backyard Ultra Santo Domingo'}
-          </p>
-          {config?.code && (
-            <div className="flex justify-center">
-              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
-                {config.code}
-              </Badge>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Info Banner - only show on verify step in normal mode */}
-      {currentStepId === 'verify' && !editMode && (
-        <div className="container mx-auto px-4 mt-6">
-          <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold text-blue-900 mb-3">💪 ¡Únete al Equipo de Voluntarios!</h2>
-              <div className="space-y-3 text-sm text-blue-800">
-                <p>
-                  Los voluntarios son fundamentales para el éxito del evento. Sin su apoyo, 
-                  no sería posible ofrecer una experiencia de calidad a los atletas.
-                </p>
-                <p>
-                  Podrás seleccionar las posiciones y turnos de tu interés según la disponibilidad.
-                </p>
+    <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+      {/* Indicador del paso actual: un solo icono centrado */}
+      {(editMode || currentStepId !== 'verify') && (
+        <div className="container mx-auto px-4 pt-8">
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="flex flex-col items-center">
+              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center">
+                {React.createElement(activeSteps[currentStep]?.icon || User, { className: 'w-5 h-5' })}
               </div>
-            </CardContent>
-          </Card>
+              <span className="text-xs mt-2 text-primary font-medium text-center">
+                {activeSteps[currentStep]?.title}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                Paso {currentStep + 1} de {activeSteps.length}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Progress Steps */}
-      <div className="container mx-auto px-4 mt-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-            {activeSteps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = index === currentStep;
-              const isCompleted = index < currentStep;
-              
-              return (
-                <div key={step.id} className="flex flex-col items-center min-w-[70px]">
-                  <div className={`
-                    w-10 h-10 rounded-full flex items-center justify-center transition-all
-                    ${isCompleted ? 'bg-green-500 text-white' : 
-                      isActive ? 'bg-primary text-white' : 
-                      'bg-gray-200 text-gray-500'}
-                  `}>
-                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                  </div>
-                  <span className={`text-xs mt-2 text-center ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
-                    {step.title}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* Form Content */}
-      <div className="container mx-auto px-4 pb-12">
+      {/* pt-8 para que la tarjeta no quede pegada al menú en el paso de
+          verificación, donde no se muestra el indicador de paso */}
+      <div className={`container mx-auto px-4 pb-12 ${(editMode || currentStepId !== 'verify') ? '' : 'pt-8'}`}>
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -781,125 +774,101 @@ export default function VoluntarioRegistroPage() {
             {/* Step: Email Verification - only in normal mode */}
             {currentStepId === 'verify' && !editMode && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setEmailAlreadyRegistered(false);
-                      setEditLinkSent(false);
-                    }}
-                    placeholder="tu@email.com"
-                    disabled={codeSent}
-                    data-testid="volunteer-email-input"
-                  />
-                </div>
+                {emailVerified && existingRegistrations.length > 0 ? (
+                  /* Correo verificado con postulaciones previas: elegir entre
+                     editar la existente o crear una nueva para el otro evento */
+                  <div className="space-y-4">
+                    <div className="max-w-sm mx-auto p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800 text-center break-words">
+                        <CheckCircle className="w-4 h-4 inline mr-1" />
+                        Correo verificado: <strong>{email}</strong>
+                      </p>
+                    </div>
 
-                {!codeSent ? (
+                    <div className="max-w-sm mx-auto flex flex-col gap-2">
+                      {existingRegistrations.map((reg) => (
+                        <Button
+                          key={reg.evento}
+                          variant="outline"
+                          onClick={() => startDirectEdit(reg)}
+                          className="w-full h-auto min-h-10 whitespace-normal"
+                          data-testid={`edit-registration-${reg.evento}`}
+                        >
+                          Editar mi postulación de {getEventoLabel(reg.evento)}
+                        </Button>
+                      ))}
+                      {eventosDisponibles.map((ev) => (
+                        <Button
+                          key={ev}
+                          onClick={() => startNewRegistration(ev)}
+                          className="w-full h-auto min-h-10 whitespace-normal"
+                          data-testid={`new-registration-${ev}`}
+                        >
+                          Crear nueva postulación para {getEventoLabel(ev)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
                   <>
-                    <Button
-                      onClick={() => sendVerificationCode()}
-                      disabled={sendingCode}
-                      className="w-full"
-                      data-testid="volunteer-send-code-btn"
-                    >
-                      {sendingCode ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
-                      ) : (
-                        'Enviar Código de Verificación'
-                      )}
-                    </Button>
-                    
-                    {emailAlreadyRegistered && (
-                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="font-medium text-amber-800">Este correo ya está registrado</p>
-                            <p className="text-sm text-amber-700 mt-1">
-                              {registeredEventos.length > 0
-                                ? <>Ya tienes un registro como voluntario para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>.</>
-                                : 'Ya tienes un registro como voluntario para este evento.'}
-                            </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Correo Electrónico *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="tu@email.com"
+                        disabled={codeSent}
+                        data-testid="volunteer-email-input"
+                      />
+                    </div>
 
-                            {editLinkSent ? (
-                              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <p className="text-sm text-green-800">
-                                  <CheckCircle className="w-4 h-4 inline mr-1" />
-                                  Te enviamos el enlace de edición a tu correo. Revísalo (incluyendo spam) para editar tu postulación.
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={requestEditLink}
-                                  disabled={requestingEditLink || sendingCode}
-                                  className="border-amber-300 text-amber-800 hover:bg-amber-100"
-                                  data-testid="edit-previous-registration-btn"
-                                >
-                                  {requestingEditLink ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando enlace...</>
-                                  ) : (
-                                    <><Edit2 className="w-4 h-4 mr-2" /> Editar mi postulación</>
-                                  )}
-                                </Button>
-                                {eventosDisponibles.map((ev) => (
-                                  <Button
-                                    key={ev}
-                                    size="sm"
-                                    onClick={() => sendVerificationCode(ev)}
-                                    disabled={sendingCode || requestingEditLink}
-                                    data-testid={`register-other-event-${ev}`}
-                                  >
-                                    {sendingCode ? (
-                                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando código...</>
-                                    ) : (
-                                      <><ArrowRight className="w-4 h-4 mr-2" /> Registrarme para {getEventoLabel(ev)}</>
-                                    )}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                    {!codeSent ? (
+                      <Button
+                        onClick={() => sendVerificationCode()}
+                        disabled={sendingCode}
+                        className="w-full"
+                        data-testid="volunteer-send-code-btn"
+                      >
+                        {sendingCode ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                        ) : (
+                          'Enviar Código de Verificación'
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="code">Código de Verificación *</Label>
+                          <Input
+                            id="code"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="123456"
+                            maxLength={6}
+                            data-testid="volunteer-code-input"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Revisa tu correo (incluyendo spam) para el código de 6 dígitos
+                          </p>
                         </div>
+
+                        <Button
+                          onClick={verifyCode}
+                          disabled={verifying}
+                          className="w-full"
+                          data-testid="volunteer-verify-btn"
+                        >
+                          {verifying ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
+                          ) : (
+                            'Verificar Código'
+                          )}
+                        </Button>
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code">Código de Verificación *</Label>
-                      <Input
-                        id="code"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="123456"
-                        maxLength={6}
-                        data-testid="volunteer-code-input"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Revisa tu correo (incluyendo spam) para el código de 6 dígitos
-                      </p>
-                    </div>
-                    
-                    <Button 
-                      onClick={verifyCode} 
-                      disabled={verifying}
-                      className="w-full"
-                      data-testid="volunteer-verify-btn"
-                    >
-                      {verifying ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
-                      ) : (
-                        'Verificar Código'
-                      )}
-                    </Button>
-                  </div>
                 )}
               </div>
             )}
@@ -1067,12 +1036,57 @@ export default function VoluntarioRegistroPage() {
                         No hay turnos disponibles en este momento.
                       </div>
                     ) : (
-                      <div className="space-y-6">
-                        {availableSlots.positions.map((position) => (
-                          <Card key={position.puesto} className="border-border">
-                            <CardHeader className="py-3 px-4 bg-muted/50">
-                              <CardTitle className="text-base font-semibold">{position.puesto}</CardTitle>
+                      <div className="space-y-3">
+                        {availableSlots.positions.map((position) => {
+                          const isOpen = !!expandedPositions[position.puesto];
+                          const seleccionadosEnPosicion = position.turnos.filter(t => selectedSlots.includes(t.slot_id)).length;
+                          return (
+                          <Card key={position.puesto} className={`border-border ${isOpen ? '' : 'shadow-none'}`}>
+                            <CardHeader
+                              className="py-3 px-4 bg-muted/50 cursor-pointer select-none"
+                              onClick={() => togglePosition(position.puesto)}
+                              data-testid={`position-accordion-${position.puesto}`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                {/* Tres líneas: nombre, cantidad de turnos y seleccionados */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <CardTitle className="text-base font-semibold break-words">{position.puesto}</CardTitle>
+                                    {position.descripcion && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          togglePositionInfo(position.puesto);
+                                        }}
+                                        className="text-primary flex-shrink-0"
+                                        title="Ver en qué consiste esta posición"
+                                        data-testid={`position-info-${position.puesto}`}
+                                      >
+                                        <Info className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">{position.turnos.length} turnos</div>
+                                  <div className={`text-xs ${seleccionadosEnPosicion > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                                    {seleccionadosEnPosicion} seleccionado{seleccionadosEnPosicion !== 1 ? 's' : ''}
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 mt-1">
+                                  {isOpen ? (
+                                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </div>
+                              {openInfoPositions[position.puesto] && position.descripcion && (
+                                <p className="text-sm text-muted-foreground mt-2 pt-2 border-t break-words">
+                                  {position.descripcion}
+                                </p>
+                              )}
                             </CardHeader>
+                            {isOpen && (
                             <CardContent className="p-4">
                               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
                                 {position.turnos.map((turno) => {
@@ -1123,8 +1137,10 @@ export default function VoluntarioRegistroPage() {
                                 })}
                               </div>
                             </CardContent>
+                            )}
                           </Card>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     
@@ -1311,19 +1327,48 @@ export default function VoluntarioRegistroPage() {
 
             {/* Navigation Buttons - show after verification in normal mode or always in edit mode */}
             {(editMode || currentStepId !== 'verify') && (
-              <div className="flex justify-between pt-4 border-t">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={prevStep} 
-                    disabled={currentStep === 0}
+              <div className="pt-4 border-t space-y-3">
+                {/* Anterior y Siguiente en la misma línea */}
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (currentStep === 0 && editMode && canReturnToChoice) {
+                        // Se entró editando desde la pantalla de selección:
+                        // regresar a ella
+                        backToChoice();
+                      } else {
+                        prevStep();
+                      }
+                    }}
+                    disabled={currentStep === 0 && !(editMode && canReturnToChoice)}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Anterior
                   </Button>
-                  
-                  {/* Cancel button - only show in edit mode */}
-                  {editMode && (
+
+                  {currentStep < activeSteps.length - 1 ? (
+                    <Button onClick={nextStep} className="flex-1 sm:flex-initial min-w-0">
+                      Siguiente
+                      <ArrowRight className="w-4 h-4 ml-2 flex-shrink-0" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSubmit} disabled={submitting} className="flex-1 sm:flex-initial min-w-0" data-testid="volunteer-submit-btn">
+                      {submitting ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                          {editMode ? 'Guardar Cambios' : 'Completar'}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Cancelar debajo, solo en modo edición */}
+                {editMode && (
+                  <div className="flex justify-center">
                     <Button
                       variant="ghost"
                       onClick={() => setShowCancelModal(true)}
@@ -1333,25 +1378,7 @@ export default function VoluntarioRegistroPage() {
                       <XCircle className="w-4 h-4 mr-2" />
                       Cancelar Postulación
                     </Button>
-                  )}
-                </div>
-                
-                {currentStep < activeSteps.length - 1 ? (
-                  <Button onClick={nextStep}>
-                    Siguiente
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={submitting} data-testid="volunteer-submit-btn">
-                    {submitting ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        {editMode ? 'Guardar Cambios' : 'Completar Registro'}
-                      </>
-                    )}
-                  </Button>
+                  </div>
                 )}
               </div>
             )}
@@ -1415,7 +1442,7 @@ export default function VoluntarioRegistroPage() {
                   }}
                   className="flex-1"
                 >
-                  Mantener Postulación
+                  Mantener
                 </Button>
                 <Button
                   variant="destructive"
@@ -1427,7 +1454,7 @@ export default function VoluntarioRegistroPage() {
                   {cancelling ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelando...</>
                   ) : (
-                    'Confirmar Cancelación'
+                    'Confirmar'
                   )}
                 </Button>
               </div>
