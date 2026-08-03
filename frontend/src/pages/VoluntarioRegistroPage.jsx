@@ -205,24 +205,29 @@ export default function VoluntarioRegistroPage() {
     }
   };
   
-  // Calculate the date for a shift based on its start time
-  const getShiftDate = (horaInicio) => {
+  // Fecha a mostrar para un turno. El backend ya envía la fecha real de cada
+  // turno (según la programación del evento y su dia_tipo); la heurística por
+  // hora de inicio queda solo como respaldo para datos viejos sin fecha.
+  const getShiftDate = (turno) => {
+    const formato = { weekday: 'short', day: 'numeric', month: 'short' };
+
+    if (turno?.fecha) {
+      return new Date(turno.fecha + 'T00:00:00').toLocaleDateString('es-DO', formato);
+    }
+
+    const horaInicio = turno?.hora_inicio;
     const raceDate = availableSlots.race_date || config?.date;
     if (!raceDate || !horaInicio) return '';
-    
+
     const [hours] = horaInicio.split(':').map(Number);
     const baseDate = new Date(raceDate + 'T00:00:00');
-    
+
     // If shift starts between midnight and 8am, it's likely day 2
     if (hours >= 0 && hours < 8) {
       baseDate.setDate(baseDate.getDate() + 1);
     }
-    
-    return baseDate.toLocaleDateString('es-DO', { 
-      weekday: 'short', 
-      day: 'numeric', 
-      month: 'short' 
-    });
+
+    return baseDate.toLocaleDateString('es-DO', formato);
   };
   
   // Form data
@@ -306,7 +311,10 @@ export default function VoluntarioRegistroPage() {
     }
     
     if (!t1Info || !t2Info) return false;
-    
+
+    // Turnos en días distintos no chocan aunque coincidan las horas
+    if (t1Info.fecha && t2Info.fecha && t1Info.fecha !== t2Info.fecha) return false;
+
     // Convert times to comparable format
     const parseTime = (timeStr) => {
       if (!timeStr) return 0;
@@ -353,7 +361,8 @@ export default function VoluntarioRegistroPage() {
             puesto: pos.puesto,
             turno: turno.turno,
             hora_inicio: turno.hora_inicio,
-            hora_fin: turno.hora_fin
+            hora_fin: turno.hora_fin,
+            fecha: turno.fecha
           });
         }
       }
@@ -682,7 +691,7 @@ export default function VoluntarioRegistroPage() {
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
-                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} | {getShiftDate(slot.hora_inicio)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
+                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} | {getShiftDate(slot)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
                       </li>
                     ))}
                   </ul>
@@ -731,7 +740,7 @@ export default function VoluntarioRegistroPage() {
                   <ul className="text-sm text-blue-700 space-y-1">
                     {selectedInfo.map(slot => (
                       <li key={slot.id}>
-                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} | {getShiftDate(slot.hora_inicio)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
+                        • <strong>{slot.puesto}</strong> - Turno {slot.turno} | {getShiftDate(slot)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
                       </li>
                     ))}
                   </ul>
@@ -1157,7 +1166,7 @@ export default function VoluntarioRegistroPage() {
                                           Turno {turno.turno}
                                         </Badge>
                                         <span className="text-xs text-muted-foreground">
-                                          {getShiftDate(turno.hora_inicio)}
+                                          {getShiftDate(turno)}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -1190,7 +1199,7 @@ export default function VoluntarioRegistroPage() {
                           <ul className="text-sm text-green-700 space-y-1">
                             {getSelectedSlotsInfo().map(slot => (
                               <li key={slot.id}>
-                                • {slot.puesto} - Turno {slot.turno} | {getShiftDate(slot.hora_inicio)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
+                                • {slot.puesto} - Turno {slot.turno} | {getShiftDate(slot)} {formatTime12h(slot.hora_inicio)} - {formatTime12h(slot.hora_fin)}
                               </li>
                             ))}
                           </ul>

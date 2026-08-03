@@ -162,16 +162,45 @@ async def cancel_volunteer_registration(token: str, cancellation: VolunteerCance
     return {"message": "Registro de voluntario cancelado y eliminado exitosamente"}
 
 
+# Desplazamiento en dias de cada dia_tipo respecto a la fecha base del evento
+DIA_TIPO_OFFSETS = {
+    "previo": -1,
+    "carrera": 0,
+    "carrera_dia1": 0,
+    "carrera_dia2": 1,
+    "carrera_dia3": 2,
+}
+
+
+def _fecha_turno(base_date: str, dia_tipo: Optional[str]) -> str:
+    """Fecha real (YYYY-MM-DD) de un turno segun su dia_tipo y la fecha base."""
+    try:
+        base = datetime.fromisoformat(base_date)
+    except (ValueError, TypeError):
+        return base_date or ""
+    offset = DIA_TIPO_OFFSETS.get(dia_tipo or "carrera", 0)
+    return (base + timedelta(days=offset)).strftime("%Y-%m-%d")
+
+
 @router.get("/available-slots")
 async def get_available_slots(evento: Optional[str] = None):
     """Get available volunteer slots grouped by position and shift (one per turno).
     Optionally filtered by event ('carrera' or 'campeonato')."""
     from server import db
-    
-    # Get active race for the event date
-    active_race = await db.race_configurations.find_one({"is_active": True})
-    race_date = active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
-    
+
+    evento_norm = evento if evento in VALID_EVENTOS else "carrera"
+
+    # Fecha base del evento: la programacion de turnos del propio evento si
+    # existe (el campeonato tiene fechas distintas a la carrera activa);
+    # como respaldo, la fecha de la carrera activa.
+    race_date = None
+    schedule = await db.volunteer_event_schedules.find_one({"evento": evento_norm})
+    if schedule and schedule.get("fecha_inicio"):
+        race_date = str(schedule["fecha_inicio"])[:10]
+    if not race_date:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_date = active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
+
     # Get all slots from the correct collection, filtered by event
     query = evento_query(evento) if evento in VALID_EVENTOS else {}
     slots = await db.volunteer_assignments.find(query, {"_id": 0}).to_list(1000)
@@ -195,7 +224,9 @@ async def get_available_slots(evento: Optional[str] = None):
                 "turno": turno,
                 "hora_inicio": slot.get("hora_inicio", ""),
                 "hora_fin": slot.get("hora_fin", ""),
-                "dia": slot.get("dia", "")
+                "dia": slot.get("dia", ""),
+                "dia_tipo": slot.get("dia_tipo", "carrera"),
+                "fecha": _fecha_turno(race_date, slot.get("dia_tipo")),
             }
         
         # Build position info
@@ -211,7 +242,9 @@ async def get_available_slots(evento: Optional[str] = None):
                 "available_count": 0,
                 "total_count": 0,
                 "hora_inicio": slot.get("hora_inicio"),
-                "hora_fin": slot.get("hora_fin")
+                "hora_fin": slot.get("hora_fin"),
+                "dia_tipo": slot.get("dia_tipo", "carrera"),
+                "fecha": _fecha_turno(race_date, slot.get("dia_tipo")),
             }
         
         positions[puesto]["turnos"][turno]["total_count"] += 1
@@ -231,6 +264,8 @@ async def get_available_slots(evento: Optional[str] = None):
                     "turno": turno,
                     "hora_inicio": turno_data["hora_inicio"],
                     "hora_fin": turno_data["hora_fin"],
+                    "dia_tipo": turno_data["dia_tipo"],
+                    "fecha": turno_data["fecha"],
                     "available_count": turno_data["available_count"],
                     "total_count": turno_data["total_count"],
                     "slot_id": turno_data["first_available_slot_id"]  # Single slot ID for selection
