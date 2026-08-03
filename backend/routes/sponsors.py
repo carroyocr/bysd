@@ -41,9 +41,24 @@ STATUS_LABELS = {
     "declinado": "Declinado",
 }
 
-# Solo desde "cierre" en adelante el patrocinador aparece publicado en el
-# sitio. Los documentos viejos sin status siguen publicados (legacy).
-PUBLISHED_STATUSES = ("cierre", "facturacion", "pago")
+# Orden del pipeline (sin "declinado", que nunca se publica). Cada
+# patrocinador define en "publicar_desde" el momento del proceso a partir
+# del cual aparece en el sitio (por defecto "cierre"). Los documentos
+# viejos sin status siguen publicados (legacy).
+ORDERED_PIPELINE = [s for s in SPONSOR_STATUSES if s != "declinado"]
+DEFAULT_PUBLICAR_DESDE = "cierre"
+
+
+def sponsor_esta_publicado(doc: dict) -> bool:
+    status = doc.get("status")
+    if status is None:
+        return True  # legacy, sin pipeline
+    if status not in ORDERED_PIPELINE:
+        return False  # declinado o valor desconocido
+    threshold = doc.get("publicar_desde") or DEFAULT_PUBLICAR_DESDE
+    if threshold not in ORDERED_PIPELINE:
+        threshold = DEFAULT_PUBLICAR_DESDE
+    return ORDERED_PIPELINE.index(status) >= ORDERED_PIPELINE.index(threshold)
 
 # El endpoint publico solo expone los campos de la vitrina del sitio; los
 # datos comerciales (RNC, montos, bitacora, contactos) son solo del panel.
@@ -74,6 +89,7 @@ class SponsorCreate(BaseModel):
     propuesta_categoria: Optional[str] = None
     propuesta_monto: Optional[float] = None
     status: Optional[str] = "prospecto"
+    publicar_desde: Optional[str] = None
 
 
 class SponsorUpdate(BaseModel):
@@ -92,6 +108,7 @@ class SponsorUpdate(BaseModel):
     propuesta_categoria: Optional[str] = None
     propuesta_monto: Optional[float] = None
     status: Optional[str] = None
+    publicar_desde: Optional[str] = None
 
 
 class BitacoraEntry(BaseModel):
@@ -106,20 +123,20 @@ def get_db():
 @router.get("/race/{race_code}")
 async def get_sponsors_by_race(race_code: str, db=Depends(get_db)):
     """Get published sponsors for a specific race (public endpoint)"""
-    # Solo se publica un patrocinador cuando el proceso llega a "cierre"
-    # (o mas alla). Los documentos sin status son legacy y siguen visibles.
-    sponsors = await db.sponsors.find(
-        {
-            "race_code": race_code.upper(),
-            "is_active": True,
-            "$or": [
-                {"status": {"$in": list(PUBLISHED_STATUSES)}},
-                {"status": {"$exists": False}},
-                {"status": None},
-            ],
-        },
-        PUBLIC_FIELDS
+    # Se necesitan status y publicar_desde para decidir la publicacion,
+    # pero se quitan antes de responder: son datos del panel.
+    projection = {**PUBLIC_FIELDS, "status": 1, "publicar_desde": 1}
+    docs = await db.sponsors.find(
+        {"race_code": race_code.upper(), "is_active": True},
+        projection
     ).sort("order", 1).to_list(100)
+
+    sponsors = []
+    for doc in docs:
+        if sponsor_esta_publicado(doc):
+            doc.pop("status", None)
+            doc.pop("publicar_desde", None)
+            sponsors.append(doc)
 
     return {"sponsors": sponsors, "race_code": race_code.upper()}
 
@@ -158,6 +175,10 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     if status not in SPONSOR_STATUSES:
         raise HTTPException(status_code=400, detail="Status inválido")
 
+    publicar_desde = sponsor.publicar_desde or DEFAULT_PUBLICAR_DESDE
+    if publicar_desde not in ORDERED_PIPELINE:
+        raise HTTPException(status_code=400, detail="Momento de publicación inválido")
+
     sponsor_data = {
         "name": sponsor.name,
         "description": sponsor.description,
@@ -176,6 +197,7 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "propuesta_categoria": (sponsor.propuesta_categoria or "").strip(),
         "propuesta_monto": sponsor.propuesta_monto,
         "status": status,
+        "publicar_desde": publicar_desde,
         "bitacora": [],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
@@ -211,6 +233,9 @@ async def update_sponsor(
 
     if "status" in update_data and update_data["status"] not in SPONSOR_STATUSES:
         raise HTTPException(status_code=400, detail="Status inválido")
+
+    if "publicar_desde" in update_data and update_data["publicar_desde"] not in ORDERED_PIPELINE:
+        raise HTTPException(status_code=400, detail="Momento de publicación inválido")
 
     update_data["updated_at"] = datetime.now(timezone.utc)
 

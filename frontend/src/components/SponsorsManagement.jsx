@@ -29,14 +29,34 @@ const STATUS_OPTIONS = [
   { value: 'declinado', label: 'Declinado', badgeClass: 'bg-red-100 text-red-700' },
 ];
 
-// A partir de "cierre" el patrocinador se publica en el sitio
-const PUBLISHED_STATUSES = ['cierre', 'facturacion', 'pago'];
+// Orden del pipeline (sin "declinado", que nunca se publica). Cada
+// patrocinador se publica al alcanzar el momento elegido en publicar_desde
+// (por defecto "cierre").
+const PIPELINE_ORDER = STATUS_OPTIONS.filter((s) => s.value !== 'declinado').map((s) => s.value);
+const DEFAULT_PUBLICAR_DESDE = 'cierre';
 
 const getStatusInfo = (status) =>
   STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
 
-const isPublished = (sponsor) =>
-  sponsor.is_active && (!sponsor.status || PUBLISHED_STATUSES.includes(sponsor.status));
+const isPublished = (sponsor) => {
+  if (!sponsor.is_active) return false;
+  if (!sponsor.status) return true; // legacy, sin pipeline
+  const idx = PIPELINE_ORDER.indexOf(sponsor.status);
+  if (idx === -1) return false; // declinado
+  let threshold = PIPELINE_ORDER.indexOf(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE);
+  if (threshold === -1) threshold = PIPELINE_ORDER.indexOf(DEFAULT_PUBLICAR_DESDE);
+  return idx >= threshold;
+};
+
+// Separador de miles para el campo de monto (se guarda sin comas)
+const formatMontoInput = (value) => {
+  if (value === '' || value === null || value === undefined) return '';
+  const [ent, dec] = String(value).split('.');
+  const entFmt = ent.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return dec !== undefined ? `${entFmt}.${dec}` : entFmt;
+};
+
+const parseMontoInput = (str) => (str || '').replace(/,/g, '').replace(/[^0-9.]/g, '');
 
 const EMPTY_FORM = {
   name: '',
@@ -52,6 +72,7 @@ const EMPTY_FORM = {
   propuesta_categoria: '',
   propuesta_monto: '',
   status: 'prospecto',
+  publicar_desde: DEFAULT_PUBLICAR_DESDE,
 };
 
 const formatFechaHora = (iso) => {
@@ -129,6 +150,7 @@ export default function SponsorsManagement() {
     propuesta_categoria: formData.propuesta_categoria || null,
     propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
     status: formData.status || 'prospecto',
+    publicar_desde: formData.publicar_desde || DEFAULT_PUBLICAR_DESDE,
   });
 
   const handleSubmit = async (e) => {
@@ -205,6 +227,7 @@ export default function SponsorsManagement() {
       propuesta_categoria: sponsor.propuesta_categoria || '',
       propuesta_monto: sponsor.propuesta_monto ?? '',
       status: sponsor.status || 'prospecto',
+      publicar_desde: sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE,
     });
     setShowAddForm(true);
   };
@@ -512,35 +535,54 @@ export default function SponsorsManagement() {
                     <Label htmlFor="propuesta_monto">Monto (RD$)</Label>
                     <Input
                       id="propuesta_monto"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.propuesta_monto}
-                      onChange={(e) => setFormData(prev => ({ ...prev, propuesta_monto: e.target.value }))}
-                      placeholder="0.00"
+                      type="text"
+                      inputMode="decimal"
+                      value={formatMontoInput(formData.propuesta_monto)}
+                      onChange={(e) => {
+                        const raw = parseMontoInput(e.target.value);
+                        if ((raw.match(/\./g) || []).length > 1) return;
+                        setFormData(prev => ({ ...prev, propuesta_monto: raw }));
+                      }}
+                      placeholder="100,000.00"
                       data-testid="sponsor-monto-input"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Status */}
-              <div className="pt-3 border-t space-y-2">
-                <Label htmlFor="status">Status del Proceso de Cierre</Label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-md bg-background"
-                  data-testid="sponsor-status-select"
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  El patrocinador solo se publica en el sitio cuando el proceso llega a <strong>Cierre</strong> (o Facturación / Pago).
-                </p>
+              {/* Status + publicación */}
+              <div className="pt-3 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status del Proceso de Cierre</Label>
+                  <select
+                    id="status"
+                    value={formData.status}
+                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    data-testid="sponsor-status-select"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="publicar_desde">Publicar en el sitio a partir de</Label>
+                  <select
+                    id="publicar_desde"
+                    value={formData.publicar_desde}
+                    onChange={(e) => setFormData(prev => ({ ...prev, publicar_desde: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    data-testid="sponsor-publicar-desde-select"
+                  >
+                    {STATUS_OPTIONS.filter((s) => s.value !== 'declinado').map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    El patrocinador aparece en la página de patrocinadores cuando el proceso alcanza este momento.
+                  </p>
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -744,6 +786,11 @@ export default function SponsorsManagement() {
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
+                      {!publicado && sponsor.status !== 'declinado' && (
+                        <span className="text-xs text-muted-foreground">
+                          Se publica al llegar a: <strong>{getStatusInfo(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE).label}</strong>
+                        </span>
+                      )}
                       {ultima && (
                         <span className="text-xs text-muted-foreground">
                           Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}
