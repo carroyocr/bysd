@@ -789,7 +789,6 @@ export default function VoluntarioRegistroPage() {
                           className="w-full h-auto min-h-10 whitespace-normal"
                           data-testid={`edit-registration-${reg.evento}`}
                         >
-                          <Edit2 className="w-4 h-4 mr-2 flex-shrink-0" />
                           Editar mi postulación de {getEventoLabel(reg.evento)}
                         </Button>
                       ))}
@@ -800,7 +799,6 @@ export default function VoluntarioRegistroPage() {
                           className="w-full h-auto min-h-10 whitespace-normal"
                           data-testid={`new-registration-${ev}`}
                         >
-                          <ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" />
                           Crear nueva postulación para {getEventoLabel(ev)}
                         </Button>
                       ))}
