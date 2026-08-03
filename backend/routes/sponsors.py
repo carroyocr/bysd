@@ -67,6 +67,7 @@ class SponsorCreate(BaseModel):
     razon_social: Optional[str] = None
     rnc: Optional[str] = None
     nombre_contacto: Optional[str] = None
+    posicion_contacto: Optional[str] = None
     telefono: Optional[str] = None
     correo: Optional[str] = None
     pagina_web: Optional[str] = None
@@ -84,6 +85,7 @@ class SponsorUpdate(BaseModel):
     razon_social: Optional[str] = None
     rnc: Optional[str] = None
     nombre_contacto: Optional[str] = None
+    posicion_contacto: Optional[str] = None
     telefono: Optional[str] = None
     correo: Optional[str] = None
     pagina_web: Optional[str] = None
@@ -167,6 +169,7 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "razon_social": (sponsor.razon_social or "").strip(),
         "rnc": (sponsor.rnc or "").strip(),
         "nombre_contacto": (sponsor.nombre_contacto or "").strip(),
+        "posicion_contacto": (sponsor.posicion_contacto or "").strip(),
         "telefono": (sponsor.telefono or "").strip(),
         "correo": (sponsor.correo or "").strip(),
         "pagina_web": (sponsor.pagina_web or "").strip(),

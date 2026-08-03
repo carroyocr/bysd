@@ -45,6 +45,7 @@ const EMPTY_FORM = {
   razon_social: '',
   rnc: '',
   nombre_contacto: '',
+  posicion_contacto: '',
   telefono: '',
   correo: '',
   pagina_web: '',
@@ -121,6 +122,7 @@ export default function SponsorsManagement() {
     razon_social: formData.razon_social || null,
     rnc: formData.rnc || null,
     nombre_contacto: formData.nombre_contacto || null,
+    posicion_contacto: formData.posicion_contacto || null,
     telefono: formData.telefono || null,
     correo: formData.correo || null,
     pagina_web: formData.pagina_web || null,
@@ -196,6 +198,7 @@ export default function SponsorsManagement() {
       razon_social: sponsor.razon_social || '',
       rnc: sponsor.rnc || '',
       nombre_contacto: sponsor.nombre_contacto || '',
+      posicion_contacto: sponsor.posicion_contacto || '',
       telefono: sponsor.telefono || '',
       correo: sponsor.correo || '',
       pagina_web: sponsor.pagina_web || '',
@@ -448,6 +451,16 @@ export default function SponsorsManagement() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="posicion_contacto">Posición del Contacto</Label>
+                    <Input
+                      id="posicion_contacto"
+                      value={formData.posicion_contacto}
+                      onChange={(e) => setFormData(prev => ({ ...prev, posicion_contacto: e.target.value }))}
+                      placeholder="Ej: Gerente de Mercadeo"
+                      data-testid="sponsor-posicion-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="telefono">Teléfono</Label>
                     <Input
                       id="telefono"
@@ -684,7 +697,11 @@ export default function SponsorsManagement() {
                     {/* Contact + proposal summary */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
                       {sponsor.nombre_contacto && (
-                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{sponsor.nombre_contacto}</span>
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {sponsor.nombre_contacto}
+                          {sponsor.posicion_contacto ? ` — ${sponsor.posicion_contacto}` : ''}
+                        </span>
                       )}
                       {sponsor.telefono && (
                         <a href={`tel:${sponsor.telefono}`} className="flex items-center gap-1 hover:underline">
