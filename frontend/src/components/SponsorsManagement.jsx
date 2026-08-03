@@ -7,7 +7,7 @@ import { Badge } from './ui/badge';
 import {
   Plus, Edit, Trash2, Save, X, Upload, Instagram,
   Building2, ExternalLink, Image, Phone, Mail, Globe, User,
-  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign
+  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -101,8 +101,8 @@ export default function SponsorsManagement() {
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(null);
 
-  // Bitácora modal
-  const [bitacoraSponsor, setBitacoraSponsor] = useState(null);
+  // Bitácora (acordeón dentro de la tarjeta)
+  const [expandedBitacora, setExpandedBitacora] = useState(null); // sponsor.name
   const [bitacoraNota, setBitacoraNota] = useState('');
   const [savingNota, setSavingNota] = useState(false);
 
@@ -312,12 +312,12 @@ export default function SponsorsManagement() {
 
   /* ---------------- Bitácora ---------------- */
 
-  const openBitacora = (sponsor) => {
-    setBitacoraSponsor(sponsor);
+  const toggleBitacora = (sponsor) => {
+    setExpandedBitacora(expandedBitacora === sponsor.name ? null : sponsor.name);
     setBitacoraNota('');
   };
 
-  const handleAddNota = async () => {
+  const handleAddNota = async (sponsor) => {
     if (!bitacoraNota.trim()) {
       toast.error('Escribe la nota del contacto');
       return;
@@ -325,7 +325,7 @@ export default function SponsorsManagement() {
     setSavingNota(true);
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(bitacoraSponsor.name)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -335,15 +335,7 @@ export default function SponsorsManagement() {
       if (response.ok) {
         toast.success('Contacto registrado');
         setBitacoraNota('');
-        // Refrescar y mantener el modal abierto con datos nuevos
-        const res = await adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
-        if (res.ok) {
-          const data = await res.json();
-          const nuevos = data.sponsors || [];
-          setSponsors(nuevos);
-          const actualizado = nuevos.find((s) => s.name === bitacoraSponsor.name);
-          if (actualizado) setBitacoraSponsor(actualizado);
-        }
+        loadSponsors();
       } else {
         const error = await response.json();
         toast.error(error.detail || 'Error al registrar contacto');
@@ -704,7 +696,7 @@ export default function SponsorsManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openBitacora(sponsor)}
+                          onClick={() => toggleBitacora(sponsor)}
                           title="Bitácora de contactos"
                           data-testid={`bitacora-sponsor-${sponsor.name}`}
                         >
@@ -712,6 +704,11 @@ export default function SponsorsManagement() {
                           <span className="ml-1 text-xs hidden md:inline">
                             Bitácora{(sponsor.bitacora || []).length > 0 ? ` (${sponsor.bitacora.length})` : ''}
                           </span>
+                          {expandedBitacora === sponsor.name ? (
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 ml-1" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
@@ -797,6 +794,59 @@ export default function SponsorsManagement() {
                         </span>
                       )}
                     </div>
+
+                    {/* Bitácora (acordeón) */}
+                    {expandedBitacora === sponsor.name && (
+                      <div className="mt-3 pt-3 border-t space-y-3" data-testid={`bitacora-panel-${sponsor.name}`}>
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <NotebookPen className="w-4 h-4 text-[#E8772E]" />
+                          Bitácora de Contactos
+                        </h4>
+
+                        {/* Registrar contacto */}
+                        <div className="space-y-2">
+                          <textarea
+                            placeholder="Registrar contacto (llamada, correo, reunión...)"
+                            value={bitacoraNota}
+                            onChange={(e) => setBitacoraNota(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
+                            data-testid="bitacora-nota-input"
+                          />
+                          <div className="flex justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddNota(sponsor)}
+                              disabled={savingNota}
+                              data-testid="bitacora-add-btn"
+                            >
+                              {savingNota ? 'Guardando...' : 'Registrar'}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Entradas (más recientes primero) */}
+                        {(sponsor.bitacora || []).length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">
+                            Aún no hay contactos registrados con este patrocinador
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {[...(sponsor.bitacora || [])].reverse().map((entrada) => (
+                              <div
+                                key={entrada.id}
+                                className={`p-3 rounded-lg border text-sm ${
+                                  entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
+                                }`}
+                              >
+                                <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
+                                <div className="mt-0.5">{entrada.nota}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -818,63 +868,6 @@ export default function SponsorsManagement() {
         </Card>
       )}
 
-      {/* Bitácora Modal */}
-      {bitacoraSponsor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <NotebookPen className="w-5 h-5 text-[#E8772E]" />
-                  Bitácora — {bitacoraSponsor.name}
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setBitacoraSponsor(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto space-y-4">
-              {/* Add note */}
-              <div className="space-y-2">
-                <textarea
-                  placeholder="Registrar contacto (llamada, correo, reunión...)"
-                  value={bitacoraNota}
-                  onChange={(e) => setBitacoraNota(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
-                  data-testid="bitacora-nota-input"
-                />
-                <div className="flex justify-end">
-                  <Button onClick={handleAddNota} disabled={savingNota} data-testid="bitacora-add-btn">
-                    {savingNota ? 'Guardando...' : 'Registrar'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Entries (newest first) */}
-              {(bitacoraSponsor.bitacora || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-4">
-                  Aún no hay contactos registrados con este patrocinador
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {[...(bitacoraSponsor.bitacora || [])].reverse().map((entrada) => (
-                    <div
-                      key={entrada.id}
-                      className={`p-3 rounded-lg border text-sm ${
-                        entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
-                      }`}
-                    >
-                      <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
-                      <div className="mt-0.5">{entrada.nota}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
