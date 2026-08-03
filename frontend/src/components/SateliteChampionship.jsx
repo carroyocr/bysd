@@ -38,10 +38,10 @@ export default function SateliteChampionship() {
               Evento Internacional
             </Badge>
             <h2 className="font-display text-4xl sm:text-5xl text-foreground">
-              Campeonato Satélite por Equipos
+              Campeonato Mundial por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              República Dominicana ha sido seleccionada para participar en el Campeonato Satélite por Equipos del Backyard Ultra
+              República Dominicana ha sido seleccionada para participar en el Campeonato Mundial por Equipos del Backyard Ultra
             </p>
           </div>
 
@@ -93,7 +93,7 @@ export default function SateliteChampionship() {
               </h3>
               <div className="grid md:grid-cols-2 gap-6 text-sm text-muted-foreground leading-relaxed">
                 <div className="space-y-3">
-                  <p>El Campeonato Satélite por Equipos es la <strong className="text-foreground">principal competencia por naciones</strong> dentro del formato Backyard Ultra. Equipos nacionales de múltiples países compiten simultáneamente.</p>
+                  <p>El Campeonato Mundial por Equipos es la <strong className="text-foreground">principal competencia por naciones</strong> dentro del formato Backyard Ultra. Equipos nacionales de múltiples países compiten simultáneamente.</p>
                   <p>La puntuación por equipo se calcula a razón de <strong className="text-foreground">un (1) punto por cada vuelta completada</strong> por cada miembro del equipo.</p>
                 </div>
                 <div className="space-y-3">

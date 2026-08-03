@@ -29,7 +29,7 @@ const formatTime12h = (time24) => {
 // Event options (volunteer can choose which event to volunteer for)
 const EVENTO_OPTIONS = [
   { value: "carrera", label: "Carrera Activa" },
-  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+  { value: "campeonato", label: "Campeonato Mundial por Equipos" }
 ];
 
 // Form steps for volunteers
