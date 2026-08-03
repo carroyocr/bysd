@@ -585,7 +585,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -641,7 +641,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -688,7 +688,7 @@ export default function VoluntarioRegistroPage() {
   // Loading state for edit mode
   if (loadingExisting) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando tu postulación...</p>
@@ -698,74 +698,54 @@ export default function VoluntarioRegistroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
+    <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+      {/* Header (mismo estilo neutro que el resto de las secciones) */}
+      <div className="container mx-auto px-4 py-8 sm:py-10">
+        <div className="text-center space-y-3">
+          <h1 className="font-display text-3xl sm:text-5xl text-foreground">
             {editMode ? 'Editar Postulación' : 'Registro de Voluntarios'}
           </h1>
-          <p className="text-center text-purple-100 mb-4">
+          <p className="text-base sm:text-lg text-muted-foreground">
             {raceName || 'Backyard Ultra Santo Domingo'}
           </p>
           {config?.code && (
             <div className="flex justify-center">
-              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
-                {config.code}
-              </Badge>
+              <Badge variant="outline">{config.code}</Badge>
             </div>
           )}
         </div>
       </div>
 
-      {/* Info Banner - only show on verify step in normal mode */}
-      {currentStepId === 'verify' && !editMode && (
-        <div className="container mx-auto px-4 mt-6">
-          <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-bold text-blue-900 mb-3">💪 ¡Únete al Equipo de Voluntarios!</h2>
-              <div className="space-y-3 text-sm text-blue-800">
-                <p>
-                  Los voluntarios son fundamentales para el éxito del evento. Sin su apoyo, 
-                  no sería posible ofrecer una experiencia de calidad a los atletas.
-                </p>
-                <p>
-                  Podrás seleccionar las posiciones y turnos de tu interés según la disponibilidad.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Progress Steps: ocultos en la pantalla inicial de correo */}
+      {(editMode || currentStepId !== 'verify') && (
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
+              {activeSteps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = index === currentStep;
+                const isCompleted = index < currentStep;
 
-      {/* Progress Steps */}
-      <div className="container mx-auto px-4 mt-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-            {activeSteps.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = index === currentStep;
-              const isCompleted = index < currentStep;
-              
-              return (
-                <div key={step.id} className="flex flex-col items-center min-w-[70px]">
-                  <div className={`
-                    w-10 h-10 rounded-full flex items-center justify-center transition-all
-                    ${isCompleted ? 'bg-green-500 text-white' : 
-                      isActive ? 'bg-primary text-white' : 
-                      'bg-gray-200 text-gray-500'}
-                  `}>
-                    {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                return (
+                  <div key={step.id} className="flex flex-col items-center min-w-[56px] sm:min-w-[70px]">
+                    <div className={`
+                      w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all
+                      ${isCompleted ? 'bg-green-500 text-white' :
+                        isActive ? 'bg-primary text-white' :
+                        'bg-gray-200 text-gray-500'}
+                    `}>
+                      {isCompleted ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                    </div>
+                    <span className={`text-[10px] sm:text-xs mt-2 text-center ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                      {step.title}
+                    </span>
                   </div>
-                  <span className={`text-xs mt-2 text-center ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
-                    {step.title}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Form Content */}
       <div className="container mx-auto px-4 pb-12">
@@ -817,9 +797,9 @@ export default function VoluntarioRegistroPage() {
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="flex items-start gap-3">
                           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <p className="font-medium text-amber-800">Este correo ya está registrado</p>
-                            <p className="text-sm text-amber-700 mt-1">
+                            <p className="text-sm text-amber-700 mt-1 break-words">
                               {registeredEventos.length > 0
                                 ? <>Ya tienes un registro como voluntario para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>.</>
                                 : 'Ya tienes un registro como voluntario para este evento.'}
@@ -833,19 +813,19 @@ export default function VoluntarioRegistroPage() {
                                 </p>
                               </div>
                             ) : (
-                              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                              <div className="mt-3 flex flex-col gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={requestEditLink}
                                   disabled={requestingEditLink || sendingCode}
-                                  className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                                  className="w-full h-auto min-h-9 whitespace-normal border-amber-300 text-amber-800 hover:bg-amber-100"
                                   data-testid="edit-previous-registration-btn"
                                 >
                                   {requestingEditLink ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando enlace...</>
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> Enviando enlace...</>
                                   ) : (
-                                    <><Edit2 className="w-4 h-4 mr-2" /> Editar mi postulación</>
+                                    <><Edit2 className="w-4 h-4 mr-2 flex-shrink-0" /> Editar mi postulación</>
                                   )}
                                 </Button>
                                 {eventosDisponibles.map((ev) => (
@@ -854,12 +834,13 @@ export default function VoluntarioRegistroPage() {
                                     size="sm"
                                     onClick={() => sendVerificationCode(ev)}
                                     disabled={sendingCode || requestingEditLink}
+                                    className="w-full h-auto min-h-9 whitespace-normal"
                                     data-testid={`register-other-event-${ev}`}
                                   >
                                     {sendingCode ? (
-                                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando código...</>
+                                      <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> Enviando código...</>
                                     ) : (
-                                      <><ArrowRight className="w-4 h-4 mr-2" /> Registrarme para {getEventoLabel(ev)}</>
+                                      <><ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" /> Registrarme para {getEventoLabel(ev)}</>
                                     )}
                                   </Button>
                                 ))}
@@ -1311,17 +1292,17 @@ export default function VoluntarioRegistroPage() {
 
             {/* Navigation Buttons - show after verification in normal mode or always in edit mode */}
             {(editMode || currentStepId !== 'verify') && (
-              <div className="flex justify-between pt-4 border-t">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={prevStep} 
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
                     disabled={currentStep === 0}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Anterior
                   </Button>
-                  
+
                   {/* Cancel button - only show in edit mode */}
                   {editMode && (
                     <Button
@@ -1335,14 +1316,14 @@ export default function VoluntarioRegistroPage() {
                     </Button>
                   )}
                 </div>
-                
+
                 {currentStep < activeSteps.length - 1 ? (
-                  <Button onClick={nextStep}>
+                  <Button onClick={nextStep} className="ml-auto">
                     Siguiente
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button onClick={handleSubmit} disabled={submitting} data-testid="volunteer-submit-btn">
+                  <Button onClick={handleSubmit} disabled={submitting} className="ml-auto" data-testid="volunteer-submit-btn">
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
                     ) : (
