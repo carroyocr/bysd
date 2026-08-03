@@ -43,6 +43,39 @@ const STEPS = [
   { id: 'preferences', title: 'Preferencias', icon: Shirt },
 ];
 
+// Formulario vacío (estado inicial y "crear nueva postulación")
+const FORM_VACIO = {
+  // Personal
+  nombre: '',
+  apellidos: '',
+  fecha_nacimiento: '',
+  sexo: '',
+  nacionalidad: '',
+  telefono: '',
+  ciudad_residencia: '',
+
+  // Experience
+  experiencia_voluntariado: 'No',
+  experiencia_voluntariado_detalle: '',
+
+  // Medical
+  tipo_sangre: '',
+  condicion_medica: 'No',
+  condicion_medica_detalle: '',
+  alergias: 'No',
+  alergias_detalle: '',
+
+  // Emergency
+  contacto_emergencia_nombre: '',
+  contacto_emergencia_relacion: '',
+  contacto_emergencia_telefono: '',
+
+  // Preferences
+  talla_camiseta: '',
+  como_se_entero: '',
+  comentarios: '',
+};
+
 // Edit mode steps (skip verification)
 const EDIT_STEPS = [
   { id: 'personal', title: 'Datos Personales', icon: User },
@@ -172,37 +205,7 @@ export default function VoluntarioRegistroPage() {
   };
   
   // Form data
-  const [formData, setFormData] = useState({
-    // Personal
-    nombre: '',
-    apellidos: '',
-    fecha_nacimiento: '',
-    sexo: '',
-    nacionalidad: '',
-    telefono: '',
-    ciudad_residencia: '',
-    
-    // Experience
-    experiencia_voluntariado: 'No',
-    experiencia_voluntariado_detalle: '',
-    
-    // Medical
-    tipo_sangre: '',
-    condicion_medica: 'No',
-    condicion_medica_detalle: '',
-    alergias: 'No',
-    alergias_detalle: '',
-    
-    // Emergency
-    contacto_emergencia_nombre: '',
-    contacto_emergencia_relacion: '',
-    contacto_emergencia_telefono: '',
-    
-    // Preferences
-    talla_camiseta: '',
-    como_se_entero: '',
-    comentarios: '',
-  });
+  const [formData, setFormData] = useState({ ...FORM_VACIO });
   
   // Submission
   const [submitting, setSubmitting] = useState(false);
@@ -382,10 +385,24 @@ export default function VoluntarioRegistroPage() {
 
   // Inicia una postulación nueva (formulario vacío) para el evento indicado
   const startNewRegistration = (evento) => {
+    setFormData({ ...FORM_VACIO });
     setSelectedEvento(evento);
     setSelectedSlots([]);
+    setEditMode(false);
+    setEditToken(null);
     setCurrentStep(1);
   };
+
+  // Vuelve a la pantalla de selección (editar o crear) tras verificar el correo
+  const backToChoice = () => {
+    setEditMode(false);
+    setEditToken(null);
+    setCurrentStep(0);
+  };
+
+  // Si se llegó al formulario desde la pantalla de selección, "Anterior" en el
+  // primer paso regresa a esa pantalla (aplica al editar directamente)
+  const canReturnToChoice = existingRegistrations.length > 0;
 
   const verifyCode = async () => {
     if (!verificationCode || verificationCode.length !== 6) {
@@ -1297,19 +1314,48 @@ export default function VoluntarioRegistroPage() {
 
             {/* Navigation Buttons - show after verification in normal mode or always in edit mode */}
             {(editMode || currentStepId !== 'verify') && (
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t">
-                <div className="flex flex-wrap gap-2">
+              <div className="pt-4 border-t space-y-3">
+                {/* Anterior y Siguiente en la misma línea */}
+                <div className="flex items-center justify-between gap-2">
                   <Button
                     variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 0}
+                    onClick={() => {
+                      if (currentStep === 0 && editMode && canReturnToChoice) {
+                        // Se entró editando desde la pantalla de selección:
+                        // regresar a ella
+                        backToChoice();
+                      } else {
+                        prevStep();
+                      }
+                    }}
+                    disabled={currentStep === 0 && !(editMode && canReturnToChoice)}
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Anterior
                   </Button>
 
-                  {/* Cancel button - only show in edit mode */}
-                  {editMode && (
+                  {currentStep < activeSteps.length - 1 ? (
+                    <Button onClick={nextStep}>
+                      Siguiente
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSubmit} disabled={submitting} data-testid="volunteer-submit-btn">
+                      {submitting ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          {editMode ? 'Guardar Cambios' : 'Completar Registro'}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Cancelar debajo, solo en modo edición */}
+                {editMode && (
+                  <div className="flex justify-center">
                     <Button
                       variant="ghost"
                       onClick={() => setShowCancelModal(true)}
@@ -1319,25 +1365,7 @@ export default function VoluntarioRegistroPage() {
                       <XCircle className="w-4 h-4 mr-2" />
                       Cancelar Postulación
                     </Button>
-                  )}
-                </div>
-
-                {currentStep < activeSteps.length - 1 ? (
-                  <Button onClick={nextStep} className="ml-auto">
-                    Siguiente
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button onClick={handleSubmit} disabled={submitting} className="ml-auto" data-testid="volunteer-submit-btn">
-                    {submitting ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {editMode ? 'Actualizando...' : 'Enviando...'}</>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        {editMode ? 'Guardar Cambios' : 'Completar Registro'}
-                      </>
-                    )}
-                  </Button>
+                  </div>
                 )}
               </div>
             )}
