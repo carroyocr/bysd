@@ -75,12 +75,11 @@ export default function VoluntarioRegistroPage() {
   const [verifying, setVerifying] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   
-  // State for showing "already registered" options
-  const [emailAlreadyRegistered, setEmailAlreadyRegistered] = useState(false);
+  // Postulaciones existentes del correo verificado (para ofrecer editar o
+  // crear una nueva en el otro evento)
   const [registeredEventos, setRegisteredEventos] = useState([]);
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [requestingEditLink, setRequestingEditLink] = useState(false);
-  const [editLinkSent, setEditLinkSent] = useState(false);
+  const [existingRegistrations, setExistingRegistrations] = useState([]);
   
   // Available slots data
   const [availableSlots, setAvailableSlots] = useState({ positions: [], shifts_info: [], race_date: null });
@@ -335,15 +334,12 @@ export default function VoluntarioRegistroPage() {
     return opt ? opt.label : value;
   };
 
-  // continuarConEvento: cuando el correo ya está registrado en un evento y el
-  // voluntario elige registrarse para el otro, se reenvía con ese evento.
-  const sendVerificationCode = async (continuarConEvento = null) => {
+  const sendVerificationCode = async () => {
     if (!email || !email.includes('@')) {
       toast.error('Por favor ingresa un email válido');
       return;
     }
 
-    setEmailAlreadyRegistered(false);
     setSendingCode(true);
 
     const xhr = new XMLHttpRequest();
@@ -360,28 +356,10 @@ export default function VoluntarioRegistroPage() {
       }
 
       if (xhr.status === 200) {
-        if (data.status === 'already_registered') {
-          setEmailAlreadyRegistered(true);
-          setRegisteredEventos(data.registered_eventos || []);
-          setEventosDisponibles(data.eventos_disponibles || []);
-          toast.info('Este correo ya está registrado como voluntario');
-          return;
-        }
-        if (continuarConEvento) {
-          setSelectedEvento(continuarConEvento);
-          setSelectedSlots([]);
-        }
         setCodeSent(true);
         toast.success('Código enviado a tu correo');
       } else {
-        const errorMessage = data.detail || 'Error enviando código';
-
-        if (errorMessage.includes('ya está registrado')) {
-          setEmailAlreadyRegistered(true);
-          toast.info('Este correo ya está registrado como voluntario');
-        } else {
-          toast.error(errorMessage);
-        }
+        toast.error(data.detail || 'Error enviando código');
       }
     };
 
@@ -390,32 +368,23 @@ export default function VoluntarioRegistroPage() {
       toast.error('Error de conexión. Intenta de nuevo.');
     };
 
-    xhr.send(JSON.stringify({ email, continuar_con_evento: continuarConEvento }));
+    xhr.send(JSON.stringify({ email }));
   };
 
-  // Pide al backend que envíe por correo el enlace de edición de la(s)
-  // postulación(es) existente(s)
-  const requestEditLink = async () => {
-    setRequestingEditLink(true);
-    try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/request-edit-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await response.json();
+  // Abre directamente el formulario de edición de una postulación existente
+  // (el correo ya fue verificado, no hace falta enlace por email)
+  const startDirectEdit = (registration) => {
+    setEditToken(registration.edit_token);
+    setEditMode(true);
+    setCurrentStep(0);
+    loadExistingRegistration(registration.edit_token);
+  };
 
-      if (response.ok) {
-        setEditLinkSent(true);
-        toast.success('Enlace de edición enviado a tu correo');
-      } else {
-        toast.error(data.detail || 'Error enviando el enlace');
-      }
-    } catch (error) {
-      toast.error('Error de conexión');
-    } finally {
-      setRequestingEditLink(false);
-    }
+  // Inicia una postulación nueva (formulario vacío) para el evento indicado
+  const startNewRegistration = (evento) => {
+    setSelectedEvento(evento);
+    setSelectedSlots([]);
+    setCurrentStep(1);
   };
 
   const verifyCode = async () => {
@@ -437,8 +406,22 @@ export default function VoluntarioRegistroPage() {
       if (response.ok) {
         setEmailVerified(true);
         setSessionToken(data.session_token);
-        setCurrentStep(1);
         toast.success('Email verificado correctamente');
+
+        const regs = data.registrations || [];
+        setExistingRegistrations(regs);
+        setRegisteredEventos(regs.map(r => r.evento));
+        setEventosDisponibles(data.eventos_disponibles || []);
+
+        if (regs.length === 0) {
+          // Sin postulaciones previas: sigue el flujo normal
+          setCurrentStep(1);
+          if (data.eventos_disponibles?.length) {
+            setSelectedEvento(data.eventos_disponibles[0]);
+          }
+        }
+        // Con postulaciones previas se queda en este paso mostrando las
+        // opciones: editar la existente o crear una nueva para el otro evento
       } else {
         toast.error(data.detail || 'Código inválido');
       }
@@ -769,28 +752,73 @@ export default function VoluntarioRegistroPage() {
             {/* Step: Email Verification - only in normal mode */}
             {currentStepId === 'verify' && !editMode && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Correo Electrónico *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setEmailAlreadyRegistered(false);
-                      setEditLinkSent(false);
-                    }}
-                    placeholder="tu@email.com"
-                    disabled={codeSent}
-                    data-testid="volunteer-email-input"
-                  />
-                </div>
+                {emailVerified && existingRegistrations.length > 0 ? (
+                  /* Correo verificado con postulaciones previas: elegir entre
+                     editar la existente o crear una nueva para el otro evento */
+                  <div className="space-y-4">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        <CheckCircle className="w-4 h-4 inline mr-1" />
+                        Correo verificado: <strong>{email}</strong>
+                      </p>
+                    </div>
 
-                {!codeSent ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-amber-800">Ya tienes una postulación como voluntario</p>
+                          <p className="text-sm text-amber-700 mt-1 break-words">
+                            Registrado para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>. ¿Qué deseas hacer?
+                          </p>
+
+                          <div className="mt-3 flex flex-col gap-2">
+                            {existingRegistrations.map((reg) => (
+                              <Button
+                                key={reg.evento}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => startDirectEdit(reg)}
+                                className="w-full h-auto min-h-9 whitespace-normal border-amber-300 text-amber-800 hover:bg-amber-100"
+                                data-testid={`edit-registration-${reg.evento}`}
+                              >
+                                <Edit2 className="w-4 h-4 mr-2 flex-shrink-0" />
+                                Editar mi postulación de {getEventoLabel(reg.evento)}
+                              </Button>
+                            ))}
+                            {eventosDisponibles.map((ev) => (
+                              <Button
+                                key={ev}
+                                size="sm"
+                                onClick={() => startNewRegistration(ev)}
+                                className="w-full h-auto min-h-9 whitespace-normal"
+                                data-testid={`new-registration-${ev}`}
+                              >
+                                <ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" />
+                                Crear nueva postulación para {getEventoLabel(ev)}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                   <>
-                    {/* Oculto cuando el correo ya está registrado: las opciones
-                        del panel de abajo son las acciones válidas */}
-                    {!emailAlreadyRegistered && (
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Correo Electrónico *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="tu@email.com"
+                        disabled={codeSent}
+                        data-testid="volunteer-email-input"
+                      />
+                    </div>
+
+                    {!codeSent ? (
                       <Button
                         onClick={() => sendVerificationCode()}
                         disabled={sendingCode}
@@ -803,96 +831,38 @@ export default function VoluntarioRegistroPage() {
                           'Enviar Código de Verificación'
                         )}
                       </Button>
-                    )}
-
-                    {emailAlreadyRegistered && (
-                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-amber-800">Este correo ya está registrado</p>
-                            <p className="text-sm text-amber-700 mt-1 break-words">
-                              {registeredEventos.length > 0
-                                ? <>Ya tienes un registro como voluntario para: <strong>{registeredEventos.map(getEventoLabel).join(', ')}</strong>.</>
-                                : 'Ya tienes un registro como voluntario para este evento.'}
-                            </p>
-
-                            {editLinkSent ? (
-                              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <p className="text-sm text-green-800">
-                                  <CheckCircle className="w-4 h-4 inline mr-1" />
-                                  Te enviamos el enlace de edición a tu correo. Revísalo (incluyendo spam) para editar tu postulación.
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="mt-3 flex flex-col gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={requestEditLink}
-                                  disabled={requestingEditLink || sendingCode}
-                                  className="w-full h-auto min-h-9 whitespace-normal border-amber-300 text-amber-800 hover:bg-amber-100"
-                                  data-testid="edit-previous-registration-btn"
-                                >
-                                  {requestingEditLink ? (
-                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> Enviando enlace...</>
-                                  ) : (
-                                    <><Edit2 className="w-4 h-4 mr-2 flex-shrink-0" /> Editar mi postulación</>
-                                  )}
-                                </Button>
-                                {eventosDisponibles.map((ev) => (
-                                  <Button
-                                    key={ev}
-                                    size="sm"
-                                    onClick={() => sendVerificationCode(ev)}
-                                    disabled={sendingCode || requestingEditLink}
-                                    className="w-full h-auto min-h-9 whitespace-normal"
-                                    data-testid={`register-other-event-${ev}`}
-                                  >
-                                    {sendingCode ? (
-                                      <><Loader2 className="w-4 h-4 mr-2 animate-spin flex-shrink-0" /> Enviando código...</>
-                                    ) : (
-                                      <><ArrowRight className="w-4 h-4 mr-2 flex-shrink-0" /> Registrarme para {getEventoLabel(ev)}</>
-                                    )}
-                                  </Button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="code">Código de Verificación *</Label>
+                          <Input
+                            id="code"
+                            value={verificationCode}
+                            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="123456"
+                            maxLength={6}
+                            data-testid="volunteer-code-input"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Revisa tu correo (incluyendo spam) para el código de 6 dígitos
+                          </p>
                         </div>
+
+                        <Button
+                          onClick={verifyCode}
+                          disabled={verifying}
+                          className="w-full"
+                          data-testid="volunteer-verify-btn"
+                        >
+                          {verifying ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
+                          ) : (
+                            'Verificar Código'
+                          )}
+                        </Button>
                       </div>
                     )}
                   </>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code">Código de Verificación *</Label>
-                      <Input
-                        id="code"
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="123456"
-                        maxLength={6}
-                        data-testid="volunteer-code-input"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Revisa tu correo (incluyendo spam) para el código de 6 dígitos
-                      </p>
-                    </div>
-                    
-                    <Button 
-                      onClick={verifyCode} 
-                      disabled={verifying}
-                      className="w-full"
-                      data-testid="volunteer-verify-btn"
-                    >
-                      {verifying ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verificando...</>
-                      ) : (
-                        'Verificar Código'
-                      )}
-                    </Button>
-                  </div>
                 )}
               </div>
             )}
