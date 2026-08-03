@@ -707,26 +707,9 @@ export default function VoluntarioRegistroPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
-      {/* Header (mismo estilo neutro que el resto de las secciones) */}
-      <div className="container mx-auto px-4 py-8 sm:py-10">
-        <div className="text-center space-y-3">
-          <h1 className="font-display text-3xl sm:text-5xl text-foreground">
-            {editMode ? 'Editar Postulación' : 'Registro de Voluntarios'}
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            {raceName || 'Backyard Ultra Santo Domingo'}
-          </p>
-          {config?.code && (
-            <div className="flex justify-center">
-              <Badge variant="outline">{config.code}</Badge>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Indicador del paso actual: un solo icono centrado */}
       {(editMode || currentStepId !== 'verify') && (
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 pt-8">
           <div className="max-w-4xl mx-auto mb-8">
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center">
@@ -744,7 +727,9 @@ export default function VoluntarioRegistroPage() {
       )}
 
       {/* Form Content */}
-      <div className="container mx-auto px-4 pb-12">
+      {/* pt-8 para que la tarjeta no quede pegada al menú en el paso de
+          verificación, donde no se muestra el indicador de paso */}
+      <div className={`container mx-auto px-4 pb-12 ${(editMode || currentStepId !== 'verify') ? '' : 'pt-8'}`}>
         <Card className="max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
