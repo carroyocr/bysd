@@ -11,6 +11,7 @@ exacto, solo cortar el abuso automatizado. Si algun dia hay varias instancias,
 cada una llevara su propia cuenta y los limites efectivos se multiplicaran por
 el numero de instancias; a partir de ahi tocaria llevarlo a Redis o a Mongo.
 """
+import os
 import time
 from collections import defaultdict, deque
 from typing import Deque, Dict, Optional, Tuple
@@ -61,6 +62,11 @@ def comprobar(
     clave:  con que se agrupa, normalmente la IP.
     """
     global _desde_ultima_limpieza
+
+    # Llave solo para pruebas locales: con RATE_LIMIT_OFF=1 no se limita nada.
+    # Produccion no define esta variable, asi que alli siempre se aplica.
+    if os.getenv("RATE_LIMIT_OFF") == "1":
+        return
 
     ahora = time.time()
     marcas = _intentos[(bucket, clave)]
