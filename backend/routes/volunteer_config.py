@@ -51,6 +51,10 @@ class PositionUpdate(BaseModel):
     descripcion: Optional[str] = None
     turnos: Optional[List[ShiftConfig]] = None
     evento: Optional[str] = None
+    # Si es True, se borran TODOS los slots de la posicion (incluso asignados)
+    # antes de regenerar. Lo usa "Generar según Programación" para evitar
+    # que queden slots viejos duplicados con otros horarios.
+    reemplazar_slots: bool = False
 
 
 @router.get("/positions")
@@ -130,6 +134,13 @@ async def update_position(nombre: str, data: PositionUpdate, evento: str = "carr
         update_data["descripcion"] = data.descripcion
     if data.turnos is not None:
         update_data["turnos"] = [t.dict() for t in data.turnos]
+        if data.reemplazar_slots:
+            # Wipe every slot of the position (assigned included) so the
+            # regenerated shifts don't coexist with stale ones
+            await db.volunteer_assignments.delete_many({
+                "puesto": nombre,
+                **evento_query(evento)
+            })
         # Regenerate slots when shifts change
         await _regenerate_slots_for_position(db, nombre, data.turnos, data.nombre or nombre, evento=evento)
     
@@ -215,6 +226,36 @@ async def clear_all_assignments(evento: Optional[str] = None):
     return {
         "message": f"Asignaciones limpiadas: {assigned_count} slots liberados",
         "slots_cleared": assigned_count
+    }
+
+
+@router.post("/delete-position-shifts")
+async def delete_position_shifts(nombre: str, evento: str = "carrera"):
+    """Delete every shift (and its slots, including assigned ones) of ONE position.
+    The position itself is kept, without shifts. 'nombre' goes as a query
+    param so names containing '/' work without route issues."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+
+    existing = await _find_position(db, nombre, evento)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Posición no encontrada")
+
+    ev_filter = evento_query(evento)
+    slots_result = await db.volunteer_assignments.delete_many({
+        "puesto": existing["nombre"],
+        **ev_filter
+    })
+    await db.volunteer_positions.update_one(
+        {"_id": existing["_id"]},
+        {"$set": {"turnos": [], "updated_at": datetime.now(timezone.utc)}}
+    )
+
+    return {
+        "message": f"Turnos de \"{existing['nombre']}\" eliminados: {slots_result.deleted_count} slots borrados",
+        "slots_deleted": slots_result.deleted_count,
     }
 
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Trash2, Edit2, Save, X, Clock, Users, AlertCircle,
   Loader2, Download, RefreshCw, ChevronDown, ChevronUp, RotateCcw,
-  CalendarClock, Wand2
+  CalendarClock, CalendarX, Wand2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
@@ -193,22 +193,38 @@ export default function VolunteerConfigManagement() {
     return opt ? opt.label : value;
   };
 
-  // Calculate the date for a shift based on its start time
-  const getShiftDate = (horaInicio) => {
-    if (!raceDate || !horaInicio) return '';
-    
-    const [hours] = horaInicio.split(':').map(Number);
+  // Calculate the date for a shift. Prefers the event schedule (fecha_inicio
+  // + dia_tipo); falls back to the active race date with an hour heuristic.
+  const getShiftDate = (turno) => {
+    const offsets = { previo: -1, carrera_dia1: 0, carrera_dia2: 1, carrera_dia3: 2 };
+    const offset = offsets[turno.dia_tipo];
+
+    if (programacion.fecha_inicio && offset !== undefined) {
+      const base = new Date(programacion.fecha_inicio);
+      if (!isNaN(base.getTime())) {
+        const fecha = new Date(base.getFullYear(), base.getMonth(), base.getDate() + offset);
+        return fecha.toLocaleDateString('es-DO', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        });
+      }
+    }
+
+    if (!raceDate || !turno.hora_inicio) return '';
+
+    const [hours] = turno.hora_inicio.split(':').map(Number);
     const baseDate = new Date(raceDate + 'T00:00:00');
-    
+
     // If shift starts between midnight and 8am, it's likely day 2
     if (hours >= 0 && hours < 8) {
       baseDate.setDate(baseDate.getDate() + 1);
     }
-    
-    return baseDate.toLocaleDateString('es-DO', { 
-      weekday: 'short', 
-      day: 'numeric', 
-      month: 'short' 
+
+    return baseDate.toLocaleDateString('es-DO', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
     });
   };
 
@@ -472,6 +488,28 @@ export default function VolunteerConfigManagement() {
     }
   };
 
+  const handleDeletePositionShifts = async (nombre) => {
+    if (!window.confirm(`⚠️ ¿Eliminar TODOS los turnos de la posición "${nombre}"?\n\nSe borrarán sus turnos y slots (incluyendo los asignados). La posición se conserva sin turnos. Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/delete-position-shifts?nombre=${encodeURIComponent(nombre)}&evento=${selectedEvento}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+        loadPositions();
+      } else {
+        toast.error(data.detail || 'Error eliminando turnos');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    }
+  };
+
   const startEdit = (position) => {
     setEditingPosition(position.nombre);
     setEditData({
@@ -537,8 +575,9 @@ export default function VolunteerConfigManagement() {
     setTurnos(turnos.filter((_, i) => i !== index));
   };
 
-  // Shift editor component
-  const ShiftEditor = ({ turnos, setTurnos, disabled = false }) => {
+  // Shift editor component. onGenerate (opcional) recibe los turnos generados
+  // según la programación; si no se pasa, se usa setTurnos.
+  const ShiftEditor = ({ turnos, setTurnos, disabled = false, onGenerate = null }) => {
     // Get color classes based on dia_tipo
     const getDiaTipoClasses = (diaTipo) => {
       const info = getDiaTipoInfo(diaTipo);
@@ -567,10 +606,14 @@ export default function VolunteerConfigManagement() {
                   toast.error('Configura y guarda primero la programación del evento (fechas y duración del turno)');
                   return;
                 }
-                if (turnos.length > 0 && !window.confirm(`Se reemplazarán los ${turnos.length} turnos actuales por ${generados.length} turnos generados según la programación del evento. ¿Continuar?`)) {
+                if (turnos.length > 0 && !window.confirm(`Se reemplazarán los ${turnos.length} turnos actuales por ${generados.length} turnos generados según la programación del evento. Al guardar, los slots anteriores de la posición (incluyendo asignados) serán reemplazados para evitar duplicados. ¿Continuar?`)) {
                   return;
                 }
-                setTurnos(generados);
+                if (onGenerate) {
+                  onGenerate(generados);
+                } else {
+                  setTurnos(generados);
+                }
               }}
               className="text-primary"
             >
@@ -942,6 +985,15 @@ export default function VolunteerConfigManagement() {
                     </Badge>
                     {editingPosition !== position.nombre && (
                       <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-orange-500 hover:text-orange-700 hover:bg-orange-50"
+                          title="Eliminar todos los turnos de esta posición"
+                          onClick={() => handleDeletePositionShifts(position.nombre)}
+                        >
+                          <CalendarX className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => startEdit(position)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -980,9 +1032,10 @@ export default function VolunteerConfigManagement() {
                         </div>
                       </div>
                       
-                      <ShiftEditor 
+                      <ShiftEditor
                         turnos={editData.turnos}
                         setTurnos={(turnos) => setEditData({...editData, turnos})}
+                        onGenerate={(turnos) => setEditData({...editData, turnos, reemplazar_slots: true})}
                       />
                       
                       <div className="flex justify-end gap-2 pt-4 border-t">
@@ -1002,7 +1055,7 @@ export default function VolunteerConfigManagement() {
                         <div key={idx} className="flex items-center gap-4 p-2 bg-muted/30 rounded">
                           <Badge>{turno.turno}</Badge>
                           <span className="text-sm text-muted-foreground">
-                            {getShiftDate(turno.hora_inicio)}
+                            {getShiftDate(turno)}
                           </span>
                           <span className="text-sm">
                             <Clock className="w-3 h-3 inline mr-1" />
