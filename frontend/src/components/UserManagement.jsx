@@ -12,20 +12,43 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Available permissions. Cada permiso abre uno o varios tabs del panel;
-// la descripción lista los tabs que cubre (ver TAB_PERMISSIONS en AdminPage).
+// Un permiso por cada tab del panel (mismo orden que el menú lateral).
 const PERMISSIONS = [
-  { id: 'control', label: 'Panel de Control', description: 'Tabs Control y Vueltas: gestión de la carrera en tiempo real' },
-  { id: 'athletes', label: 'Atletas', description: 'Tabs Atletas, Resultados 2026, Perfiles y Seleccionados' },
-  { id: 'finances', label: 'Finanzas', description: 'Tab Finanzas: ingresos y gastos' },
-  { id: 'volunteers', label: 'Voluntarios', description: 'Tabs Voluntarios (asignaciones) y Turnos' },
-  { id: 'sponsors', label: 'Patrocinadores', description: 'Tab Patrocinadores: gestión y proceso de cierre' },
-  { id: 'surveys', label: 'Encuestas', description: 'Tab Encuesta: ver resultados' },
-  { id: 'emails', label: 'Correos', description: 'Tabs Correos, Enviar Correos, WhatsApp y Prensa' },
-  { id: 'config', label: 'Configuración', description: 'Tabs Carrera, Camisetas y Capacitaciones' },
+  { id: 'race-control', label: 'Control', description: 'Gestión de la carrera en tiempo real' },
+  { id: 'laps', label: 'Vueltas', description: 'Registro de vueltas' },
   { id: 'scanner', label: 'Escáner QR', description: 'Registrar vueltas con QR' },
-  { id: 'users', label: 'Usuarios', description: 'Tab Usuarios: gestionar usuarios y permisos' },
+  { id: 'registrations', label: 'Atletas', description: 'Inscripciones y BIBs' },
+  { id: 'finances', label: 'Finanzas', description: 'Ingresos y gastos' },
+  { id: 'assignments', label: 'Voluntarios', description: 'Asignaciones de voluntarios' },
+  { id: 'shifts', label: 'Turnos', description: 'Puestos y turnos de voluntarios' },
+  { id: 'sponsors', label: 'Patrocinadores', description: 'Gestión y proceso de cierre' },
+  { id: 'surveys', label: 'Encuesta', description: 'Ver resultados de encuestas' },
+  { id: 'email-templates', label: 'Correos', description: 'Plantillas de correo' },
+  { id: 'results-2026', label: 'Resultados 2026', description: 'Vinculación de resultados 2026' },
+  { id: 'seleccionados', label: 'Seleccionados', description: 'Roster del Campeonato Mundial' },
+  { id: 'athlete-profiles', label: 'Perfiles', description: 'Perfiles de atletas' },
+  { id: 'email-composer', label: 'Enviar Correos', description: 'Envío masivo de correos' },
+  { id: 'whatsapp', label: 'WhatsApp', description: 'Envío de mensajes por WhatsApp' },
+  { id: 'tshirt', label: 'Camisetas', description: 'Votación de camisetas' },
+  { id: 'prensa', label: 'Prensa', description: 'Contactos de medios y entrevistas' },
+  { id: 'capacitaciones', label: 'Capacitaciones', description: 'Gestión de capacitaciones' },
+  { id: 'users', label: 'Usuarios', description: 'Gestionar usuarios y permisos' },
+  { id: 'race-config', label: 'Carrera', description: 'Configuración de la carrera' },
 ];
+
+// Permisos "sombrilla" históricos: abren todos los tabs de su grupo. Se
+// muestran solo si el usuario ya los tiene, para poder quitarlos.
+const LEGACY_PERMISSIONS = [
+  { id: 'control', label: 'Control + Vueltas (grupo)', description: 'Permiso histórico: abre Control y Vueltas' },
+  { id: 'athletes', label: 'Atletas completo (grupo)', description: 'Permiso histórico: abre Atletas, Resultados 2026, Perfiles y Seleccionados' },
+  { id: 'volunteers', label: 'Voluntarios completo (grupo)', description: 'Permiso histórico: abre Voluntarios y Turnos' },
+  { id: 'emails', label: 'Correos completo (grupo)', description: 'Permiso histórico: abre Correos, Enviar Correos, WhatsApp y Prensa' },
+  { id: 'config', label: 'Configuración completa (grupo)', description: 'Permiso histórico: abre Carrera, Camisetas y Capacitaciones' },
+];
+
+const permisoInfo = (permId) =>
+  PERMISSIONS.find((p) => p.id === permId) ||
+  LEGACY_PERMISSIONS.find((p) => p.id === permId);
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -392,7 +415,7 @@ export default function UserManagement() {
                     <div className="mt-4 pt-4 border-t">
                       <Label className="mb-2 block">Editar Permisos</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
-                        {PERMISSIONS.map(perm => (
+                        {[...PERMISSIONS, ...LEGACY_PERMISSIONS.filter(lp => editPermissions.includes(lp.id))].map(perm => (
                           <label 
                             key={perm.id}
                             className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
@@ -432,7 +455,7 @@ export default function UserManagement() {
                   ) : (
                     <div className="mt-3 flex flex-wrap gap-1">
                       {(user.permissions || []).map(perm => {
-                        const permInfo = PERMISSIONS.find(p => p.id === perm);
+                        const permInfo = permisoInfo(perm);
                         return (
                           <Badge key={perm} variant="secondary" className="text-xs">
                             {permInfo?.label || perm}

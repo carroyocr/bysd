@@ -94,11 +94,37 @@ def require_admin(authorization: Optional[str] = Header(None)) -> dict:
     return verify_admin_token(authorization)
 
 
+# Permisos por tab del panel. Cada tab tiene su permiso propio; los permisos
+# "sombrilla" historicos (control, athletes, volunteers, emails, config)
+# siguen valiendo y abren todos los tabs de su grupo. Los endpoints exigen la
+# sombrilla, y un permiso por tab satisface a la sombrilla de su grupo.
+TAB_PERMISSION_GROUPS = {
+    "race-control": "control",      # tab Control
+    "laps": "control",              # tab Vueltas
+    "registrations": "athletes",    # tab Atletas
+    "results-2026": "athletes",     # tab Resultados 2026
+    "athlete-profiles": "athletes", # tab Perfiles
+    "seleccionados": "athletes",    # tab Seleccionados
+    "assignments": "volunteers",    # tab Voluntarios (asignaciones)
+    "shifts": "volunteers",         # tab Turnos
+    "email-templates": "emails",    # tab Correos
+    "email-composer": "emails",     # tab Enviar Correos
+    "whatsapp": "emails",           # tab WhatsApp
+    "prensa": "emails",             # tab Prensa
+    "race-config": "config",        # tab Carrera
+    "tshirt": "config",             # tab Camisetas
+    "capacitaciones": "config",     # tab Capacitaciones
+}
+
+
 def has_permission(payload: dict, permission: str) -> bool:
     if payload.get("is_admin"):
         return True
     permisos = payload.get("permissions") or []
-    return "all" in permisos or permission in permisos
+    if "all" in permisos or permission in permisos:
+        return True
+    # Permisos por tab: cualquiera cuyo grupo sea el permiso exigido
+    return any(TAB_PERMISSION_GROUPS.get(p) == permission for p in permisos)
 
 
 def require_permission(permission: str) -> Callable:

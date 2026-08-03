@@ -26,28 +26,32 @@ import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
-// Map of tab IDs to permission IDs
+// Permisos que abren cada tab: el primero es el permiso propio del tab y el
+// segundo el permiso "sombrilla" histórico de su grupo (sigue valiendo).
 const TAB_PERMISSIONS = {
-  'control': 'control',
-  'lap-registry': 'control', // Same permission as control
-  'registrations': 'athletes',
-  'finances': 'finances',
-  'volunteers': 'volunteers',
-  'assignments': 'volunteers', // Same permission as volunteers
-  'sponsors': 'sponsors',
-  'surveys': 'surveys',
-  'config': 'config',
-  'users': 'users',
-  'emails': 'emails',
-  'results-2026': 'athletes', // Same permission as athletes
-  'athlete-profiles': 'athletes', // Same permission as athletes
-  'email-composer': 'emails', // Same permission as emails
-  'whatsapp': 'emails', // WhatsApp sender uses the emails permission
-  'tshirt': 'config', // T-shirt voting management (config permission)
-  'capacitaciones': 'config', // Trainings management
-  'seleccionados': 'athletes', // Campeonato Mundial roster (same permission as athletes)
-  'prensa': 'emails', // Press contacts + interview planner (emails permission)
+  'control': ['race-control', 'control'],
+  'lap-registry': ['laps', 'control'],
+  'registrations': ['registrations', 'athletes'],
+  'finances': ['finances'],
+  'volunteers': ['shifts', 'volunteers'],
+  'assignments': ['assignments', 'volunteers'],
+  'sponsors': ['sponsors'],
+  'surveys': ['surveys'],
+  'config': ['race-config', 'config'],
+  'users': ['users'],
+  'emails': ['email-templates', 'emails'],
+  'results-2026': ['results-2026', 'athletes'],
+  'athlete-profiles': ['athlete-profiles', 'athletes'],
+  'email-composer': ['email-composer', 'emails'],
+  'whatsapp': ['whatsapp', 'emails'],
+  'tshirt': ['tshirt', 'config'],
+  'capacitaciones': ['capacitaciones', 'config'],
+  'seleccionados': ['seleccionados', 'athletes'],
+  'prensa': ['prensa', 'emails'],
 };
+
+const canOpenTab = (permissions, tabId) =>
+  (TAB_PERMISSIONS[tabId] || []).some((p) => permissions.includes(p));
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
 const SPECIAL_PERMISSIONS = ['scanner'];
@@ -84,12 +88,12 @@ export default function AdminPage() {
         
         // Set initial tab based on permissions
         const requestedTab = searchParams.get('tab') || 'control';
-        if (isAdminUser || permissions.includes('all') || permissions.includes(TAB_PERMISSIONS[requestedTab])) {
+        if (isAdminUser || permissions.includes('all') || canOpenTab(permissions, requestedTab)) {
           setActiveTab(requestedTab);
         } else {
           // Find first allowed tab
-          const firstAllowedTab = Object.keys(TAB_PERMISSIONS).find(tab => 
-            permissions.includes(TAB_PERMISSIONS[tab])
+          const firstAllowedTab = Object.keys(TAB_PERMISSIONS).find(tab =>
+            canOpenTab(permissions, tab)
           );
           if (firstAllowedTab) {
             setActiveTab(firstAllowedTab);
@@ -118,14 +122,13 @@ export default function AdminPage() {
   const hasAccess = (tabId) => {
     if (isAdmin) return true;
     if (userPermissions.includes('all')) return true;
-    
+
     // Check for special permissions (like 'scanner')
     if (SPECIAL_PERMISSIONS.includes(tabId)) {
       return userPermissions.includes(tabId);
     }
-    
-    const requiredPermission = TAB_PERMISSIONS[tabId];
-    return userPermissions.includes(requiredPermission);
+
+    return canOpenTab(userPermissions, tabId);
   };
 
   const handleLogout = () => {
