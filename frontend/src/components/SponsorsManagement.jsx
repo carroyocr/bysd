@@ -4,15 +4,71 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
-import { 
-  Plus, Edit, Trash2, Save, X, Upload, Instagram, 
-  Building2, GripVertical, ExternalLink, Image
+import {
+  Plus, Edit, Trash2, Save, X, Upload, Instagram,
+  Building2, ExternalLink, Image, Phone, Mail, Globe, User,
+  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Pipeline del proceso de cierre (mismo orden que el backend). "Prospecto" y
+// "Declinado" complementan la lista original: inicio y salida negativa.
+const STATUS_OPTIONS = [
+  { value: 'prospecto', label: 'Prospecto', badgeClass: 'bg-gray-100 text-gray-700' },
+  { value: 'envio_informacion', label: 'Envío de Información', badgeClass: 'bg-blue-100 text-blue-700' },
+  { value: 'llamada_primer_contacto', label: 'Llamada de Primer Contacto', badgeClass: 'bg-sky-100 text-sky-700' },
+  { value: 'reunion', label: 'Reunión (física o virtual)', badgeClass: 'bg-indigo-100 text-indigo-700' },
+  { value: 'retroalimentacion', label: 'Retroalimentación', badgeClass: 'bg-purple-100 text-purple-700' },
+  { value: 'cierre', label: 'Cierre', badgeClass: 'bg-green-100 text-green-700' },
+  { value: 'facturacion', label: 'Facturación', badgeClass: 'bg-emerald-100 text-emerald-700' },
+  { value: 'pago', label: 'Pago', badgeClass: 'bg-teal-100 text-teal-700' },
+  { value: 'declinado', label: 'Declinado', badgeClass: 'bg-red-100 text-red-700' },
+];
+
+// A partir de "cierre" el patrocinador se publica en el sitio
+const PUBLISHED_STATUSES = ['cierre', 'facturacion', 'pago'];
+
+const getStatusInfo = (status) =>
+  STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
+
+const isPublished = (sponsor) =>
+  sponsor.is_active && (!sponsor.status || PUBLISHED_STATUSES.includes(sponsor.status));
+
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+  instagram: '',
+  razon_social: '',
+  rnc: '',
+  nombre_contacto: '',
+  telefono: '',
+  correo: '',
+  pagina_web: '',
+  propuesta_categoria: '',
+  propuesta_monto: '',
+  status: 'prospecto',
+};
+
+const formatFechaHora = (iso) => {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('es-DO', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+};
+
+const formatMonto = (monto) => {
+  if (monto === null || monto === undefined || monto === '') return null;
+  return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(monto);
+};
 
 export default function SponsorsManagement() {
   const { raceCode, raceName } = useRaceConfig();
@@ -22,16 +78,17 @@ export default function SponsorsManagement() {
   const [editingSponsor, setEditingSponsor] = useState(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(null);
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    instagram: ''
-  });
+
+  // Bitácora modal
+  const [bitacoraSponsor, setBitacoraSponsor] = useState(null);
+  const [bitacoraNota, setBitacoraNota] = useState('');
+  const [savingNota, setSavingNota] = useState(false);
+
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const loadSponsors = useCallback(async () => {
     if (!raceCode) return;
-    
+
     setLoading(true);
     try {
       const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
@@ -52,19 +109,38 @@ export default function SponsorsManagement() {
   }, [loadSponsors]);
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', instagram: '' });
+    setFormData(EMPTY_FORM);
     setShowAddForm(false);
     setEditingSponsor(null);
   };
 
+  const buildPayload = () => ({
+    name: formData.name,
+    description: formData.description,
+    instagram: formData.instagram || null,
+    razon_social: formData.razon_social || null,
+    rnc: formData.rnc || null,
+    nombre_contacto: formData.nombre_contacto || null,
+    telefono: formData.telefono || null,
+    correo: formData.correo || null,
+    pagina_web: formData.pagina_web || null,
+    propuesta_categoria: formData.propuesta_categoria || null,
+    propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
+    status: formData.status || 'prospecto',
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.description.trim()) {
       toast.error('Nombre y descripción son requeridos');
       return;
     }
-    
+    if (formData.propuesta_monto !== '' && isNaN(parseFloat(formData.propuesta_monto))) {
+      toast.error('El monto de la propuesta debe ser un número');
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingSponsor) {
@@ -74,14 +150,10 @@ export default function SponsorsManagement() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: formData.name,
-              description: formData.description,
-              instagram: formData.instagram || null
-            })
+            body: JSON.stringify(buildPayload())
           }
         );
-        
+
         if (response.ok) {
           toast.success('Patrocinador actualizado');
           loadSponsors();
@@ -95,14 +167,9 @@ export default function SponsorsManagement() {
         const response = await adminFetch(`${API_URL}/api/sponsors/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: formData.name,
-            description: formData.description,
-            instagram: formData.instagram || null,
-            race_code: raceCode
-          })
+          body: JSON.stringify({ ...buildPayload(), race_code: raceCode })
         });
-        
+
         if (response.ok) {
           toast.success('Patrocinador creado');
           loadSponsors();
@@ -125,20 +192,53 @@ export default function SponsorsManagement() {
     setFormData({
       name: sponsor.name,
       description: sponsor.description,
-      instagram: sponsor.instagram || ''
+      instagram: sponsor.instagram || '',
+      razon_social: sponsor.razon_social || '',
+      rnc: sponsor.rnc || '',
+      nombre_contacto: sponsor.nombre_contacto || '',
+      telefono: sponsor.telefono || '',
+      correo: sponsor.correo || '',
+      pagina_web: sponsor.pagina_web || '',
+      propuesta_categoria: sponsor.propuesta_categoria || '',
+      propuesta_monto: sponsor.propuesta_monto ?? '',
+      status: sponsor.status || 'prospecto',
     });
     setShowAddForm(true);
   };
 
+  const handleStatusChange = async (sponsor, status) => {
+    if ((sponsor.status || 'prospecto') === status) return;
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        }
+      );
+      if (response.ok) {
+        const info = getStatusInfo(status);
+        toast.success(`Status actualizado a "${info.label}"`);
+        loadSponsors();
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Error al actualizar status');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    }
+  };
+
   const handleDelete = async (sponsorName) => {
     if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Esta acción no se puede deshacer.`)) return;
-    
+
     try {
       const response = await adminFetch(
         `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
         { method: 'DELETE' }
       );
-      
+
       if (response.ok) {
         toast.success('Patrocinador eliminado permanentemente');
         // Update local state immediately for better UX
@@ -154,12 +254,12 @@ export default function SponsorsManagement() {
 
   const handleLogoUpload = async (sponsorName, file) => {
     if (!file) return;
-    
+
     setUploadingLogo(sponsorName);
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
       const response = await adminFetch(
         `${API_URL}/api/sponsors/upload-logo/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
@@ -168,7 +268,7 @@ export default function SponsorsManagement() {
           body: formData
         }
       );
-      
+
       if (response.ok) {
         toast.success('Logo subido exitosamente');
         loadSponsors();
@@ -182,6 +282,57 @@ export default function SponsorsManagement() {
     } finally {
       setUploadingLogo(null);
     }
+  };
+
+  /* ---------------- Bitácora ---------------- */
+
+  const openBitacora = (sponsor) => {
+    setBitacoraSponsor(sponsor);
+    setBitacoraNota('');
+  };
+
+  const handleAddNota = async () => {
+    if (!bitacoraNota.trim()) {
+      toast.error('Escribe la nota del contacto');
+      return;
+    }
+    setSavingNota(true);
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(bitacoraSponsor.name)}?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nota: bitacoraNota })
+        }
+      );
+      if (response.ok) {
+        toast.success('Contacto registrado');
+        setBitacoraNota('');
+        // Refrescar y mantener el modal abierto con datos nuevos
+        const res = await adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
+        if (res.ok) {
+          const data = await res.json();
+          const nuevos = data.sponsors || [];
+          setSponsors(nuevos);
+          const actualizado = nuevos.find((s) => s.name === bitacoraSponsor.name);
+          if (actualizado) setBitacoraSponsor(actualizado);
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Error al registrar contacto');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingNota(false);
+    }
+  };
+
+  const ultimoContacto = (sponsor) => {
+    const entradas = sponsor.bitacora || [];
+    if (entradas.length === 0) return null;
+    return entradas[entradas.length - 1];
   };
 
   if (loading) {
@@ -198,7 +349,10 @@ export default function SponsorsManagement() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Patrocinadores</h2>
-          <p className="text-muted-foreground">Gestiona los patrocinadores del evento • {sponsors.length} registrados</p>
+          <p className="text-muted-foreground">
+            Gestiona los patrocinadores y su proceso de cierre • {sponsors.length} registrados •{' '}
+            {sponsors.filter(isPublished).length} publicados en el sitio
+          </p>
         </div>
         <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
           <Plus className="w-4 h-4 mr-2" />
@@ -243,7 +397,7 @@ export default function SponsorsManagement() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="description">Descripción *</Label>
                 <textarea
@@ -256,7 +410,126 @@ export default function SponsorsManagement() {
                   data-testid="sponsor-description-input"
                 />
               </div>
-              
+
+              {/* Datos comerciales */}
+              <div className="pt-3 border-t">
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Landmark className="w-4 h-4" />
+                  Datos Comerciales
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="razon_social">Razón Social</Label>
+                    <Input
+                      id="razon_social"
+                      value={formData.razon_social}
+                      onChange={(e) => setFormData(prev => ({ ...prev, razon_social: e.target.value }))}
+                      placeholder="Ej: Industrias Banilejas, S.A.S."
+                      data-testid="sponsor-razon-social-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rnc">RNC</Label>
+                    <Input
+                      id="rnc"
+                      value={formData.rnc}
+                      onChange={(e) => setFormData(prev => ({ ...prev, rnc: e.target.value }))}
+                      placeholder="1-01-00000-0"
+                      data-testid="sponsor-rnc-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nombre_contacto">Nombre de Contacto</Label>
+                    <Input
+                      id="nombre_contacto"
+                      value={formData.nombre_contacto}
+                      onChange={(e) => setFormData(prev => ({ ...prev, nombre_contacto: e.target.value }))}
+                      placeholder="Persona con quien se gestiona"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Teléfono</Label>
+                    <Input
+                      id="telefono"
+                      value={formData.telefono}
+                      onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                      placeholder="809-000-0000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="correo">Correo</Label>
+                    <Input
+                      id="correo"
+                      type="email"
+                      value={formData.correo}
+                      onChange={(e) => setFormData(prev => ({ ...prev, correo: e.target.value }))}
+                      placeholder="contacto@empresa.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pagina_web">Página Web</Label>
+                    <Input
+                      id="pagina_web"
+                      value={formData.pagina_web}
+                      onChange={(e) => setFormData(prev => ({ ...prev, pagina_web: e.target.value }))}
+                      placeholder="www.empresa.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Propuesta */}
+              <div className="pt-3 border-t">
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <BadgeDollarSign className="w-4 h-4" />
+                  Propuesta de Patrocinio
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="propuesta_categoria">Categoría</Label>
+                    <Input
+                      id="propuesta_categoria"
+                      value={formData.propuesta_categoria}
+                      onChange={(e) => setFormData(prev => ({ ...prev, propuesta_categoria: e.target.value }))}
+                      placeholder="Ej: Platino, Oro, Plata, Bronce"
+                      data-testid="sponsor-categoria-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="propuesta_monto">Monto (RD$)</Label>
+                    <Input
+                      id="propuesta_monto"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.propuesta_monto}
+                      onChange={(e) => setFormData(prev => ({ ...prev, propuesta_monto: e.target.value }))}
+                      placeholder="0.00"
+                      data-testid="sponsor-monto-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="pt-3 border-t space-y-2">
+                <Label htmlFor="status">Status del Proceso de Cierre</Label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-md bg-background"
+                  data-testid="sponsor-status-select"
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  El patrocinador solo se publica en el sitio cuando el proceso llega a <strong>Cierre</strong> (o Facturación / Pago).
+                </p>
+              </div>
+
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving}>
                   <Save className="w-4 h-4 mr-2" />
@@ -285,7 +558,11 @@ export default function SponsorsManagement() {
             </CardContent>
           </Card>
         ) : (
-          sponsors.map((sponsor, index) => (
+          sponsors.map((sponsor) => {
+            const statusInfo = getStatusInfo(sponsor.status);
+            const publicado = isPublished(sponsor);
+            const ultima = ultimoContacto(sponsor);
+            return (
             <Card key={sponsor.name} className={!sponsor.is_active ? 'opacity-50' : ''}>
               <CardContent className="py-4">
                 <div className="flex items-start gap-4">
@@ -293,8 +570,8 @@ export default function SponsorsManagement() {
                   <div className="flex-shrink-0">
                     {sponsor.logo_url ? (
                       <div className="w-20 h-20 rounded-lg border overflow-hidden bg-white flex items-center justify-center">
-                        <img 
-                          src={`${API_URL}${sponsor.logo_url}`} 
+                        <img
+                          src={`${API_URL}${sponsor.logo_url}`}
                           alt={sponsor.name}
                           className="max-w-full max-h-full object-contain p-1"
                           onError={(e) => { e.target.style.display = 'none'; }}
@@ -305,7 +582,7 @@ export default function SponsorsManagement() {
                         <Image className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
-                    
+
                     {/* Logo Upload */}
                     <label className="block mt-2 cursor-pointer">
                       <input
@@ -321,19 +598,40 @@ export default function SponsorsManagement() {
                       </div>
                     </label>
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-lg flex items-center gap-2 flex-wrap">
                           {sponsor.name}
                           {!sponsor.is_active && (
                             <Badge variant="outline" className="text-xs">Inactivo</Badge>
                           )}
+                          <Badge className={`text-xs ${statusInfo.badgeClass} hover:${statusInfo.badgeClass}`}>
+                            {statusInfo.label}
+                          </Badge>
+                          {publicado ? (
+                            <Badge className="text-xs bg-green-600 text-white hover:bg-green-600 flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              Publicado
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground flex items-center gap-1">
+                              <EyeOff className="w-3 h-3" />
+                              No publicado
+                            </Badge>
+                          )}
                         </h3>
+                        {(sponsor.razon_social || sponsor.rnc) && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {sponsor.razon_social}
+                            {sponsor.razon_social && sponsor.rnc ? ' · ' : ''}
+                            {sponsor.rnc ? `RNC: ${sponsor.rnc}` : ''}
+                          </div>
+                        )}
                         {sponsor.instagram && (
-                          <a 
+                          <a
                             href={sponsor.instagram}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -345,9 +643,21 @@ export default function SponsorsManagement() {
                           </a>
                         )}
                       </div>
-                      
+
                       {/* Actions */}
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openBitacora(sponsor)}
+                          title="Bitácora de contactos"
+                          data-testid={`bitacora-sponsor-${sponsor.name}`}
+                        >
+                          <NotebookPen className="w-4 h-4" />
+                          <span className="ml-1 text-xs hidden md:inline">
+                            Bitácora{(sponsor.bitacora || []).length > 0 ? ` (${sponsor.bitacora.length})` : ''}
+                          </span>
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -366,15 +676,69 @@ export default function SponsorsManagement() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                       {sponsor.description}
                     </p>
+
+                    {/* Contact + proposal summary */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                      {sponsor.nombre_contacto && (
+                        <span className="flex items-center gap-1"><User className="w-3 h-3" />{sponsor.nombre_contacto}</span>
+                      )}
+                      {sponsor.telefono && (
+                        <a href={`tel:${sponsor.telefono}`} className="flex items-center gap-1 hover:underline">
+                          <Phone className="w-3 h-3" />{sponsor.telefono}
+                        </a>
+                      )}
+                      {sponsor.correo && (
+                        <a href={`mailto:${sponsor.correo}`} className="flex items-center gap-1 hover:underline">
+                          <Mail className="w-3 h-3" />{sponsor.correo}
+                        </a>
+                      )}
+                      {sponsor.pagina_web && (
+                        <a
+                          href={sponsor.pagina_web.startsWith('http') ? sponsor.pagina_web : `https://${sponsor.pagina_web}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 hover:underline"
+                        >
+                          <Globe className="w-3 h-3" />{sponsor.pagina_web}
+                        </a>
+                      )}
+                      {(sponsor.propuesta_categoria || sponsor.propuesta_monto != null) && (
+                        <span className="flex items-center gap-1 font-medium text-foreground">
+                          <BadgeDollarSign className="w-3 h-3" />
+                          {sponsor.propuesta_categoria || 'Propuesta'}
+                          {formatMonto(sponsor.propuesta_monto) ? ` · ${formatMonto(sponsor.propuesta_monto)}` : ''}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Status quick-change + último contacto */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
+                      <select
+                        value={sponsor.status || 'prospecto'}
+                        onChange={(e) => handleStatusChange(sponsor, e.target.value)}
+                        className="px-2 py-1 text-xs border rounded-md bg-background"
+                        data-testid={`status-select-${sponsor.name}`}
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                      {ultima && (
+                        <span className="text-xs text-muted-foreground">
+                          Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -383,11 +747,66 @@ export default function SponsorsManagement() {
         <Card className="bg-amber-50 border-amber-200">
           <CardContent className="py-4">
             <p className="text-sm text-amber-800">
-              <strong>Nota:</strong> Los patrocinadores de BYSD-2026 están configurados de forma estática 
+              <strong>Nota:</strong> Los patrocinadores de BYSD-2026 están configurados de forma estática
               y no se pueden modificar desde este panel. Esta funcionalidad está disponible para nuevas carreras.
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Bitácora Modal */}
+      {bitacoraSponsor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <NotebookPen className="w-5 h-5 text-[#E8772E]" />
+                  Bitácora — {bitacoraSponsor.name}
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setBitacoraSponsor(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto space-y-4">
+              {/* Add note */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Registrar contacto (llamada, correo, reunión...)"
+                  value={bitacoraNota}
+                  onChange={(e) => setBitacoraNota(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddNota(); }}
+                  data-testid="bitacora-nota-input"
+                />
+                <Button onClick={handleAddNota} disabled={savingNota} data-testid="bitacora-add-btn">
+                  {savingNota ? 'Guardando...' : 'Registrar'}
+                </Button>
+              </div>
+
+              {/* Entries (newest first) */}
+              {(bitacoraSponsor.bitacora || []).length === 0 ? (
+                <p className="text-sm text-muted-foreground italic text-center py-4">
+                  Aún no hay contactos registrados con este patrocinador
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {[...(bitacoraSponsor.bitacora || [])].reverse().map((entrada) => (
+                    <div
+                      key={entrada.id}
+                      className={`p-3 rounded-lg border text-sm ${
+                        entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
+                      }`}
+                    >
+                      <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
+                      <div className="mt-0.5">{entrada.nota}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

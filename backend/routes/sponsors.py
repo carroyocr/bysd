@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
+import uuid
 from pathlib import Path
 
 from services.auth import require_permission
@@ -12,6 +13,44 @@ router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
 # El listado publico de la web es el unico endpoint abierto; el resto (crear,
 # editar, borrar, subir logos) exige el permiso "sponsors".
 solo_sponsors = Depends(require_permission("sponsors"))
+
+# Pipeline del proceso de cierre de un patrocinio. "prospecto" (aun sin primer
+# contacto) y "declinado" (no se concreto) se agregan a la lista pedida para
+# cubrir el inicio y la salida negativa del proceso.
+SPONSOR_STATUSES = (
+    "prospecto",
+    "envio_informacion",
+    "llamada_primer_contacto",
+    "reunion",
+    "retroalimentacion",
+    "cierre",
+    "facturacion",
+    "pago",
+    "declinado",
+)
+
+STATUS_LABELS = {
+    "prospecto": "Prospecto",
+    "envio_informacion": "Envío de Información",
+    "llamada_primer_contacto": "Llamada de Primer Contacto",
+    "reunion": "Reunión (física o virtual)",
+    "retroalimentacion": "Retroalimentación",
+    "cierre": "Cierre",
+    "facturacion": "Facturación",
+    "pago": "Pago",
+    "declinado": "Declinado",
+}
+
+# Solo desde "cierre" en adelante el patrocinador aparece publicado en el
+# sitio. Los documentos viejos sin status siguen publicados (legacy).
+PUBLISHED_STATUSES = ("cierre", "facturacion", "pago")
+
+# El endpoint publico solo expone los campos de la vitrina del sitio; los
+# datos comerciales (RNC, montos, bitacora, contactos) son solo del panel.
+PUBLIC_FIELDS = {
+    "_id": 0, "name": 1, "description": 1, "instagram": 1,
+    "logo_url": 1, "order": 1, "race_code": 1, "is_active": 1,
+}
 
 # Uploads directory for sponsor logos
 UPLOADS_DIR = Path(__file__).parent.parent / "static" / "uploads" / "sponsors"
@@ -24,6 +63,16 @@ class SponsorCreate(BaseModel):
     instagram: Optional[str] = None
     race_code: str
     order: Optional[int] = 0
+    # Datos comerciales (CRM)
+    razon_social: Optional[str] = None
+    rnc: Optional[str] = None
+    nombre_contacto: Optional[str] = None
+    telefono: Optional[str] = None
+    correo: Optional[str] = None
+    pagina_web: Optional[str] = None
+    propuesta_categoria: Optional[str] = None
+    propuesta_monto: Optional[float] = None
+    status: Optional[str] = "prospecto"
 
 
 class SponsorUpdate(BaseModel):
@@ -32,6 +81,19 @@ class SponsorUpdate(BaseModel):
     instagram: Optional[str] = None
     order: Optional[int] = None
     is_active: Optional[bool] = None
+    razon_social: Optional[str] = None
+    rnc: Optional[str] = None
+    nombre_contacto: Optional[str] = None
+    telefono: Optional[str] = None
+    correo: Optional[str] = None
+    pagina_web: Optional[str] = None
+    propuesta_categoria: Optional[str] = None
+    propuesta_monto: Optional[float] = None
+    status: Optional[str] = None
+
+
+class BitacoraEntry(BaseModel):
+    nota: str
 
 
 def get_db():
@@ -41,12 +103,22 @@ def get_db():
 
 @router.get("/race/{race_code}")
 async def get_sponsors_by_race(race_code: str, db=Depends(get_db)):
-    """Get all sponsors for a specific race"""
+    """Get published sponsors for a specific race (public endpoint)"""
+    # Solo se publica un patrocinador cuando el proceso llega a "cierre"
+    # (o mas alla). Los documentos sin status son legacy y siguen visibles.
     sponsors = await db.sponsors.find(
-        {"race_code": race_code.upper(), "is_active": True},
-        {"_id": 0}
+        {
+            "race_code": race_code.upper(),
+            "is_active": True,
+            "$or": [
+                {"status": {"$in": list(PUBLISHED_STATUSES)}},
+                {"status": {"$exists": False}},
+                {"status": None},
+            ],
+        },
+        PUBLIC_FIELDS
     ).sort("order", 1).to_list(100)
-    
+
     return {"sponsors": sponsors, "race_code": race_code.upper()}
 
 
@@ -80,6 +152,10 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     )
     next_order = (last_sponsor.get("order", 0) + 1) if last_sponsor else 1
     
+    status = sponsor.status or "prospecto"
+    if status not in SPONSOR_STATUSES:
+        raise HTTPException(status_code=400, detail="Status inválido")
+
     sponsor_data = {
         "name": sponsor.name,
         "description": sponsor.description,
@@ -88,6 +164,16 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "order": sponsor.order or next_order,
         "logo_url": None,
         "is_active": True,
+        "razon_social": (sponsor.razon_social or "").strip(),
+        "rnc": (sponsor.rnc or "").strip(),
+        "nombre_contacto": (sponsor.nombre_contacto or "").strip(),
+        "telefono": (sponsor.telefono or "").strip(),
+        "correo": (sponsor.correo or "").strip(),
+        "pagina_web": (sponsor.pagina_web or "").strip(),
+        "propuesta_categoria": (sponsor.propuesta_categoria or "").strip(),
+        "propuesta_monto": sponsor.propuesta_monto,
+        "status": status,
+        "bitacora": [],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
@@ -116,17 +202,35 @@ async def update_sponsor(
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
     
     update_data = {k: v for k, v in updates.dict().items() if v is not None}
-    
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No se proporcionaron datos para actualizar")
-    
+
+    if "status" in update_data and update_data["status"] not in SPONSOR_STATUSES:
+        raise HTTPException(status_code=400, detail="Status inválido")
+
     update_data["updated_at"] = datetime.now(timezone.utc)
-    
+
+    ops = {"$set": update_data}
+
+    # Cada cambio de status queda registrado en la bitacora automaticamente
+    old_status = sponsor.get("status") or "prospecto"
+    new_status = update_data.get("status")
+    if new_status and new_status != old_status:
+        ops["$push"] = {
+            "bitacora": {
+                "id": str(uuid.uuid4()),
+                "fecha": datetime.now(timezone.utc).isoformat(),
+                "nota": f"Status: {STATUS_LABELS.get(old_status, old_status)} → {STATUS_LABELS.get(new_status, new_status)}",
+                "tipo": "status",
+            }
+        }
+
     await db.sponsors.update_one(
         {"name": sponsor_name, "race_code": race_code.upper()},
-        {"$set": update_data}
+        ops
     )
-    
+
     return {"message": "Patrocinador actualizado exitosamente"}
 
 
@@ -208,6 +312,37 @@ async def hard_delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
     
     return {"message": "Patrocinador eliminado permanentemente"}
+
+
+@router.post("/bitacora/{sponsor_name}", dependencies=[solo_sponsors])
+async def add_bitacora_entry(
+    sponsor_name: str,
+    race_code: str,
+    entry: BitacoraEntry,
+    db=Depends(get_db)
+):
+    """Registrar un contacto en la bitacora del patrocinador"""
+    nota = entry.nota.strip()
+    if not nota:
+        raise HTTPException(status_code=400, detail="La nota no puede estar vacía")
+
+    result = await db.sponsors.update_one(
+        {"name": sponsor_name, "race_code": race_code.upper()},
+        {
+            "$push": {
+                "bitacora": {
+                    "id": str(uuid.uuid4()),
+                    "fecha": datetime.now(timezone.utc).isoformat(),
+                    "nota": nota,
+                    "tipo": "contacto",
+                }
+            },
+            "$set": {"updated_at": datetime.now(timezone.utc)},
+        }
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
+    return {"message": "Contacto registrado en la bitácora"}
 
 
 @router.post("/reorder", dependencies=[solo_sponsors])

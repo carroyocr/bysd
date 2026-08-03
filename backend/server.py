@@ -400,6 +400,12 @@ app.include_router(album_router, prefix="/api")
 from routes.capacitaciones import router as capacitaciones_router
 app.include_router(capacitaciones_router, prefix="/api")
 
+from routes.seleccionados import router as seleccionados_router
+app.include_router(seleccionados_router, prefix="/api")
+
+from routes.prensa import router as prensa_router
+app.include_router(prensa_router, prefix="/api")
+
 cors_origins = [o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()]
 
 app.add_middleware(

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -22,6 +22,8 @@ import EmailComposer from '../components/EmailComposer';
 import WhatsAppComposer from '../components/WhatsAppComposer';
 import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
+import SeleccionadosManagement from '../components/SeleccionadosManagement';
+import PrensaManagement from '../components/PrensaManagement';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
 // Map of tab IDs to permission IDs
@@ -43,6 +45,8 @@ const TAB_PERMISSIONS = {
   'whatsapp': 'emails', // WhatsApp sender uses the emails permission
   'tshirt': 'config', // T-shirt voting management (config permission)
   'capacitaciones': 'config', // Trainings management
+  'seleccionados': 'athletes', // Campeonato Mundial roster (same permission as athletes)
+  'prensa': 'emails', // Press contacts + interview planner (emails permission)
 };
 
 // Special permissions that are not tabs (used for menu buttons like scanner)
@@ -255,6 +259,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">2026</span>
               </TabsTrigger>
             )}
+            {/* 10b. Seleccionados (Campeonato Mundial) */}
+            {hasAccess('seleccionados') && (
+              <TabsTrigger value="seleccionados" className="flex items-center gap-2" data-testid="tab-seleccionados">
+                <Medal className="w-4 h-4" />
+                <span className="hidden sm:inline">Seleccionados</span>
+                <span className="sm:hidden">Selecc.</span>
+              </TabsTrigger>
+            )}
             {/* 11. Perfiles de Atletas */}
             {hasAccess('athlete-profiles') && (
               <TabsTrigger value="athlete-profiles" className="flex items-center gap-2" data-testid="tab-athlete-profiles">
@@ -284,6 +296,13 @@ export default function AdminPage() {
                 <Shirt className="w-4 h-4" />
                 <span className="hidden sm:inline">Camisetas</span>
                 <span className="sm:hidden">Camisetas</span>
+              </TabsTrigger>
+            )}
+            {/* 13b. Prensa */}
+            {hasAccess('prensa') && (
+              <TabsTrigger value="prensa" className="flex items-center gap-2" data-testid="tab-prensa">
+                <Newspaper className="w-4 h-4" />
+                <span>Prensa</span>
               </TabsTrigger>
             )}
             {/* 14. Capacitaciones */}
@@ -411,6 +430,18 @@ export default function AdminPage() {
           {hasAccess('capacitaciones') && (
             <TabsContent value="capacitaciones">
               <CapacitacionesManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('seleccionados') && (
+            <TabsContent value="seleccionados">
+              <SeleccionadosManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('prensa') && (
+            <TabsContent value="prensa">
+              <PrensaManagement />
             </TabsContent>
           )}
           </div>
