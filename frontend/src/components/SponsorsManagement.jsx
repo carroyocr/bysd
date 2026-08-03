@@ -592,7 +592,9 @@ export default function SponsorsManagement() {
         </Card>
       )}
 
-      {/* Sponsors List */}
+      {/* Sponsors List (oculta mientras el formulario está abierto, para
+          concentrar la vista en el patrocinador que se edita) */}
+      {!showAddForm && (
       <div className="grid gap-4">
         {sponsors.length === 0 ? (
           <Card>
@@ -855,6 +857,7 @@ export default function SponsorsManagement() {
           })
         )}
       </div>
+      )}
 
       {/* Info for legacy races */}
       {raceCode === 'BYSD-2026' && (
