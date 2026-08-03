@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   User, Mail, Phone, Calendar, MapPin, Heart, Shield, 
   Shirt, CheckCircle, AlertCircle, ArrowLeft, ArrowRight, 
-  Loader2, Info, Users, Clipboard, Clock, Check, Edit2, XCircle
+  Loader2, Info, Users, Clipboard, Clock, Check, Edit2, XCircle,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -86,6 +87,12 @@ export default function VoluntarioRegistroPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState([]); // Array of slot IDs
   const [selectedEvento, setSelectedEvento] = useState('carrera'); // Event chosen by volunteer
+  // Posiciones expandidas en el acordeón de turnos (cargan contraídas)
+  const [expandedPositions, setExpandedPositions] = useState({});
+
+  const togglePosition = (puesto) => {
+    setExpandedPositions(prev => ({ ...prev, [puesto]: !prev[puesto] }));
+  };
   
   // Check for edit token in URL
   useEffect(() => {
@@ -250,6 +257,7 @@ export default function VoluntarioRegistroPage() {
     if (evento === selectedEvento) return;
     setSelectedEvento(evento);
     setSelectedSlots([]);
+    setExpandedPositions({});
   };
 
   // Check if two time slots conflict
@@ -1052,12 +1060,33 @@ export default function VoluntarioRegistroPage() {
                         No hay turnos disponibles en este momento.
                       </div>
                     ) : (
-                      <div className="space-y-6">
-                        {availableSlots.positions.map((position) => (
-                          <Card key={position.puesto} className="border-border">
-                            <CardHeader className="py-3 px-4 bg-muted/50">
-                              <CardTitle className="text-base font-semibold">{position.puesto}</CardTitle>
+                      <div className="space-y-3">
+                        {availableSlots.positions.map((position) => {
+                          const isOpen = !!expandedPositions[position.puesto];
+                          const seleccionadosEnPosicion = position.turnos.filter(t => selectedSlots.includes(t.slot_id)).length;
+                          return (
+                          <Card key={position.puesto} className={`border-border ${isOpen ? '' : 'shadow-none'}`}>
+                            <CardHeader
+                              className="py-3 px-4 bg-muted/50 cursor-pointer select-none"
+                              onClick={() => togglePosition(position.puesto)}
+                              data-testid={`position-accordion-${position.puesto}`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <CardTitle className="text-base font-semibold">{position.puesto}</CardTitle>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  {seleccionadosEnPosicion > 0 && (
+                                    <Badge className="text-xs">{seleccionadosEnPosicion} seleccionado{seleccionadosEnPosicion > 1 ? 's' : ''}</Badge>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">{position.turnos.length} turnos</Badge>
+                                  {isOpen ? (
+                                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </div>
                             </CardHeader>
+                            {isOpen && (
                             <CardContent className="p-4">
                               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
                                 {position.turnos.map((turno) => {
@@ -1108,8 +1137,10 @@ export default function VoluntarioRegistroPage() {
                                 })}
                               </div>
                             </CardContent>
+                            )}
                           </Card>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     
