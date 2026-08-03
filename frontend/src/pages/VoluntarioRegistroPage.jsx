@@ -136,36 +136,39 @@ export default function VoluntarioRegistroPage() {
     }
   }, [searchParams]);
   
+  // Mapea una postulación del backend a los campos del formulario
+  const mapRegistrationToForm = (data) => ({
+    nombre: data.nombre || '',
+    apellidos: data.apellidos || '',
+    fecha_nacimiento: data.fecha_nacimiento || '',
+    sexo: data.sexo || '',
+    nacionalidad: data.nacionalidad || '',
+    telefono: data.telefono || '',
+    ciudad_residencia: data.ciudad_residencia || '',
+    experiencia_voluntariado: data.experiencia_voluntariado || 'No',
+    experiencia_voluntariado_detalle: data.experiencia_voluntariado_detalle || '',
+    tipo_sangre: data.tipo_sangre || '',
+    condicion_medica: data.condicion_medica || 'No',
+    condicion_medica_detalle: data.condicion_medica_detalle || '',
+    alergias: data.alergias || 'No',
+    alergias_detalle: data.alergias_detalle || '',
+    contacto_emergencia_nombre: data.contacto_emergencia_nombre || '',
+    contacto_emergencia_relacion: data.contacto_emergencia_relacion || '',
+    contacto_emergencia_telefono: data.contacto_emergencia_telefono || '',
+    talla_camiseta: data.talla_camiseta || '',
+    como_se_entero: data.como_se_entero || '',
+    comentarios: data.comentarios || '',
+  });
+
   const loadExistingRegistration = async (token) => {
     setLoadingExisting(true);
     try {
       const response = await fetch(`${API_URL}/api/volunteer-registration/by-token/${token}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setEmail(data.email || '');
-        setFormData({
-          nombre: data.nombre || '',
-          apellidos: data.apellidos || '',
-          fecha_nacimiento: data.fecha_nacimiento || '',
-          sexo: data.sexo || '',
-          nacionalidad: data.nacionalidad || '',
-          telefono: data.telefono || '',
-          ciudad_residencia: data.ciudad_residencia || '',
-          experiencia_voluntariado: data.experiencia_voluntariado || 'No',
-          experiencia_voluntariado_detalle: data.experiencia_voluntariado_detalle || '',
-          tipo_sangre: data.tipo_sangre || '',
-          condicion_medica: data.condicion_medica || 'No',
-          condicion_medica_detalle: data.condicion_medica_detalle || '',
-          alergias: data.alergias || 'No',
-          alergias_detalle: data.alergias_detalle || '',
-          contacto_emergencia_nombre: data.contacto_emergencia_nombre || '',
-          contacto_emergencia_relacion: data.contacto_emergencia_relacion || '',
-          contacto_emergencia_telefono: data.contacto_emergencia_telefono || '',
-          talla_camiseta: data.talla_camiseta || '',
-          como_se_entero: data.como_se_entero || '',
-          comentarios: data.comentarios || '',
-        });
+        setFormData(mapRegistrationToForm(data));
         setSelectedSlots(data.slots_interes || []);
         setSelectedEvento(data.evento || 'carrera');
         setEmailVerified(true);
@@ -383,13 +386,36 @@ export default function VoluntarioRegistroPage() {
     loadExistingRegistration(registration.edit_token);
   };
 
-  // Inicia una postulación nueva (formulario vacío) para el evento indicado
-  const startNewRegistration = (evento) => {
-    setFormData({ ...FORM_VACIO });
-    setSelectedEvento(evento);
-    setSelectedSlots([]);
+  // Inicia una postulación nueva para el evento indicado. Los datos de la
+  // postulación existente se precargan para solo confirmarlos; lo único que
+  // queda pendiente es elegir los turnos del nuevo evento.
+  const startNewRegistration = async (evento) => {
     setEditMode(false);
     setEditToken(null);
+    setSelectedEvento(evento);
+    setSelectedSlots([]);
+
+    const base = existingRegistrations[0];
+    if (base?.edit_token) {
+      setLoadingExisting(true);
+      try {
+        const response = await fetch(`${API_URL}/api/volunteer-registration/by-token/${base.edit_token}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFormData(mapRegistrationToForm(data));
+          toast.success('Datos precargados de tu postulación anterior; confírmalos y elige los turnos');
+        } else {
+          setFormData({ ...FORM_VACIO });
+        }
+      } catch (error) {
+        setFormData({ ...FORM_VACIO });
+      } finally {
+        setLoadingExisting(false);
+      }
+    } else {
+      setFormData({ ...FORM_VACIO });
+    }
+
     setCurrentStep(1);
   };
 
