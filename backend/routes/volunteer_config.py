@@ -108,7 +108,9 @@ async def create_position(data: PositionCreate):
     return {"message": "Posición creada exitosamente", "position": data.nombre}
 
 
-@router.put("/positions/{nombre}")
+# {nombre:path} permite nombres con "/" (ej. "Área de Carpas / Zona de Atletas"):
+# el %2F llega decodificado al enrutador y sin esto la ruta no coincide (404).
+@router.put("/positions/{nombre:path}")
 async def update_position(nombre: str, data: PositionUpdate, evento: str = "carrera"):
     """Update a volunteer position"""
     from server import db
@@ -139,7 +141,7 @@ async def update_position(nombre: str, data: PositionUpdate, evento: str = "carr
     return {"message": "Posición actualizada exitosamente"}
 
 
-@router.delete("/positions/{nombre}")
+@router.delete("/positions/{nombre:path}")
 async def delete_position(nombre: str, evento: str = "carrera"):
     """Delete a volunteer position and its slots"""
     from server import db
