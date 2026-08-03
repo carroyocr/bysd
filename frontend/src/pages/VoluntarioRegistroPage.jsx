@@ -780,19 +780,23 @@ export default function VoluntarioRegistroPage() {
 
                 {!codeSent ? (
                   <>
-                    <Button
-                      onClick={() => sendVerificationCode()}
-                      disabled={sendingCode}
-                      className="w-full"
-                      data-testid="volunteer-send-code-btn"
-                    >
-                      {sendingCode ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
-                      ) : (
-                        'Enviar Código de Verificación'
-                      )}
-                    </Button>
-                    
+                    {/* Oculto cuando el correo ya está registrado: las opciones
+                        del panel de abajo son las acciones válidas */}
+                    {!emailAlreadyRegistered && (
+                      <Button
+                        onClick={() => sendVerificationCode()}
+                        disabled={sendingCode}
+                        className="w-full"
+                        data-testid="volunteer-send-code-btn"
+                      >
+                        {sendingCode ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</>
+                        ) : (
+                          'Enviar Código de Verificación'
+                        )}
+                      </Button>
+                    )}
+
                     {emailAlreadyRegistered && (
                       <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="flex items-start gap-3">
