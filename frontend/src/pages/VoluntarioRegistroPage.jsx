@@ -1442,7 +1442,7 @@ export default function VoluntarioRegistroPage() {
                   }}
                   className="flex-1"
                 >
-                  Mantener Postulación
+                  Mantener
                 </Button>
                 <Button
                   variant="destructive"
@@ -1454,7 +1454,7 @@ export default function VoluntarioRegistroPage() {
                   {cancelling ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cancelando...</>
                   ) : (
-                    'Confirmar Cancelación'
+                    'Confirmar'
                   )}
                 </Button>
               </div>
