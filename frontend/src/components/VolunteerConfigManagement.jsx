@@ -113,7 +113,7 @@ const DIA_TIPO_OPTIONS = [
 // Event options (top-level grouping)
 const EVENTOS = [
   { value: "carrera", label: "Carrera Activa" },
-  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+  { value: "campeonato", label: "Campeonato Mundial por Equipos" }
 ];
 
 // Helper to get day type display info

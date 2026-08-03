@@ -31,7 +31,7 @@ def nombre_evento(active_race: Optional[dict], evento: Optional[str]) -> str:
     """Human name of the event a volunteer registered for: the active race's
     name for 'carrera', or the satellite championship label."""
     if evento == "campeonato":
-        return "Campeonato Satélite por Equipos"
+        return "Campeonato Mundial por Equipos"
     return (active_race or {}).get("name") or "Backyard Ultra Santo Domingo"
 
 

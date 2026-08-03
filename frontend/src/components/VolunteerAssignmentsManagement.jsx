@@ -12,7 +12,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Event options
 const EVENTO_OPTIONS = [
   { value: "carrera", label: "Carrera Activa" },
-  { value: "campeonato", label: "Campeonato Satélite por Equipos" }
+  { value: "campeonato", label: "Campeonato Mundial por Equipos" }
 ];
 
 // Day type display helpers
