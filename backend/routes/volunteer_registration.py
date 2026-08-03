@@ -27,6 +27,17 @@ def evento_query(evento: str) -> dict:
     return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
 
 
+def eventos_abiertos(active_race: Optional[dict]) -> List[str]:
+    """Eventos que aceptan postulaciones NUEVAS de voluntarios.
+
+    El campeonato siempre está abierto. El registro para la carrera se
+    enciende desde el panel (race_configurations.show_volunteer_carrera) y
+    está apagado por defecto, para no confundir a quien se postula."""
+    if (active_race or {}).get("show_volunteer_carrera") is True:
+        return ["carrera", "campeonato"]
+    return ["campeonato"]
+
+
 def nombre_evento(active_race: Optional[dict], evento: Optional[str]) -> str:
     """Human name of the event a volunteer registered for: the active race's
     name for 'carrera', or the satellite championship label."""
@@ -349,9 +360,10 @@ async def verify_code(request: VerificationConfirm, http_request: Request = None
             "edit_token": edit_token
         })
 
+    ya_registrados = {r["evento"] for r in registrations}
     eventos_disponibles = [
-        e for e in VALID_EVENTOS
-        if e not in {r["evento"] for r in registrations}
+        e for e in eventos_abiertos(active_race)
+        if e not in ya_registrados
     ]
 
     return {
@@ -389,6 +401,14 @@ async def register_volunteer(
     
     # Check if already registered for this specific event
     evento = data.evento if data.evento in VALID_EVENTOS else "carrera"
+
+    # No se aceptan postulaciones nuevas para un evento cerrado
+    if evento not in eventos_abiertos(active_race):
+        raise HTTPException(
+            status_code=400,
+            detail=f"El registro de voluntarios para {nombre_evento(active_race, evento)} está cerrado por ahora"
+        )
+
     existing = await db.volunteer_registrations.find_one({
         "email": email,
         "race_code": race_code,
@@ -486,6 +506,18 @@ async def update_volunteer_registration(token: str, data: VolunteerRegistrationD
     # Al editar no se permite cambiar a un evento donde el mismo correo
     # ya tiene otro registro
     evento = data.evento if data.evento in VALID_EVENTOS else "carrera"
+
+    # Quien ya está postulado puede seguir editando (o cancelar) su postulación
+    # aunque el evento esté cerrado; lo que no puede es mudarse a uno cerrado
+    evento_actual = existing.get("evento") or "carrera"
+    if evento != evento_actual:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        if evento not in eventos_abiertos(active_race):
+            raise HTTPException(
+                status_code=400,
+                detail=f"El registro de voluntarios para {nombre_evento(active_race, evento)} está cerrado por ahora"
+            )
+
     otro = await db.volunteer_registrations.find_one({
         "email": existing.get("email"),
         "race_code": existing.get("race_code"),

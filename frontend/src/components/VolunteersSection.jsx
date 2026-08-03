@@ -162,6 +162,11 @@ export default function VolunteersSection() {
                   <p className="text-muted-foreground">
                     ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
                   </p>
+                  {config?.show_volunteer_carrera !== true && (
+                    <p className="text-sm font-medium text-pink-700">
+                      Por ahora solo recibimos postulaciones para el Campeonato Mundial por Equipos.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
