@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, Trash2, Edit2, Save, X, Clock, Users, AlertCircle, 
-  Loader2, Download, RefreshCw, ChevronDown, ChevronUp, RotateCcw
+import {
+  Plus, Trash2, Edit2, Save, X, Clock, Users, AlertCircle,
+  Loader2, Download, RefreshCw, ChevronDown, ChevronUp, RotateCcw,
+  CalendarClock, Wand2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
@@ -50,6 +51,56 @@ const siguienteDiaTipo = (diaTipo) => {
   if (i === -1) return diaTipo; // valor antiguo ("carrera"): se deja como está
   return DIA_TIPO_SECUENCIA[Math.min(i + 1, DIA_TIPO_SECUENCIA.length - 1)];
 };
+
+// Letra del turno i: A..Z y luego AA, AB, ...
+const letraTurno = (indice) => {
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let nombre = '';
+  let n = indice + 1;
+  while (n > 0) {
+    const resto = (n - 1) % 26;
+    nombre = letras[resto] + nombre;
+    n = Math.floor((n - 1) / 26);
+  }
+  return nombre;
+};
+
+const fmtHoraDate = (fecha) =>
+  `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;
+
+// Genera turnos consecutivos que cubren [inicio, fin] con la duración indicada.
+// El dia_tipo sigue el día calendario en que arranca cada turno (día 1, 2, 3).
+const generarTurnosProgramacion = (programacion) => {
+  const inicio = new Date(programacion.fecha_inicio);
+  const fin = new Date(programacion.fecha_fin);
+  const durMin = Math.round(parseFloat(programacion.duracion_horas) * 60);
+  if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin <= inicio || !durMin || durMin <= 0) {
+    return null;
+  }
+  const diaTipos = ['carrera_dia1', 'carrera_dia2', 'carrera_dia3'];
+  const diaBase = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const slotsCount = parseInt(programacion.slots_por_turno) || 2;
+  const turnos = [];
+  let cursor = new Date(inicio);
+  let i = 0;
+  while (cursor < fin) {
+    const finTurno = new Date(Math.min(cursor.getTime() + durMin * 60000, fin.getTime()));
+    const diaCursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
+    const offsetDia = Math.round((diaCursor - diaBase) / 86400000);
+    turnos.push({
+      turno: letraTurno(i),
+      hora_inicio: fmtHoraDate(cursor),
+      hora_fin: fmtHoraDate(finTurno),
+      slots_count: slotsCount,
+      dia_tipo: diaTipos[Math.min(offsetDia, diaTipos.length - 1)],
+    });
+    cursor = finTurno;
+    i++;
+  }
+  return turnos;
+};
+
+const PROGRAMACION_VACIA = { fecha_inicio: '', fecha_fin: '', duracion_horas: 4, slots_por_turno: 2 };
 
 // Day type options
 const DIA_TIPO_OPTIONS = [
@@ -100,17 +151,23 @@ export default function VolunteerConfigManagement() {
   
   // Clearing assignments
   const [clearing, setClearing] = useState(false);
-  
+
   // Race date for display
   const [raceDate, setRaceDate] = useState(null);
 
+  // Programación del evento (fechas + duración de turno) para generar turnos
+  const [programacion, setProgramacion] = useState({ ...PROGRAMACION_VACIA });
+  const [savingProgramacion, setSavingProgramacion] = useState(false);
+  const [applyingProgramacion, setApplyingProgramacion] = useState(false);
+  const [deletingShifts, setDeletingShifts] = useState(false);
+
   useEffect(() => {
-    loadPositions();
     loadRaceDate();
   }, []);
 
   useEffect(() => {
     loadPositions();
+    loadProgramacion();
     setShowNewForm(false);
     setEditingPosition(null);
     setEditData(null);
@@ -190,17 +247,17 @@ export default function VolunteerConfigManagement() {
   };
 
   const clearAssignments = async () => {
-    if (!window.confirm('⚠️ ¿Estás seguro de limpiar TODAS las asignaciones de voluntarios?\n\nEsta acción liberará todos los slots asignados y no se puede deshacer.')) {
+    if (!window.confirm(`⚠️ ¿Limpiar TODAS las asignaciones de voluntarios de "${getEventoLabel(selectedEvento)}"?\n\nEsta acción liberará todos los slots asignados de este evento y no se puede deshacer.`)) {
       return;
     }
-    
+
     setClearing(true);
     try {
-      const response = await adminFetch(`${API_URL}/api/volunteer-config/clear-assignments`, {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/clear-assignments?evento=${selectedEvento}`, {
         method: 'POST'
       });
       const data = await response.json();
-      
+
       if (response.ok) {
         toast.success(data.message);
       } else {
@@ -210,6 +267,126 @@ export default function VolunteerConfigManagement() {
       toast.error('Error de conexión');
     } finally {
       setClearing(false);
+    }
+  };
+
+  const deleteAllShifts = async () => {
+    if (!window.confirm(`⚠️ ¿Eliminar TODOS los turnos de "${getEventoLabel(selectedEvento)}"?\n\nSe borrarán todos los turnos y sus slots (incluyendo los asignados) de este evento. Las posiciones se conservan sin turnos. Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    setDeletingShifts(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/delete-all-shifts?evento=${selectedEvento}`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+        loadPositions();
+      } else {
+        toast.error(data.detail || 'Error eliminando turnos');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setDeletingShifts(false);
+    }
+  };
+
+  const loadProgramacion = async () => {
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/event-schedule?evento=${selectedEvento}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.schedule) {
+          setProgramacion({
+            fecha_inicio: data.schedule.fecha_inicio || '',
+            fecha_fin: data.schedule.fecha_fin || '',
+            duracion_horas: data.schedule.duracion_horas || 4,
+            slots_por_turno: data.schedule.slots_por_turno || 2,
+          });
+        } else {
+          setProgramacion({ ...PROGRAMACION_VACIA });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading event schedule:', error);
+    }
+  };
+
+  const validarProgramacion = () => {
+    if (!programacion.fecha_inicio || !programacion.fecha_fin) {
+      toast.error('Define la fecha y hora de inicio y final del evento');
+      return false;
+    }
+    if (!generarTurnosProgramacion(programacion)) {
+      toast.error('Revisa las fechas y la duración del turno: la fecha final debe ser posterior a la inicial');
+      return false;
+    }
+    return true;
+  };
+
+  const saveProgramacion = async () => {
+    if (!validarProgramacion()) return;
+
+    setSavingProgramacion(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/event-schedule?evento=${selectedEvento}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...programacion,
+          duracion_horas: parseFloat(programacion.duracion_horas),
+          slots_por_turno: parseInt(programacion.slots_por_turno) || 2,
+        })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.detail || 'Error guardando programación');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingProgramacion(false);
+    }
+  };
+
+  const applyProgramacion = async () => {
+    if (!validarProgramacion()) return;
+
+    const turnos = generarTurnosProgramacion(programacion);
+    if (!window.confirm(`⚠️ ¿Generar ${turnos.length} turnos en TODAS las posiciones de "${getEventoLabel(selectedEvento)}"?\n\nLos turnos y slots actuales de este evento (incluyendo asignaciones) serán reemplazados. Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    setApplyingProgramacion(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/apply-schedule?evento=${selectedEvento}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...programacion,
+          duracion_horas: parseFloat(programacion.duracion_horas),
+          slots_por_turno: parseInt(programacion.slots_por_turno) || 2,
+        })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+        loadPositions();
+      } else {
+        toast.error(data.detail || 'Error generando turnos');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setApplyingProgramacion(false);
     }
   };
 
@@ -376,18 +553,40 @@ export default function VolunteerConfigManagement() {
 
     return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <Label className="text-sm font-medium">Turnos</Label>
         {!disabled && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addShift(turnos, setTurnos)}
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Agregar Turno
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const generados = generarTurnosProgramacion(programacion);
+                if (!generados) {
+                  toast.error('Configura y guarda primero la programación del evento (fechas y duración del turno)');
+                  return;
+                }
+                if (turnos.length > 0 && !window.confirm(`Se reemplazarán los ${turnos.length} turnos actuales por ${generados.length} turnos generados según la programación del evento. ¿Continuar?`)) {
+                  return;
+                }
+                setTurnos(generados);
+              }}
+              className="text-primary"
+            >
+              <Wand2 className="w-3 h-3 mr-1" />
+              Generar según Programación
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addShift(turnos, setTurnos)}
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Agregar Turno
+            </Button>
+          </div>
         )}
       </div>
       
@@ -491,8 +690,8 @@ export default function VolunteerConfigManagement() {
               Importar Existentes
             </Button>
           )}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={clearAssignments}
             disabled={clearing}
             className="text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
@@ -503,6 +702,19 @@ export default function VolunteerConfigManagement() {
               <RotateCcw className="w-4 h-4 mr-2" />
             )}
             Limpiar Asignaciones
+          </Button>
+          <Button
+            variant="outline"
+            onClick={deleteAllShifts}
+            disabled={deletingShifts}
+            className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+          >
+            {deletingShifts ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4 mr-2" />
+            )}
+            Eliminar Todos los Turnos
           </Button>
           <Button onClick={() => setShowNewForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -529,6 +741,79 @@ export default function VolunteerConfigManagement() {
           </button>
         ))}
       </div>
+
+      {/* Programación del Evento: fechas, duración de turno y generación automática */}
+      <Card>
+        <CardHeader className="py-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarClock className="w-5 h-5 text-primary" />
+            Programación del Evento
+          </CardTitle>
+          <CardDescription>
+            Define el inicio y final del evento y la duración de cada turno para que el sistema los genere automáticamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Inicio del Evento *</Label>
+              <Input
+                type="datetime-local"
+                value={programacion.fecha_inicio}
+                onChange={(e) => setProgramacion({ ...programacion, fecha_inicio: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Final del Evento *</Label>
+              <Input
+                type="datetime-local"
+                value={programacion.fecha_fin}
+                onChange={(e) => setProgramacion({ ...programacion, fecha_fin: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Duración del Turno (horas)</Label>
+              <Input
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={programacion.duracion_horas}
+                onChange={(e) => setProgramacion({ ...programacion, duracion_horas: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Slots por Turno</Label>
+              <Input
+                type="number"
+                min="1"
+                max="20"
+                value={programacion.slots_por_turno}
+                onChange={(e) => setProgramacion({ ...programacion, slots_por_turno: e.target.value })}
+              />
+            </div>
+          </div>
+          {(() => {
+            const preview = generarTurnosProgramacion(programacion);
+            return preview ? (
+              <p className="text-sm text-muted-foreground">
+                Se generarán <span className="font-medium text-foreground">{preview.length} turnos</span> por posición:{' '}
+                {preview[0].turno} ({formatTime12h(preview[0].hora_inicio)}) hasta{' '}
+                {preview[preview.length - 1].turno} (termina {formatTime12h(preview[preview.length - 1].hora_fin)}).
+              </p>
+            ) : null;
+          })()}
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button variant="outline" onClick={saveProgramacion} disabled={savingProgramacion}>
+              {savingProgramacion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Guardar Programación
+            </Button>
+            <Button onClick={applyProgramacion} disabled={applyingProgramacion || positions.length === 0}>
+              {applyingProgramacion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+              Generar Turnos en Todas las Posiciones
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

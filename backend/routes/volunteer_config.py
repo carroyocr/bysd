@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from services.auth import require_permission
 
@@ -22,6 +22,13 @@ def evento_query(evento: str) -> dict:
         return {"evento": "campeonato"}
     # carrera (default) includes legacy docs without the field
     return {"$or": [{"evento": "carrera"}, {"evento": {"$exists": False}}, {"evento": None}]}
+
+
+class EventScheduleUpdate(BaseModel):
+    fecha_inicio: str  # ISO local, ej. "2026-08-15T08:00"
+    fecha_fin: str
+    duracion_horas: float
+    slots_por_turno: int = 2
 
 
 class ShiftConfig(BaseModel):
@@ -184,24 +191,187 @@ async def regenerate_all_slots():
 
 
 @router.post("/clear-assignments")
-async def clear_all_assignments():
-    """Clear all volunteer assignments from slots"""
+async def clear_all_assignments(evento: Optional[str] = None):
+    """Clear volunteer assignments from slots.
+    If 'evento' is provided, only that event's assignments are cleared."""
     from server import db
-    
+
+    query = evento_query(evento) if evento in VALID_EVENTOS else {}
+
     # Count current assignments
     assigned_count = await db.volunteer_assignments.count_documents({
+        **query,
         "email_asignado": {"$nin": [None, ""]}
     })
-    
-    # Clear all assignments
-    result = await db.volunteer_assignments.update_many(
-        {},
+
+    # Clear assignments
+    await db.volunteer_assignments.update_many(
+        query,
         {"$set": {"email_asignado": None, "nombre_asignado": None}}
     )
-    
+
     return {
         "message": f"Asignaciones limpiadas: {assigned_count} slots liberados",
         "slots_cleared": assigned_count
+    }
+
+
+@router.post("/delete-all-shifts")
+async def delete_all_shifts(evento: str = "carrera"):
+    """Delete every shift (and its slots, including assigned ones) for an event.
+    Positions are kept, but left without shifts."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    ev_filter = evento_query(evento)
+
+    slots_result = await db.volunteer_assignments.delete_many(ev_filter)
+    positions_result = await db.volunteer_positions.update_many(
+        ev_filter,
+        {"$set": {"turnos": [], "updated_at": datetime.now(timezone.utc)}}
+    )
+
+    return {
+        "message": (
+            f"Turnos eliminados: {slots_result.deleted_count} slots borrados "
+            f"en {positions_result.modified_count} posiciones"
+        ),
+        "slots_deleted": slots_result.deleted_count,
+        "positions_updated": positions_result.modified_count,
+    }
+
+
+def _parse_schedule_dates(data: EventScheduleUpdate):
+    """Validate and parse the schedule; returns (inicio, fin) datetimes."""
+    try:
+        inicio = datetime.fromisoformat(data.fecha_inicio)
+        fin = datetime.fromisoformat(data.fecha_fin)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Fechas inválidas")
+    if fin <= inicio:
+        raise HTTPException(status_code=400, detail="La fecha final debe ser posterior a la inicial")
+    if data.duracion_horas <= 0:
+        raise HTTPException(status_code=400, detail="La duración del turno debe ser mayor que cero")
+    if data.slots_por_turno < 1:
+        raise HTTPException(status_code=400, detail="Los slots por turno deben ser al menos 1")
+    return inicio, fin
+
+
+def _letra_turno(indice: int) -> str:
+    """A..Z, then AA, AB, ... for shift labels."""
+    letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    nombre = ""
+    indice += 1
+    while indice > 0:
+        indice, resto = divmod(indice - 1, 26)
+        nombre = letras[resto] + nombre
+    return nombre
+
+
+def _generar_turnos(inicio: datetime, fin: datetime, duracion_horas: float, slots_count: int) -> List[dict]:
+    """Generate consecutive shifts covering [inicio, fin] with the given duration.
+    dia_tipo follows the calendar day of each shift's start (dia1, dia2, dia3)."""
+    dia_tipos = ["carrera_dia1", "carrera_dia2", "carrera_dia3"]
+    duracion = timedelta(minutes=round(duracion_horas * 60))
+    turnos = []
+    cursor = inicio
+    indice = 0
+    while cursor < fin:
+        fin_turno = min(cursor + duracion, fin)
+        offset_dia = (cursor.date() - inicio.date()).days
+        turnos.append({
+            "turno": _letra_turno(indice),
+            "hora_inicio": cursor.strftime("%H:%M"),
+            "hora_fin": fin_turno.strftime("%H:%M"),
+            "slots_count": slots_count,
+            "dia_tipo": dia_tipos[min(offset_dia, len(dia_tipos) - 1)],
+        })
+        cursor = fin_turno
+        indice += 1
+    return turnos
+
+
+@router.get("/event-schedule")
+async def get_event_schedule(evento: str = "carrera"):
+    """Get the saved schedule (start/end datetime + shift duration) for an event."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    schedule = await db.volunteer_event_schedules.find_one({"evento": evento}, {"_id": 0})
+    return {"schedule": schedule}
+
+
+@router.put("/event-schedule")
+async def save_event_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
+    """Save the schedule for an event (used to auto-generate shifts)."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    _parse_schedule_dates(data)
+
+    await db.volunteer_event_schedules.update_one(
+        {"evento": evento},
+        {"$set": {
+            "evento": evento,
+            "fecha_inicio": data.fecha_inicio,
+            "fecha_fin": data.fecha_fin,
+            "duracion_horas": data.duracion_horas,
+            "slots_por_turno": data.slots_por_turno,
+            "updated_at": datetime.now(timezone.utc),
+        }},
+        upsert=True
+    )
+
+    return {"message": "Programación guardada"}
+
+
+@router.post("/apply-schedule")
+async def apply_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
+    """Save the schedule and regenerate the shifts of EVERY position of the event.
+    Existing slots for the event (including assigned ones) are replaced."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    inicio, fin = _parse_schedule_dates(data)
+    ev_filter = evento_query(evento)
+
+    positions = await db.volunteer_positions.find(ev_filter).to_list(100)
+    if not positions:
+        raise HTTPException(status_code=400, detail="No hay posiciones configuradas en este evento")
+
+    # Persist the schedule so it is also available for new positions
+    await save_event_schedule(data, evento)
+
+    # Replace all slots of the event with freshly generated ones
+    await db.volunteer_assignments.delete_many(ev_filter)
+
+    total_slots = 0
+    num_turnos = 0
+    for position in positions:
+        turnos_existentes = position.get("turnos") or []
+        slots_count = turnos_existentes[0].get("slots_count", data.slots_por_turno) if turnos_existentes else data.slots_por_turno
+        turnos = _generar_turnos(inicio, fin, data.duracion_horas, slots_count)
+        num_turnos = len(turnos)
+
+        await db.volunteer_positions.update_one(
+            {"_id": position["_id"]},
+            {"$set": {"turnos": turnos, "evento": evento, "updated_at": datetime.now(timezone.utc)}}
+        )
+        total_slots += await _regenerate_slots_for_position(
+            db, position["nombre"], [ShiftConfig(**t) for t in turnos], evento=evento
+        )
+
+    return {
+        "message": (
+            f"Turnos generados: {len(positions)} posiciones con "
+            f"{num_turnos} turnos cada una ({total_slots} slots)"
+        ),
+        "positions_updated": len(positions),
+        "slots_created": total_slots,
     }
 
 
