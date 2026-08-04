@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
+import VolunteerCoverageMap from './VolunteerCoverageMap';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -430,6 +431,9 @@ export default function VolunteerAssignmentsManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mapa de cobertura: todos los días y posiciones de un vistazo */}
+      <VolunteerCoverageMap slots={eventSlots} />
 
       {/* Search and Refresh */}
       <Card>
