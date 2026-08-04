@@ -60,10 +60,12 @@ async def send_shift_reminder(slot_id: int):
         
         volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
         
+        from services.volunteer_dates import con_fecha
+
         success = await send_volunteer_reminder_email(
             to_email=assignment["email_asignado"],
             volunteer_name=volunteer_name,
-            assignment=assignment
+            assignment=await con_fecha(database, assignment)
         )
         
         if success:
@@ -115,10 +117,12 @@ async def send_friday_mass_email():
             
             volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
             
+            from services.volunteer_dates import con_fecha_varios
+
             success = await send_volunteer_assignments_email(
                 to_email=email,
                 volunteer_name=volunteer_name,
-                assignments=assignments
+                assignments=await con_fecha_varios(database, assignments)
             )
             
             if success:
@@ -176,17 +180,14 @@ async def schedule_all_reminders():
         skipped_count = 0
         now = datetime.now()
         
+        from services.volunteer_dates import fecha_y_hora_de_slot
+
         for slot in slots:
             slot_id = slot.get("id")
-            dia = slot.get("dia")
-            hora_inicio = slot.get("hora_inicio")
-            
-            if not dia or not hora_inicio:
-                skipped_count += 1
-                continue
-            
-            # Calculate reminder time (1 hour before)
-            start_time = parse_time_to_datetime(dia, hora_inicio)
+
+            # La fecha sale del dia_tipo + la programacion del evento; los
+            # slots no guardan una fecha concreta
+            start_time = await fecha_y_hora_de_slot(database, slot)
             if not start_time:
                 skipped_count += 1
                 continue

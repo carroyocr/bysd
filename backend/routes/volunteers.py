@@ -314,9 +314,10 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     # Schedule reminder for this new assignment
     try:
         from services.volunteer_scheduler import schedule_single_reminder
+        from services.volunteer_dates import fecha_de_slot
         schedule_single_reminder(
             slot_id=slot_id,
-            dia=slot.get("dia", ""),
+            dia=await fecha_de_slot(database, slot),
             hora_inicio=slot.get("hora_inicio", "")
         )
     except Exception as e:
@@ -329,13 +330,19 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             send_email_with_template, build_race_data, build_volunteer_data
         )
         
+        from services.volunteer_dates import con_fecha
+
         # Get race config
         race_config = await database.race_configurations.find_one({"is_active": True})
-        
+
+        # El slot guarda el dia como tipo relativo, no como fecha: se resuelve
+        # con la programacion del evento para que el correo no salga sin fecha
+        slot_con_fecha = await con_fecha(database, slot)
+
         # Build merge data with assignment info
         merge_data = {
             **build_race_data(race_config),
-            **build_volunteer_data(volunteer, assignment=slot),
+            **build_volunteer_data(volunteer, assignment=slot_con_fecha),
         }
         
         await send_email_with_template(
@@ -521,11 +528,13 @@ async def send_test_reminder_email(request: TestEmailRequest):
     
     # Use test volunteer name
     volunteer_name = "Voluntario de Prueba"
-    
+
+    from services.volunteer_dates import con_fecha
+
     success = await send_volunteer_reminder_email(
         to_email=email,
         volunteer_name=volunteer_name,
-        assignment=assignment
+        assignment=await con_fecha(database, assignment)
     )
     
     if success:
@@ -561,11 +570,13 @@ async def send_test_assignments_email(request: TestEmailRequest):
     
     # Use test volunteer name
     volunteer_name = "Voluntario de Prueba"
-    
+
+    from services.volunteer_dates import con_fecha_varios
+
     success = await send_volunteer_assignments_email(
         to_email=email,
         volunteer_name=volunteer_name,
-        assignments=assignments
+        assignments=await con_fecha_varios(database, assignments)
     )
     
     if success:
@@ -606,11 +617,13 @@ async def send_slot_reminder(slot_id: int):
         raise HTTPException(status_code=404, detail="Voluntario no encontrado")
     
     volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
-    
+
+    from services.volunteer_dates import con_fecha
+
     success = await send_volunteer_reminder_email(
         to_email=assignment["email_asignado"],
         volunteer_name=volunteer_name,
-        assignment=assignment
+        assignment=await con_fecha(database, assignment)
     )
     
     if success:
@@ -665,11 +678,13 @@ async def send_all_volunteers_assignments():
         ).to_list(100)
         
         volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
-        
+
+        from services.volunteer_dates import con_fecha_varios
+
         success = await send_volunteer_assignments_email(
             to_email=email,
             volunteer_name=volunteer_name,
-            assignments=assignments
+            assignments=await con_fecha_varios(database, assignments)
         )
         
         if success:
