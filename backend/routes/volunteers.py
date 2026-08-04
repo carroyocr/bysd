@@ -280,20 +280,33 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             headers={"X-Error-Detail": "Slot no encontrado"}
         )
     
-    if slot.get("email_asignado"):
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Este espacio ya está asignado a otro voluntario"},
-            headers={"X-Error-Detail": "Este espacio ya está asignado a otro voluntario"}
-        )
-    
+    slot_solicitado_id = slot_id
+    if slot.get("email_asignado") and slot.get("email_asignado") != email:
+        # El cupo puntual ya se ocupó, pero el turno puede tener otros libres:
+        # se busca uno del mismo puesto y turno en vez de rechazar la asignación
+        alternativo = await database.volunteer_assignments.find_one({
+            "puesto": slot.get("puesto"),
+            "turno": slot.get("turno"),
+            "dia_tipo": slot.get("dia_tipo"),
+            "evento": slot.get("evento"),
+            "email_asignado": {"$in": [None, ""]},
+        })
+        if not alternativo:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Este turno ya no tiene espacios disponibles"},
+                headers={"X-Error-Detail": "Este turno ya no tiene espacios disponibles"}
+            )
+        slot = alternativo
+        slot_id = alternativo["id"]
+
     volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
-    
+
     # Assign volunteer
     await database.volunteer_assignments.update_one(
         {"id": slot_id},
         {"$set": {
-            "email_asignado": email, 
+            "email_asignado": email,
             "nombre_asignado": volunteer_name,
             "updated_at": datetime.utcnow()
         }}
@@ -307,7 +320,8 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
                 "status": "confirmed",
                 "updated_at": datetime.utcnow()
             },
-            "$pull": {"slots_interes": slot_id}
+            # Se quita el turno solicitado y, si se reubicó, también el cupo real
+            "$pull": {"slots_interes": {"$in": list({slot_solicitado_id, slot_id})}}
         }
     )
     

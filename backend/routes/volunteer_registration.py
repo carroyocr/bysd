@@ -182,10 +182,32 @@ def _fecha_turno(base_date: str, dia_tipo: Optional[str]) -> str:
     return (base + timedelta(days=offset)).strftime("%Y-%m-%d")
 
 
+async def slots_reservados(db, excluir_email: Optional[str] = None) -> set:
+    """IDs de turnos ya solicitados por algun voluntario (slots_interes).
+
+    Un turno solicitado queda bloqueado aunque todavia no este asignado: si no,
+    dos voluntarios reciben el mismo slot_id y al asignar al primero el segundo
+    queda con un turno 'ya asignado a otro' pese a haber cupos libres.
+    'excluir_email' deja fuera las reservas del propio voluntario, para que al
+    editar siga viendo su seleccion.
+    """
+    query = {"slots_interes": {"$exists": True, "$ne": []}}
+    if excluir_email:
+        query["email"] = {"$ne": excluir_email.lower()}
+
+    reservados = set()
+    async for reg in db.volunteer_registrations.find(query, {"_id": 0, "slots_interes": 1}):
+        for slot_id in reg.get("slots_interes") or []:
+            reservados.add(slot_id)
+    return reservados
+
+
 @router.get("/available-slots")
-async def get_available_slots(evento: Optional[str] = None):
+async def get_available_slots(evento: Optional[str] = None, email: Optional[str] = None):
     """Get available volunteer slots grouped by position and shift (one per turno).
-    Optionally filtered by event ('carrera' or 'campeonato')."""
+    Optionally filtered by event ('carrera' or 'campeonato').
+    'email' excludes that volunteer's own requested shifts from the block, so
+    they keep seeing their selection while editing."""
     from server import db
 
     evento_norm = evento if evento in VALID_EVENTOS else "carrera"
@@ -208,15 +230,18 @@ async def get_available_slots(evento: Optional[str] = None):
     # Descripcion de cada posicion, para mostrarla en el registro publico
     position_docs = await db.volunteer_positions.find(query, {"_id": 0, "nombre": 1, "descripcion": 1}).to_list(200)
     descripciones = {p["nombre"]: (p.get("descripcion") or "") for p in position_docs}
-    
+
+    # Turnos ya solicitados por otros: se descuentan de la disponibilidad
+    reservados = await slots_reservados(db, excluir_email=email)
+
     # Group by position and turno
     positions = {}
     shifts_info = {}
-    
+
     for slot in slots:
         puesto = slot.get("puesto", "")
         turno = slot.get("turno", "")
-        is_available = not slot.get("email_asignado")
+        is_available = not slot.get("email_asignado") and slot.get("id") not in reservados
         
         # Build shift info
         if turno not in shifts_info:
@@ -283,6 +308,40 @@ async def get_available_slots(evento: Optional[str] = None):
         "shifts_info": list(shifts_info.values()),
         "race_date": race_date
     }
+
+
+async def validar_slots_libres(db, slots: Optional[List[int]], email: str):
+    """Corta con 400 si alguno de los turnos elegidos ya fue tomado.
+
+    Cubre la carrera entre dos voluntarios que abren el formulario a la vez:
+    entre que se cargan los turnos y se envia el registro, otro pudo quedarse
+    con el mismo turno.
+    """
+    if not slots:
+        return
+
+    ocupados = await db.volunteer_assignments.find(
+        {"id": {"$in": slots}, "email_asignado": {"$nin": [None, ""]}},
+        {"_id": 0, "id": 1, "puesto": 1, "turno": 1}
+    ).to_list(100)
+
+    reservados = await slots_reservados(db, excluir_email=email)
+    conflictivos = {s["id"]: s for s in ocupados}
+    for slot_id in slots:
+        if slot_id in reservados and slot_id not in conflictivos:
+            conflictivos[slot_id] = None
+
+    if not conflictivos:
+        return
+
+    detalle = await db.volunteer_assignments.find(
+        {"id": {"$in": list(conflictivos)}}, {"_id": 0, "puesto": 1, "turno": 1}
+    ).to_list(100)
+    nombres = ", ".join(f"{d.get('puesto', '')} (turno {d.get('turno', '')})" for d in detalle) or "seleccionados"
+    raise HTTPException(
+        status_code=400,
+        detail=f"Otro voluntario acaba de tomar estos turnos: {nombres}. Vuelve a elegir."
+    )
 
 
 def generate_verification_code():
@@ -452,7 +511,10 @@ async def register_volunteer(
 
     if existing:
         raise HTTPException(status_code=400, detail="Ya estás registrado como voluntario para este evento")
-    
+
+    # Los turnos elegidos deben seguir libres
+    await validar_slots_libres(db, data.slots_interes, email)
+
     # Generate edit token
     edit_token = generate_edit_token()
     
@@ -561,6 +623,9 @@ async def update_volunteer_registration(token: str, data: VolunteerRegistrationD
     })
     if otro:
         raise HTTPException(status_code=400, detail="Ya tienes otro registro para ese evento")
+
+    # Los turnos elegidos deben seguir libres (los propios no cuentan)
+    await validar_slots_libres(db, data.slots_interes, existing.get("email", ""))
 
     # Update registration
     update_data = {

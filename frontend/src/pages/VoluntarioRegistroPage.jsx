@@ -277,7 +277,10 @@ export default function VoluntarioRegistroPage() {
   const loadAvailableSlots = async () => {
     setLoadingSlots(true);
     try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/available-slots?evento=${selectedEvento}`);
+      // El email deja fuera del bloqueo los turnos que uno mismo ya solicitó,
+      // para no perder la selección al editar
+      const emailParam = email ? `&email=${encodeURIComponent(email)}` : '';
+      const response = await fetch(`${API_URL}/api/volunteer-registration/available-slots?evento=${selectedEvento}${emailParam}`);
       if (response.ok) {
         const data = await response.json();
         setAvailableSlots(data);
