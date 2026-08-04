@@ -4,12 +4,24 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
-  Search, Medal, Shield, RefreshCw, Loader2, Trash2, ArrowLeftRight, UserPlus
+  Search, Medal, Shield, RefreshCw, Loader2, Trash2, ArrowLeftRight, UserPlus,
+  Pencil, X, Save
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
+import { COUNTRIES } from '../data/countries';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const MANUAL_VACIO = {
+  nombre: '',
+  apellidos: '',
+  sexo: '',
+  nacionalidad: '',
+  bib: '',
+  laps_completed: '',
+  categoria: 'titular',
+};
 
 const CATEGORIA_CONFIG = {
   titular: { label: 'Titular', otherLabel: 'Reserva', badgeClass: 'bg-green-100 text-green-700 hover:bg-green-100' },
@@ -22,6 +34,11 @@ export default function SeleccionadosManagement() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Alta manual de un seleccionado externo (no corrió el evento previo)
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualData, setManualData] = useState({ ...MANUAL_VACIO });
+  const [savingManual, setSavingManual] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -52,7 +69,8 @@ export default function SeleccionadosManagement() {
 
   // Atletas del evento previo que aún no están en la selección
   const availableCandidates = useMemo(() => {
-    const selectedBibs = new Set(seleccionados.map((s) => s.bib));
+    // Los externos pueden no tener BIB: se excluyen del filtro por BIB
+    const selectedBibs = new Set(seleccionados.map((s) => s.bib).filter(Boolean));
     let data = candidates.filter((c) => !selectedBibs.has(c.bib));
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -86,6 +104,40 @@ export default function SeleccionadosManagement() {
       toast.error('Error de conexión');
     } finally {
       setActionId(null);
+    }
+  };
+
+  const handleAddManual = async () => {
+    if (!manualData.nombre.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
+    setSavingManual(true);
+    try {
+      const res = await adminFetch(`${API_URL}/api/seleccionados/admin/manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...manualData,
+          nombre: manualData.nombre.trim(),
+          apellidos: manualData.apellidos.trim(),
+          bib: manualData.bib.trim() || null,
+          laps_completed: parseInt(manualData.laps_completed, 10) || 0,
+        }),
+      });
+      if (res.ok) {
+        toast.success(`${manualData.nombre} agregado como ${CATEGORIA_CONFIG[manualData.categoria].label.toLowerCase()}`);
+        setManualData({ ...MANUAL_VACIO });
+        setShowManualForm(false);
+        loadData();
+      } else {
+        const data = await res.json();
+        toast.error(data.detail || 'Error al agregar seleccionado');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingManual(false);
     }
   };
 
@@ -154,13 +206,18 @@ export default function SeleccionadosManagement() {
         ) : (
           <div className="divide-y">
             {items.map((sel) => (
-              <div key={sel.id} className="px-4 py-3 flex items-center justify-between gap-3" data-testid={`seleccionado-${sel.bib}`}>
+              <div key={sel.id} className="px-4 py-3 flex items-center justify-between gap-3" data-testid={`seleccionado-${sel.bib || sel.id}`}>
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-mono font-semibold text-sm w-10 shrink-0">{sel.bib}</span>
+                  <span className="font-mono font-semibold text-sm w-10 shrink-0">{sel.bib || '—'}</span>
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{sel.nombre} {sel.apellidos}</div>
+                    <div className="font-medium truncate">
+                      {sel.nombre} {sel.apellidos}
+                      {sel.externo && (
+                        <Badge variant="outline" className="ml-2 text-[10px] font-normal align-middle">Externo</Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">
-                      {sel.laps_completed} vueltas
+                      {sel.externo && !sel.laps_completed ? 'Sin participación previa' : `${sel.laps_completed} vueltas`}
                       {sel.sexo ? ` · ${sel.sexo === 'Femenino' ? 'F' : 'M'}` : ''}
                       {sel.nacionalidad ? ` · ${sel.nacionalidad}` : ''}
                     </div>
@@ -249,6 +306,141 @@ export default function SeleccionadosManagement() {
         <SelectedList items={titulares} categoria="titular" />
         <SelectedList items={reservas} categoria="reserva" />
       </div>
+
+      {/* Alta manual: atleta externo que no corrió el evento previo */}
+      <Card className={showManualForm ? 'border-[#E8772E]/50' : ''}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-[#E8772E]" />
+                Agregar Atleta Externo
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Para seleccionados que no participaron en el evento de 2026 y no aparecen en la lista de abajo
+              </p>
+            </div>
+            {!showManualForm ? (
+              <Button size="sm" onClick={() => setShowManualForm(true)} data-testid="show-manual-form">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Digitar Seleccionado
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowManualForm(false);
+                  setManualData({ ...MANUAL_VACIO });
+                }}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        {showManualForm && (
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Nombre *</label>
+                <Input
+                  value={manualData.nombre}
+                  onChange={(e) => setManualData({ ...manualData, nombre: e.target.value })}
+                  placeholder="Ej: Juan"
+                  data-testid="manual-nombre"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Apellidos</label>
+                <Input
+                  value={manualData.apellidos}
+                  onChange={(e) => setManualData({ ...manualData, apellidos: e.target.value })}
+                  placeholder="Ej: Pérez García"
+                  data-testid="manual-apellidos"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Sexo</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={manualData.sexo}
+                  onChange={(e) => setManualData({ ...manualData, sexo: e.target.value })}
+                  data-testid="manual-sexo"
+                >
+                  <option value="">Seleccionar</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Nacionalidad</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={manualData.nacionalidad}
+                  onChange={(e) => setManualData({ ...manualData, nacionalidad: e.target.value })}
+                  data-testid="manual-nacionalidad"
+                >
+                  <option value="">Seleccionar país</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.name}>{country.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">BIB (opcional)</label>
+                <Input
+                  value={manualData.bib}
+                  onChange={(e) => setManualData({ ...manualData, bib: e.target.value })}
+                  placeholder="Sin BIB"
+                  data-testid="manual-bib"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Vueltas previas (opcional)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={manualData.laps_completed}
+                  onChange={(e) => setManualData({ ...manualData, laps_completed: e.target.value })}
+                  placeholder="0"
+                  data-testid="manual-laps"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Categoría</label>
+              <div className="flex gap-2">
+                {Object.entries(CATEGORIA_CONFIG).map(([value, cfg]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={manualData.categoria === value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setManualData({ ...manualData, categoria: value })}
+                    data-testid={`manual-categoria-${value}`}
+                  >
+                    {value === 'titular' ? <Medal className="w-3.5 h-3.5 mr-1" /> : <Shield className="w-3.5 h-3.5 mr-1" />}
+                    {cfg.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <Button onClick={handleAddManual} disabled={savingManual} data-testid="save-manual">
+                {savingManual ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+                ) : (
+                  <><Save className="w-4 h-4 mr-2" /> Agregar a la Selección</>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Candidates from previous event */}
       <Card>

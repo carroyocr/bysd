@@ -8,7 +8,9 @@ la colección campeonato_seleccionados.
 """
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime, timezone
+import re
 import uuid
 
 from services.auth import require_permission
@@ -29,6 +31,17 @@ def get_db():
 class SeleccionadoCreate(BaseModel):
     result_id: str  # _id del participante del evento previo
     categoria: str  # titular | reserva
+
+
+class SeleccionadoManualCreate(BaseModel):
+    """Atleta externo: no corrio el evento previo, se digita a mano."""
+    nombre: str
+    apellidos: Optional[str] = ""
+    categoria: str  # titular | reserva
+    sexo: Optional[str] = ""
+    nacionalidad: Optional[str] = ""
+    bib: Optional[str] = None
+    laps_completed: Optional[int] = 0
 
 
 class SeleccionadoUpdate(BaseModel):
@@ -85,6 +98,54 @@ async def add_seleccionado(data: SeleccionadoCreate, db=Depends(get_db)):
         "sexo": participante.get("sexo", ""),
         "nacionalidad": participante.get("nacionalidad", ""),
         "laps_completed": participante.get("laps_completed", 0),
+        "categoria": data.categoria,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.campeonato_seleccionados.insert_one({**doc})
+    return {"success": True, "seleccionado": doc}
+
+
+@router.post("/admin/manual", dependencies=[solo_atletas])
+async def add_seleccionado_manual(data: SeleccionadoManualCreate, db=Depends(get_db)):
+    """Agrega un seleccionado externo, digitado a mano.
+
+    Para atletas que no corrieron el evento previo y por tanto no aparecen
+    entre los candidatos. Quedan marcados con externo=True y sin result_id.
+    """
+    if data.categoria not in CATEGORIAS:
+        raise HTTPException(status_code=400, detail="Categoría inválida (titular o reserva)")
+
+    nombre = (data.nombre or "").strip()
+    apellidos = (data.apellidos or "").strip()
+    if not nombre:
+        raise HTTPException(status_code=400, detail="El nombre es obligatorio")
+
+    bib = (data.bib or "").strip() or None
+    if bib:
+        # El BIB, si se digita, no puede chocar con otro ya seleccionado
+        if await db.campeonato_seleccionados.find_one({"bib": bib}):
+            raise HTTPException(status_code=400, detail=f"Ya hay un seleccionado con el BIB {bib}")
+
+    # Evitar duplicar a la misma persona por nombre completo
+    patron = f"^{re.escape(nombre)}$"
+    patron_apellidos = f"^{re.escape(apellidos)}$"
+    repetido = await db.campeonato_seleccionados.find_one({
+        "nombre": {"$regex": patron, "$options": "i"},
+        "apellidos": {"$regex": patron_apellidos, "$options": "i"},
+    })
+    if repetido:
+        raise HTTPException(status_code=400, detail="Ya hay un seleccionado con ese nombre")
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "result_id": None,
+        "externo": True,
+        "bib": bib,
+        "nombre": nombre,
+        "apellidos": apellidos,
+        "sexo": (data.sexo or "").strip(),
+        "nacionalidad": (data.nacionalidad or "").strip(),
+        "laps_completed": data.laps_completed or 0,
         "categoria": data.categoria,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
