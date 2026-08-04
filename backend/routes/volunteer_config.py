@@ -371,10 +371,62 @@ async def save_event_schedule(data: EventScheduleUpdate, evento: str = "carrera"
     return {"message": "Programación guardada"}
 
 
+# Desplazamiento en dias de cada dia_tipo, para comparar turnos de dias distintos
+DIA_TIPO_OFFSET = {
+    "previo": -1,
+    "carrera": 0,
+    "carrera_dia1": 0,
+    "carrera_dia2": 1,
+    "carrera_dia3": 2,
+}
+
+
+def _minutos(hora: str) -> int:
+    try:
+        h, m = (hora or "0:0").split(":")[:2]
+        return int(h) * 60 + int(m)
+    except (ValueError, AttributeError):
+        return 0
+
+
+def _intervalo(turno: dict) -> tuple:
+    """Inicio y fin del turno en minutos absolutos desde el dia 1 del evento.
+    Un turno que termina antes de empezar cruza la medianoche."""
+    # Los turnos antiguos no guardan a que dia pertenecen: se toman como dia 1.
+    # No se adivina por la hora, porque el turno de apertura de la manana
+    # temprano caeria en el dia equivocado.
+    dia = DIA_TIPO_OFFSET.get(turno.get("dia_tipo") or "carrera", 0) * 1440
+    inicio = dia + _minutos(turno.get("hora_inicio"))
+    fin = dia + _minutos(turno.get("hora_fin"))
+    if fin <= inicio:
+        fin += 1440
+    return inicio, fin
+
+
+def _se_solapan(a: dict, b: dict) -> bool:
+    ini_a, fin_a = _intervalo(a)
+    ini_b, fin_b = _intervalo(b)
+    return ini_a < fin_b and ini_b < fin_a
+
+
+def _siguiente_letra(usadas: set) -> str:
+    """Primera etiqueta libre (A..Z, luego AA, AB...)."""
+    i = 0
+    while True:
+        letra = _letra_turno(i)
+        if letra not in usadas:
+            return letra
+        i += 1
+
+
 @router.post("/apply-schedule")
 async def apply_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
-    """Save the schedule and regenerate the shifts of EVERY position of the event.
-    Existing slots for the event (including assigned ones) are replaced."""
+    """Save the schedule and ADD the missing shifts to every position.
+
+    Nada se borra: los turnos y slots que ya existen (con o sin voluntario
+    asignado) se conservan tal cual. Solo se agregan los turnos de la
+    programacion que caen en horas todavia sin cubrir.
+    """
     from server import db
 
     if evento not in VALID_EVENTOS:
@@ -389,17 +441,94 @@ async def apply_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
     # Persist the schedule so it is also available for new positions
     await save_event_schedule(data, evento)
 
-    # Replace all slots of the event with freshly generated ones
-    await db.volunteer_assignments.delete_many(ev_filter)
+    generados = _generar_turnos(inicio, fin, data.duracion_horas, data.slots_por_turno)
 
     total_slots = 0
-    num_turnos = 0
-    for position in positions:
-        turnos_existentes = position.get("turnos") or []
-        slots_count = turnos_existentes[0].get("slots_count", data.slots_por_turno) if turnos_existentes else data.slots_por_turno
-        turnos = _generar_turnos(inicio, fin, data.duracion_horas, slots_count)
-        num_turnos = len(turnos)
+    total_turnos_nuevos = 0
+    posiciones_tocadas = 0
+    omitidos_por_solape = 0
 
+    for position in positions:
+        existentes = list(position.get("turnos") or [])
+        usadas = {t.get("turno") for t in existentes if t.get("turno")}
+
+        nuevos = []
+        for turno in generados:
+            # Se agrega solo si su horario no pisa ningun turno ya existente
+            # (ni otro recien agregado en esta misma pasada)
+            if any(_se_solapan(turno, otro) for otro in existentes + nuevos):
+                omitidos_por_solape += 1
+                continue
+            etiqueta = _siguiente_letra(usadas)
+            usadas.add(etiqueta)
+            nuevos.append({**turno, "turno": etiqueta})
+
+        if not nuevos:
+            continue
+
+        posiciones_tocadas += 1
+        total_turnos_nuevos += len(nuevos)
+
+        await db.volunteer_positions.update_one(
+            {"_id": position["_id"]},
+            {"$set": {
+                "turnos": existentes + nuevos,
+                "evento": evento,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+        # preserve_assignments=True: no toca los slots que ya existen
+        total_slots += await _regenerate_slots_for_position(
+            db,
+            position["nombre"],
+            [ShiftConfig(**t) for t in nuevos],
+            preserve_assignments=True,
+            evento=evento,
+        )
+
+    if not total_turnos_nuevos:
+        return {
+            "message": "No se agregaron turnos: el horario de la programación ya está cubierto por los turnos existentes",
+            "positions_updated": 0,
+            "shifts_created": 0,
+            "slots_created": 0,
+        }
+
+    return {
+        "message": (
+            f"Turnos agregados: {total_turnos_nuevos} nuevos en {posiciones_tocadas} "
+            f"posiciones ({total_slots} slots). Los turnos y asignaciones existentes se conservaron."
+        ),
+        "positions_updated": posiciones_tocadas,
+        "shifts_created": total_turnos_nuevos,
+        "slots_created": total_slots,
+    }
+
+
+@router.post("/replace-schedule")
+async def replace_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
+    """Borra TODOS los turnos y slots del evento (asignaciones incluidas) y los
+    regenera desde cero con la programacion. Accion destructiva y explicita:
+    para completar sin perder nada esta /apply-schedule."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    inicio, fin = _parse_schedule_dates(data)
+    ev_filter = evento_query(evento)
+
+    positions = await db.volunteer_positions.find(ev_filter).to_list(100)
+    if not positions:
+        raise HTTPException(status_code=400, detail="No hay posiciones configuradas en este evento")
+
+    await save_event_schedule(data, evento)
+
+    borrados = await db.volunteer_assignments.delete_many(ev_filter)
+
+    turnos = _generar_turnos(inicio, fin, data.duracion_horas, data.slots_por_turno)
+
+    total_slots = 0
+    for position in positions:
         await db.volunteer_positions.update_one(
             {"_id": position["_id"]},
             {"$set": {"turnos": turnos, "evento": evento, "updated_at": datetime.now(timezone.utc)}}
@@ -410,10 +539,12 @@ async def apply_schedule(data: EventScheduleUpdate, evento: str = "carrera"):
 
     return {
         "message": (
-            f"Turnos generados: {len(positions)} posiciones con "
-            f"{num_turnos} turnos cada una ({total_slots} slots)"
+            f"Turnos regenerados desde cero: {len(positions)} posiciones con "
+            f"{len(turnos)} turnos cada una ({total_slots} slots). "
+            f"Se eliminaron {borrados.deleted_count} slots anteriores."
         ),
         "positions_updated": len(positions),
+        "slots_deleted": borrados.deleted_count,
         "slots_created": total_slots,
     }
 

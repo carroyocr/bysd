@@ -159,6 +159,7 @@ export default function VolunteerConfigManagement() {
   const [programacion, setProgramacion] = useState({ ...PROGRAMACION_VACIA });
   const [savingProgramacion, setSavingProgramacion] = useState(false);
   const [applyingProgramacion, setApplyingProgramacion] = useState(false);
+  const [replacingProgramacion, setReplacingProgramacion] = useState(false);
   const [deletingShifts, setDeletingShifts] = useState(false);
 
   useEffect(() => {
@@ -372,11 +373,50 @@ export default function VolunteerConfigManagement() {
     }
   };
 
+  // Acción destructiva: borra turnos, slots y asignaciones del evento y los
+  // vuelve a crear con la programación
+  const replaceProgramacion = async () => {
+    if (!validarProgramacion()) return;
+
+    const turnos = generarTurnosProgramacion(programacion);
+    if (!window.confirm(`⚠️ ¿REGENERAR DESDE CERO los turnos de "${getEventoLabel(selectedEvento)}"?\n\nSe ELIMINARÁN todos los turnos, slots y ASIGNACIONES actuales de este evento y se crearán ${turnos.length} turnos nuevos por posición.\n\nEsta acción no se puede deshacer.`)) {
+      return;
+    }
+    if (!window.confirm('Confirma otra vez: se perderán las asignaciones de voluntarios de este evento.')) {
+      return;
+    }
+
+    setReplacingProgramacion(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/replace-schedule?evento=${selectedEvento}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...programacion,
+          duracion_horas: parseFloat(programacion.duracion_horas),
+          slots_por_turno: parseInt(programacion.slots_por_turno) || 2,
+        })
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(data.message);
+        loadPositions();
+      } else {
+        toast.error(data.detail || 'Error regenerando turnos');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setReplacingProgramacion(false);
+    }
+  };
+
   const applyProgramacion = async () => {
     if (!validarProgramacion()) return;
 
     const turnos = generarTurnosProgramacion(programacion);
-    if (!window.confirm(`⚠️ ¿Generar ${turnos.length} turnos en TODAS las posiciones de "${getEventoLabel(selectedEvento)}"?\n\nLos turnos y slots actuales de este evento (incluyendo asignaciones) serán reemplazados. Esta acción no se puede deshacer.`)) {
+    if (!window.confirm(`¿Completar los turnos de TODAS las posiciones de "${getEventoLabel(selectedEvento)}" según esta programación?\n\nSe agregarán únicamente los turnos que falten para cubrir el horario (hasta ${turnos.length} por posición).\n\nLos turnos, slots y asignaciones que ya existen NO se modifican ni se eliminan.`)) {
       return;
     }
 
@@ -850,9 +890,19 @@ export default function VolunteerConfigManagement() {
               {savingProgramacion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Guardar Programación
             </Button>
+            <Button
+              variant="outline"
+              onClick={replaceProgramacion}
+              disabled={replacingProgramacion || positions.length === 0}
+              className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+              title="Elimina todos los turnos, slots y asignaciones del evento y los vuelve a crear"
+            >
+              {replacingProgramacion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Regenerar desde Cero
+            </Button>
             <Button onClick={applyProgramacion} disabled={applyingProgramacion || positions.length === 0}>
               {applyingProgramacion ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
-              Generar Turnos en Todas las Posiciones
+              Completar Turnos Faltantes
             </Button>
           </div>
         </CardContent>
