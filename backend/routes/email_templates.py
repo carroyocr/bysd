@@ -133,7 +133,6 @@ DEFAULT_TEMPLATES = [
         <h1 style="color: white; margin: 0; font-size: 24px;">¡Registro Confirmado!</h1></div>
     <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
         <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu registro para <strong>{{race_name}}</strong> ha sido recibido exitosamente.</p>
         {{proximos_pasos}}
         <p style="font-size: 14px; color: #6b7280;">Si necesitas modificar tu registro, usa este enlace:<br>
             <a href="{{athlete_edit_link}}" style="color: #1f2937;">Editar mi registro</a></p></div>
