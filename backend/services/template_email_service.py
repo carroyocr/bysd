@@ -96,6 +96,12 @@ def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False
     return results
 
 
+# Campos cuyo valor es un bloque de HTML que arma el propio backend (nunca
+# texto escrito por un usuario). Se insertan tal cual: escaparlos haria que el
+# correo mostrara las etiquetas <p style="..."> en pantalla.
+HTML_MERGE_FIELDS = {"proximos_pasos"}
+
+
 def render_template(template_str: str, data: Dict[str, Any], escape: bool = True) -> str:
     """
     Render a template string by replacing merge fields with actual data.
@@ -104,7 +110,8 @@ def render_template(template_str: str, data: Dict[str, Any], escape: bool = True
 
     escape=True (por defecto) para cuerpos HTML. Pasar escape=False solo para
     el asunto, que viaja como cabecera de texto plano: ahi un "&" escapado se
-    leeria literalmente como "&amp;".
+    leeria literalmente como "&amp;". Los campos de HTML_MERGE_FIELDS tampoco
+    se escapan porque su contenido lo genera el backend.
     """
     if not template_str:
         return ""
@@ -122,10 +129,13 @@ def render_template(template_str: str, data: Dict[str, Any], escape: bool = True
         # Los valores se escapan; la plantilla no. Sin esto, un atleta que se
         # llame '<b>x' o algo peor inyecta HTML en los correos que salen a
         # terceros (y los nombres los escribe cualquiera en la inscripcion).
-        # Ningun campo de fusion es HTML a proposito: son textos y URLs, y
-        # escapar una URL es correcto dentro de href/src.
+        # Los campos de fusion son textos y URLs, y escapar una URL es correcto
+        # dentro de href/src; la unica excepcion son los bloques de HTML que
+        # arma el backend (HTML_MERGE_FIELDS).
         texto = str(value)
-        return html.escape(texto, quote=True) if escape else texto
+        if not escape or field_name in HTML_MERGE_FIELDS:
+            return texto
+        return html.escape(texto, quote=True)
 
     result = re.sub(pattern, replacer, result)
 

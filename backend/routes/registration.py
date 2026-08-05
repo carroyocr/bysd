@@ -799,9 +799,87 @@ async def public_participants(race_code: str):
     }
 
 
+def _bloque_datos_pago(race_config: Optional[dict], fecha_limite: Optional[str]) -> str:
+    """Bloque HTML con los datos bancarios y los pasos para notificar el pago.
+
+    Se usa al promover desde la lista de espera cuando el proceso de cobro ya
+    esta abierto. Los valores salen de la configuracion de la carrera (los
+    escribe un admin en el panel) y se escapan igual antes de meterlos al HTML.
+    """
+    import html as _html
+    from services.template_email_service import BASE_URL
+
+    cfg = race_config or {}
+    monto = cfg.get("registration_cost") or 0
+    filas = [
+        ("Monto", f"RD$ {monto:,.0f}" if monto else ""),
+        ("Banco", cfg.get("payment_bank_name", "")),
+        ("Titular", cfg.get("payment_account_name", "")),
+        ("Tipo de cuenta", cfg.get("payment_account_type", "")),
+        ("Número de cuenta", cfg.get("payment_account_number", "")),
+        ("Documento del titular", cfg.get("payment_account_id", "")),
+    ]
+    filas_html = "".join(
+        f"""
+                <tr>
+                    <td style="padding: 6px 0; color: #6b7280;">{etiqueta}:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #1f2937;">{_html.escape(str(valor))}</td>
+                </tr>"""
+        for etiqueta, valor in filas if valor
+    )
+
+    limite_html = ""
+    if fecha_limite:
+        limite_html = f"""
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; border: 2px solid #9ca3af;">
+                <p style="font-size: 14px; color: #374151; margin: 0 0 10px 0;">Tienes tiempo para completar tu pago hasta el:</p>
+                <p style="font-size: 24px; font-weight: bold; color: #1f2937; margin: 0;">{_html.escape(fecha_limite)}</p>
+            </div>"""
+
+    return f"""
+            <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
+                <strong>¡Buenas noticias!</strong> Se ha liberado un cupo y tu registro a la carrera está confirmado.
+            </p>
+            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+                El período de pagos ya está abierto, así que a continuación te dejamos los datos para que completes el pago de tu inscripción.
+            </p>{limite_html}
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0 0 15px 0;">Datos para el pago:</p>
+                <table style="width: 100%; font-size: 14px;">{filas_html}
+                </table>
+            </div>
+            <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 25px 0 10px 0;">¿Cómo notificar tu pago?</p>
+            <ol style="font-size: 14px; color: #4b5563; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Realiza el pago con los datos indicados arriba.</li>
+                <li>Ingresa a tu <strong>perfil</strong> en nuestro sitio web.</li>
+                <li>Ve a la sección <strong>Carreras Inscritas</strong>.</li>
+                <li>Pulsa <strong>Notificar pago</strong> y adjunta tu comprobante de pago.</li>
+            </ol>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{BASE_URL}/mi-perfil" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Ir a mi Perfil</a>
+            </div>
+            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
+                <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.6;">
+                    <strong>Importante:</strong> si no recibimos tu pago dentro del plazo, tu inscripción será cancelada y tu espacio se reasignará a la lista de espera.
+                </p>
+            </div>
+    """
+
+
 @admin_router.post("/promote-waitlist/{email}")
-async def promote_waitlist(email: str, race_code: str):
-    """Admin: Promote a waitlisted athlete to confirmed registration and send confirmation email."""
+async def promote_waitlist(
+    email: str,
+    race_code: str,
+    incluir_pago: bool = False,
+    fecha_limite_pago: Optional[str] = None,
+):
+    """Admin: Promote a waitlisted athlete to confirmed registration and send confirmation email.
+
+    Con incluir_pago=true el correo lleva ademas los datos bancarios y los
+    pasos para notificar el pago (util cuando el periodo de cobro ya arranco).
+    fecha_limite_pago es texto libre y opcional ("15 de septiembre"): si viene,
+    se muestra como fecha limite.
+    """
     registration = await registrations_collection.find_one({
         "email": email.lower(),
         "race_code": race_code
@@ -826,7 +904,9 @@ async def promote_waitlist(email: str, race_code: str):
         }
         now = datetime.now(timezone.utc)
         payment_cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
-        if now < payment_cutoff:
+        if incluir_pago:
+            merge_data["proximos_pasos"] = _bloque_datos_pago(race_config, fecha_limite_pago)
+        elif now < payment_cutoff:
             merge_data["proximos_pasos"] = """
                 <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
                     <strong>¡Buenas noticias!</strong> Se ha liberado un cupo y tu registro a la carrera está confirmado.
