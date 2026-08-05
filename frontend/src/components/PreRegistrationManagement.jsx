@@ -441,14 +441,27 @@ export default function PreRegistrationManagement() {
   };
 
   const [promotingEmail, setPromotingEmail] = useState(null);
+  const [promoteTarget, setPromoteTarget] = useState(null);
+  const [incluirPago, setIncluirPago] = useState(false);
+  const [fechaLimitePago, setFechaLimitePago] = useState('');
+
+  const openPromoteDialog = (email) => {
+    setPromoteTarget(email);
+    setIncluirPago(false);
+    setFechaLimitePago('');
+  };
+
   const promoteWaitlist = async (email) => {
-    if (!window.confirm('¿Promover este atleta de la lista de espera a inscrito? Se le enviará un correo de confirmación.')) {
-      return;
-    }
     setPromotingEmail(email);
+    setPromoteTarget(null);
     try {
+      const params = new URLSearchParams({ race_code: raceCode });
+      if (incluirPago) {
+        params.set('incluir_pago', 'true');
+        if (fechaLimitePago.trim()) params.set('fecha_limite_pago', fechaLimitePago.trim());
+      }
       const response = await adminFetch(
-        `${API_URL}/api/registration/admin/promote-waitlist/${email}?race_code=${raceCode}`,
+        `${API_URL}/api/registration/admin/promote-waitlist/${email}?${params.toString()}`,
         {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
@@ -1094,7 +1107,7 @@ export default function PreRegistrationManagement() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => promoteWaitlist(reg.email)}
+                                onClick={() => openPromoteDialog(reg.email)}
                                 disabled={promotingEmail === reg.email}
                                 className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                                 title="Promover a inscrito"
@@ -1205,6 +1218,59 @@ export default function PreRegistrationManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Promover desde lista de espera */}
+      {promoteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="promote-modal">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="px-6 py-4 border-b">
+              <h3 className="font-semibold text-lg">Promover a inscrito</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Se le enviará un correo de confirmación a <strong>{promoteTarget}</strong>.
+              </p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={incluirPago}
+                  onChange={(e) => setIncluirPago(e.target.checked)}
+                  className="w-4 h-4 mt-0.5"
+                  data-testid="promote-incluir-pago"
+                />
+                <span className="text-sm">
+                  Incluir la información de pago en el correo
+                  <span className="block text-xs text-muted-foreground">
+                    Agrega los datos bancarios de la carrera y los pasos para notificar el pago.
+                    Úsalo solo si el proceso de cobro ya está abierto.
+                  </span>
+                </span>
+              </label>
+              {incluirPago && (
+                <div className="space-y-1 pl-6">
+                  <Label htmlFor="fecha-limite-pago" className="text-sm">Fecha límite de pago (opcional)</Label>
+                  <Input
+                    id="fecha-limite-pago"
+                    value={fechaLimitePago}
+                    onChange={(e) => setFechaLimitePago(e.target.value)}
+                    placeholder="Ej: 15 de septiembre"
+                    data-testid="promote-fecha-limite"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si la dejas vacía, el correo no muestra una fecha límite.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPromoteTarget(null)}>Cancelar</Button>
+              <Button onClick={() => promoteWaitlist(promoteTarget)} data-testid="promote-confirm">
+                Promover y notificar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
