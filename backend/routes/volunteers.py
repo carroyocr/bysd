@@ -198,6 +198,10 @@ class AssignmentSlot(BaseModel):
 class AssignmentRequest(BaseModel):
     email: str
 
+class MultipleAssignmentRequest(BaseModel):
+    email: str
+    slot_ids: List[int]
+
 class AssignmentResponse(BaseModel):
     message: str
     success: bool
@@ -252,34 +256,24 @@ async def get_shifts():
     return sorted(shifts)
 
 
-@router.post("/assign/{slot_id}")
-async def assign_volunteer(slot_id: int, request: AssignmentRequest):
-    """Assign a volunteer to a slot"""
-    from server import db as database
-    
-    email = request.email.strip().lower()
-    
-    # Verify volunteer exists (check both collections)
+async def _buscar_voluntario(database, email: str):
+    """El voluntario puede vivir en cualquiera de las dos colecciones."""
     volunteer = await database.volunteers.find_one({"email": email})
     if not volunteer:
         volunteer = await database.volunteer_registrations.find_one({"email": email})
-    
-    if not volunteer:
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."},
-            headers={"X-Error-Detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."}
-        )
-    
-    # Check slot exists and is available
+    return volunteer
+
+
+async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str):
+    """Asigna un cupo al voluntario y programa su recordatorio.
+
+    Devuelve (slot_asignado, None) o (None, (status, mensaje)) si no se pudo.
+    Si el cupo puntual ya está tomado, busca otro libre del mismo turno.
+    """
     slot = await database.volunteer_assignments.find_one({"id": slot_id})
     if not slot:
-        return JSONResponse(
-            status_code=404,
-            content={"detail": "Slot no encontrado"},
-            headers={"X-Error-Detail": "Slot no encontrado"}
-        )
-    
+        return None, (404, "Slot no encontrado")
+
     slot_solicitado_id = slot_id
     if slot.get("email_asignado") and slot.get("email_asignado") != email:
         # El cupo puntual ya se ocupó, pero el turno puede tener otros libres:
@@ -292,17 +286,10 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             "email_asignado": {"$in": [None, ""]},
         })
         if not alternativo:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": "Este turno ya no tiene espacios disponibles"},
-                headers={"X-Error-Detail": "Este turno ya no tiene espacios disponibles"}
-            )
+            return None, (400, "Este turno ya no tiene espacios disponibles")
         slot = alternativo
         slot_id = alternativo["id"]
 
-    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
-
-    # Assign volunteer
     await database.volunteer_assignments.update_one(
         {"id": slot_id},
         {"$set": {
@@ -311,7 +298,7 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             "updated_at": datetime.utcnow()
         }}
     )
-    
+
     # Update volunteer registration status to confirmed and remove from slots_interes
     await database.volunteer_registrations.update_one(
         {"email": email},
@@ -324,7 +311,7 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
             "$pull": {"slots_interes": {"$in": list({slot_solicitado_id, slot_id})}}
         }
     )
-    
+
     # Schedule reminder for this new assignment
     try:
         from services.volunteer_scheduler import schedule_single_reminder
@@ -337,42 +324,156 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     except Exception as e:
         # Don't fail the assignment if scheduler fails
         print(f"Warning: Could not schedule reminder for slot {slot_id}: {e}")
-    
-    # Send confirmation email using template system
-    try:
-        from services.template_email_service import (
-            send_email_with_template, build_race_data, build_volunteer_data
-        )
-        
-        from services.volunteer_dates import con_fecha
 
-        # Get race config
-        race_config = await database.race_configurations.find_one({"is_active": True})
+    return slot, None
 
-        # El slot guarda el dia como tipo relativo, no como fecha: se resuelve
-        # con la programacion del evento para que el correo no salga sin fecha
-        slot_con_fecha = await con_fecha(database, slot)
 
-        # Build merge data with assignment info
+def _fila_turno_html(slot: dict) -> str:
+    """Una tarjeta de turno para el correo de varios turnos."""
+    import html as _html
+    from services.template_email_service import format_time_ampm, format_date_spanish
+
+    puesto = _html.escape(str(slot.get("puesto", "") or ""))
+    turno = _html.escape(str(slot.get("turno", "") or ""))
+    dia = _html.escape(format_date_spanish(slot.get("dia", "") or ""))
+    horario = f"{format_time_ampm(slot.get('hora_inicio', ''))} - {format_time_ampm(slot.get('hora_fin', ''))}"
+    return f"""
+            <div style="background: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin: 0 0 12px 0; border-left: 4px solid #9ca3af;">
+                <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #1f2937;">{puesto}</p>
+                <table style="width: 100%; font-size: 14px; color: #4b5563;">
+                    <tr>
+                        <td style="padding: 3px 0;">Turno {turno}</td>
+                        <td style="padding: 3px 0; text-align: right;">{dia}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 3px 0;" colspan="2"><strong style="color: #1f2937;">{horario}</strong></td>
+                    </tr>
+                </table>
+            </div>"""
+
+
+async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
+    """Envía UN solo correo con todos los turnos recién asignados.
+
+    Con un turno usa la plantilla de siempre; con varios, la de turnos
+    múltiples, para no mandarle un correo por turno al voluntario.
+    """
+    if not slots:
+        return
+    from services.template_email_service import (
+        send_email_with_template, build_race_data, build_volunteer_data
+    )
+    from services.volunteer_dates import con_fecha_varios
+
+    race_config = await database.race_configurations.find_one({"is_active": True})
+    # El slot guarda el dia como tipo relativo, no como fecha: se resuelve
+    # con la programacion del evento para que el correo no salga sin fecha
+    slots_con_fecha = await con_fecha_varios(database, slots)
+
+    if len(slots_con_fecha) == 1:
         merge_data = {
             **build_race_data(race_config),
-            **build_volunteer_data(volunteer, assignment=slot_con_fecha),
+            **build_volunteer_data(volunteer, assignment=slots_con_fecha[0]),
         }
-        
-        await send_email_with_template(
-            db=database,
-            template_id="volunteer_shift_assignment",
-            to_email=email,
-            data=merge_data
+        template_id = "volunteer_shift_assignment"
+    else:
+        def orden(s):
+            return (str(s.get("dia", "")), str(s.get("hora_inicio", "")))
+
+        merge_data = {
+            **build_race_data(race_config),
+            **build_volunteer_data(volunteer),
+            "volunteer_turnos": "".join(_fila_turno_html(s) for s in sorted(slots_con_fecha, key=orden)),
+            "volunteer_turnos_total": str(len(slots_con_fecha)),
+        }
+        template_id = "volunteer_shifts_assignment"
+
+    await send_email_with_template(
+        db=database,
+        template_id=template_id,
+        to_email=volunteer.get("email", ""),
+        data=merge_data,
+    )
+
+
+@router.post("/assign/{slot_id}")
+async def assign_volunteer(slot_id: int, request: AssignmentRequest):
+    """Assign a volunteer to a slot"""
+    from server import db as database
+
+    email = request.email.strip().lower()
+
+    volunteer = await _buscar_voluntario(database, email)
+    if not volunteer:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."},
+            headers={"X-Error-Detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."}
         )
+
+    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+
+    slot, error = await _ocupar_slot(database, slot_id, email, volunteer_name)
+    if error:
+        status_code, detail = error
+        return JSONResponse(
+            status_code=status_code,
+            content={"detail": detail},
+            headers={"X-Error-Detail": detail}
+        )
+
+    try:
+        await _enviar_correo_turnos(database, volunteer, [slot])
         print(f"Assignment confirmation email sent to {email}")
     except Exception as e:
         print(f"Warning: Could not send confirmation email to {email}: {e}")
-    
+
     return {
         "message": f"¡Asignación exitosa! {volunteer_name} ha sido asignado/a al turno.",
         "success": True,
         "volunteer_name": volunteer_name
+    }
+
+
+@router.post("/assign-multiple")
+async def assign_volunteer_multiple(request: MultipleAssignmentRequest):
+    """Asigna varios turnos de una vez y notifica con UN solo correo."""
+    from server import db as database
+
+    email = request.email.strip().lower()
+
+    volunteer = await _buscar_voluntario(database, email)
+    if not volunteer:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."},
+            headers={"X-Error-Detail": "El correo electrónico no corresponde a un voluntario registrado. No es posible realizar la asignación."}
+        )
+
+    volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
+
+    asignados = []
+    errores = []
+    for slot_id in request.slot_ids:
+        slot, error = await _ocupar_slot(database, slot_id, email, volunteer_name)
+        if error:
+            errores.append({"slot_id": slot_id, "detail": error[1]})
+        else:
+            asignados.append(slot)
+
+    if asignados:
+        try:
+            await _enviar_correo_turnos(database, volunteer, asignados)
+            print(f"Assignment confirmation email sent to {email} ({len(asignados)} turnos)")
+        except Exception as e:
+            print(f"Warning: Could not send confirmation email to {email}: {e}")
+
+    return {
+        "success": len(asignados) > 0,
+        "asignados": len(asignados),
+        "fallidos": len(errores),
+        "errores": errores,
+        "volunteer_name": volunteer_name,
     }
 
 

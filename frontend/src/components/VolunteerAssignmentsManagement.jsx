@@ -270,28 +270,23 @@ export default function VolunteerAssignmentsManagement() {
     if (!selectedVolunteer || !selectedVolunteer.slots_interes?.length) return;
     
     setActionLoading(true);
-    let successCount = 0;
-    let errorCount = 0;
-    
+
     try {
-      for (const slotId of selectedVolunteer.slots_interes) {
-        try {
-          const response = await adminFetch(`${API_URL}/api/volunteers/assign/${slotId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: selectedVolunteer.email })
-          });
-          
-          if (response.ok) {
-            successCount++;
-          } else {
-            errorCount++;
-          }
-        } catch {
-          errorCount++;
-        }
-      }
-      
+      // Un solo llamado: el backend asigna todos los turnos y manda un unico correo
+      const response = await adminFetch(`${API_URL}/api/volunteers/assign-multiple`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: selectedVolunteer.email,
+          slot_ids: selectedVolunteer.slots_interes,
+        })
+      });
+      const data = await response.json().catch(() => ({}));
+      const successCount = response.ok ? (data.asignados || 0) : 0;
+      const errorCount = response.ok
+        ? (data.fallidos || 0)
+        : selectedVolunteer.slots_interes.length;
+
       if (successCount > 0) {
         toast.success(`${successCount} turno${successCount !== 1 ? 's' : ''} confirmado${successCount !== 1 ? 's' : ''}`);
       }

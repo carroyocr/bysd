@@ -64,6 +64,8 @@ MERGE_FIELDS = {
             {"key": "{{volunteer_hora_inicio}}", "label": "Hora de inicio", "example": "8:00 AM"},
             {"key": "{{volunteer_hora_fin}}", "label": "Hora de fin", "example": "12:00 PM"},
             {"key": "{{volunteer_edit_link}}", "label": "Link de edición", "example": "https://.../voluntarios/editar/abc123"},
+            {"key": "{{volunteer_turnos}}", "label": "Lista de turnos (solo en 'Asignación de Varios Turnos')", "example": "Puesto, turno, fecha y horario de cada turno"},
+            {"key": "{{volunteer_turnos_total}}", "label": "Cantidad de turnos asignados", "example": "3"},
         ]
     },
     "payment": {
@@ -193,6 +195,27 @@ DEFAULT_TEMPLATES = [
                     <td style="padding: 8px 0;"><strong>Horario:</strong></td>
                     <td style="text-align: right;">{{volunteer_hora_inicio}} - {{volunteer_hora_fin}}</td></tr></table></div>
         <p style="font-size: 14px; color: #6b7280;">Recuerda llegar 15 minutos antes de tu turno.</p></div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_shifts_assignment",
+        "name": "Asignación de Varios Turnos - Voluntario",
+        "description": "Se envía cuando se le confirman varios turnos de una vez a un voluntario (un solo correo con todos)",
+        "subject": "Tus turnos han sido asignados - {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">¡Turnos Asignados!</h1></div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Te han sido asignados <strong>{{volunteer_turnos_total}}</strong> turnos:</p>
+        {{volunteer_turnos}}
+        <p style="font-size: 14px; color: #6b7280;">Recuerda llegar 15 minutos antes de cada turno.</p></div>
     <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
         <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
 </div>
