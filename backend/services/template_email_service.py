@@ -99,7 +99,7 @@ def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False
 # Campos cuyo valor es un bloque de HTML que arma el propio backend (nunca
 # texto escrito por un usuario). Se insertan tal cual: escaparlos haria que el
 # correo mostrara las etiquetas <p style="..."> en pantalla.
-HTML_MERGE_FIELDS = {"proximos_pasos"}
+HTML_MERGE_FIELDS = {"proximos_pasos", "volunteer_turnos"}
 
 
 def render_template(template_str: str, data: Dict[str, Any], escape: bool = True) -> str:
@@ -145,6 +145,30 @@ def render_template(template_str: str, data: Dict[str, Any], escape: bool = True
 async def get_template_by_id(db, template_id: str) -> Optional[Dict]:
     """Get a template from database by ID"""
     return await db.email_templates.find_one({"id": template_id}, {"_id": 0})
+
+
+async def _sembrar_plantilla_por_defecto(db, template_id: str) -> Optional[Dict]:
+    """Inserta la plantilla por defecto si todavia no existe en la base.
+
+    Nunca pisa una plantilla existente ($setOnInsert): lo que el admin haya
+    editado en el panel manda.
+    """
+    try:
+        from routes.email_templates import DEFAULT_TEMPLATES
+    except Exception:
+        return None
+
+    default = next((t for t in DEFAULT_TEMPLATES if t["id"] == template_id), None)
+    if not default:
+        return None
+
+    ahora = datetime.now(timezone.utc)
+    await db.email_templates.update_one(
+        {"id": template_id},
+        {"$setOnInsert": {**default, "created_at": ahora, "updated_at": ahora}},
+        upsert=True,
+    )
+    return await get_template_by_id(db, template_id)
 
 
 async def send_templated_email_with_error(
@@ -233,7 +257,13 @@ async def send_email_with_template(
     
     # Get template
     template = await get_template_by_id(db, template_id)
-    
+
+    if not template:
+        # Las plantillas se siembran cuando el panel abre la lista de correos;
+        # si un envio ocurre antes de eso, se inserta la de por defecto aqui
+        # para no quedarnos sin enviar el correo.
+        template = await _sembrar_plantilla_por_defecto(db, template_id)
+
     if not template:
         print(f"Template {template_id} not found, using fallback")
         return False
