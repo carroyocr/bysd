@@ -7,7 +7,8 @@ import { Textarea } from './ui/textarea';
 import { RichTextEditor } from './RichTextEditor';
 import {
   Send, Eye, Users, UserCheck, UserX, HandHelping, Mail, Loader2,
-  AtSign, X, ChevronDown, History, CheckCircle2, XCircle, Download
+  AtSign, X, ChevronDown, History, CheckCircle2, XCircle, Download,
+  Newspaper, Handshake
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +19,8 @@ const FILTER_OPTIONS = [
   { key: 'inscribed', label: 'Inscritos a carrera', icon: UserCheck, color: 'text-green-600' },
   { key: 'not_inscribed', label: 'No inscritos', icon: UserX, color: 'text-amber-600' },
   { key: 'volunteers', label: 'Voluntarios', icon: HandHelping, color: 'text-purple-600' },
+  { key: 'press', label: 'Prensa', icon: Newspaper, color: 'text-sky-600' },
+  { key: 'sponsors', label: 'Patrocinadores', icon: Handshake, color: 'text-emerald-600' },
   { key: 'manual', label: 'Correos específicos', icon: AtSign, color: 'text-gray-600' },
 ];
 
@@ -53,6 +56,12 @@ export default function EmailComposer() {
   const [raceCode, setRaceCode] = useState('');
   const [regStatus, setRegStatus] = useState('');
   const [payment, setPayment] = useState('');
+  const [mediaType, setMediaType] = useState('');
+  const [sponsorStatus, setSponsorStatus] = useState('');
+  const [sponsorCategory, setSponsorCategory] = useState('');
+  const [recipientOptions, setRecipientOptions] = useState({
+    media_types: [], sponsor_statuses: [], sponsor_categories: [],
+  });
   const [manualEmails, setManualEmails] = useState('');
   const [recipients, setRecipients] = useState([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
@@ -138,6 +147,14 @@ export default function EmailComposer() {
       .then(r => r.json())
       .then(data => setTemplates(Array.isArray(data) ? data : []))
       .catch(() => {});
+    fetch(`${API_URL}/api/athletes/admin/email-recipient-options`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setRecipientOptions({
+        media_types: data?.media_types || [],
+        sponsor_statuses: data?.sponsor_statuses || [],
+        sponsor_categories: data?.sponsor_categories || [],
+      }))
+      .catch(() => {});
   }, [token]);
 
   const handleTemplateChange = (id) => {
@@ -158,16 +175,21 @@ export default function EmailComposer() {
     }
   };
 
+  const buildRecipientFilter = useCallback(() => ({
+    filter_type: filterType,
+    race_code: filterType === 'inscribed' ? raceCode : null,
+    reg_status: filterType === 'inscribed' ? regStatus || null : null,
+    payment: filterType === 'inscribed' ? payment || null : null,
+    media_type: filterType === 'press' ? mediaType || null : null,
+    sponsor_status: filterType === 'sponsors' ? sponsorStatus || null : null,
+    sponsor_category: filterType === 'sponsors' ? sponsorCategory || null : null,
+    manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
+  }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, manualEmails]);
+
   const loadRecipients = useCallback(async () => {
     setLoadingRecipients(true);
     try {
-      const body = {
-        filter_type: filterType,
-        race_code: filterType === 'inscribed' ? raceCode : null,
-        reg_status: filterType === 'inscribed' ? regStatus || null : null,
-        payment: filterType === 'inscribed' ? payment || null : null,
-        manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
-      };
+      const body = buildRecipientFilter();
       const res = await fetch(`${API_URL}/api/athletes/admin/email-recipients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -180,7 +202,7 @@ export default function EmailComposer() {
     } finally {
       setLoadingRecipients(false);
     }
-  }, [filterType, raceCode, regStatus, payment, manualEmails, token]);
+  }, [buildRecipientFilter, token]);
 
   useEffect(() => {
     if (filterType !== 'manual') loadRecipients();
@@ -223,13 +245,7 @@ export default function EmailComposer() {
         content,
         plain_text: plainText,
         template_mode: !!templateId,
-        recipients: {
-          filter_type: filterType,
-          race_code: filterType === 'inscribed' ? raceCode : null,
-          reg_status: filterType === 'inscribed' ? regStatus || null : null,
-          payment: filterType === 'inscribed' ? payment || null : null,
-          manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
-        },
+        recipients: buildRecipientFilter(),
       };
       const res = await fetch(`${API_URL}/api/athletes/admin/send-email`, {
         method: 'POST',
@@ -321,6 +337,54 @@ export default function EmailComposer() {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {filterType === 'press' && (
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={mediaType}
+                    onChange={(e) => setMediaType(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="media-type-select"
+                  >
+                    <option value="">Todos los tipos de medio</option>
+                    {recipientOptions.media_types.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {filterType === 'sponsors' && (
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={sponsorStatus}
+                    onChange={(e) => setSponsorStatus(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="sponsor-status-select"
+                  >
+                    <option value="">Todas las etapas</option>
+                    {recipientOptions.sponsor_statuses.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={sponsorCategory}
+                    onChange={(e) => setSponsorCategory(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="sponsor-category-select"
+                  >
+                    <option value="">Todas las categorías</option>
+                    {recipientOptions.sponsor_categories.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  {recipientOptions.sponsor_categories.length === 0 && (
+                    <p className="text-xs text-gray-400">
+                      Las categorías salen del campo «Categoría» de la propuesta en Patrocinadores.
+                    </p>
+                  )}
                 </div>
               )}
 

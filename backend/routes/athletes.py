@@ -1985,11 +1985,14 @@ async def admin_update_athlete_profile(
 # ==================== ADMIN: EMAIL COMPOSER ====================
 
 class EmailRecipientFilter(BaseModel):
-    filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'manual'
+    filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'press', 'sponsors', 'manual'
     race_code: Optional[str] = None
     manual_emails: Optional[list] = None
     reg_status: Optional[str] = None  # estado de la inscripción (solo filtro 'inscribed')
     payment: Optional[str] = None  # 'paid', 'pending', 'in_review' (solo filtro 'inscribed')
+    media_type: Optional[str] = None  # tipo de medio (solo filtro 'press')
+    sponsor_status: Optional[str] = None  # etapa del pipeline (solo filtro 'sponsors')
+    sponsor_category: Optional[str] = None  # categoría de la propuesta (solo filtro 'sponsors')
 
 
 REG_STATUSES = {"pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"}
@@ -2061,6 +2064,67 @@ def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
     }
 
 
+def _contact_recipient(email, nombre_contacto, fallback_nombre, source):
+    """Destinatario de un directorio de contactos (prensa, patrocinadores).
+
+    El nombre viene en un solo campo: la primera palabra alimenta {{nombre}} y
+    el resto {{apellidos}}. Si no hay contacto, se usa el nombre del medio o de
+    la empresa para que el saludo no quede vacío. Devuelve None si no hay correo.
+    """
+    email = (email or "").strip().lower()
+    if not email:
+        return None
+    partes = (nombre_contacto or "").strip().split()
+    if partes:
+        nombre = partes[0]
+        apellidos = " ".join(partes[1:])
+        completo = " ".join(partes)
+    else:
+        # Sin persona de contacto: el nombre del medio o de la empresa va entero
+        nombre = completo = (fallback_nombre or "").strip()
+        apellidos = ""
+    return {
+        "email": email,
+        "nombre": nombre,
+        "apellidos": apellidos,
+        "nombre_completo": completo,
+        "source": source,
+    }
+
+
+def _dedupe_recipients(recipients):
+    """Quita los None y los correos repetidos (un mismo contacto puede aparecer
+    en varios programas o patrocinios), conservando el orden."""
+    vistos = set()
+    unicos = []
+    for r in recipients:
+        if not r or r["email"] in vistos:
+            continue
+        vistos.add(r["email"])
+        unicos.append(r)
+    return {"recipients": unicos, "total": len(unicos)}
+
+
+@router.get("/admin/email-recipient-options")
+async def admin_email_recipient_options(authorization: str = Header(None)):
+    """Admin: categorías disponibles para filtrar prensa y patrocinadores."""
+    from server import db as database
+    from routes.prensa import TIPOS_MEDIO
+    from routes.sponsors import SPONSOR_STATUSES, STATUS_LABELS
+
+    _verify_email_admin(authorization)
+
+    categorias = await database.sponsors.distinct("propuesta_categoria")
+    return {
+        "media_types": list(TIPOS_MEDIO),
+        "sponsor_statuses": [{"value": s, "label": STATUS_LABELS.get(s, s)} for s in SPONSOR_STATUSES],
+        "sponsor_categories": sorted(
+            {c.strip() for c in categorias if isinstance(c, str) and c.strip()},
+            key=str.lower,
+        ),
+    }
+
+
 @router.post("/admin/email-recipients")
 async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: str = Header(None)):
     """Admin: Get list of email recipients based on filter"""
@@ -2096,6 +2160,46 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
                     "source": "voluntario"
                 })
         return {"recipients": recipients, "total": len(recipients)}
+
+    if data.filter_type == "press":
+        from routes.prensa import TIPOS_MEDIO
+
+        query = {}
+        if data.media_type:
+            if data.media_type not in TIPOS_MEDIO:
+                raise HTTPException(status_code=400, detail="Tipo de medio inválido")
+            query["tipo_medio"] = data.media_type
+        contactos = await database.prensa_contactos.find(
+            query,
+            {"_id": 0, "email": 1, "nombre_contacto": 1, "nombre_medio": 1, "nombre_programa": 1},
+        ).sort("nombre_medio", 1).to_list(500)
+        for c in contactos:
+            fallback = c.get("nombre_medio") or c.get("nombre_programa") or ""
+            recipients.append(_contact_recipient(c.get("email"), c.get("nombre_contacto"), fallback, "prensa"))
+        return _dedupe_recipients(recipients)
+
+    if data.filter_type == "sponsors":
+        from routes.sponsors import SPONSOR_STATUSES
+
+        query = {}
+        if data.sponsor_status:
+            if data.sponsor_status not in SPONSOR_STATUSES:
+                raise HTTPException(status_code=400, detail="Etapa de patrocinio inválida")
+            # Los patrocinadores creados antes del pipeline no tienen "status": cuentan como prospecto
+            if data.sponsor_status == "prospecto":
+                query["$or"] = [{"status": "prospecto"}, {"status": {"$in": [None, ""]}}, {"status": {"$exists": False}}]
+            else:
+                query["status"] = data.sponsor_status
+        if data.sponsor_category:
+            query["propuesta_categoria"] = data.sponsor_category
+        sponsors = await database.sponsors.find(
+            query,
+            {"_id": 0, "correo": 1, "nombre_contacto": 1, "name": 1, "razon_social": 1},
+        ).sort("name", 1).to_list(500)
+        for s in sponsors:
+            fallback = s.get("name") or s.get("razon_social") or ""
+            recipients.append(_contact_recipient(s.get("correo"), s.get("nombre_contacto"), fallback, "patrocinador"))
+        return _dedupe_recipients(recipients)
 
     # Athletes-based filters
     athletes = await database.athletes.find(
@@ -2312,6 +2416,8 @@ async def admin_email_history(authorization: str = Header(None)):
         "inscribed": "Inscritos a carrera",
         "not_inscribed": "No inscritos",
         "volunteers": "Voluntarios",
+        "press": "Prensa",
+        "sponsors": "Patrocinadores",
         "manual": "Correos específicos",
     }
 
