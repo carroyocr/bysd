@@ -32,19 +32,8 @@ import MyProfilePage from './pages/MyProfilePage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import LiveApp from './live/LiveApp';
-import RoleSelectPage from './pages/RoleSelectPage';
-import StaffMenuPage from './pages/StaffMenuPage';
 import { isNative } from './lib/platform';
-import { getAppRole, roleHome } from './lib/appRole';
 import './App.css';
-
-/**
- * Entrada de la app nativa: si ya se eligió un rol va directo a su inicio;
- * si no, muestra el selector de rol. En la web nunca se usa.
- */
-function NativeEntry() {
-  return <Navigate to={roleHome(getAppRole())} replace />;
-}
 
 export default function App() {
   return (
@@ -53,10 +42,9 @@ export default function App() {
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Routes>
-          {/* App nativa: selector de rol y menú de staff, sin Navigation/Footer */}
-          {isNative() && <Route path="/" element={<NativeEntry />} />}
-          <Route path="/app" element={<RoleSelectPage />} />
-          <Route path="/staff" element={<StaffMenuPage />} />
+          {/* App nativa: entra directo a BYSD Live; el perfil del atleta y el
+              acceso de staff son opciones dentro de su menú lateral */}
+          {isNative() && <Route path="/" element={<Navigate to="/live" replace />} />}
 
           {/* Admin routes without Navigation/Footer */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

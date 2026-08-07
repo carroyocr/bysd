@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw,
+  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck,
 } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 
@@ -23,10 +23,11 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
-    { label: 'Perfil del corredor', Icon: User, action: () => { onClose(); window.location.href = '/mi-perfil'; } },
+    { label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') },
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
+    { label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') },
   ];
 
   return (

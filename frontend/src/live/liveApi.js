@@ -22,6 +22,25 @@ export async function postJson(path, body) {
   return { ok: res.ok, data };
 }
 
+/** Llamada con token (perfil del atleta o panel de staff) y cuerpo opcional. */
+export async function authJson(method, path, { token, body } = {}) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    return { ok: false, status: 0, data: {} };
+  }
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
 // ISO3 -> ISO2 para banderas; si no está en el mapa se muestra solo el texto
 const ISO3_TO_ISO2 = {
   DOM: 'DO', CRC: 'CR', PAN: 'PA', MEX: 'MX', USA: 'US', PUR: 'PR', COL: 'CO',

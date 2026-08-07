@@ -20,6 +20,8 @@ import RaceInfoScreen from './screens/RaceInfoScreen';
 import SponsorsScreen from './screens/SponsorsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
+import PerfilScreen from './screens/PerfilScreen';
+import StaffScreen from './screens/StaffScreen';
 
 const RaceContext = createContext(null);
 export const useRace = () => useContext(RaceContext);
@@ -138,6 +140,9 @@ export default function LiveApp() {
       <Routes>
         <Route index element={<WelcomeScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
+        {/* Antes de :raceCode para que no se interpreten como código de carrera */}
+        <Route path="perfil" element={<PerfilScreen />} />
+        <Route path="staff" element={<StaffScreen />} />
         <Route path=":raceCode/*" element={<RaceShell />} />
       </Routes>
     </LiveThemeProvider>

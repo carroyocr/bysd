@@ -18,7 +18,30 @@ export default function AdFooter({ raceCode }) {
     const load = async () => {
       try {
         const data = await getJson(`/api/ads/public${raceCode ? `?race_code=${raceCode}` : ''}`);
-        if (!cancel) setBanners(data);
+        if (data.length > 0) {
+          if (!cancel) setBanners(data);
+          return;
+        }
+        // Sin banners de publicidad: caer a los patrocinadores publicados de
+        // la carrera para que el pie no quede vacío.
+        let code = raceCode;
+        if (!code) {
+          const active = await getJson('/api/race-config/active');
+          code = active?.code;
+        }
+        if (!code) return;
+        const { sponsors } = await getJson(`/api/sponsors/race/${code}`);
+        const fallback = (sponsors || []).map((s, i) => ({
+          id: `sponsor-${code}-${i}`,
+          name: s.name,
+          text: s.description || null,
+          logo_url: s.logo_url || null,
+          link_url: s.instagram
+            ? (s.instagram.startsWith('http') ? s.instagram : `https://instagram.com/${s.instagram.replace('@', '')}`)
+            : null,
+          is_sponsor_fallback: true,
+        }));
+        if (!cancel) setBanners(fallback);
       } catch {
         /* sin publicidad no se rompe nada */
       }
@@ -45,7 +68,7 @@ export default function AdFooter({ raceCode }) {
   const ad = playlist.length ? playlist[index % playlist.length] : null;
 
   useEffect(() => {
-    if (!ad || impressionsSent.current.has(ad.id)) return;
+    if (!ad || ad.is_sponsor_fallback || impressionsSent.current.has(ad.id)) return;
     impressionsSent.current.add(ad.id);
     postJson('/api/ads/track', { banner_id: ad.id, event: 'impression' }).catch(() => {});
   }, [ad]);
@@ -53,7 +76,9 @@ export default function AdFooter({ raceCode }) {
   if (!ad) return null;
 
   const handleClick = () => {
-    postJson('/api/ads/track', { banner_id: ad.id, event: 'click' }).catch(() => {});
+    if (!ad.is_sponsor_fallback) {
+      postJson('/api/ads/track', { banner_id: ad.id, event: 'click' }).catch(() => {});
+    }
     if (ad.link_url) {
       const url = ad.link_url.startsWith('http') ? ad.link_url : `https://${ad.link_url}`;
       window.open(url, '_blank', 'noopener,noreferrer');

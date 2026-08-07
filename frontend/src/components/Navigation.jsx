@@ -473,14 +473,14 @@ export default function Navigation() {
                     )
                   ))}
 
-                  {/* Solo en la app nativa: volver al selector de rol */}
+                  {/* Solo en la app nativa: volver a BYSD Live */}
                   {isNative() && (
                     <Link
-                      to="/app"
+                      to="/live"
                       onClick={handleLinkClick}
                       className="px-4 py-3 text-base font-medium rounded-lg transition-colors text-foreground hover:text-primary hover:bg-secondary"
                     >
-                      Cambiar de rol
+                      Volver a la app en vivo
                     </Link>
                   )}
                 </div>
