@@ -49,8 +49,11 @@ export default function TrackingScreen() {
     return () => clearInterval(id);
   }, [fetchData]);
 
+  // Antes de la salida los inscritos están en "registered": cuentan como activos
+  const esActivo = (p) => p.status === 'active' || p.status === 'registered';
+
   const counts = useMemo(() => ({
-    active: (participants || []).filter((p) => p.status === 'active').length,
+    active: (participants || []).filter(esActivo).length,
     retired: (participants || []).filter((p) => p.status === 'retired').length,
     dns: (participants || []).filter((p) => p.status === 'dns').length,
     favoritos: (participants || []).filter((p) => followed.includes(p.bib)).length,
@@ -60,6 +63,7 @@ export default function TrackingScreen() {
   const filtered = useMemo(() => {
     let list = participants || [];
     if (filter === 'favoritos') list = list.filter((p) => followed.includes(p.bib));
+    else if (filter === 'active') list = list.filter(esActivo);
     else if (filter !== 'all') list = list.filter((p) => p.status === filter);
     const q = search.trim().toLowerCase();
     if (q) {
@@ -74,6 +78,11 @@ export default function TrackingScreen() {
   const toggleFollow = (bib) => setFollowed(followedStore.toggle(bib));
 
   const progressLine = (p) => {
+    if (p.status === 'registered') {
+      return p.categoria
+        ? (p.categoria === 'titular' ? 'Titular de la selección' : 'Reserva de la selección')
+        : 'Inscrito · listo para la salida';
+    }
     if (p.status === 'dns') return 'No inició la carrera';
     if (p.status === 'retired') return `DNF · se retiró en la vuelta ${p.retired_at_lap || p.laps_completed || '—'}`;
     if (p.status === 'winner') return `GANADOR · ${p.laps_completed} vueltas`;
@@ -124,11 +133,11 @@ export default function TrackingScreen() {
           </div>
         )}
 
-        {filtered.map((p) => (
+        {filtered.map((p, idx) => (
           <div
-            key={p.bib}
-            onClick={() => navigate(`/live/${raceCode}/atleta/${p.bib}`)}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 mb-2.5 cursor-pointer ${p.status === 'retired' || p.status === 'dns' ? T.cardOff : T.card}`}
+            key={p.bib || `sin-bib-${idx}`}
+            onClick={() => p.bib && navigate(`/live/${raceCode}/atleta/${p.bib}`)}
+            className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 mb-2.5 ${p.bib ? 'cursor-pointer' : ''} ${p.status === 'retired' || p.status === 'dns' ? T.cardOff : T.card}`}
           >
             <div
               className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border-2 ${T.avatar}`}
@@ -151,7 +160,7 @@ export default function TrackingScreen() {
               </p>
             </div>
             <div className="flex flex-col items-end gap-2 shrink-0">
-              <span className={`text-xs font-mono font-bold ${T.muted}`}>#{p.bib}</span>
+              <span className={`text-xs font-mono font-bold ${T.muted}`}>{p.bib ? `#${p.bib}` : ''}</span>
               <button
                 aria-label="Seguir"
                 onClick={(e) => { e.stopPropagation(); toggleFollow(p.bib); }}

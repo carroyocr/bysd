@@ -64,6 +64,20 @@ export function LiveThemeProvider({ children }) {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
+  // Pinta tambien el documento: sin esto, el rebote del scroll en el celular
+  // muestra el fondo blanco del sitio detras de la app.
+  useEffect(() => {
+    const color = theme === 'dark' ? '#0C0C0C' : '#FAF6EA';
+    const htmlPrev = document.documentElement.style.backgroundColor;
+    const bodyPrev = document.body.style.backgroundColor;
+    document.documentElement.style.backgroundColor = color;
+    document.body.style.backgroundColor = color;
+    return () => {
+      document.documentElement.style.backgroundColor = htmlPrev;
+      document.body.style.backgroundColor = bodyPrev;
+    };
+  }, [theme]);
+
   const value = {
     theme,
     setTheme,

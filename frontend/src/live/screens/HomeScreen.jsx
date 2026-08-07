@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Radio, Trophy, MessageCircle } from 'lucide-react';
-import { API, getJson } from '../liveApi';
+import { Menu, Radio, Trophy, MessageCircle, Clock } from 'lucide-react';
+import { API, getJson, raceStartMs, formatCountdown } from '../liveApi';
 import { useRace } from '../LiveApp';
 import AdFooter from '../components/AdFooter';
 
@@ -13,6 +13,24 @@ export default function HomeScreen() {
   const { raceCode, race, openDrawer } = useRace();
   const navigate = useNavigate();
   const [fondo, setFondo] = useState(null);
+  const [hasWinner, setHasWinner] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  const startMs = raceStartMs(race);
+  const started = startMs != null && now >= startMs;
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // EN VIVO solo si ya arrancó y no hay ganador declarado
+  useEffect(() => {
+    if (!started) return;
+    getJson(`/api/race/stats?race_code=${raceCode}`)
+      .then((s) => setHasWinner(!!s?.winner))
+      .catch(() => {});
+  }, [started, raceCode]);
 
   // El sufijo de versión evita que el navegador muestre una portada vieja
   // cuando se reemplaza (el archivo conserva el mismo nombre).
@@ -92,9 +110,14 @@ export default function HomeScreen() {
               {race?.name || 'Backyard Ultra Santo Domingo'}
             </h1>
           )}
-          {race?.is_active && (
+          {started && hasWinner === false && (
             <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-widest bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_#4ade80] animate-pulse" /> EN VIVO
+            </span>
+          )}
+          {!started && startMs != null && (
+            <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-widest bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-[#F5A623]">
+              <Clock className="w-3.5 h-3.5" /> INICIA EN {formatCountdown(startMs - now)}
             </span>
           )}
         </div>

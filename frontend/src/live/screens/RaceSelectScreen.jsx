@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, CalendarDays, MapPin, Loader2 } from 'lucide-react';
-import { API, getJson } from '../liveApi';
+import { ChevronRight, CalendarDays, MapPin, Loader2, Clock } from 'lucide-react';
+import { API, getJson, raceStartMs, formatCountdown } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 
 const fmtDate = (iso) => {
@@ -22,6 +22,8 @@ export default function RaceSelectScreen() {
   const { T } = useLiveTheme();
   const navigate = useNavigate();
   const [races, setRaces] = useState(null);
+  const [winners, setWinners] = useState({});
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     let cancel = false;
@@ -30,6 +32,26 @@ export default function RaceSelectScreen() {
       .catch(() => { if (!cancel) setRaces([]); });
     return () => { cancel = true; };
   }, []);
+
+  // Tic para la cuenta regresiva
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+
+  // EN VIVO real: la carrera ya arrancó y todavía no hay ganador declarado
+  useEffect(() => {
+    (races || [])
+      .filter((r) => {
+        const start = raceStartMs(r);
+        return start != null && Date.now() >= start && !r.archived_at;
+      })
+      .forEach((r) => {
+        getJson(`/api/race/stats?race_code=${r.code}`)
+          .then((s) => setWinners((prev) => ({ ...prev, [r.code]: !!s?.winner })))
+          .catch(() => {});
+      });
+  }, [races]);
 
   const today = new Date().toISOString().slice(0, 10);
   const actuales = (races || []).filter((r) => r.is_active || (r.date && r.date >= today && !r.archived_at));
@@ -64,11 +86,25 @@ export default function RaceSelectScreen() {
             <MapPin className="w-3.5 h-3.5 shrink-0" /> {race.location}
           </p>
         )}
-        {race.is_active && (
-          <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-extrabold tracking-wider text-green-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]" /> EN VIVO
-          </span>
-        )}
+        {(() => {
+          const start = raceStartMs(race);
+          const started = start != null && now >= start;
+          if (started && winners[race.code] === false) {
+            return (
+              <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-extrabold tracking-wider text-green-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]" /> EN VIVO
+              </span>
+            );
+          }
+          if (!started && start != null) {
+            return (
+              <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-bold tracking-wider text-[#E77622]">
+                <Clock className="w-3 h-3" /> INICIA EN {formatCountdown(start - now)}
+              </span>
+            );
+          }
+          return null;
+        })()}
       </div>
       <ChevronRight className={`w-5 h-5 shrink-0 ${T.subtle}`} />
     </button>

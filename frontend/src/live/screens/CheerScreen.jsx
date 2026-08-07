@@ -42,7 +42,7 @@ export default function CheerScreen() {
     } else {
       getJson(`/api/race/participants?race_code=${raceCode}`)
         .then((data) => setParticipants(
-          data.filter((p) => ['active', 'retired', 'winner', 'honor'].includes(p.status))
+          data.filter((p) => p.bib && ['registered', 'active', 'retired', 'winner', 'honor'].includes(p.status))
         ))
         .catch(() => {});
     }

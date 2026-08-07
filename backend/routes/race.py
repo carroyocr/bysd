@@ -218,26 +218,59 @@ async def get_participants(
     LEGACY_RACE_CODES = ["BYSD-2026"]  # Add more legacy race codes here if needed
     
     participants = []
-    
+
+    # Campeonato Mundial por Equipos: el "roster" no son inscripciones sino la
+    # nomina de seleccionados (titulares y reservas).
+    config_doc = None
+    if active_race_code:
+        config_doc = await database.race_configurations.find_one(
+            {"code": active_race_code}, {"es_campeonato": 1}
+        )
+    if config_doc and config_doc.get("es_campeonato"):
+        docs = await database.campeonato_seleccionados.find({}, {"_id": 0}).to_list(500)
+        # Titulares primero, luego reservas; dentro de cada grupo por nombre
+        docs.sort(key=lambda d: (0 if d.get("categoria") == "titular" else 1, d.get("nombre", "")))
+        seleccionados = [{
+            "bib": str(d.get("bib")).zfill(3) if d.get("bib") else None,
+            "nombre": d.get("nombre"),
+            "apellidos": d.get("apellidos"),
+            "nacionalidad": d.get("nacionalidad") or "DOM",
+            "sexo": d.get("sexo"),
+            "status": d.get("status") or "registered",
+            "laps_completed": 0,
+            "total_km": 0.0,
+            "categoria": d.get("categoria"),
+        } for d in docs]
+        if search:
+            s = search.lower()
+            seleccionados = [
+                p for p in seleccionados
+                if (p.get("bib") and s in p["bib"].lower())
+                or s in (p.get("nombre") or "").lower()
+                or s in (p.get("apellidos") or "").lower()
+            ]
+        return seleccionados
+
     if active_race_code in LEGACY_RACE_CODES:
         # Use legacy participants collection for historical races
         query = {}
         if status and status in ["active", "retired", "dns", "winner", "honor"]:
             query["status"] = status
-        
+
         participants = await database.participants.find(query, {"_id": 0}).to_list(1000)
     else:
         # Try registrations collection first for new races
         if active_race_code:
-            # Build query for registrations - only active, paid participants with BIB
+            # Antes de la salida los inscritos estan en "registered": tambien
+            # se muestran (la lista de espera y cancelados quedan fuera).
             query = {
                 "race_code": active_race_code,
-                "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
+                "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
                 "payment_status": "paid",  # Must have completed payment
                 "bib": {"$exists": True, "$ne": None}  # Must have BIB assigned
             }
-            
-            if status and status in ["active", "retired", "dns", "winner", "honor"]:
+
+            if status and status in ["registered", "active", "retired", "dns", "winner", "honor"]:
                 query["status"] = status
             
             registrations = await database.registrations.find(
@@ -1645,7 +1678,7 @@ async def submit_cheer_message(
         if bib_digits.isdigit():
             bib_formas.append(int(bib_digits))
         athlete = await database.registrations.find_one(
-            {"race_code": active_race_code, "bib": {"$in": bib_formas}, "status": {"$in": ["active", "retired", "winner", "honor"]}},
+            {"race_code": active_race_code, "bib": {"$in": bib_formas}, "status": {"$in": ["registered", "active", "retired", "winner", "honor"]}},
             {"_id": 0, "edit_token": 0}
         )
     

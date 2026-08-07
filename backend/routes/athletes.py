@@ -863,10 +863,38 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
     if not code:
         raise HTTPException(status_code=404, detail="No hay carrera activa")
 
+    # Campeonato: la ficha sale de la nomina de seleccionados
+    config_doc = await database.race_configurations.find_one({"code": code}, {"es_campeonato": 1})
+    if config_doc and config_doc.get("es_campeonato"):
+        bib_str = str(bib).zfill(3)
+        sel = await database.campeonato_seleccionados.find_one(
+            {"bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]}}, {"_id": 0}
+        )
+        if not sel:
+            raise HTTPException(status_code=404, detail="Atleta no encontrado")
+        return {
+            "bib": str(sel.get("bib")).zfill(3) if sel.get("bib") else None,
+            "nombre": sel.get("nombre"),
+            "apellidos": sel.get("apellidos"),
+            "sexo": sel.get("sexo"),
+            "nacionalidad": sel.get("nacionalidad"),
+            "ciudad_residencia": None,
+            "photo_url": None,
+            "status": sel.get("status") or "registered",
+            "laps_completed": 0,
+            "total_km": 0.0,
+            "retired_at_lap": None,
+            "anos_experiencia": None,
+            "maxima_distancia_km": None,
+            "categoria": sel.get("categoria"),
+            "itra_url": None,
+            "itra_snapshot": None,
+        }
+
     registration = await database.registrations.find_one({
         "race_code": code,
         "bib": str(bib).zfill(3),
-        "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
+        "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
     })
     if not registration:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
