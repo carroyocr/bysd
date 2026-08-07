@@ -60,6 +60,15 @@ export default function TrackingScreen() {
     all: (participants || []).length,
   }), [participants, followed]);
 
+  // Carrera concluida: ya nadie está activo ni en espera de salida. Sin
+  // corredores activos el filtro "Activos" sobra y se entra a "Todos".
+  const concluida = participants !== null && counts.all > 0 && counts.active === 0;
+  const visibleFilters = concluida ? FILTERS.filter(({ key }) => key !== 'active') : FILTERS;
+
+  useEffect(() => {
+    if (concluida && filter === 'active') setFilter('all');
+  }, [concluida, filter]);
+
   const filtered = useMemo(() => {
     let list = participants || [];
     if (filter === 'favoritos') list = list.filter((p) => followed.includes(p.bib));
@@ -106,7 +115,7 @@ export default function TrackingScreen() {
 
         {/* Filtros: compactos para caber en una fila sin scroll horizontal */}
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {FILTERS.map(({ key, label }) => (
+          {visibleFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
