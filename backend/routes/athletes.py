@@ -875,6 +875,7 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
         "bib": registration.get("bib"),
         "nombre": registration.get("nombre"),
         "apellidos": registration.get("apellidos"),
+        "sexo": registration.get("sexo"),
         "nacionalidad": registration.get("nacionalidad"),
         "ciudad_residencia": registration.get("ciudad_residencia"),
         "photo_url": registration.get("photo_url"),

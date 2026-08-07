@@ -417,10 +417,11 @@ async def upload_race_image(
     - home: Logo for home page hero section (recommended: 400x400px PNG, transparent background)
     - menu: Logo for navigation menu (recommended: 48x48px PNG, transparent background)  
     - favicon: Browser tab icon (recommended: 32x32px PNG or ICO)
+    - portada: Foto de fondo del Home de BYSD Live (recomendado: 1080x1920px JPG)
     """
     from server import db as database
-    
-    valid_types = ["home", "menu", "favicon"]
+
+    valid_types = ["home", "menu", "favicon", "portada"]
     if image_type not in valid_types:
         raise HTTPException(
             status_code=400, 
@@ -453,7 +454,8 @@ async def upload_race_image(
     field_map = {
         "home": "logo_home_url",
         "menu": "logo_menu_url",
-        "favicon": "favicon_url"
+        "favicon": "favicon_url",
+        "portada": "portada_url"
     }
     
     # Update database
@@ -466,7 +468,8 @@ async def upload_race_image(
     size_recommendations = {
         "home": "400x400px PNG con fondo transparente",
         "menu": "48x48px PNG con fondo transparente",
-        "favicon": "32x32px PNG o ICO"
+        "favicon": "32x32px PNG o ICO",
+        "portada": "1080x1920px JPG (foto del evento para el Home de BYSD Live)"
     }
     
     return {

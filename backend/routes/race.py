@@ -2495,3 +2495,79 @@ async def check_certificate(bib: str, db=Depends(lambda: None)):
         "nombre": participant.get("nombre"),
         "apellidos": participant.get("apellidos")
     }
+
+
+@router.get("/athlete-laps/{bib}")
+async def get_athlete_laps(bib: str, race_code: Optional[str] = None, db=Depends(lambda: None)):
+    """Vueltas de un atleta para BYSD Live: hora, duración y pace por vuelta.
+
+    Combina lap_registrations (escaneo QR, trae inicio y fin de vuelta) con el
+    laps_log manual de la inscripción (solo momento de registro). Público: no
+    expone quién escaneó ni datos del scanner.
+    """
+    from server import db as database
+
+    active_race_code = race_code or await get_active_race_code(database)
+    if not active_race_code:
+        return {"laps": [], "km_per_lap": KM_PER_LAP}
+
+    bib_str = str(bib).zfill(3)
+
+    registros = await database.lap_registrations.find(
+        {
+            "race_code": active_race_code,
+            "bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]},
+            "action": "lap_completed",
+        },
+        {"_id": 0, "lap_number": 1, "lap_start_time": 1, "scan_time": 1, "scan_time_local": 1},
+    ).sort("lap_number", 1).to_list(500)
+
+    vistos = set()
+    laps = []
+    for r in registros:
+        numero = r.get("lap_number")
+        if numero in vistos:
+            continue
+        vistos.add(numero)
+
+        inicio = r.get("lap_start_time")
+        fin = r.get("scan_time")
+        duracion_seg = None
+        if inicio and fin:
+            try:
+                delta = (fin - inicio).total_seconds()
+                # Descarta valores imposibles (relojes desfasados o datos sucios)
+                if 0 < delta <= 2 * 3600:
+                    duracion_seg = int(delta)
+            except TypeError:
+                duracion_seg = None
+
+        pace_seg_km = int(duracion_seg / KM_PER_LAP) if duracion_seg else None
+
+        laps.append({
+            "lap": numero,
+            "hora": r.get("scan_time_local"),
+            "duracion_seg": duracion_seg,
+            "pace_seg_km": pace_seg_km,
+        })
+
+    # Complementar con vueltas manuales que no pasaron por el scanner
+    registration = await database.registrations.find_one(
+        {"race_code": active_race_code, "bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]}},
+        {"_id": 0, "laps_log": 1},
+    )
+    for entry in (registration or {}).get("laps_log", []):
+        numero = entry.get("lap")
+        if numero is None or numero in vistos:
+            continue
+        vistos.add(numero)
+        completado = entry.get("completed_at")
+        laps.append({
+            "lap": numero,
+            "hora": completado.strftime("%H:%M") if hasattr(completado, "strftime") else None,
+            "duracion_seg": None,
+            "pace_seg_km": None,
+        })
+
+    laps.sort(key=lambda x: x["lap"])
+    return {"laps": laps, "km_per_lap": KM_PER_LAP}
