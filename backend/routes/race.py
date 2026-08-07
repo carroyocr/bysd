@@ -20,6 +20,10 @@ from services import rate_limit
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
+# Carreras historicas cuyos resultados viven en la coleccion legada
+# `participants` (previa al sistema de inscripciones `registrations`).
+LEGACY_RACE_CODES = ["BYSD-2026"]
+
 KM_PER_LAP = 6.7
 CERTIFICATES_DIR = Path(__file__).parent.parent / "static" / "certificates" / "individual"
 
@@ -212,10 +216,6 @@ async def get_participants(
     active_race_code = race_code
     if not active_race_code:
         active_race_code = await get_active_race_code(database)
-    
-    # Determine data source based on race code
-    # BYSD-2026 (and other legacy races) use the old participants collection
-    LEGACY_RACE_CODES = ["BYSD-2026"]  # Add more legacy race codes here if needed
     
     participants = []
 

@@ -3,9 +3,12 @@ import { Building2, Instagram, Loader2 } from 'lucide-react';
 import { API, getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { LEGACY_SPONSORS, LEGACY_RACE_CODES } from '../../content/legacySponsors';
+import { openExternal } from '../../lib/nativeExport';
 
 /**
- * Patrocinadores publicados de la carrera seleccionada.
+ * Patrocinadores de la carrera seleccionada: las ediciones legadas (2026)
+ * usan la lista fija compartida con el sitio; las nuevas, el panel.
  */
 export default function SponsorsScreen() {
   const { T } = useLiveTheme();
@@ -14,6 +17,11 @@ export default function SponsorsScreen() {
 
   useEffect(() => {
     let cancel = false;
+    if (LEGACY_RACE_CODES.includes(raceCode)) {
+      // logo local del build; misma forma que los del panel
+      setSponsors(LEGACY_SPONSORS.map((s) => ({ ...s, logo_url: s.logo })));
+      return () => { cancel = true; };
+    }
     getJson(`/api/sponsors/race/${raceCode}`)
       .then((data) => { if (!cancel) setSponsors(Array.isArray(data) ? data : data.sponsors || []); })
       .catch(() => { if (!cancel) setSponsors([]); });
@@ -55,15 +63,17 @@ export default function SponsorsScreen() {
               {s.description && <p className={`text-xs mt-0.5 line-clamp-2 ${T.muted}`}>{s.description}</p>}
             </div>
             {s.instagram && (
-              <a
-                href={`https://instagram.com/${s.instagram.replace('@', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => openExternal(
+                  s.instagram.startsWith('http')
+                    ? s.instagram
+                    : `https://instagram.com/${s.instagram.replace('@', '')}`
+                )}
                 aria-label={`Instagram de ${s.name}`}
                 className="w-9 h-9 flex items-center justify-center shrink-0"
               >
                 <Instagram className="w-5 h-5 text-[#E77622]" />
-              </a>
+              </button>
             )}
           </div>
         ))}

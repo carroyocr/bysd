@@ -82,7 +82,14 @@ export default function AthleteScreen() {
     setProfile(null);
     setFailed(false);
     Promise.all([
-      getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`),
+      // Si la ficha completa falla (p. ej. carreras históricas sin
+      // inscripción), se cae a los datos básicos del listado de la carrera.
+      getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`).catch(async () => {
+        const list = await getJson(`/api/race/participants?race_code=${raceCode}`);
+        const p = (list || []).find((x) => x.bib === bib);
+        if (!p) throw new Error('No encontrado');
+        return p;
+      }),
       getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
     ])
       .then(([prof, lapsData]) => {
