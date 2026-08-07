@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Send, MessageCircle, Loader2 } from 'lucide-react';
-import { getJson, postJson, FAN_NAME_KEY, initialsOf } from '../liveApi';
+import { Send, MessageCircle, Loader2, Search, X } from 'lucide-react';
+import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -19,6 +19,7 @@ export default function CheerScreen() {
   const [bib, setBib] = useState(bibParam || '');
   const [profile, setProfile] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [query, setQuery] = useState('');
   const [cheers, setCheers] = useState([]);
   const [fanName, setFanName] = useState(() => localStorage.getItem(FAN_NAME_KEY) || '');
   const [message, setMessage] = useState('');
@@ -47,6 +48,23 @@ export default function CheerScreen() {
     }
     fetchCheers(bibParam || '');
   }, [bibParam, raceCode, fetchCheers]);
+
+  // Autocompletado: 170 corredores en un combo no se navegan; se filtra por
+  // nombre o dorsal y se muestran las primeras coincidencias.
+  const seleccionado = useMemo(
+    () => participants.find((p) => p.bib === bib) || null,
+    [participants, bib]
+  );
+
+  const sugerencias = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return participants
+      .filter((p) =>
+        `${p.nombre} ${p.apellidos}`.toLowerCase().includes(q) ||
+        (p.bib || '').toLowerCase().includes(q.replace(/^#/, '')))
+      .slice(0, 6);
+  }, [participants, query]);
 
   const handleSend = async () => {
     if (!bib) {
@@ -92,18 +110,54 @@ export default function CheerScreen() {
 
         <div className={`rounded-2xl p-4 mb-5 ${T.card}`}>
           {!bibParam && (
-            <select
-              value={bib}
-              onChange={(e) => setBib(e.target.value)}
-              className={`w-full rounded-xl px-3 py-2.5 text-sm mb-2 appearance-none ${T.input}`}
-            >
-              <option value="">¿Para quién es el ánimo?</option>
-              {participants.map((p) => (
-                <option key={p.bib} value={p.bib}>
-                  #{p.bib} · {p.nombre} {p.apellidos}
-                </option>
-              ))}
-            </select>
+            seleccionado ? (
+              <div className={`flex items-center gap-2.5 rounded-xl px-3 py-2 mb-2 ${T.chipOn}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold ${T.avatar}`}>
+                  {initialsOf(seleccionado.nombre, seleccionado.apellidos)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold truncate">{seleccionado.nombre} {seleccionado.apellidos}</p>
+                  <p className="text-[10px] opacity-75">#{seleccionado.bib}</p>
+                </div>
+                <button aria-label="Cambiar corredor" onClick={() => { setBib(''); setQuery(''); }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="relative mb-2">
+                <div className={`flex items-center gap-2 rounded-xl px-3 ${T.input}`}>
+                  <Search className="w-4 h-4 shrink-0 opacity-70" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="¿Para quién? Busca por nombre o dorsal"
+                    className="w-full bg-transparent py-2.5 text-sm outline-none"
+                  />
+                </div>
+                {sugerencias.length > 0 && (
+                  <div className={`absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-20 shadow-xl ${T.card}`}>
+                    {sugerencias.map((p) => (
+                      <button
+                        key={p.bib}
+                        onClick={() => { setBib(p.bib); setQuery(''); setResult(null); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left border-b last:border-b-0 ${T.divider}`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${T.avatar}`}>
+                          {initialsOf(p.nombre, p.apellidos)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold truncate">{p.nombre} {p.apellidos}</p>
+                          <p className={`text-[10px] ${T.muted}`}>#{p.bib} · {flagOf(p.nacionalidad)} {p.nacionalidad}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {query.trim() && sugerencias.length === 0 && (
+                  <p className={`text-xs mt-1.5 px-1 ${T.muted}`}>Sin coincidencias con «{query}».</p>
+                )}
+              </div>
+            )
           )}
           <input
             value={fanName}
