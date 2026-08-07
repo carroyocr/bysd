@@ -97,6 +97,7 @@ function RaceShell() {
         <Route path="atleta/:bib/experiencia" element={<ExperienciaScreen />} />
         <Route path="atleta/:bib/resultados" element={<ShareResultsScreen />} />
         <Route path="atleta/:bib/animo" element={<CheerScreen />} />
+        <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
         <Route path="patrocinadores" element={<SponsorsScreen />} />

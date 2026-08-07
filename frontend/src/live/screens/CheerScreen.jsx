@@ -6,34 +6,53 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
 /**
- * Enviar mensaje de apoyo a un corredor + muro de sus mensajes recibidos.
+ * Enviar mensaje de apoyo.
+ *
+ * Con dorsal en la ruta (desde la ficha) va directo a ese corredor; sin dorsal
+ * (acceso rápido del Home) muestra el selector para escribir de una vez.
  */
 export default function CheerScreen() {
   const { T } = useLiveTheme();
   const { raceCode } = useRace();
-  const { bib } = useParams();
+  const { bib: bibParam } = useParams();
 
+  const [bib, setBib] = useState(bibParam || '');
   const [profile, setProfile] = useState(null);
+  const [participants, setParticipants] = useState([]);
   const [cheers, setCheers] = useState([]);
   const [fanName, setFanName] = useState(() => localStorage.getItem(FAN_NAME_KEY) || '');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
 
-  const fetchCheers = useCallback(() => {
-    getJson(`/api/race/cheers?athlete_bib=${bib}&limit=30&race_code=${raceCode}`)
+  const fetchCheers = useCallback((forBib) => {
+    const filtro = forBib ? `&athlete_bib=${forBib}` : '';
+    getJson(`/api/race/cheers?limit=30&race_code=${raceCode}${filtro}`)
       .then((d) => setCheers(d.messages || []))
       .catch(() => {});
-  }, [bib, raceCode]);
+  }, [raceCode]);
 
+  // Con dorsal fijo: ficha del corredor. Sin dorsal: lista para el selector.
   useEffect(() => {
-    getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`)
-      .then(setProfile)
-      .catch(() => {});
-    fetchCheers();
-  }, [bib, raceCode, fetchCheers]);
+    if (bibParam) {
+      getJson(`/api/athletes/public-profile/${bibParam}?race_code=${raceCode}`)
+        .then(setProfile)
+        .catch(() => {});
+    } else {
+      getJson(`/api/race/participants?race_code=${raceCode}`)
+        .then((data) => setParticipants(
+          data.filter((p) => ['active', 'retired', 'winner', 'honor'].includes(p.status))
+        ))
+        .catch(() => {});
+    }
+    fetchCheers(bibParam || '');
+  }, [bibParam, raceCode, fetchCheers]);
 
   const handleSend = async () => {
+    if (!bib) {
+      setResult({ ok: false, text: 'Elige a quién va dirigido el mensaje.' });
+      return;
+    }
     if (!fanName.trim() || !message.trim()) {
       setResult({ ok: false, text: 'Completa tu nombre y el mensaje.' });
       return;
@@ -47,9 +66,9 @@ export default function CheerScreen() {
     });
     if (ok) {
       localStorage.setItem(FAN_NAME_KEY, fanName.trim());
-      setResult({ ok: true, text: '¡Mensaje enviado! Gracias por apoyar.' });
+      setResult({ ok: true, text: `¡Mensaje enviado a ${data.athlete_name || 'tu corredor'}!` });
       setMessage('');
-      fetchCheers();
+      fetchCheers(bibParam || '');
     } else {
       setResult({ ok: false, text: data.detail || 'No se pudo enviar el mensaje.' });
     }
@@ -59,7 +78,7 @@ export default function CheerScreen() {
   return (
     <Screen title="Enviar ánimo" back>
       <div className="px-4 py-4">
-        {profile && (
+        {bibParam && profile && (
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 border-[#E77622] ${T.avatar}`}>
               {initialsOf(profile.nombre, profile.apellidos)}
@@ -72,6 +91,20 @@ export default function CheerScreen() {
         )}
 
         <div className={`rounded-2xl p-4 mb-5 ${T.card}`}>
+          {!bibParam && (
+            <select
+              value={bib}
+              onChange={(e) => setBib(e.target.value)}
+              className={`w-full rounded-xl px-3 py-2.5 text-sm mb-2 appearance-none ${T.input}`}
+            >
+              <option value="">¿Para quién es el ánimo?</option>
+              {participants.map((p) => (
+                <option key={p.bib} value={p.bib}>
+                  #{p.bib} · {p.nombre} {p.apellidos}
+                </option>
+              ))}
+            </select>
+          )}
           <input
             value={fanName}
             onChange={(e) => setFanName(e.target.value)}
@@ -101,17 +134,21 @@ export default function CheerScreen() {
           </button>
         </div>
 
-        <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>Mensajes recibidos</p>
+        <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>
+          {bibParam ? 'Mensajes recibidos' : 'Mensajes recientes'}
+        </p>
         {cheers.length === 0 ? (
           <div className={`text-center py-10 ${T.muted}`}>
             <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-60" />
-            <p className="text-xs">Sé la primera persona en enviarle ánimo.</p>
+            <p className="text-xs">Sé la primera persona en enviar ánimo.</p>
           </div>
         ) : (
           cheers.map((c, i) => (
             <div key={i} className={`rounded-2xl px-3.5 py-3 mb-2.5 ${T.card}`}>
               <p className="text-sm leading-snug">{c.message}</p>
-              <p className={`text-[11px] mt-1.5 ${T.muted}`}>— {c.fan_name}</p>
+              <p className={`text-[11px] mt-1.5 ${T.muted}`}>
+                — {c.fan_name}{!bibParam && (c.athlete_name || c.athlete_bib) ? ` para ${c.athlete_name || `#${c.athlete_bib}`}` : ''}
+              </p>
             </div>
           ))
         )}

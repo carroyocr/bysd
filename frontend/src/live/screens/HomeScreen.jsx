@@ -48,7 +48,7 @@ export default function HomeScreen() {
   const quickActions = [
     { label: 'Seguimiento', Icon: Radio, to: `/live/${raceCode}/seguimiento` },
     { label: 'Ganadores', Icon: Trophy, to: `/live/${raceCode}/ganadores` },
-    { label: 'Ánimo', Icon: MessageCircle, to: `/live/${raceCode}/seguimiento` },
+    { label: 'Ánimo', Icon: MessageCircle, to: `/live/${raceCode}/animo` },
   ];
 
   return (
