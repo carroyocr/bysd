@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { exportTextFile, openExternal } from '../lib/nativeExport';
 
 // Add custom CSS for slow pulse animation
 const customStyles = `
@@ -403,19 +404,14 @@ export default function LiveDashboard({ raceCode }) {
   const shareOnTwitter = () => {
     const text = getWinnerShareText();
     const url = window.location.href;
-    window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
-      '_blank',
-      'width=550,height=420'
+    openExternal(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
     );
   };
 
   const shareOnWhatsApp = () => {
     const text = getWinnerShareText() + `\n\n🔗 ${window.location.href}`;
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(text)}`,
-      '_blank'
-    );
+    openExternal(`https://wa.me/?text=${encodeURIComponent(text)}`);
   };
 
   const copyToClipboard = async () => {
@@ -503,15 +499,11 @@ export default function LiveDashboard({ raceCode }) {
 
     // Add UTF-8 BOM for Excel compatibility with special characters
     const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `backyard-ultra-resultados-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportTextFile(
+      `backyard-ultra-resultados-${new Date().toISOString().split('T')[0]}.csv`,
+      BOM + csvContent,
+      'text/csv;charset=utf-8;'
+    );
   };
 
   const filteredParticipants = participants.filter(p => {
@@ -901,14 +893,14 @@ export default function LiveDashboard({ raceCode }) {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem 
-                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
+                              onClick={() => openExternal(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`)}
                               className="cursor-pointer"
                             >
                               <FileText className="w-4 h-4 mr-2" />
                               Ver PDF
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}/image`, '_blank')}
+                              onClick={() => openExternal(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}/image`)}
                               className="cursor-pointer"
                             >
                               <Image className="w-4 h-4 mr-2" />
@@ -1064,14 +1056,14 @@ export default function LiveDashboard({ raceCode }) {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem 
-                                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`, '_blank')}
+                                  onClick={() => openExternal(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}`)}
                                   className="cursor-pointer"
                                 >
                                   <FileText className="w-4 h-4 mr-2" />
                                   Ver PDF
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}/image`, '_blank')}
+                                  onClick={() => openExternal(`${process.env.REACT_APP_BACKEND_URL}/api/race/certificate/${participant.bib}/image`)}
                                   className="cursor-pointer"
                                 >
                                   <Image className="w-4 h-4 mr-2" />

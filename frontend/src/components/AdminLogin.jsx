@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
-export default function AdminLogin() {
+export default function AdminLogin({ redirectTo = '/admin' }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -38,7 +38,7 @@ export default function AdminLogin() {
       localStorage.setItem('admin_username', data.username);
       localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
       localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
-      navigate('/admin');
+      navigate(redirectTo);
     } catch (err) {
       setError(err.message);
     } finally {

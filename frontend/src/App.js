@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { RaceConfigProvider } from './contexts/RaceConfigContext';
 import Navigation from './components/Navigation';
@@ -32,7 +32,19 @@ import MyProfilePage from './pages/MyProfilePage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import LiveApp from './live/LiveApp';
+import RoleSelectPage from './pages/RoleSelectPage';
+import StaffMenuPage from './pages/StaffMenuPage';
+import { isNative } from './lib/platform';
+import { getAppRole, roleHome } from './lib/appRole';
 import './App.css';
+
+/**
+ * Entrada de la app nativa: si ya se eligió un rol va directo a su inicio;
+ * si no, muestra el selector de rol. En la web nunca se usa.
+ */
+function NativeEntry() {
+  return <Navigate to={roleHome(getAppRole())} replace />;
+}
 
 export default function App() {
   return (
@@ -41,6 +53,11 @@ export default function App() {
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Routes>
+          {/* App nativa: selector de rol y menú de staff, sin Navigation/Footer */}
+          {isNative() && <Route path="/" element={<NativeEntry />} />}
+          <Route path="/app" element={<RoleSelectPage />} />
+          <Route path="/staff" element={<StaffMenuPage />} />
+
           {/* Admin routes without Navigation/Footer */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/race-control" element={<RaceControlPage />} />

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import useHasSponsors from '../hooks/useHasSponsors';
+import { isNative } from '../lib/platform';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -471,6 +472,17 @@ export default function Navigation() {
                       </Link>
                     )
                   ))}
+
+                  {/* Solo en la app nativa: volver al selector de rol */}
+                  {isNative() && (
+                    <Link
+                      to="/app"
+                      onClick={handleLinkClick}
+                      className="px-4 py-3 text-base font-medium rounded-lg transition-colors text-foreground hover:text-primary hover:bg-secondary"
+                    >
+                      Cambiar de rol
+                    </Link>
+                  )}
                 </div>
               </div>
             </SheetContent>

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Sun, Moon, Bell, Star, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sun, Moon, Bell, Star, Trash2, UserCog, ChevronRight } from 'lucide-react';
 import { NOTIF_KEY, FOLLOWED_KEY } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
+import { isNative } from '../../lib/platform';
+import { clearAppRole } from '../../lib/appRole';
 
 function Toggle({ on, onChange }) {
   return (
@@ -23,6 +26,7 @@ function Toggle({ on, onChange }) {
  * Configuración: modo claro/oscuro y notificaciones de vueltas.
  */
 export default function SettingsScreen() {
+  const navigate = useNavigate();
   const { theme, toggleTheme, T } = useLiveTheme();
   const [notifOn, setNotifOn] = useState(() => localStorage.getItem(NOTIF_KEY) === 'on');
   const [notifMsg, setNotifMsg] = useState(null);
@@ -96,6 +100,25 @@ export default function SettingsScreen() {
             <Trash2 className={`w-4 h-4 ${T.subtle}`} />
           </button>
         </div>
+
+        {isNative() && (
+          <div className={`rounded-2xl mt-4 ${T.card}`}>
+            <button
+              onClick={() => {
+                clearAppRole();
+                navigate('/app');
+              }}
+              className="w-full flex items-center gap-3.5 px-4 py-4 text-left"
+            >
+              <UserCog className="w-5 h-5 text-[#E77622] shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-bold">Cambiar de rol</p>
+                <p className={`text-[11px] mt-0.5 ${T.muted}`}>Volver a elegir espectador, atleta o staff</p>
+              </div>
+              <ChevronRight className={`w-4 h-4 ${T.subtle}`} />
+            </button>
+          </div>
+        )}
 
         <p className={`text-[10px] text-center mt-8 ${T.subtle}`}>
           BYSD Live · Backyard Ultra Santo Domingo
