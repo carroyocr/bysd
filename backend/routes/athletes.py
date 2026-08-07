@@ -121,6 +121,7 @@ class UpdateProfileRequest(BaseModel):
     como_se_entero: Optional[str] = None
     itra_url: Optional[str] = None
     itra_snapshot: Optional[ItraSnapshot] = None
+    perfil_publico: Optional[bool] = None
 
 class RaceRegistrationRequest(BaseModel):
     race_code: str
@@ -744,6 +745,7 @@ async def get_profile(authorization: str = Header(None)):
         "photo_url": athlete.get("photo_url"),
         "itra_url": athlete.get("itra_url"),
         "itra_snapshot": athlete.get("itra_snapshot"),
+        "perfil_publico": athlete.get("perfil_publico", True),
         "email_verified": athlete.get("email_verified", False),
         "claimed_results": athlete.get("claimed_results", []),
         "profile_complete": bool(athlete.get("tipo_sangre") and athlete.get("talla_camiseta") and athlete.get("contacto_emergencia_nombre")),
@@ -789,12 +791,22 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
         snapshot = data.itra_snapshot.model_dump()
         snapshot["results"] = snapshot.get("results", [])[:30]
         update_data["itra_snapshot"] = snapshot
+    if data.perfil_publico is not None:
+        update_data["perfil_publico"] = data.perfil_publico
 
     await database.athletes.update_one(
         {"_id": ObjectId(athlete_id)},
         {"$set": update_data}
     )
-    
+
+    # La visibilidad se copia a las inscripciones para que la lista de
+    # atletas pueda filtrar sin hacer un join por cada corredor.
+    if data.perfil_publico is not None:
+        await database.registrations.update_many(
+            {"$or": [{"athlete_id": athlete_id}, {"email": payload.get("email")}]},
+            {"$set": {"perfil_publico": data.perfil_publico}}
+        )
+
     return {"success": True, "message": "Perfil actualizado"}
 
 
@@ -897,6 +909,8 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
         "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
     })
     if not registration:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+    if registration.get("perfil_publico") is False:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")
 
     profile = {

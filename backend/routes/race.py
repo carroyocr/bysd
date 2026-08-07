@@ -267,7 +267,9 @@ async def get_participants(
             query = {
                 "race_code": active_race_code,
                 "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
-                "bib": {"$exists": True, "$ne": None}  # Must have BIB assigned
+                "bib": {"$exists": True, "$ne": None},  # Must have BIB assigned
+                # Atletas que pidieron no aparecer publicamente
+                "perfil_publico": {"$ne": False},
             }
 
             if status and status in ["registered", "active", "retired", "dns", "winner", "honor"]:
