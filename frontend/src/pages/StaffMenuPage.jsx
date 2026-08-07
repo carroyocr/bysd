@@ -64,7 +64,7 @@ export default function StaffMenuPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0C0C0C] text-white px-6 py-10">
+    <div className="min-h-screen bg-[#0C0C0C] text-white px-6 pb-10 pt-[calc(2.5rem+env(safe-area-inset-top))]">
       <div className="max-w-md w-full mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <span className="w-12 h-12 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">

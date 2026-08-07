@@ -40,7 +40,7 @@ export default function RoleSelectPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0C0C0C] text-white px-6 py-10">
+    <div className="min-h-screen flex flex-col bg-[#0C0C0C] text-white px-6 pb-10 pt-[calc(2.5rem+env(safe-area-inset-top))]">
       <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto">
         <img
           src="/logo-backyard-ultra.png"

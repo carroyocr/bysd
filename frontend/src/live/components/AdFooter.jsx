@@ -61,7 +61,7 @@ export default function AdFooter({ raceCode }) {
   };
 
   return (
-    <footer className={`sticky bottom-0 z-40 ${T.footer}`}>
+    <footer className={`sticky bottom-0 z-40 pb-[env(safe-area-inset-bottom)] ${T.footer}`}>
       <button onClick={handleClick} className="w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left">
         <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${T.subtle}`}>
           Patrocinador

@@ -77,7 +77,8 @@ export default function App() {
             element={
               <>
                 <Navigation />
-                <main className="flex-1">
+                {/* Compensa la altura extra que el safe-area agrega al nav fijo */}
+                <main className="flex-1 pt-[env(safe-area-inset-top)]">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/evento" element={<EventoPage />} />

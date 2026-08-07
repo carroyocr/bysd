@@ -35,7 +35,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     >
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <aside
-        className={`absolute top-0 left-0 h-full w-[82%] max-w-[320px] flex flex-col transition-transform duration-250 ease-out ${T.drawer} ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`absolute top-0 left-0 h-full w-[82%] max-w-[320px] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-transform duration-250 ease-out ${T.drawer} ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex items-center justify-between px-4 h-16 shrink-0">
           <div className="font-extrabold tracking-wide text-base">
