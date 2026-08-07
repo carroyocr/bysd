@@ -188,6 +188,68 @@ export default function RaceConfigPanel() {
     loadData();
   }, []);
 
+  // Fotos del evento para BYSD Live (solo las propias de esta carrera)
+  const [livePhotos, setLivePhotos] = useState([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
+  const loadLivePhotos = async (code) => {
+    try {
+      const res = await fetch(`${API_URL}/api/race-config/live-photos/${code}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLivePhotos(data.source_race === code ? data.photos : []);
+      }
+    } catch { /* sin fotos */ }
+  };
+
+  useEffect(() => {
+    if (activeRace?.code && !activeRace.is_default) loadLivePhotos(activeRace.code);
+  }, [activeRace?.code, activeRace?.is_default]);
+
+  const handleLivePhotosUpload = async (e) => {
+    const files = [...(e.target.files || [])];
+    e.target.value = '';
+    if (!files.length || !activeRace?.code) return;
+    setUploadingPhotos(true);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append('files', f));
+      const res = await adminFetch(`${API_URL}/api/race-config/live-photos/${activeRace.code}`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message);
+        loadLivePhotos(activeRace.code);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.detail || 'No se pudieron subir las fotos');
+      }
+    } catch {
+      toast.error('Error de conexión al subir las fotos');
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleDeleteLivePhoto = async (filename) => {
+    if (!window.confirm('¿Eliminar esta foto del evento?')) return;
+    try {
+      const res = await adminFetch(`${API_URL}/api/race-config/live-photos/${activeRace.code}/${filename}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast.success('Foto eliminada');
+        loadLivePhotos(activeRace.code);
+      } else {
+        toast.error('No se pudo eliminar la foto');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    }
+  };
+
   const handleCreateRace = async (e) => {
     e.preventDefault();
     
@@ -320,7 +382,8 @@ export default function RaceConfigPanel() {
     const typeLabels = {
       'home': 'Logo del Home',
       'menu': 'Logo del Menú',
-      'favicon': 'Favicon'
+      'favicon': 'Favicon',
+      'portada': 'Portada de BYSD Live'
     };
     
     const formData = new FormData();
@@ -704,6 +767,94 @@ export default function RaceConfigPanel() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Subiendo imagen...
+                  </div>
+                )}
+
+                {/* Portada del Home de BYSD Live */}
+                <div className="p-4 border rounded-lg space-y-3 max-w-md">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">Portada de BYSD Live</h4>
+                    {activeRace?.portada_url ? (
+                      <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Cargada
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">Usa fotos del evento</Badge>
+                    )}
+                  </div>
+                  {activeRace?.portada_url && (
+                    <div className="w-full h-32 bg-muted/50 rounded-lg border overflow-hidden">
+                      <img
+                        src={activeRace.portada_url.startsWith('/api') ? `${API_URL}${activeRace.portada_url}` : activeRace.portada_url}
+                        alt="Portada BYSD Live"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Foto de fondo del Home de la app /live</p>
+                    <p className="text-xs font-medium text-blue-600">Recomendado: foto vertical u horizontal grande (JPG)</p>
+                  </div>
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpg,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(e, 'portada')}
+                      disabled={uploadingLogo}
+                    />
+                    <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                      <span className="cursor-pointer">
+                        <Upload className="w-3 h-3 mr-2" />
+                        Subir Portada
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+              </div>
+
+              {/* Fotos del evento para BYSD Live */}
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2 text-lg">
+                  <Image className="w-5 h-5" />
+                  Fotos del Evento (BYSD Live)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Se muestran en la app <code>/live</code> (ficha del atleta y Home sin portada).
+                  Si esta carrera no tiene fotos propias, la app usa las de la edición anterior.
+                </p>
+                <label className="inline-block">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpg,image/jpeg,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={handleLivePhotosUpload}
+                    disabled={uploadingPhotos}
+                  />
+                  <Button type="button" variant="outline" size="sm" asChild disabled={uploadingPhotos}>
+                    <span className="cursor-pointer">
+                      {uploadingPhotos ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Upload className="w-3 h-3 mr-2" />}
+                      Subir fotos (varias a la vez)
+                    </span>
+                  </Button>
+                </label>
+                {livePhotos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {livePhotos.map((ph) => (
+                      <div key={ph.filename} className="relative group aspect-square rounded-lg overflow-hidden border">
+                        <img src={`${API_URL}${ph.url}`} alt="Foto del evento" className="w-full h-full object-cover" loading="lazy" />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLivePhoto(ph.filename)}
+                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Eliminar foto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

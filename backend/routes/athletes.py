@@ -78,6 +78,28 @@ class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
+class ItraResult(BaseModel):
+    date: Optional[str] = None
+    race: Optional[str] = None
+    country: Optional[str] = None
+    distance_km: Optional[float] = None
+    elevation_m: Optional[float] = None
+    time: Optional[str] = None
+    position: Optional[str] = None
+    category: Optional[str] = None
+
+
+class ItraSnapshot(BaseModel):
+    performance_index: Optional[int] = None
+    level: Optional[str] = None            # ej. "Intermediate 3"
+    age_category: Optional[str] = None     # ej. "M 45-49"
+    finished_races: Optional[int] = None
+    total_distance_km: Optional[float] = None
+    total_elevation_m: Optional[float] = None
+    total_race_time: Optional[str] = None  # ej. "187:39:05"
+    results: list[ItraResult] = []
+
+
 class UpdateProfileRequest(BaseModel):
     nombre: Optional[str] = None
     apellidos: Optional[str] = None
@@ -97,6 +119,8 @@ class UpdateProfileRequest(BaseModel):
     talla_camiseta: Optional[str] = None
     personalizacion_camiseta: Optional[str] = None
     como_se_entero: Optional[str] = None
+    itra_url: Optional[str] = None
+    itra_snapshot: Optional[ItraSnapshot] = None
 
 class RaceRegistrationRequest(BaseModel):
     race_code: str
@@ -718,6 +742,8 @@ async def get_profile(authorization: str = Header(None)):
         "personalizacion_camiseta": athlete.get("personalizacion_camiseta"),
         "como_se_entero": athlete.get("como_se_entero"),
         "photo_url": athlete.get("photo_url"),
+        "itra_url": athlete.get("itra_url"),
+        "itra_snapshot": athlete.get("itra_snapshot"),
         "email_verified": athlete.get("email_verified", False),
         "claimed_results": athlete.get("claimed_results", []),
         "profile_complete": bool(athlete.get("tipo_sangre") and athlete.get("talla_camiseta") and athlete.get("contacto_emergencia_nombre")),
@@ -751,7 +777,19 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
         value = getattr(data, field, None)
         if value is not None:
             update_data[field] = value
-    
+
+    # Experiencia ITRA: solo aceptamos enlaces del propio itra.run; cadena
+    # vacia borra el enlace. El snapshot llega ya validado por Pydantic.
+    if data.itra_url is not None:
+        url = data.itra_url.strip()
+        if url and not url.startswith("https://itra.run/"):
+            raise HTTPException(status_code=400, detail="El enlace debe ser de itra.run (https://itra.run/...)")
+        update_data["itra_url"] = url or None
+    if data.itra_snapshot is not None:
+        snapshot = data.itra_snapshot.model_dump()
+        snapshot["results"] = snapshot.get("results", [])[:30]
+        update_data["itra_snapshot"] = snapshot
+
     await database.athletes.update_one(
         {"_id": ObjectId(athlete_id)},
         {"$set": update_data}
@@ -809,6 +847,62 @@ async def upload_athlete_photo(
 
 
 # ==================== RACE REGISTRATION ENDPOINTS ====================
+
+@router.get("/public-profile/{bib}")
+async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
+    """Ficha pública del atleta para BYSD Live: datos de carrera + experiencia ITRA.
+
+    Solo expone lo que puede ver un espectador; nada de contacto ni datos
+    médicos.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from routes.race import get_active_race_code
+
+    code = race_code or await get_active_race_code(database)
+    if not code:
+        raise HTTPException(status_code=404, detail="No hay carrera activa")
+
+    registration = await database.registrations.find_one({
+        "race_code": code,
+        "bib": str(bib).zfill(3),
+        "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
+    })
+    if not registration:
+        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+
+    profile = {
+        "bib": registration.get("bib"),
+        "nombre": registration.get("nombre"),
+        "apellidos": registration.get("apellidos"),
+        "sexo": registration.get("sexo"),
+        "nacionalidad": registration.get("nacionalidad"),
+        "ciudad_residencia": registration.get("ciudad_residencia"),
+        "photo_url": registration.get("photo_url"),
+        "status": registration.get("status"),
+        "laps_completed": registration.get("laps_completed", 0),
+        "total_km": registration.get("total_km", 0.0),
+        "retired_at_lap": registration.get("retired_at_lap"),
+        "anos_experiencia": registration.get("anos_experiencia"),
+        "maxima_distancia_km": registration.get("maxima_distancia_km"),
+        "itra_url": None,
+        "itra_snapshot": None,
+    }
+
+    # La experiencia ITRA vive en la cuenta del atleta, no en la inscripcion.
+    athlete_id = registration.get("athlete_id")
+    if athlete_id:
+        try:
+            athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+        except Exception:
+            athlete = None
+        if athlete:
+            profile["itra_url"] = athlete.get("itra_url")
+            profile["itra_snapshot"] = athlete.get("itra_snapshot")
+            profile["photo_url"] = profile["photo_url"] or athlete.get("photo_url")
+
+    return profile
+
 
 @router.get("/my-races")
 async def get_my_races(authorization: str = Header(None)):

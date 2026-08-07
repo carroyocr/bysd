@@ -38,6 +38,16 @@ async def get_receipt(filename: str):
     return await file_storage.serve(filename, disk_dir=BACKEND_DIR / "uploads" / "receipts")
 
 
+@router.get("/api/uploads/live_photos/{filename}")
+async def serve_live_photo(filename: str):
+    return await file_storage.serve(filename, disk_dir=STATIC_DIR / "uploads" / "live_photos")
+
+
+@router.get("/api/uploads/ads/{filename}")
+async def serve_ad_logo(filename: str):
+    return await file_storage.serve(filename, disk_dir=STATIC_DIR / "uploads" / "ads")
+
+
 @router.get("/api/uploads/sponsors/{filename}")
 async def get_sponsor_logo(filename: str):
     return await file_storage.serve(filename, disk_dir=STATIC_DIR / "uploads" / "sponsors")

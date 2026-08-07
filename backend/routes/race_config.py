@@ -417,10 +417,11 @@ async def upload_race_image(
     - home: Logo for home page hero section (recommended: 400x400px PNG, transparent background)
     - menu: Logo for navigation menu (recommended: 48x48px PNG, transparent background)  
     - favicon: Browser tab icon (recommended: 32x32px PNG or ICO)
+    - portada: Foto de fondo del Home de BYSD Live (recomendado: 1080x1920px JPG)
     """
     from server import db as database
-    
-    valid_types = ["home", "menu", "favicon"]
+
+    valid_types = ["home", "menu", "favicon", "portada"]
     if image_type not in valid_types:
         raise HTTPException(
             status_code=400, 
@@ -453,7 +454,8 @@ async def upload_race_image(
     field_map = {
         "home": "logo_home_url",
         "menu": "logo_menu_url",
-        "favicon": "favicon_url"
+        "favicon": "favicon_url",
+        "portada": "portada_url"
     }
     
     # Update database
@@ -466,7 +468,8 @@ async def upload_race_image(
     size_recommendations = {
         "home": "400x400px PNG con fondo transparente",
         "menu": "48x48px PNG con fondo transparente",
-        "favicon": "32x32px PNG o ICO"
+        "favicon": "32x32px PNG o ICO",
+        "portada": "1080x1920px JPG (foto del evento para el Home de BYSD Live)"
     }
     
     return {
@@ -1037,3 +1040,81 @@ async def notify_volunteers_manual_available(
         "total_volunteers": len(volunteers)
     }
 
+
+
+# ==================== FOTOS DEL EVENTO (BYSD LIVE) ====================
+
+@router.get("/live-photos/{code}")
+async def get_live_photos(code: str):
+    """Fotos del evento para BYSD Live (público).
+
+    Si la carrera pedida aún no tiene fotos propias (una edición futura), se
+    devuelven las de la edición más reciente que sí tenga, para que la app no
+    quede vacía.
+    """
+    from server import db as database
+
+    code = code.upper()
+    photos = await database.live_photos.find(
+        {"race_code": code}, {"_id": 0}
+    ).sort("order", 1).to_list(200)
+    source = code
+
+    if not photos:
+        otras = await database.live_photos.distinct("race_code")
+        if otras:
+            source = sorted(otras)[-1]
+            photos = await database.live_photos.find(
+                {"race_code": source}, {"_id": 0}
+            ).sort("order", 1).to_list(200)
+
+    return {"photos": photos, "source_race": source if photos else None}
+
+
+@router.post("/live-photos/{code}", dependencies=[solo_config])
+async def upload_live_photos(code: str, files: list[UploadFile] = File(...)):
+    """Sube fotos del evento (varias a la vez) a GridFS."""
+    from server import db as database
+    from services import file_storage
+    import uuid as uuid_module
+
+    code = code.upper()
+    race = await database.race_configurations.find_one({"code": code})
+    if not race and code != "BYSD-2026":  # la legado no vive en race_configurations
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+
+    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+    count = await database.live_photos.count_documents({"race_code": code})
+    subidas = []
+    for file in files:
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail=f"Tipo no permitido ({file.filename}). Use PNG, JPG o WEBP")
+        content = await file.read()
+        ext_original = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
+        content, ext, content_type = file_storage.compress_image(content, ext_original, file.content_type)
+        filename = f"{code}_{uuid_module.uuid4().hex[:10]}.{ext}"
+        await file_storage.save(filename, content, content_type, file_storage.FOLDER_LIVE_PHOTOS)
+        doc = {
+            "race_code": code,
+            "filename": filename,
+            "url": f"/api/uploads/live_photos/{filename}",
+            "order": count + len(subidas),
+            "uploaded_at": datetime.utcnow(),
+        }
+        await database.live_photos.insert_one(doc)
+        doc.pop("_id", None)
+        subidas.append(doc)
+
+    return {"message": f"{len(subidas)} foto(s) subidas", "photos": subidas}
+
+
+@router.delete("/live-photos/{code}/{filename}", dependencies=[solo_config])
+async def delete_live_photo(code: str, filename: str):
+    from server import db as database
+    from services import file_storage
+
+    result = await database.live_photos.delete_one({"race_code": code.upper(), "filename": filename})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+    await file_storage.delete(filename)
+    return {"message": "Foto eliminada"}

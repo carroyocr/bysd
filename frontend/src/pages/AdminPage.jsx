@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -11,6 +11,7 @@ import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
 import SponsorsManagement from '../components/SponsorsManagement';
+import AdsManagement from '../components/AdsManagement';
 import VolunteerConfigManagement from '../components/VolunteerConfigManagement';
 import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsManagement';
 import FinancesManagement from '../components/FinancesManagement';
@@ -36,6 +37,7 @@ const TAB_PERMISSIONS = {
   'volunteers': ['shifts', 'volunteers'],
   'assignments': ['assignments', 'volunteers'],
   'sponsors': ['sponsors'],
+  'ads': ['ads', 'sponsors'],
   'surveys': ['surveys'],
   'config': ['race-config', 'config'],
   'users': ['users'],
@@ -238,6 +240,14 @@ export default function AdminPage() {
                 <span className="sm:hidden">Sponsors</span>
               </TabsTrigger>
             )}
+            {/* 7b. Publicidad (banners de BYSD Live) */}
+            {hasAccess('ads') && (
+              <TabsTrigger value="ads" className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4" />
+                <span className="hidden sm:inline">Publicidad</span>
+                <span className="sm:hidden">Ads</span>
+              </TabsTrigger>
+            )}
             {/* 8. Encuesta */}
             {hasAccess('surveys') && (
               <TabsTrigger value="surveys" className="flex items-center gap-2">
@@ -373,6 +383,12 @@ export default function AdminPage() {
           {hasAccess('sponsors') && (
             <TabsContent value="sponsors">
               <SponsorsManagement />
+            </TabsContent>
+          )}
+
+          {hasAccess('ads') && (
+            <TabsContent value="ads">
+              <AdsManagement />
             </TabsContent>
           )}
 

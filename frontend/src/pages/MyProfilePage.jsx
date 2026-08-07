@@ -10,6 +10,7 @@ import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, Che
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
+import ItraExperienceSection from '../components/ItraExperienceSection';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -1143,6 +1144,13 @@ export default function MyProfilePage() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Experiencia ITRA: se muestra en la ficha publica de BYSD Live */}
+          {activeTab === 'profile' && athlete && (
+            <div className="mt-4">
+              <ItraExperienceSection athlete={athlete} onSaved={fetchProfile} />
+            </div>
           )}
 
           {/* ===== RACES TAB ===== */}

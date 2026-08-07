@@ -31,6 +31,7 @@ import ScanConfirmPage from './pages/ScanConfirmPage';
 import MyProfilePage from './pages/MyProfilePage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
+import LiveApp from './live/LiveApp';
 import './App.css';
 
 export default function App() {
@@ -49,6 +50,9 @@ export default function App() {
           {/* QR Scanner routes without Navigation/Footer - optimized for mobile */}
           <Route path="/scan" element={<QRScannerPage />} />
           <Route path="/scan/confirmar" element={<ScanConfirmPage />} />
+
+          {/* BYSD Live: app movil de seguimiento para espectadores, sin Navigation/Footer */}
+          <Route path="/live/*" element={<LiveApp />} />
           
           {/* Public routes with Navigation/Footer */}
           <Route
