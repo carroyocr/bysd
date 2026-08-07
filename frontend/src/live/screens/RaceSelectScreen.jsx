@@ -54,8 +54,13 @@ export default function RaceSelectScreen() {
   }, [races]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const actuales = (races || []).filter((r) => r.is_active || (r.date && r.date >= today && !r.archived_at));
-  const pasadas = (races || []).filter((r) => !actuales.includes(r));
+  // Próximas: la más cercana primero. Pasadas: la más reciente primero.
+  const actuales = (races || [])
+    .filter((r) => r.is_active || (r.date && r.date >= today && !r.archived_at))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const pasadas = (races || [])
+    .filter((r) => !actuales.includes(r))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const raceCard = (race) => (
     <button
