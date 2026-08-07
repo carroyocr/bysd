@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 
@@ -14,28 +15,38 @@ export function Wheel({ options, value, onChange }) {
   const { T } = useLiveTheme();
   const ref = useRef(null);
   const timer = useRef(null);
+  const idxRef = useRef(0);
   const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o));
   const [idx, setIdx] = useState(() => Math.max(0, opts.findIndex((o) => o.value === value)));
 
   useEffect(() => {
     const i = Math.max(0, opts.findIndex((o) => o.value === value));
+    idxRef.current = i;
     setIdx(i);
     if (ref.current) ref.current.scrollTop = i * ITEM_H;
     // eslint-disable-next-line
   }, []);
 
   const onScroll = () => {
+    if (!ref.current) return;
+    // La selección se registra en vivo mientras gira: si el usuario toca
+    // Confirmar sin esperar a que el rodillo se asiente, ya vale la fila
+    // que está bajo la banda.
+    const i = Math.min(opts.length - 1, Math.max(0, Math.round(ref.current.scrollTop / ITEM_H)));
+    if (i !== idxRef.current) {
+      idxRef.current = i;
+      setIdx(i);
+      onChange(opts[i].value);
+    }
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       if (!ref.current) return;
-      const i = Math.min(opts.length - 1, Math.max(0, Math.round(ref.current.scrollTop / ITEM_H)));
-      setIdx(i);
-      ref.current.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
-      onChange(opts[i].value);
+      ref.current.scrollTo({ top: idxRef.current * ITEM_H, behavior: 'smooth' });
     }, 120);
   };
 
   const pick = (i) => {
+    idxRef.current = i;
     setIdx(i);
     ref.current?.scrollTo({ top: i * ITEM_H, behavior: 'smooth' });
     onChange(opts[i].value);
@@ -57,6 +68,7 @@ export function Wheel({ options, value, onChange }) {
         <div style={{ height: PAD }} />
         {opts.map(({ value: v, label }, i) => (
           <button
+            type="button"
             key={v}
             onClick={() => pick(i)}
             className={`w-full flex items-center justify-center px-1 transition-colors ${
@@ -73,10 +85,15 @@ export function Wheel({ options, value, onChange }) {
   );
 }
 
-/** Hoja inferior con título, contenido (rodillos) y botón de confirmar. */
+/**
+ * Hoja inferior con título, contenido (rodillos) y botón de confirmar.
+ * Se monta en document.body con un portal: los campos suelen vivir dentro
+ * de un <label>, y el navegador reenvía los toques del interior del label
+ * a su control (reabría la hoja al confirmar o cerrar).
+ */
 export function PickerSheet({ title, onClose, onConfirm, children }) {
   const { T } = useLiveTheme();
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className={`absolute bottom-0 left-0 right-0 max-w-md mx-auto rounded-t-2xl flex flex-col pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${T.drawer}`}>
@@ -89,6 +106,7 @@ export function PickerSheet({ title, onClose, onConfirm, children }) {
         <div className="flex gap-1 px-3 py-2">{children}</div>
         <div className="px-4 pt-1">
           <button
+            type="button"
             onClick={onConfirm}
             className="w-full bg-[#E77622] hover:bg-[#d96a1a] text-white font-bold rounded-xl py-3 text-sm transition-colors"
           >
@@ -96,7 +114,8 @@ export function PickerSheet({ title, onClose, onConfirm, children }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
