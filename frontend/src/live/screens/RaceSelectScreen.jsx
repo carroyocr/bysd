@@ -117,7 +117,7 @@ export default function RaceSelectScreen() {
 
   return (
     <div className={`min-h-[100dvh] ${T.page}`}>
-      <div className="w-full max-w-md mx-auto px-4 pt-10 pb-8">
+      <div className="w-full max-w-md mx-auto px-4 pb-8 pt-[calc(2.5rem+env(safe-area-inset-top))]">
         <h1 className="text-2xl font-extrabold">
           BYSD <span className="text-[#E77622]">LIVE</span>
         </h1>
