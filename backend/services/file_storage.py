@@ -35,6 +35,7 @@ FOLDER_PARTICIPANT_PHOTOS = "participant_photos"
 FOLDER_RECEIPTS = "receipts"
 FOLDER_SPONSORS = "sponsors"
 FOLDER_ADS = "ads"
+FOLDER_LIVE_PHOTOS = "live_photos"
 FOLDER_LOGOS = "logos"
 FOLDER_MANUALS = "manuals"
 

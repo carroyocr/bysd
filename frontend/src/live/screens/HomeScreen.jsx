@@ -18,17 +18,24 @@ export default function HomeScreen() {
     ? (race.portada_url.startsWith('/api') ? `${API}${race.portada_url}` : race.portada_url)
     : albumFallback;
 
-  // Sin portada configurada: se usa la primera foto del álbum del evento
+  // Sin portada configurada: primera foto del evento (o del álbum como último recurso)
   useEffect(() => {
     if (race && !race.portada_url) {
-      getJson('/api/album/photos')
+      getJson(`/api/race-config/live-photos/${raceCode}`)
         .then((d) => {
           const first = d.photos?.[0]?.url;
-          if (first) setAlbumFallback(`${first}=w1080`);
+          if (first) {
+            setAlbumFallback(`${API}${first}`);
+          } else {
+            return getJson('/api/album/photos').then((a) => {
+              const foto = a.photos?.[0]?.url;
+              if (foto) setAlbumFallback(`${foto}=w1080`);
+            });
+          }
         })
         .catch(() => {});
     }
-  }, [race]);
+  }, [race, raceCode]);
 
   const logo = race?.logo_home_url || race?.logo_url;
   const logoSrc = logo ? (logo.startsWith('/api') ? `${API}${logo}` : logo) : null;

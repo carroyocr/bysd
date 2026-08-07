@@ -11,7 +11,7 @@ const FILTERS = [
   { key: 'active', label: 'Activos' },
   { key: 'retired', label: 'DNF' },
   { key: 'dns', label: 'DNS' },
-  { key: 'favoritos', label: 'Favoritos' },
+  { key: 'favoritos', label: 'Fav' },
   { key: 'all', label: 'Todos' },
 ];
 
@@ -95,15 +95,15 @@ export default function TrackingScreen() {
           />
         </div>
 
-        {/* Filtros */}
-        <div className="flex gap-2 mb-3 overflow-x-auto pb-0.5">
+        {/* Filtros: compactos para caber en una fila sin scroll horizontal */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {FILTERS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`shrink-0 text-[11px] font-semibold px-3.5 py-1.5 rounded-full ${filter === key ? T.chipOn : T.chip}`}
+              className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-full whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
             >
-              {label} <span className="opacity-60 font-normal">· {counts[key]}</span>
+              {label} <span className="opacity-60 font-normal">{counts[key]}</span>
             </button>
           ))}
         </div>

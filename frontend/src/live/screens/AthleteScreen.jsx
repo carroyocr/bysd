@@ -83,14 +83,19 @@ export default function AthleteScreen() {
       getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`),
       getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
       getJson(`/api/race/stats?race_code=${raceCode}`).catch(() => null),
-      getJson('/api/album/photos').catch(() => ({ photos: [] })),
+      // Fotos del evento propias; el álbum de Google queda como último recurso
+      getJson(`/api/race-config/live-photos/${raceCode}`)
+        .then((d) => (d.photos?.length
+          ? d.photos.map((p, i) => ({ index: i, url: `${API}${p.url}`, propia: true }))
+          : getJson('/api/album/photos').then((a) => (a.photos || []).map((p) => ({ ...p, url: `${p.url}=w300` })))))
+        .catch(() => []),
     ])
-      .then(([prof, lapsData, statsData, albumData]) => {
+      .then(([prof, lapsData, statsData, fotos]) => {
         if (cancel) return;
         setProfile(prof);
         setLaps(lapsData.laps || []);
         setStats(statsData);
-        setPhotos((albumData.photos || []).slice(0, 6));
+        setPhotos((fotos || []).slice(0, 6));
       })
       .catch(() => { if (!cancel) setFailed(true); });
     return () => { cancel = true; };
@@ -328,7 +333,7 @@ export default function AthleteScreen() {
               <div className="grid grid-cols-3 gap-1.5">
                 {photos.map((ph) => (
                   <a key={ph.index} href="/album" className="aspect-square rounded-xl overflow-hidden">
-                    <img src={`${ph.url}=w300`} alt="Foto del evento" className="w-full h-full object-cover" loading="lazy" />
+                    <img src={ph.url} alt="Foto del evento" className="w-full h-full object-cover" loading="lazy" />
                   </a>
                 ))}
               </div>
