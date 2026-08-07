@@ -8,11 +8,11 @@ import { Screen, useRace } from '../LiveApp';
 const POLL_MS = 30000;
 
 const FILTERS = [
+  { key: 'all', label: 'Todos' },
   { key: 'active', label: 'Activos' },
   { key: 'retired', label: 'DNF' },
   { key: 'dns', label: 'DNS' },
   { key: 'favoritos', label: 'Fav' },
-  { key: 'all', label: 'Todos' },
 ];
 
 // Colores para el aro del avatar (estilo tracking de maratón)
