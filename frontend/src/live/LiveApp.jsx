@@ -123,9 +123,11 @@ function RaceShell() {
 }
 
 /**
- * Plantilla de pantalla estándar: barra superior + contenido + pie publicitario.
+ * Plantilla de pantalla estándar: barra superior + contenido. El pie
+ * publicitario solo aparece donde se pide con showAds (inicio, detalle del
+ * corredor, ganadores y enviar ánimo).
  */
-export function Screen({ title, back = false, children, noAds = false }) {
+export function Screen({ title, back = false, children, showAds = false }) {
   const { T } = useLiveTheme();
   const { raceCode, openDrawer } = useRace() || {};
 
@@ -134,7 +136,7 @@ export function Screen({ title, back = false, children, noAds = false }) {
       <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-[100dvh]">
         <TopBar title={title} back={back} onMenu={openDrawer} raceCode={raceCode} />
         <main className="flex-1">{children}</main>
-        {!noAds && <AdFooter raceCode={raceCode} />}
+        {showAds && <AdFooter raceCode={raceCode} />}
       </div>
     </div>
   );

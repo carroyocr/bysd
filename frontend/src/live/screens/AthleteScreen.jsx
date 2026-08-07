@@ -108,7 +108,7 @@ export default function AthleteScreen() {
     : `${statusLabel(profile?.status)}${profile?.status === 'retired' && profile?.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}`;
 
   return (
-    <Screen title="Detalle del corredor" back>
+    <Screen title="Detalle del corredor" back showAds>
       {!profile && !failed && (
         <div className={`flex justify-center py-20 ${T.muted}`}>
           <Loader2 className="w-6 h-6 animate-spin" />
