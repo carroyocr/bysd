@@ -11,6 +11,7 @@ import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
 import ItraExperienceSection from '../components/ItraExperienceSection';
+import { Switch } from '../components/ui/switch';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -1151,6 +1152,35 @@ export default function MyProfilePage() {
             <div className="mt-4">
               <ItraExperienceSection athlete={athlete} onSaved={fetchProfile} />
             </div>
+          )}
+
+          {/* Visibilidad del perfil en BYSD Live (publico por defecto) */}
+          {activeTab === 'profile' && athlete && (
+            <Card className="mt-4">
+              <CardContent className="p-4 sm:p-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-primary" /> Perfil público en BYSD Live
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Con esto activado, los espectadores te ven en la lista de atletas y pueden
+                    seguirte y enviarte ánimo. Si lo desactivas, no aparecerás en el seguimiento en vivo.
+                  </p>
+                </div>
+                <Switch
+                  checked={athlete.perfil_publico !== false}
+                  onCheckedChange={async (value) => {
+                    const { ok, data } = await apiCall('PUT', `${API_URL}/api/athletes/profile`, { perfil_publico: value });
+                    if (ok) {
+                      toast.success(value ? 'Tu perfil ahora es público' : 'Tu perfil quedó oculto del seguimiento');
+                      await fetchProfile();
+                    } else {
+                      toast.error(data.detail || 'No se pudo actualizar');
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
           )}
 
           {/* ===== RACES TAB ===== */}
