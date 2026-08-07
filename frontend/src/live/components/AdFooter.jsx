@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { API, getJson, postJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
+import { openExternal } from '../../lib/nativeExport';
 
 const AD_ROTATE_MS = 8000;
 
@@ -23,14 +24,20 @@ export default function AdFooter({ raceCode }) {
           return;
         }
         // Sin banners de publicidad: caer a los patrocinadores publicados de
-        // la carrera para que el pie no quede vacío.
+        // la carrera; si esa carrera tampoco tiene, usar los de la carrera
+        // activa para que el pie no quede vacío.
+        let sponsors = [];
         let code = raceCode;
-        if (!code) {
-          const active = await getJson('/api/race-config/active');
-          code = active?.code;
+        if (code) {
+          ({ sponsors } = await getJson(`/api/sponsors/race/${code}`));
         }
-        if (!code) return;
-        const { sponsors } = await getJson(`/api/sponsors/race/${code}`);
+        if (!sponsors || sponsors.length === 0) {
+          const active = await getJson('/api/race-config/active');
+          if (active?.code && active.code !== code) {
+            code = active.code;
+            ({ sponsors } = await getJson(`/api/sponsors/race/${code}`));
+          }
+        }
         const fallback = (sponsors || []).map((s, i) => ({
           id: `sponsor-${code}-${i}`,
           name: s.name,
@@ -81,13 +88,14 @@ export default function AdFooter({ raceCode }) {
     }
     if (ad.link_url) {
       const url = ad.link_url.startsWith('http') ? ad.link_url : `https://${ad.link_url}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // La publicidad es lo único que sale de la app (navegador del sistema)
+      openExternal(url);
     }
   };
 
   return (
-    <footer className={`sticky bottom-0 z-40 pb-[env(safe-area-inset-bottom)] ${T.footer}`}>
-      <button onClick={handleClick} className="w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left">
+    <footer className="sticky bottom-0 z-40 px-4 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <button onClick={handleClick} className={`w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left rounded-2xl shadow-lg overflow-hidden ${T.card}`}>
         <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${T.subtle}`}>
           Patrocinador
         </span>

@@ -22,6 +22,9 @@ import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
 import PerfilScreen from './screens/PerfilScreen';
 import StaffScreen from './screens/StaffScreen';
+import ReglasScreen from './screens/ReglasScreen';
+import LogisticaScreen from './screens/LogisticaScreen';
+import FaqScreen from './screens/FaqScreen';
 
 const RaceContext = createContext(null);
 export const useRace = () => useContext(RaceContext);
@@ -102,6 +105,9 @@ function RaceShell() {
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
+        <Route path="reglas" element={<ReglasScreen />} />
+        <Route path="logistica" element={<LogisticaScreen />} />
+        <Route path="faq" element={<FaqScreen />} />
         <Route path="patrocinadores" element={<SponsorsScreen />} />
         <Route path="config" element={<SettingsScreen />} />
         <Route path="sos" element={<SosScreen />} />

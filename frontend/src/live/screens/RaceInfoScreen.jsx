@@ -1,5 +1,6 @@
 import React from 'react';
-import { CalendarDays, Clock, MapPin, Repeat, ExternalLink, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarDays, Clock, MapPin, Repeat, ChevronRight, Info } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -20,7 +21,9 @@ const fmtDate = (iso) => {
  */
 export default function RaceInfoScreen() {
   const { T } = useLiveTheme();
-  const { race } = useRace();
+  const { race, raceCode } = useRace();
+  const navigate = useNavigate();
+  const base = `/live/${(raceCode || '').toLowerCase()}`;
 
   const rows = [
     { Icon: CalendarDays, label: 'Fecha', value: fmtDate(race?.date) },
@@ -29,11 +32,11 @@ export default function RaceInfoScreen() {
     { Icon: Repeat, label: 'Formato', value: 'Vueltas de 6.7 km cada hora, hasta el Last One Standing' },
   ];
 
+  // Secciones integradas dentro de la app (no salen de BYSD Live)
   const links = [
-    { label: 'Reglas de la carrera', href: '/reglas' },
-    { label: 'Logística y llegada', href: '/logistica' },
-    { label: 'Preguntas frecuentes', href: '/faq' },
-    { label: 'Sitio oficial', href: '/' },
+    { label: 'Reglas de la carrera', to: `${base}/reglas` },
+    { label: 'Logística y llegada', to: `${base}/logistica` },
+    { label: 'Preguntas frecuentes', to: `${base}/faq` },
   ];
 
   return (
@@ -62,17 +65,17 @@ export default function RaceInfoScreen() {
         </div>
 
         <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>Más información</p>
-        {links.map(({ label, href }) => (
-          <a
+        {links.map(({ label, to }) => (
+          <button
             key={label}
-            href={href}
-            className={`flex items-center justify-between rounded-2xl px-4 py-3.5 mb-2.5 text-sm font-semibold ${T.card}`}
+            onClick={() => navigate(to)}
+            className={`w-full flex items-center justify-between rounded-2xl px-4 py-3.5 mb-2.5 text-sm font-semibold text-left ${T.card}`}
           >
             <span className="flex items-center gap-3">
               <Info className="w-4 h-4 text-[#E77622]" /> {label}
             </span>
-            <ExternalLink className={`w-4 h-4 ${T.subtle}`} />
-          </a>
+            <ChevronRight className={`w-4 h-4 ${T.subtle}`} />
+          </button>
         ))}
       </div>
     </Screen>
