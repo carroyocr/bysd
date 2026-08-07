@@ -9,7 +9,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
-import Picker from '../components/Picker';
+import Picker, { PickerSheet, Wheel } from '../components/Picker';
 
 const TOKEN_KEY = 'athlete_token';
 
@@ -77,45 +77,75 @@ function Msg({ T, msg }) {
  * Selector de fecha con el diseño de la app (día/mes/año): el calendario
  * nativo del sistema desentona con el tema oscuro y no se puede estilizar.
  */
-function DateField({ T, value, onChange, fromYear, toYear }) {
-  const [y = '', m = '', d = ''] = (value || '').split('-');
-  const now = new Date().getFullYear();
+function DateField({ T, value, onChange, fromYear, toYear, title = 'Fecha' }) {
+  const now = new Date();
+  const startYear = fromYear ?? now.getFullYear() - 10;
+  const endYear = toYear ?? 1930;
   const years = [];
-  for (let i = fromYear ?? now - 10; i >= (toYear ?? 1930); i--) years.push(String(i));
-  const daysInMonth = y && m ? new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate() : 31;
-  const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
+  for (let i = startYear; i >= endYear; i--) years.push(String(i));
 
-  const emit = (ny, nm, nd) => {
-    if (nd && parseInt(nd, 10) > (ny && nm ? new Date(parseInt(ny, 10), parseInt(nm, 10), 0).getDate() : 31)) {
-      nd = '';
+  const [open, setOpen] = useState(false);
+  const [temp, setTemp] = useState({ y: '', m: '', d: '' });
+
+  const openSheet = () => {
+    const [y = '', m = '', d = ''] = (value || '').split('-');
+    if (y) {
+      setTemp({ y, m: String(parseInt(m, 10)), d: String(parseInt(d, 10)) });
+    } else if (startYear >= now.getFullYear()) {
+      // Fechas recientes (p. ej. fecha de pago): arranca en hoy
+      setTemp({ y: String(now.getFullYear()), m: String(now.getMonth() + 1), d: String(now.getDate()) });
+    } else {
+      setTemp({ y: '1990', m: '6', d: '15' });
     }
-    onChange(ny && nm && nd ? `${ny}-${nm.padStart(2, '0')}-${nd.padStart(2, '0')}` : '');
+    setOpen(true);
   };
 
+  const daysInMonth = new Date(parseInt(temp.y || '2000', 10), parseInt(temp.m || '1', 10), 0).getDate();
+  const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
+
+  const confirm = () => {
+    const d = Math.min(parseInt(temp.d || '1', 10), daysInMonth);
+    onChange(`${temp.y}-${String(temp.m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+    setOpen(false);
+  };
+
+  const label = value
+    ? (() => {
+        const [y, m, d] = value.split('-');
+        return `${parseInt(d, 10)} de ${MESES[parseInt(m, 10) - 1]} de ${y}`;
+      })()
+    : 'Seleccionar fecha';
+
   return (
-    <div className="grid grid-cols-3 gap-2">
-      <Picker
-        title="Día"
-        placeholder="Día"
-        value={d ? String(parseInt(d, 10)) : ''}
-        options={days}
-        onSelect={(v) => emit(y, m, v)}
-      />
-      <Picker
-        title="Mes"
-        placeholder="Mes"
-        value={m ? String(parseInt(m, 10)) : ''}
-        options={MESES.map((nombre, i) => ({ value: String(i + 1), label: nombre }))}
-        onSelect={(v) => emit(y, v, d)}
-      />
-      <Picker
-        title="Año"
-        placeholder="Año"
-        value={y}
-        options={years}
-        onSelect={(v) => emit(v, m, d)}
-      />
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={openSheet}
+        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm text-left ${T.input}`}
+      >
+        <span className={value ? '' : 'opacity-50'}>{label}</span>
+        <ChevronDown className="w-4 h-4 opacity-60 shrink-0" />
+      </button>
+      {open && (
+        <PickerSheet title={title} onClose={() => setOpen(false)} onConfirm={confirm}>
+          <Wheel
+            options={days}
+            value={String(Math.min(parseInt(temp.d || '1', 10), daysInMonth))}
+            onChange={(v) => setTemp((p) => ({ ...p, d: v }))}
+          />
+          <Wheel
+            options={MESES.map((nombre, i) => ({ value: String(i + 1), label: nombre }))}
+            value={temp.m}
+            onChange={(v) => setTemp((p) => ({ ...p, m: v }))}
+          />
+          <Wheel
+            options={years}
+            value={temp.y}
+            onChange={(v) => setTemp((p) => ({ ...p, y: v }))}
+          />
+        </PickerSheet>
+      )}
+    </>
   );
 }
 
@@ -616,7 +646,7 @@ export default function PerfilScreen() {
               <div className="grid grid-cols-2 gap-3">
                 <Field T={T} label="Teléfono"><TextInput T={T} value={editData.telefono} onChange={upd('telefono')} /></Field>
                 <Field T={T} label="Fecha de nacimiento">
-                  <DateField T={T} value={editData.fecha_nacimiento} onChange={(v) => setEditData((p) => ({ ...p, fecha_nacimiento: v }))} />
+                  <DateField T={T} title="Fecha de nacimiento" value={editData.fecha_nacimiento} onChange={(v) => setEditData((p) => ({ ...p, fecha_nacimiento: v }))} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -815,6 +845,7 @@ export default function PerfilScreen() {
                       <Field T={T} label="Fecha del pago *">
                         <DateField
                           T={T}
+                          title="Fecha del pago"
                           value={receiptData.payment_date}
                           onChange={(v) => setReceiptData((p) => ({ ...p, payment_date: v }))}
                           fromYear={new Date().getFullYear()}
