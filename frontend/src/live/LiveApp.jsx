@@ -71,7 +71,10 @@ function useLapNotifications(raceCode) {
  * menú lateral y expone la carrera a todas las pantallas internas.
  */
 function RaceShell() {
-  const { raceCode } = useParams();
+  const { raceCode: rawCode } = useParams();
+  // El backend distingue mayúsculas en los códigos; se normaliza una sola
+  // vez aquí para que la URL funcione venga como venga (bysd-2026, BYSD-2026).
+  const raceCode = rawCode?.toUpperCase();
   const [race, setRace] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -86,7 +89,7 @@ function RaceShell() {
   }, [raceCode]);
 
   const ctx = {
-    raceCode: raceCode?.toUpperCase(),
+    raceCode,
     race,
     openDrawer: () => setDrawerOpen(true),
   };
