@@ -1635,11 +1635,17 @@ async def submit_cheer_message(
     # Get active race code
     active_race_code = await get_active_race_code(database)
     
-    # Validate athlete exists - check registrations first, then participants
+    # Validate athlete exists - check registrations first, then participants.
+    # El bib se guarda como texto con ceros ("017") al inscribirse, pero hay
+    # registros viejos con entero: se buscan ambas formas.
     athlete = None
     if active_race_code:
+        bib_digits = request.athlete_bib.lstrip('0')
+        bib_formas = [request.athlete_bib, request.athlete_bib.zfill(3)]
+        if bib_digits.isdigit():
+            bib_formas.append(int(bib_digits))
         athlete = await database.registrations.find_one(
-            {"race_code": active_race_code, "bib": int(request.athlete_bib.lstrip('0')) if request.athlete_bib.lstrip('0').isdigit() else None, "status": {"$in": ["active", "retired", "winner"]}},
+            {"race_code": active_race_code, "bib": {"$in": bib_formas}, "status": {"$in": ["active", "retired", "winner", "honor"]}},
             {"_id": 0, "edit_token": 0}
         )
     
@@ -1764,13 +1770,16 @@ async def get_cheer_messages(
     for msg in messages:
         athlete = None
         if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-            # Try registrations first for new races
-            bib_int = int(msg["athlete_bib"].lstrip('0')) if msg["athlete_bib"].lstrip('0').isdigit() else None
-            if bib_int:
-                athlete = await database.registrations.find_one(
-                    {"race_code": active_race_code, "bib": bib_int},
-                    {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
-                )
+            # Try registrations first for new races. El bib se guarda como
+            # texto con ceros ("017"); hay registros viejos con entero.
+            bib_digits = msg["athlete_bib"].lstrip('0')
+            bib_formas = [msg["athlete_bib"], msg["athlete_bib"].zfill(3)]
+            if bib_digits.isdigit():
+                bib_formas.append(int(bib_digits))
+            athlete = await database.registrations.find_one(
+                {"race_code": active_race_code, "bib": {"$in": bib_formas}},
+                {"_id": 0, "nombre": 1, "apellidos": 1, "nacionalidad": 1}
+            )
         
         # Fallback to participants
         if not athlete:
