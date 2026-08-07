@@ -262,11 +262,11 @@ async def get_participants(
         # Try registrations collection first for new races
         if active_race_code:
             # Antes de la salida los inscritos estan en "registered": tambien
-            # se muestran (la lista de espera y cancelados quedan fuera).
+            # se muestran, incluidos los pendientes de pago (la lista de
+            # espera y cancelados quedan fuera por el filtro de status).
             query = {
                 "race_code": active_race_code,
                 "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
-                "payment_status": "paid",  # Must have completed payment
                 "bib": {"$exists": True, "$ne": None}  # Must have BIB assigned
             }
 
