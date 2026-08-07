@@ -2,18 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
-  ChevronDown, ExternalLink, Medal,
+  ChevronDown, ExternalLink, Medal, Heart,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
+import { useRaceConfig } from '../../contexts/RaceConfigContext';
 
 const TOKEN_KEY = 'athlete_token';
 
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+const VUELTAS_OPCIONES = [
+  'Al menos 1', 'De 2 a 5', 'De 6 a 10', 'De 11 a 15', 'De 16 a 20',
+  'De 21 a 24', 'Hasta que sea el ganador', 'No estoy seguro',
+];
 
 /* ---------- piezas de formulario con el tema de LiveApp ---------- */
 
@@ -59,6 +68,44 @@ function Msg({ T, msg }) {
   );
 }
 
+/**
+ * Selector de fecha con el diseño de la app (día/mes/año): el calendario
+ * nativo del sistema desentona con el tema oscuro y no se puede estilizar.
+ */
+function DateField({ T, value, onChange }) {
+  const [y = '', m = '', d = ''] = (value || '').split('-');
+  const now = new Date().getFullYear();
+  const years = [];
+  for (let i = now - 10; i >= 1930; i--) years.push(String(i));
+  const daysInMonth = y && m ? new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate() : 31;
+  const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
+
+  const emit = (ny, nm, nd) => {
+    if (nd && parseInt(nd, 10) > (ny && nm ? new Date(parseInt(ny, 10), parseInt(nm, 10), 0).getDate() : 31)) {
+      nd = '';
+    }
+    onChange(ny && nm && nd ? `${ny}-${nm.padStart(2, '0')}-${nd.padStart(2, '0')}` : '');
+  };
+
+  const cls = `w-full rounded-xl px-2 py-2.5 text-sm outline-none appearance-none ${T.input}`;
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <select aria-label="Día" value={d ? String(parseInt(d, 10)) : ''} onChange={(e) => emit(y, m, e.target.value)} className={cls}>
+        <option value="">Día</option>
+        {days.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <select aria-label="Mes" value={m ? String(parseInt(m, 10)) : ''} onChange={(e) => emit(y, e.target.value, d)} className={cls}>
+        <option value="">Mes</option>
+        {MESES.map((nombre, i) => <option key={nombre} value={String(i + 1)}>{nombre}</option>)}
+      </select>
+      <select aria-label="Año" value={y} onChange={(e) => emit(e.target.value, m, d)} className={cls}>
+        <option value="">Año</option>
+        {years.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function InfoRow({ T, label, value }) {
   return (
     <div className={`flex justify-between gap-3 py-2 border-b last:border-b-0 ${T.divider}`}>
@@ -76,6 +123,7 @@ function InfoRow({ T, label, value }) {
 export default function PerfilScreen() {
   const { T } = useLiveTheme();
   const navigate = useNavigate();
+  const { config } = useRaceConfig();
 
   const [view, setView] = useState(() => (localStorage.getItem(TOKEN_KEY) ? 'cargando' : 'login'));
   const [msg, setMsg] = useState(null);
@@ -97,6 +145,14 @@ export default function PerfilScreen() {
   const [editData, setEditData] = useState({});
   const [showPwdForm, setShowPwdForm] = useState(false);
   const [pwdData, setPwdData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+
+  // Inscripción a la carrera activa (mismo flujo que /mi-perfil en la web)
+  const [showInscription, setShowInscription] = useState(false);
+  const [inscribing, setInscribing] = useState(false);
+  const [inscriptionData, setInscriptionData] = useState({
+    motivacion: '', anos_experiencia: '', maxima_distancia_km: '',
+    vueltas_aspiradas: '', tiene_carpa: '', hospedaje: '', acompanantes: '',
+  });
 
   const token = () => localStorage.getItem(TOKEN_KEY);
 
@@ -253,6 +309,37 @@ export default function PerfilScreen() {
       setMsg({ type: 'ok', text: 'Contraseña actualizada' });
     } else {
       setMsg({ type: 'error', text: data.detail || 'Error al cambiar la contraseña' });
+    }
+  };
+
+  const inscribeRace = async () => {
+    if (!inscriptionData.motivacion) {
+      setMsg({ type: 'error', text: 'Indica qué te motiva a participar' });
+      return;
+    }
+    setInscribing(true);
+    setMsg(null);
+    const { ok, data } = await authJson('POST', '/api/athletes/register-race', {
+      token: token(),
+      body: {
+        race_code: config?.code,
+        motivacion: inscriptionData.motivacion,
+        anos_experiencia: inscriptionData.anos_experiencia ? parseInt(inscriptionData.anos_experiencia, 10) : null,
+        maxima_distancia_km: inscriptionData.maxima_distancia_km ? parseFloat(inscriptionData.maxima_distancia_km) : null,
+        vueltas_aspiradas: inscriptionData.vueltas_aspiradas,
+        tiene_carpa: inscriptionData.tiene_carpa,
+        hospedaje: inscriptionData.hospedaje,
+        acompanantes: inscriptionData.acompanantes ? parseInt(inscriptionData.acompanantes, 10) : null,
+      },
+    });
+    setInscribing(false);
+    if (ok) {
+      setShowInscription(false);
+      setMsg({ type: 'ok', text: `¡Inscripción realizada! Tu BIB es el #${data.bib}` });
+      authJson('GET', '/api/athletes/my-races', { token: token() })
+        .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'Error al inscribirse' });
     }
   };
 
@@ -432,7 +519,9 @@ export default function PerfilScreen() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field T={T} label="Teléfono"><TextInput T={T} value={editData.telefono} onChange={upd('telefono')} /></Field>
-                <Field T={T} label="Fecha de nacimiento"><TextInput T={T} type="date" value={editData.fecha_nacimiento} onChange={upd('fecha_nacimiento')} /></Field>
+                <Field T={T} label="Fecha de nacimiento">
+                  <DateField T={T} value={editData.fecha_nacimiento} onChange={(v) => setEditData((p) => ({ ...p, fecha_nacimiento: v }))} />
+                </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field T={T} label="Sexo"><SelectInput T={T} options={SEXOS} value={editData.sexo} onChange={upd('sexo')} /></Field>
@@ -470,6 +559,89 @@ export default function PerfilScreen() {
           )}
         </div>
 
+        {/* Inscripción a la carrera activa */}
+        {config && config.show_preregistration !== false && athlete?.profile_complete &&
+          !myRaces.some((r) => r.is_active) && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+              <Heart className="w-4 h-4 text-[#E77622]" /> {config.name || 'Próxima edición'}
+            </h3>
+            {!showInscription ? (
+              <>
+                <p className={`text-xs mb-3 ${T.muted}`}>
+                  Inscríbete a la próxima edición desde la app. Completar el formulario
+                  garantiza tu espacio en la carrera.
+                </p>
+                <PrimaryButton onClick={() => { setShowInscription(true); setMsg(null); }}>
+                  Inscribirme
+                </PrimaryButton>
+              </>
+            ) : (
+              <div className="space-y-3 mt-2">
+                <div className={`rounded-xl px-3 py-3 ${T.itraBox}`}>
+                  <p className={`text-xs leading-relaxed ${T.muted}`}>
+                    El costo de la carrera será de{' '}
+                    <strong className="text-[#E77622]">
+                      RD${(config.registration_cost || 4000).toLocaleString('es-DO')}
+                    </strong>. Cuatro meses antes del evento te enviaremos por correo las
+                    instrucciones de pago, con 30 días de plazo; si no se completa, el
+                    pre-registro se desestima y el cupo puede reasignarse. Revisa también
+                    tu carpeta de spam.
+                  </p>
+                </div>
+                <Field T={T} label="¿Qué te motiva a participar en este evento? *">
+                  <textarea
+                    value={inscriptionData.motivacion}
+                    onChange={(e) => setInscriptionData((p) => ({ ...p, motivacion: e.target.value }))}
+                    maxLength={1000}
+                    placeholder="Cuéntanos tu motivación…"
+                    className={`w-full min-h-[90px] rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field T={T} label="Años de experiencia">
+                    <TextInput T={T} type="number" min="0" inputMode="numeric" placeholder="Ej: 5" value={inscriptionData.anos_experiencia} onChange={(e) => setInscriptionData((p) => ({ ...p, anos_experiencia: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Máxima distancia (km)">
+                    <TextInput T={T} type="number" min="0" step="0.1" inputMode="decimal" placeholder="Ej: 42.2" value={inscriptionData.maxima_distancia_km} onChange={(e) => setInscriptionData((p) => ({ ...p, maxima_distancia_km: e.target.value }))} />
+                  </Field>
+                </div>
+                <Field T={T} label="¿Cuántas vueltas aspiras completar?">
+                  <SelectInput T={T} options={VUELTAS_OPCIONES} value={inscriptionData.vueltas_aspiradas} onChange={(e) => setInscriptionData((p) => ({ ...p, vueltas_aspiradas: e.target.value }))} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field T={T} label="¿Tienes carpa o toldo?">
+                    <SelectInput T={T} options={['Si', 'No', 'Tal vez']} value={inscriptionData.tiene_carpa} onChange={(e) => setInscriptionData((p) => ({ ...p, tiene_carpa: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="¿Personas que te acompañan?">
+                    <TextInput T={T} type="number" min="0" max="20" inputMode="numeric" placeholder="0" value={inscriptionData.acompanantes} onChange={(e) => setInscriptionData((p) => ({ ...p, acompanantes: e.target.value }))} />
+                  </Field>
+                </div>
+                <Field T={T} label="¿Te gustaría dormir en el lugar?">
+                  <select
+                    value={inscriptionData.hospedaje}
+                    onChange={(e) => setInscriptionData((p) => ({ ...p, hospedaje: e.target.value }))}
+                    className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none appearance-none ${T.input}`}
+                  >
+                    <option value="">Selecciona</option>
+                    <option value="Si quiero acampar">Sí, quiero acampar</option>
+                    <option value="Si quisiera hospedarme en el hotel">Sí, quisiera hospedarme en el hotel</option>
+                    <option value="No lo he decidido aun">No lo he decidido aún</option>
+                  </select>
+                </Field>
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setShowInscription(false)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
+                    Cancelar
+                  </button>
+                  <button onClick={inscribeRace} disabled={inscribing} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                    {inscribing ? 'Enviando…' : 'Confirmar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Mis carreras */}
         <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
           <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
@@ -491,7 +663,7 @@ export default function PerfilScreen() {
             ))
           )}
           <button onClick={() => navigate('/mi-perfil')} className={`mt-3 flex items-center gap-1.5 text-xs underline ${T.muted}`}>
-            <ExternalLink className="w-3 h-3" /> Gestión completa (comprobantes, inscripción) en el sitio
+            <ExternalLink className="w-3 h-3" /> Comprobantes de pago y gestión completa en el sitio
           </button>
         </div>
 
