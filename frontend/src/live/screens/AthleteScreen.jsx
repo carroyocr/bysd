@@ -53,6 +53,7 @@ function PaceChart({ laps, T }) {
 }
 
 const STATUS_STYLES = {
+  registered: 'bg-sky-500/15 text-sky-400 border border-sky-500/40',
   active: 'bg-green-500/15 text-green-500 border border-green-500/40',
   retired: 'bg-red-500/15 text-red-500 border border-red-500/40',
   dns: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',

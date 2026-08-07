@@ -92,6 +92,7 @@ export function useFollowed() {
 
 export function statusLabel(status) {
   switch (status) {
+    case 'registered': return 'Inscrito';
     case 'active': return 'En carrera';
     case 'retired': return 'DNF';
     case 'dns': return 'DNS';
@@ -99,4 +100,23 @@ export function statusLabel(status) {
     case 'honor': return 'Mención de honor';
     default: return status || '';
   }
+}
+
+// ---- Inicio de carrera y cuenta regresiva ----
+
+// Momento de salida en hora de RD (GMT-4); null si la carrera no tiene fecha
+export function raceStartMs(race) {
+  if (!race?.date || !race?.start_time) return null;
+  const t = new Date(`${race.date}T${race.start_time}:00-04:00`).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+export function formatCountdown(ms) {
+  if (ms == null || ms <= 0) return null;
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${Math.max(m, 1)}m`;
 }

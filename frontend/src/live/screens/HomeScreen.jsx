@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Radio, Trophy, MessageCircle } from 'lucide-react';
-import { API, getJson } from '../liveApi';
+import { Menu, Radio, Trophy, MessageCircle, Clock } from 'lucide-react';
+import { API, getJson, raceStartMs } from '../liveApi';
 import { useRace } from '../LiveApp';
 import AdFooter from '../components/AdFooter';
 
@@ -13,6 +13,25 @@ export default function HomeScreen() {
   const { raceCode, race, openDrawer } = useRace();
   const navigate = useNavigate();
   const [fondo, setFondo] = useState(null);
+  const [hasWinner, setHasWinner] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  const startMs = raceStartMs(race);
+  const started = startMs != null && now >= startMs;
+
+  // Tic de 1s: el contador corre en vivo
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // EN VIVO solo si ya arrancó y no hay ganador declarado
+  useEffect(() => {
+    if (!started) return;
+    getJson(`/api/race/stats?race_code=${raceCode}`)
+      .then((s) => setHasWinner(!!s?.winner))
+      .catch(() => {});
+  }, [started, raceCode]);
 
   // El sufijo de versión evita que el navegador muestre una portada vieja
   // cuando se reemplaza (el archivo conserva el mismo nombre).
@@ -92,12 +111,41 @@ export default function HomeScreen() {
               {race?.name || 'Backyard Ultra Santo Domingo'}
             </h1>
           )}
-          {race?.is_active && (
+          {started && hasWinner === false && (
             <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-widest bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_#4ade80] animate-pulse" /> EN VIVO
             </span>
           )}
         </div>
+
+        {/* Cuenta regresiva: protagónica pero abajo, donde no tapa caras en
+            las fotos curadas del fondo */}
+        {!started && startMs != null && (
+          <div className="relative z-10 mt-auto mb-4 mx-auto bg-black/55 backdrop-blur rounded-2xl px-5 py-3 text-center">
+            <p className="text-[9px] font-extrabold tracking-[0.3em] text-[#F5A623] mb-1.5 flex items-center justify-center gap-1.5">
+              <Clock className="w-3 h-3" /> INICIA EN
+            </p>
+            <div className="flex items-baseline justify-center gap-3 font-mono">
+              {(() => {
+                const ms = Math.max(0, startMs - now);
+                const seg = [
+                  [Math.floor(ms / 86400000), 'DÍAS'],
+                  [Math.floor((ms % 86400000) / 3600000), 'HRS'],
+                  [Math.floor((ms % 3600000) / 60000), 'MIN'],
+                  [Math.floor((ms % 60000) / 1000), 'SEG'],
+                ];
+                return seg.map(([v, label]) => (
+                  <div key={label}>
+                    <div className="text-2xl font-extrabold text-white leading-none">
+                      {String(v).padStart(2, '0')}
+                    </div>
+                    <div className="text-[8px] tracking-widest text-white/60 mt-1">{label}</div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* Accesos rápidos */}
         <div className="relative z-10 mt-auto pb-5 px-6">
