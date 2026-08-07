@@ -9,6 +9,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
+import Picker from '../components/Picker';
 
 const TOKEN_KEY = 'athlete_token';
 
@@ -39,12 +40,16 @@ function TextInput({ T, ...props }) {
   return <input {...props} className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`} />;
 }
 
-function SelectInput({ T, options, placeholder, ...props }) {
+// Mantiene la firma de un <select> (onChange con e.target.value) pero usa el
+// Picker propio de la app en vez del desplegable nativo del sistema.
+function SelectInput({ T, options, placeholder, value, onChange }) {
   return (
-    <select {...props} className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none appearance-none ${T.input}`}>
-      <option value="">{placeholder || 'Selecciona'}</option>
-      {options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select>
+    <Picker
+      options={options}
+      placeholder={placeholder}
+      value={value}
+      onSelect={(v) => onChange({ target: { value: v } })}
+    />
   );
 }
 
@@ -87,21 +92,29 @@ function DateField({ T, value, onChange }) {
     onChange(ny && nm && nd ? `${ny}-${nm.padStart(2, '0')}-${nd.padStart(2, '0')}` : '');
   };
 
-  const cls = `w-full rounded-xl px-2 py-2.5 text-sm outline-none appearance-none ${T.input}`;
   return (
     <div className="grid grid-cols-3 gap-2">
-      <select aria-label="Día" value={d ? String(parseInt(d, 10)) : ''} onChange={(e) => emit(y, m, e.target.value)} className={cls}>
-        <option value="">Día</option>
-        {days.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <select aria-label="Mes" value={m ? String(parseInt(m, 10)) : ''} onChange={(e) => emit(y, e.target.value, d)} className={cls}>
-        <option value="">Mes</option>
-        {MESES.map((nombre, i) => <option key={nombre} value={String(i + 1)}>{nombre}</option>)}
-      </select>
-      <select aria-label="Año" value={y} onChange={(e) => emit(e.target.value, m, d)} className={cls}>
-        <option value="">Año</option>
-        {years.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <Picker
+        title="Día"
+        placeholder="Día"
+        value={d ? String(parseInt(d, 10)) : ''}
+        options={days}
+        onSelect={(v) => emit(y, m, v)}
+      />
+      <Picker
+        title="Mes"
+        placeholder="Mes"
+        value={m ? String(parseInt(m, 10)) : ''}
+        options={MESES.map((nombre, i) => ({ value: String(i + 1), label: nombre }))}
+        onSelect={(v) => emit(y, v, d)}
+      />
+      <Picker
+        title="Año"
+        placeholder="Año"
+        value={y}
+        options={years}
+        onSelect={(v) => emit(v, m, d)}
+      />
     </div>
   );
 }
@@ -609,25 +622,25 @@ export default function PerfilScreen() {
                 <Field T={T} label="¿Cuántas vueltas aspiras completar?">
                   <SelectInput T={T} options={VUELTAS_OPCIONES} value={inscriptionData.vueltas_aspiradas} onChange={(e) => setInscriptionData((p) => ({ ...p, vueltas_aspiradas: e.target.value }))} />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 items-end">
                   <Field T={T} label="¿Tienes carpa o toldo?">
                     <SelectInput T={T} options={['Si', 'No', 'Tal vez']} value={inscriptionData.tiene_carpa} onChange={(e) => setInscriptionData((p) => ({ ...p, tiene_carpa: e.target.value }))} />
                   </Field>
-                  <Field T={T} label="¿Personas que te acompañan?">
+                  <Field T={T} label="Acompañantes">
                     <TextInput T={T} type="number" min="0" max="20" inputMode="numeric" placeholder="0" value={inscriptionData.acompanantes} onChange={(e) => setInscriptionData((p) => ({ ...p, acompanantes: e.target.value }))} />
                   </Field>
                 </div>
                 <Field T={T} label="¿Te gustaría dormir en el lugar?">
-                  <select
+                  <Picker
+                    title="¿Te gustaría dormir en el lugar?"
                     value={inscriptionData.hospedaje}
-                    onChange={(e) => setInscriptionData((p) => ({ ...p, hospedaje: e.target.value }))}
-                    className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none appearance-none ${T.input}`}
-                  >
-                    <option value="">Selecciona</option>
-                    <option value="Si quiero acampar">Sí, quiero acampar</option>
-                    <option value="Si quisiera hospedarme en el hotel">Sí, quisiera hospedarme en el hotel</option>
-                    <option value="No lo he decidido aun">No lo he decidido aún</option>
-                  </select>
+                    onSelect={(v) => setInscriptionData((p) => ({ ...p, hospedaje: v }))}
+                    options={[
+                      { value: 'Si quiero acampar', label: 'Sí, quiero acampar' },
+                      { value: 'Si quisiera hospedarme en el hotel', label: 'Sí, quisiera hospedarme en el hotel' },
+                      { value: 'No lo he decidido aun', label: 'No lo he decidido aún' },
+                    ]}
+                  />
                 </Field>
                 <div className="flex gap-3 pt-1">
                   <button onClick={() => setShowInscription(false)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
