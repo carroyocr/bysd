@@ -128,20 +128,76 @@ function RaceShell() {
 /**
  * Plantilla de pantalla estándar: barra superior + contenido. El pie
  * publicitario solo aparece donde se pide con showAds (inicio, detalle del
- * corredor, ganadores y enviar ánimo).
+ * corredor, ganadores y enviar ánimo). Dentro de una carrera usa su menú
+ * lateral; fuera (perfil, staff) monta uno propio con la carrera activa.
  */
-export function Screen({ title, back = false, children, showAds = false }) {
-  const { T } = useLiveTheme();
-  const { raceCode, openDrawer } = useRace() || {};
+export function Screen(props) {
+  const ctx = useRace();
+  return ctx ? <RaceScreen {...props} ctx={ctx} /> : <StandaloneScreen {...props} />;
+}
 
+function ScreenLayout({ T, title, back, onMenu, raceCode, showAds, children, footer }) {
   return (
     <div className={`min-h-[100dvh] flex flex-col ${T.page}`} style={{ WebkitTapHighlightColor: 'transparent' }}>
       <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-[100dvh]">
-        <TopBar title={title} back={back} onMenu={openDrawer} raceCode={raceCode} />
+        <TopBar title={title} back={back} onMenu={onMenu} raceCode={raceCode} />
         <main className="flex-1">{children}</main>
         {showAds && <AdFooter raceCode={raceCode} />}
+        {footer}
       </div>
     </div>
+  );
+}
+
+function RaceScreen({ title, back = false, children, showAds = false, ctx }) {
+  const { T } = useLiveTheme();
+  return (
+    <ScreenLayout
+      T={T}
+      title={title}
+      back={back}
+      onMenu={ctx.openDrawer}
+      raceCode={ctx.raceCode}
+      showAds={showAds}
+    >
+      {children}
+    </ScreenLayout>
+  );
+}
+
+/** Pantallas fuera de una carrera: el menú lateral usa la carrera activa. */
+function StandaloneScreen({ title, back = false, children, showAds = false }) {
+  const { T } = useLiveTheme();
+  const [active, setActive] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    let cancel = false;
+    getJson('/api/race-config/active')
+      .then((data) => { if (!cancel) setActive(data); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, []);
+
+  return (
+    <ScreenLayout
+      T={T}
+      title={title}
+      back={back}
+      onMenu={() => setDrawerOpen(true)}
+      raceCode={active?.code}
+      showAds={showAds}
+      footer={(
+        <Drawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          raceCode={active?.code}
+          raceName={active?.name}
+        />
+      )}
+    >
+      {children}
+    </ScreenLayout>
   );
 }
 

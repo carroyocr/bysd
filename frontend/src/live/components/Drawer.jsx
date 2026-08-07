@@ -26,8 +26,8 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') },
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
-    { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
     { label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') },
+    { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
   ];
 
   return (

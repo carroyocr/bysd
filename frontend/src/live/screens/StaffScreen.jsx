@@ -53,7 +53,7 @@ export default function StaffScreen() {
 
   if (!logged) {
     return (
-      <Screen title="Staff" back>
+      <Screen title="Staff">
         <div className="px-4 py-6">
           <div className={`rounded-2xl px-5 py-6 ${T.card}`}>
             <div className="flex flex-col items-center mb-5">
@@ -111,6 +111,8 @@ export default function StaffScreen() {
   } catch { /* sin permisos */ }
   const can = (p) => isAdmin || permissions.includes(p);
 
+  // Dentro de la app el staff solo opera el escáner; el control de carrera
+  // y el panel administrativo se usan desde la web.
   const tools = [
     can('scanner') && {
       to: '/scan',
@@ -118,22 +120,10 @@ export default function StaffScreen() {
       title: 'Escáner QR',
       description: 'Registrar vueltas escaneando el código de cada atleta',
     },
-    can('control') && {
-      to: '/admin/race-control',
-      Icon: Timer,
-      title: 'Control de carrera',
-      description: 'Vueltas, retiros y estado de los corredores',
-    },
-    (isAdmin || permissions.length > 0) && {
-      to: '/admin',
-      Icon: LayoutDashboard,
-      title: 'Panel administrativo',
-      description: 'Todas las secciones que tu perfil tiene habilitadas',
-    },
   ].filter(Boolean);
 
   return (
-    <Screen title="Staff" back>
+    <Screen title="Staff">
       <div className="px-4 py-4">
         <div className={`rounded-2xl px-4 py-4 flex items-center gap-3 ${T.card}`}>
           <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">

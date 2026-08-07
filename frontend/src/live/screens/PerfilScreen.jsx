@@ -286,7 +286,7 @@ export default function PerfilScreen() {
 
   if (view === 'cargando') {
     return (
-      <Screen title="Perfil del corredor" back>
+      <Screen title="Perfil del corredor">
         <p className={`text-center text-sm py-16 ${T.muted}`}>Cargando…</p>
       </Screen>
     );
@@ -294,7 +294,7 @@ export default function PerfilScreen() {
 
   if (view === 'login') {
     return (
-      <Screen title="Perfil del corredor" back>
+      <Screen title="Perfil del corredor">
         {authCard('Mi cuenta de atleta', 'Usa la misma cuenta del sitio web', (
           <form onSubmit={doLogin} className="space-y-3">
             <Field T={T} label="Email">
@@ -327,7 +327,7 @@ export default function PerfilScreen() {
 
   if (view === 'verificar') {
     return (
-      <Screen title="Verificar email" back>
+      <Screen title="Verificar email">
         {authCard('Verifica tu email', `Enviamos un código a ${pendingEmail}`, (
           <form onSubmit={doVerify} className="space-y-3">
             <Field T={T} label="Código de verificación">
@@ -347,7 +347,7 @@ export default function PerfilScreen() {
 
   if (view === 'restablecer') {
     return (
-      <Screen title="Restablecer contraseña" back>
+      <Screen title="Restablecer contraseña">
         {authCard('Restablecer contraseña', `Enviamos un código a ${pendingEmail}`, (
           <form onSubmit={doReset} className="space-y-3">
             <Field T={T} label="Código recibido">
@@ -371,7 +371,7 @@ export default function PerfilScreen() {
   /* ---------------- panel del atleta ---------------- */
 
   return (
-    <Screen title="Perfil del corredor" back>
+    <Screen title="Perfil del corredor">
       <div className="px-4 py-4 space-y-4">
         {/* Cabecera */}
         <div className={`rounded-2xl px-4 py-4 flex items-center gap-4 ${T.card}`}>
