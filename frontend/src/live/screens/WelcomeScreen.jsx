@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
         Backyard Ultra Santo Domingo
       </p>
       <p className="mt-10 text-[11px] tracking-[0.25em] text-[#666666] uppercase">
-        Solo puede quedar uno
+        Last One Standing
       </p>
     </div>
   );

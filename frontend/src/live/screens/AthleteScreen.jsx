@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Image as ImageIcon, Contact, MessageCircle, Trophy, Star,
-  ExternalLink, MapPin, Loader2, ChevronRight,
+  Contact, MessageCircle, Trophy, Star, Mountain, Loader2,
 } from 'lucide-react';
 import { API, getJson, flagOf, initialsOf, formatDuration, formatPace, useFollowed, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
 /**
- * Gráfico de pace por vuelta (SVG propio, estilo área como el diseño de referencia).
+ * Gráfico de línea: ritmo promedio por vuelta.
  */
 function PaceChart({ laps, T }) {
   const points = laps.filter((l) => l.pace_seg_km != null);
@@ -28,8 +27,6 @@ function PaceChart({ laps, T }) {
   const y = (pace) => PAD.top + ((pace - min) / span) * (H - PAD.top - PAD.bottom);
 
   const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.pace_seg_km).toFixed(1)}`).join(' ');
-  const area = `${line} L${x(points.length - 1).toFixed(1)},${H - PAD.bottom} L${PAD.left},${H - PAD.bottom} Z`;
-
   const fmtPaceShort = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
@@ -42,11 +39,10 @@ function PaceChart({ laps, T }) {
           </text>
         </g>
       ))}
-      <path d={area} fill="#E77622" fillOpacity="0.28" />
-      <path d={line} fill="none" stroke="#E77622" strokeWidth="2" strokeLinejoin="round" />
+      <path d={line} fill="none" stroke="#E77622" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((p, i) => (
         <g key={p.lap}>
-          <circle cx={x(i)} cy={y(p.pace_seg_km)} r="2.4" fill="#E77622" />
+          <circle cx={x(i)} cy={y(p.pace_seg_km)} r="3" fill="#E77622" />
           <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="8.5" fill="currentColor" opacity="0.55">
             V{p.lap}
           </text>
@@ -56,9 +52,16 @@ function PaceChart({ laps, T }) {
   );
 }
 
+const STATUS_STYLES = {
+  active: 'bg-green-500/15 text-green-500 border border-green-500/40',
+  retired: 'bg-red-500/15 text-red-500 border border-red-500/40',
+  dns: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',
+  winner: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
+  honor: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
+};
+
 /**
- * Pantalla dedicada del atleta: datos, acciones, progreso, vueltas (tabla y
- * gráfico), experiencia ITRA, fotos y acceso a ánimo/compartir.
+ * Pantalla dedicada del atleta: datos, acciones y vueltas (gráfico de línea y tabla).
  */
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
@@ -69,8 +72,6 @@ export default function AthleteScreen() {
   const [profile, setProfile] = useState(null);
   const [failed, setFailed] = useState(false);
   const [laps, setLaps] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [photos, setPhotos] = useState([]);
   const [tab, setTab] = useState('grafico');
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
@@ -82,40 +83,28 @@ export default function AthleteScreen() {
     Promise.all([
       getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`),
       getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
-      getJson(`/api/race/stats?race_code=${raceCode}`).catch(() => null),
-      // Fotos del evento propias; el álbum de Google queda como último recurso
-      getJson(`/api/race-config/live-photos/${raceCode}`)
-        .then((d) => (d.photos?.length
-          ? d.photos.map((p, i) => ({ index: i, url: `${API}${p.url}`, propia: true }))
-          : getJson('/api/album/photos').then((a) => (a.photos || []).map((p) => ({ ...p, url: `${p.url}=w300` })))))
-        .catch(() => []),
     ])
-      .then(([prof, lapsData, statsData, fotos]) => {
+      .then(([prof, lapsData]) => {
         if (cancel) return;
         setProfile(prof);
         setLaps(lapsData.laps || []);
-        setStats(statsData);
-        setPhotos((fotos || []).slice(0, 6));
       })
       .catch(() => { if (!cancel) setFailed(true); });
     return () => { cancel = true; };
   }, [bib, raceCode]);
 
-  const progressPct = useMemo(() => {
-    if (!profile) return 0;
-    const currentLap = stats?.current_lap || profile.laps_completed || 1;
-    if (!currentLap) return 0;
-    return Math.min(100, Math.round(((profile.laps_completed || 0) / currentLap) * 100));
-  }, [profile, stats]);
-
+  const base = `/live/${raceCode}/atleta/${bib}`;
   const actions = [
-    { label: 'Fotos', Icon: ImageIcon, action: () => document.getElementById('seccion-fotos')?.scrollIntoView({ behavior: 'smooth' }) },
-    { label: 'Compartir BIB', Icon: Contact, action: () => navigate(`/live/${raceCode}/atleta/${bib}/bib`) },
-    { label: 'Enviar ánimo', Icon: MessageCircle, action: () => navigate(`/live/${raceCode}/atleta/${bib}/animo`) },
-    { label: 'Resultados', Icon: Trophy, action: () => navigate(`/live/${raceCode}/atleta/${bib}/resultados`) },
+    // Fotos oculta por ahora (la pantalla /fotos sigue lista para reactivarla)
+    { label: 'Experiencia', Icon: Mountain, to: `${base}/experiencia` },
+    { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
+    { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
+    { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
   ];
 
-  const snapshot = profile?.itra_snapshot;
+  const statusText = profile?.status === 'active'
+    ? 'Aún en carrera'
+    : `${statusLabel(profile?.status)}${profile?.status === 'retired' && profile?.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}`;
 
   return (
     <Screen title="Detalle del corredor" back>
@@ -154,10 +143,6 @@ export default function AthleteScreen() {
                   profile.ciudad_residencia]
                   .filter(Boolean).join(' | ')}
               </p>
-              <p className={`text-[11px] mt-0.5 font-semibold ${profile.status === 'active' ? 'text-green-500' : T.subtle}`}>
-                {statusLabel(profile.status)}
-                {profile.status === 'retired' && profile.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}
-              </p>
             </div>
             <div className="text-right shrink-0">
               <span className={`text-sm font-mono font-extrabold px-2.5 py-1 rounded-lg ${T.chipOn}`}>#{profile.bib}</span>
@@ -171,44 +156,43 @@ export default function AthleteScreen() {
             </div>
           </div>
 
-          {/* Acciones */}
-          <div className="flex gap-3 px-4 pb-4 overflow-x-auto">
-            {actions.map(({ label, Icon, action }) => (
-              <button key={label} onClick={action} className="flex flex-col items-center gap-1.5 shrink-0 w-[74px]">
-                <span className={`w-14 h-14 rounded-full flex items-center justify-center ${T.actionChip}`}>
-                  <Icon className="w-5 h-5 text-[#E77622]" />
+          {/* Acciones: rejilla fija, sin scroll horizontal */}
+          <div className={`grid px-4 pb-4 gap-2 ${actions.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+            {actions.map(({ label, Icon, to }) => (
+              <button key={label} onClick={() => navigate(to)} className="flex flex-col items-center gap-1.5 min-w-0">
+                <span className={`w-11 h-11 rounded-full flex items-center justify-center ${T.actionChip}`}>
+                  <Icon className="w-[18px] h-[18px] text-[#E77622]" />
                 </span>
-                <span className={`text-[10px] text-center leading-tight ${T.muted}`}>{label}</span>
+                <span className={`text-[9.5px] text-center leading-tight ${T.muted}`}>{label}</span>
               </button>
             ))}
           </div>
 
-          {/* Progreso + vueltas */}
-          <div className={`mx-4 rounded-2xl p-4 ${T.card}`}>
-            <div className="flex items-center justify-center gap-8">
-              <div className="relative w-28 h-28">
-                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="8" />
-                  <circle
-                    cx="50" cy="50" r="44" fill="none" stroke="#E77622" strokeWidth="8" strokeLinecap="round"
-                    strokeDasharray={`${(progressPct / 100) * 276.5} 276.5`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-extrabold font-mono">{progressPct}%</span>
-                  <span className={`text-[9px] tracking-widest ${T.subtle}`}>DE LA CARRERA</span>
-                </div>
-              </div>
+          {/* Vueltas y kilómetros como protagonistas + estado */}
+          <div className={`mx-4 rounded-2xl p-5 ${T.card}`}>
+            <div className="flex justify-center mb-4">
+              <span className={`text-[11px] font-extrabold tracking-wider px-3 py-1.5 rounded-full ${STATUS_STYLES[profile.status] || STATUS_STYLES.dns}`}>
+                {statusText.toUpperCase()}
+              </span>
+            </div>
+            <div className="flex items-center justify-center gap-12">
               <div className="text-center">
-                <div className="text-3xl font-extrabold font-mono text-[#E77622]">{profile.laps_completed || 0}</div>
-                <div className={`text-[9px] tracking-widest ${T.subtle}`}>VUELTAS</div>
-                <div className="text-lg font-bold font-mono mt-2">{(profile.total_km || 0).toFixed(1)}</div>
-                <div className={`text-[9px] tracking-widest ${T.subtle}`}>KM</div>
+                <div className="text-5xl font-extrabold font-mono text-[#E77622] leading-none">
+                  {profile.laps_completed || 0}
+                </div>
+                <div className={`text-[10px] tracking-[0.18em] mt-2 ${T.subtle}`}>VUELTAS</div>
+              </div>
+              <div className={`w-px h-14 ${T.divider} border-l`} />
+              <div className="text-center">
+                <div className="text-5xl font-extrabold font-mono leading-none">
+                  {(profile.total_km || 0).toFixed(1)}
+                </div>
+                <div className={`text-[10px] tracking-[0.18em] mt-2 ${T.subtle}`}>KILÓMETROS</div>
               </div>
             </div>
 
             {/* Tabs Gráfico / Vueltas */}
-            <div className={`flex mt-4 border-b ${T.divider}`}>
+            <div className={`flex mt-5 border-b ${T.divider}`}>
               {[{ key: 'grafico', label: 'Gráfico' }, { key: 'vueltas', label: 'Vueltas' }].map(({ key, label }) => (
                 <button
                   key={key}
@@ -222,6 +206,7 @@ export default function AthleteScreen() {
 
             {tab === 'grafico' && (
               <div className="pt-4">
+                <p className={`text-[10px] tracking-widest text-center mb-1 ${T.subtle}`}>RITMO PROMEDIO POR VUELTA</p>
                 <PaceChart laps={laps} T={T} />
               </div>
             )}
@@ -254,117 +239,10 @@ export default function AthleteScreen() {
             )}
           </div>
 
-          {/* Experiencia ITRA */}
-          {(snapshot || profile.itra_url) && (
-            <div className={`mx-4 mt-4 rounded-2xl p-4 ${T.itraBox}`}>
-              <p className="text-xs font-extrabold tracking-wider text-[#E77622] mb-2.5">EXPERIENCIA ITRA</p>
-              {snapshot && (
-                <>
-                  <div className="flex items-baseline gap-3 mb-3">
-                    {snapshot.performance_index != null && (
-                      <span className="text-3xl font-extrabold font-mono text-[#E77622]">{snapshot.performance_index}</span>
-                    )}
-                    <div className="text-xs">
-                      {snapshot.level && <p className="font-bold">{snapshot.level}</p>}
-                      {snapshot.age_category && <p className={T.muted}>{snapshot.age_category}</p>}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-center mb-2">
-                    <div>
-                      <div className="text-sm font-bold font-mono">{snapshot.finished_races ?? '—'}</div>
-                      <div className={`text-[9px] ${T.subtle}`}>CARRERAS</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold font-mono">
-                        {snapshot.total_distance_km != null ? Math.round(snapshot.total_distance_km).toLocaleString() : '—'}
-                      </div>
-                      <div className={`text-[9px] ${T.subtle}`}>KM TOTALES</div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold font-mono">
-                        {snapshot.total_elevation_m != null ? `+${Math.round(snapshot.total_elevation_m).toLocaleString()}` : '—'}
-                      </div>
-                      <div className={`text-[9px] ${T.subtle}`}>DESNIVEL M</div>
-                    </div>
-                  </div>
-                  {(snapshot.results || []).slice(0, 4).map((r, i) => (
-                    <div key={i} className={`flex items-baseline justify-between gap-2 text-xs py-1.5 border-t ${T.divider}`}>
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{r.race}</p>
-                        <p className={`text-[10px] ${T.muted}`}>
-                          {[r.date, r.category, r.distance_km ? `${r.distance_km} km` : null].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0 font-mono">
-                        {r.time && <p>{r.time}</p>}
-                        {r.position && <p className={`text-[10px] ${T.muted}`}>P. {r.position}</p>}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-              {profile.itra_url && (
-                <a
-                  href={profile.itra_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-[#E77622]"
-                >
-                  Ver perfil completo en ITRA <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* Fotos del evento */}
-          <div id="seccion-fotos" className="mx-4 mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className={`text-xs font-bold tracking-wider uppercase ${T.subtle}`}>Fotos del evento</p>
-              <a href="/album" className="text-xs font-bold text-[#E77622] inline-flex items-center gap-1">
-                Ver álbum <ChevronRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-            {photos.length === 0 ? (
-              <div className={`rounded-2xl p-6 text-center ${T.card}`}>
-                <ImageIcon className={`w-8 h-8 mx-auto mb-2 opacity-60 ${T.muted}`} />
-                <p className={`text-xs ${T.muted}`}>Las fotos estarán disponibles durante el evento.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-1.5">
-                {photos.map((ph) => (
-                  <a key={ph.index} href="/album" className="aspect-square rounded-xl overflow-hidden">
-                    <img src={ph.url} alt="Foto del evento" className="w-full h-full object-cover" loading="lazy" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Datos de carrera del atleta */}
-          {(profile.anos_experiencia != null || profile.maxima_distancia_km != null) && (
-            <div className={`mx-4 mt-4 rounded-2xl p-4 flex items-center gap-6 ${T.card}`}>
-              <MapPin className="w-5 h-5 text-[#E77622] shrink-0" />
-              <div className="flex gap-8">
-                {profile.anos_experiencia != null && (
-                  <div>
-                    <div className="text-lg font-bold font-mono">{profile.anos_experiencia}</div>
-                    <div className={`text-[9px] tracking-widest ${T.subtle}`}>AÑOS CORRIENDO</div>
-                  </div>
-                )}
-                {profile.maxima_distancia_km != null && (
-                  <div>
-                    <div className="text-lg font-bold font-mono">{profile.maxima_distancia_km}</div>
-                    <div className={`text-[9px] tracking-widest ${T.subtle}`}>KM MÁX. PREVIOS</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Enviar ánimo */}
           <div className="mx-4 mt-4">
             <button
-              onClick={() => navigate(`/live/${raceCode}/atleta/${bib}/animo`)}
+              onClick={() => navigate(`${base}/animo`)}
               className="w-full rounded-xl py-3 text-sm font-bold bg-[#E77622] text-white flex items-center justify-center gap-2"
             >
               <MessageCircle className="w-4 h-4" /> Enviar mensaje de apoyo

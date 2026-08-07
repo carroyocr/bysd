@@ -11,6 +11,8 @@ import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
 import AthleteScreen from './screens/AthleteScreen';
 import ShareBibScreen from './screens/ShareBibScreen';
+import FotosScreen from './screens/FotosScreen';
+import ExperienciaScreen from './screens/ExperienciaScreen';
 import ShareResultsScreen from './screens/ShareResultsScreen';
 import CheerScreen from './screens/CheerScreen';
 import WinnersScreen from './screens/WinnersScreen';
@@ -91,6 +93,8 @@ function RaceShell() {
         <Route path="seguimiento" element={<TrackingScreen />} />
         <Route path="atleta/:bib" element={<AthleteScreen />} />
         <Route path="atleta/:bib/bib" element={<ShareBibScreen />} />
+        <Route path="atleta/:bib/fotos" element={<FotosScreen />} />
+        <Route path="atleta/:bib/experiencia" element={<ExperienciaScreen />} />
         <Route path="atleta/:bib/resultados" element={<ShareResultsScreen />} />
         <Route path="atleta/:bib/animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />

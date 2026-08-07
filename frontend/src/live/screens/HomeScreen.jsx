@@ -14,8 +14,11 @@ export default function HomeScreen() {
   const navigate = useNavigate();
   const [albumFallback, setAlbumFallback] = useState(null);
 
+  // El sufijo de versión evita que el navegador muestre una portada vieja
+  // cuando se reemplaza (el archivo conserva el mismo nombre).
+  const version = race?.updated_at ? `?v=${encodeURIComponent(race.updated_at)}` : '';
   const portada = race?.portada_url
-    ? (race.portada_url.startsWith('/api') ? `${API}${race.portada_url}` : race.portada_url)
+    ? `${race.portada_url.startsWith('/api') ? `${API}${race.portada_url}` : race.portada_url}${version}`
     : albumFallback;
 
   // Sin portada configurada: primera foto del evento (o del álbum como último recurso)
@@ -23,7 +26,9 @@ export default function HomeScreen() {
     if (race && !race.portada_url) {
       getJson(`/api/race-config/live-photos/${raceCode}`)
         .then((d) => {
-          const first = d.photos?.[0]?.url;
+          // Solo fotos marcadas como aptas para fondo (sin caras bajo el logo)
+          const aptas = (d.photos || []).filter((p) => p.fondo);
+          const first = aptas[0]?.url;
           if (first) {
             setAlbumFallback(`${API}${first}`);
           } else {

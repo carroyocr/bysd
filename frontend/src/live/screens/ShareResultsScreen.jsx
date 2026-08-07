@@ -78,7 +78,7 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl }) {
 
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
-  ctx.fillText('#BYSD #BackyardUltra #SoloPuedeQuedarUno', W / 2, 1800);
+  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1800);
 }
 
 /**

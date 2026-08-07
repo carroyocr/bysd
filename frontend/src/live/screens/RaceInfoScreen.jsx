@@ -26,7 +26,7 @@ export default function RaceInfoScreen() {
     { Icon: CalendarDays, label: 'Fecha', value: fmtDate(race?.date) },
     { Icon: Clock, label: 'Hora de inicio', value: race?.start_time ? `${race.start_time} (hora RD)` : '—' },
     { Icon: MapPin, label: 'Lugar', value: race?.location || '—' },
-    { Icon: Repeat, label: 'Formato', value: 'Vueltas de 6.7 km cada hora, hasta que solo quede uno en pie' },
+    { Icon: Repeat, label: 'Formato', value: 'Vueltas de 6.7 km cada hora, hasta el Last One Standing' },
   ];
 
   const links = [
@@ -57,7 +57,7 @@ export default function RaceInfoScreen() {
           <p className={`text-sm leading-relaxed ${T.muted}`}>
             Cada hora en punto arranca una vuelta de 6.7 km. Quien no complete la vuelta a tiempo,
             o decida no salir a la siguiente, queda fuera (DNF). La carrera continúa hasta que
-            solo una persona logre completar una vuelta más que el resto: el último en pie.
+            solo una persona logre completar una vuelta más que el resto: el Last One Standing.
           </p>
         </div>
 

@@ -73,7 +73,7 @@ function drawBibCard(ctx, { profile, raceName, siteUrl }) {
   ctx.fill();
   ctx.fillStyle = '#E77622';
   ctx.font = '700 40px -apple-system, Helvetica, Arial';
-  ctx.fillText('SOLO PUEDE QUEDAR UNO', W / 2, cardY + cardH - 28);
+  ctx.fillText('LAST ONE STANDING', W / 2, cardY + cardH - 28);
 
   // Llamado a seguir
   ctx.fillStyle = '#FFFFFF';

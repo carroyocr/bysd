@@ -106,7 +106,7 @@ export default function WinnersScreen() {
                 <div className={`text-center py-12 ${T.muted}`}>
                   <Trophy className="w-10 h-10 mx-auto mb-3 opacity-60" />
                   <p className="font-semibold">Aún no hay ganador</p>
-                  <p className="text-xs mt-1.5">La carrera sigue: solo puede quedar uno en pie.</p>
+                  <p className="text-xs mt-1.5">La carrera sigue hasta el Last One Standing.</p>
                 </div>
                 {lastStanding.length > 0 && (
                   <>
