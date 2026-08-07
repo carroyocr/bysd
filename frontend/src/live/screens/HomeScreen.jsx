@@ -12,34 +12,34 @@ import AdFooter from '../components/AdFooter';
 export default function HomeScreen() {
   const { raceCode, race, openDrawer } = useRace();
   const navigate = useNavigate();
-  const [albumFallback, setAlbumFallback] = useState(null);
+  const [fondo, setFondo] = useState(null);
 
   // El sufijo de versión evita que el navegador muestre una portada vieja
   // cuando se reemplaza (el archivo conserva el mismo nombre).
   const version = race?.updated_at ? `?v=${encodeURIComponent(race.updated_at)}` : '';
-  const portada = race?.portada_url
+  const portadaConfigurada = race?.portada_url
     ? `${race.portada_url.startsWith('/api') ? `${API}${race.portada_url}` : race.portada_url}${version}`
-    : albumFallback;
+    : null;
+  const portada = fondo || portadaConfigurada;
 
-  // Sin portada configurada: primera foto del evento (o del álbum como último recurso)
+  // Fondo: una foto al azar entre las curadas como aptas (sin caras bajo el
+  // logo). Si no hay curadas, cae a la portada configurada o al álbum.
   useEffect(() => {
-    if (race && !race.portada_url) {
-      getJson(`/api/race-config/live-photos/${raceCode}`)
-        .then((d) => {
-          // Solo fotos marcadas como aptas para fondo (sin caras bajo el logo)
-          const aptas = (d.photos || []).filter((p) => p.fondo);
-          const first = aptas[0]?.url;
-          if (first) {
-            setAlbumFallback(`${API}${first}`);
-          } else {
-            return getJson('/api/album/photos').then((a) => {
-              const foto = a.photos?.[0]?.url;
-              if (foto) setAlbumFallback(`${foto}=w1080`);
-            });
-          }
-        })
-        .catch(() => {});
-    }
+    if (!race) return;
+    getJson(`/api/race-config/live-photos/${raceCode}`)
+      .then((d) => {
+        const aptas = (d.photos || []).filter((p) => p.fondo);
+        if (aptas.length) {
+          const elegida = aptas[Math.floor(Math.random() * aptas.length)];
+          setFondo(`${API}${elegida.url}`);
+        } else if (!race.portada_url) {
+          return getJson('/api/album/photos').then((a) => {
+            const foto = a.photos?.[0]?.url;
+            if (foto) setFondo(`${foto}=w1080`);
+          });
+        }
+      })
+      .catch(() => {});
   }, [race, raceCode]);
 
   const logo = race?.logo_home_url || race?.logo_url;
