@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
-  ChevronDown, ExternalLink, Medal, Heart,
+  ChevronDown, ExternalLink, Medal, Heart, Upload, Paperclip,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -77,11 +77,11 @@ function Msg({ T, msg }) {
  * Selector de fecha con el diseño de la app (día/mes/año): el calendario
  * nativo del sistema desentona con el tema oscuro y no se puede estilizar.
  */
-function DateField({ T, value, onChange }) {
+function DateField({ T, value, onChange, fromYear, toYear }) {
   const [y = '', m = '', d = ''] = (value || '').split('-');
   const now = new Date().getFullYear();
   const years = [];
-  for (let i = now - 10; i >= 1930; i--) years.push(String(i));
+  for (let i = fromYear ?? now - 10; i >= (toYear ?? 1930); i--) years.push(String(i));
   const daysInMonth = y && m ? new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate() : 31;
   const days = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
 
@@ -166,6 +166,13 @@ export default function PerfilScreen() {
     motivacion: '', anos_experiencia: '', maxima_distancia_km: '',
     vueltas_aspiradas: '', tiene_carpa: '', hospedaje: '', acompanantes: '',
   });
+
+  // Comprobante de pago (mismo endpoint que /subir-comprobante en la web)
+  const [receiptRace, setReceiptRace] = useState(null);
+  const [receiptInfo, setReceiptInfo] = useState(null);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
+  const [submittingReceipt, setSubmittingReceipt] = useState(false);
 
   const token = () => localStorage.getItem(TOKEN_KEY);
 
@@ -348,11 +355,87 @@ export default function PerfilScreen() {
     setInscribing(false);
     if (ok) {
       setShowInscription(false);
-      setMsg({ type: 'ok', text: `¡Inscripción realizada! Tu BIB es el #${data.bib}` });
+      setMsg({
+        type: 'ok',
+        text: data.waitlisted
+          ? 'Inscripción recibida: la carrera alcanzó su cupo y quedaste en lista de espera. Te avisaremos por correo si se libera un lugar.'
+          : `¡Inscripción realizada! Tu BIB es el #${data.bib}`,
+      });
       authJson('GET', '/api/athletes/my-races', { token: token() })
         .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
     } else {
       setMsg({ type: 'error', text: data.detail || 'Error al inscribirse' });
+    }
+  };
+
+  const openReceiptForm = async (race) => {
+    setReceiptRace(race.registration_id);
+    setReceiptFile(null);
+    setReceiptData({ payment_date: '', bank_origin: '', transfer_number: '' });
+    setReceiptInfo(null);
+    setMsg(null);
+    try {
+      const res = await fetch(`${API}/api/registration/payment-info/${race.edit_token}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReceiptInfo(data.race_config || null);
+      }
+    } catch { /* la info bancaria es opcional */ }
+  };
+
+  const pickReceiptFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      setMsg({ type: 'error', text: 'Formato no válido. Usa JPG, PNG, WebP o PDF.' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setMsg({ type: 'error', text: 'El archivo es demasiado grande (máximo 10MB)' });
+      return;
+    }
+    setMsg(null);
+    setReceiptFile(file);
+  };
+
+  const submitReceipt = async (race) => {
+    if (!receiptFile) {
+      setMsg({ type: 'error', text: 'Selecciona la imagen o PDF del comprobante' });
+      return;
+    }
+    if (!receiptData.payment_date) {
+      setMsg({ type: 'error', text: 'Indica la fecha del pago' });
+      return;
+    }
+    if (!receiptData.bank_origin) {
+      setMsg({ type: 'error', text: 'Indica el banco desde donde pagaste' });
+      return;
+    }
+    setSubmittingReceipt(true);
+    setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append('receipt_image', receiptFile);
+      fd.append('payment_date', receiptData.payment_date);
+      fd.append('bank_origin', receiptData.bank_origin);
+      if (receiptData.transfer_number) fd.append('transfer_number', receiptData.transfer_number);
+      const res = await fetch(`${API}/api/registration/submit-payment-receipt/${race.edit_token}`, {
+        method: 'POST',
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error al enviar el comprobante');
+      }
+      setReceiptRace(null);
+      setMsg({ type: 'ok', text: '¡Comprobante enviado! El equipo lo revisará pronto.' });
+      authJson('GET', '/api/athletes/my-races', { token: token() })
+        .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingReceipt(false);
     }
   };
 
@@ -663,17 +746,102 @@ export default function PerfilScreen() {
           {myRaces.length === 0 ? (
             <p className={`text-xs py-3 ${T.muted}`}>No tienes inscripciones activas.</p>
           ) : (
-            myRaces.map((race) => (
-              <div key={race.registration_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold truncate">{race.race_name || race.race_code}</p>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${race.payment_status === 'paid' ? 'bg-green-500/15 text-green-500' : 'bg-yellow-500/15 text-yellow-600'}`}>
-                    {race.payment_status === 'paid' ? 'Pagado' : 'Pendiente de pago'}
-                  </span>
+            myRaces.map((race) => {
+              const enEspera = race.status === 'waitlist';
+              const receiptPending = race.payment_receipt_status === 'pending';
+              const puedeSubirComprobante = !enEspera && race.edit_token &&
+                race.payment_status !== 'paid' && !receiptPending;
+              const badge = enEspera
+                ? { cls: 'bg-orange-500/15 text-[#E77622]', label: 'Lista de espera' }
+                : race.payment_status === 'paid'
+                  ? { cls: 'bg-green-500/15 text-green-500', label: 'Pagado' }
+                  : receiptPending
+                    ? { cls: 'bg-sky-500/15 text-sky-500', label: 'Comprobante en revisión' }
+                    : { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Pendiente de pago' };
+              return (
+                <div key={race.registration_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold truncate">{race.race_name || race.race_code}</p>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${badge.cls}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  {race.bib && !enEspera && <p className={`text-xs mt-1 ${T.muted}`}>BIB #{race.bib}</p>}
+                  {enEspera && (
+                    <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
+                      La carrera alcanzó su cupo. Estás en lista de espera: si se libera un
+                      lugar te avisaremos por correo y podrás completar el pago.
+                    </p>
+                  )}
+                  {receiptPending && (
+                    <p className={`text-xs mt-1.5 ${T.muted}`}>
+                      Tu comprobante está siendo revisado por el equipo.
+                    </p>
+                  )}
+
+                  {puedeSubirComprobante && receiptRace !== race.registration_id && (
+                    <button
+                      onClick={() => openReceiptForm(race)}
+                      className={`mt-2.5 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#E77622]" /> Subir comprobante de pago
+                    </button>
+                  )}
+
+                  {receiptRace === race.registration_id && (
+                    <div className="space-y-3 mt-3">
+                      {receiptInfo && (receiptInfo.payment_bank_name || receiptInfo.payment_account_number) && (
+                        <div className={`rounded-xl px-3 py-3 ${T.itraBox}`}>
+                          <p className={`text-xs leading-relaxed ${T.muted}`}>
+                            Transfiere a: <strong>{receiptInfo.payment_bank_name}</strong>
+                            {receiptInfo.payment_account_type && <> · {receiptInfo.payment_account_type}</>}
+                            {receiptInfo.payment_account_number && <> · Cuenta {receiptInfo.payment_account_number}</>}
+                            {receiptInfo.payment_account_name && <> · A nombre de {receiptInfo.payment_account_name}</>}
+                            {receiptInfo.registration_cost && (
+                              <> · Monto RD${Number(receiptInfo.registration_cost).toLocaleString('es-DO')}</>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      <Field T={T} label="Comprobante (JPG, PNG, WebP o PDF) *">
+                        <label className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm cursor-pointer ${T.input}`}>
+                          <Paperclip className="w-4 h-4 text-[#E77622] shrink-0" />
+                          <span className={`truncate ${receiptFile ? '' : 'opacity-50'}`}>
+                            {receiptFile ? receiptFile.name : 'Seleccionar archivo o foto'}
+                          </span>
+                          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={pickReceiptFile} className="hidden" />
+                        </label>
+                      </Field>
+                      <Field T={T} label="Fecha del pago *">
+                        <DateField
+                          T={T}
+                          value={receiptData.payment_date}
+                          onChange={(v) => setReceiptData((p) => ({ ...p, payment_date: v }))}
+                          fromYear={new Date().getFullYear()}
+                          toYear={new Date().getFullYear() - 1}
+                        />
+                      </Field>
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <Field T={T} label="Banco de origen *">
+                          <TextInput T={T} value={receiptData.bank_origin} onChange={(e) => setReceiptData((p) => ({ ...p, bank_origin: e.target.value }))} placeholder="Ej: Banreservas" />
+                        </Field>
+                        <Field T={T} label="Nº de transferencia">
+                          <TextInput T={T} value={receiptData.transfer_number} onChange={(e) => setReceiptData((p) => ({ ...p, transfer_number: e.target.value }))} placeholder="Opcional" />
+                        </Field>
+                      </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => setReceiptRace(null)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
+                          Cancelar
+                        </button>
+                        <button onClick={() => submitReceipt(race)} disabled={submittingReceipt} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                          {submittingReceipt ? 'Enviando…' : 'Enviar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {race.bib && <p className={`text-xs mt-1 ${T.muted}`}>BIB #{race.bib}</p>}
-              </div>
-            ))
+              );
+            })
           )}
           <button onClick={() => navigate('/mi-perfil')} className={`mt-3 flex items-center gap-1.5 text-xs underline ${T.muted}`}>
             <ExternalLink className="w-3 h-3" /> Comprobantes de pago y gestión completa en el sitio
