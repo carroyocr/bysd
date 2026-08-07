@@ -918,16 +918,22 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
     }
 
     # La experiencia ITRA vive en la cuenta del atleta, no en la inscripcion.
+    athlete = None
     athlete_id = registration.get("athlete_id")
     if athlete_id:
         try:
             athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
         except Exception:
             athlete = None
-        if athlete:
-            profile["itra_url"] = athlete.get("itra_url")
-            profile["itra_snapshot"] = athlete.get("itra_snapshot")
-            profile["photo_url"] = profile["photo_url"] or athlete.get("photo_url")
+    # Inscripciones sin athlete_id: se busca la cuenta por el correo
+    if not athlete and registration.get("email"):
+        athlete = await database.athletes.find_one({"email": registration["email"]})
+    if athlete:
+        profile["itra_url"] = athlete.get("itra_url")
+        profile["itra_snapshot"] = athlete.get("itra_snapshot")
+        # La foto vigente del perfil manda sobre la copia de la inscripcion:
+        # el atleta puede haberla subido o cambiado despues de inscribirse.
+        profile["photo_url"] = athlete.get("photo_url") or profile["photo_url"]
 
     return profile
 
