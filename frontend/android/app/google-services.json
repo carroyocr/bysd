@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "380723196571",
+    "project_id": "bysd-live",
+    "storage_bucket": "bysd-live.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380723196571:android:c99c98f014cd75409e0c3e",
+        "android_client_info": {
+          "package_name": "com.backyardultrasd.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBj9VE_1aoe0U639tMnVaP8qF2F3bEddQM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

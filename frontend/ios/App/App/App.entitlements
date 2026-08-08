@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Notificaciones push. "development" es lo que pone Xcode al activar la
+	     capacidad; al archivar para TestFlight o la App Store, el perfil de
+	     aprovisionamiento lo sustituye por "production". -->
+	<key>aps-environment</key>
+	<string>development</string>
+</dict>
+</plist>

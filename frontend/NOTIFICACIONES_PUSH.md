@@ -20,47 +20,48 @@ La lista de corredores seguidos vive en el teléfono y se copia al backend cada
 vez que cambia. El backend no guarda nombre, correo ni cuenta: solo el token
 del dispositivo y los dorsales que sigue (colección `push_devices`).
 
-## Puesta en marcha
+## Estado
 
-Nada de esto está hecho todavía; hasta que se complete, la app funciona igual
-pero no sale ningún aviso (el panel lo avisa en el tab **Avisos App**).
+**Android: funcionando.** **iOS: falta la llave de APNs.**
 
-### 1. Proyecto de Firebase
+Hecho (2026-08-08):
 
-1. Crear un proyecto en <https://console.firebase.google.com>.
-2. Añadir una app **Android** con el ID `com.backyardultrasd.app`.
-   Descargar `google-services.json` y ponerlo en `frontend/android/app/`.
-3. Añadir una app **iOS** con el mismo ID. Descargar `GoogleService-Info.plist`
-   y añadirlo al proyecto desde Xcode (arrastrarlo sobre la carpeta `App`, con
-   "Copy items if needed" marcado).
+- Proyecto de Firebase `bysd-live`, con la app Android y la app iOS registradas
+  bajo `com.backyardultrasd.app`.
+- `google-services.json` en `frontend/android/app/` y `GoogleService-Info.plist`
+  en `frontend/ios/App/App/`, ya dentro del proyecto de Xcode. Son configuración
+  del cliente, no secretos: van al repositorio y hacen falta para compilar.
+- Capacidad **Push Notifications** activada en el target de iOS, con
+  `App/App.entitlements` (`aps-environment`).
+- Cuenta de servicio en `~/Proyectos/bysd-secretos/fcm-service-account.json` y
+  la variable `FCM_SERVICE_ACCOUNT_JSON` puesta en Render.
 
-Estos dos archivos son configuración del cliente, no secretos: pueden ir al
-repositorio y hacen falta para compilar.
-
-### 2. Llave de APNs (solo iOS)
+Pendiente para que iOS reciba avisos:
 
 1. En <https://developer.apple.com> → Certificates, Identifiers & Profiles →
    Keys, crear una llave con **Apple Push Notifications service (APNs)** y
    descargar el `.p8` (solo se puede descargar una vez).
 2. Subirla en Firebase → Configuración del proyecto → Cloud Messaging → sección
    iOS, junto con el Key ID y el Team ID.
-3. En el identificador de la app (Identifiers), activar la capacidad
-   **Push Notifications**.
-4. En Xcode: pestaña **Signing & Capabilities** → **+ Capability** →
-   **Push Notifications**.
+3. En el identificador de la app (Identifiers), activar **Push Notifications**.
 
-### 3. Cuenta de servicio para el backend
+### Si algún día hay que rehacer la cuenta de servicio
 
-1. Firebase → Configuración del proyecto → **Cuentas de servicio** →
-   *Generar nueva clave privada*. Descarga un `.json`.
-2. **Es un secreto.** No va al repositorio (`.gitignore` ya ignora
-   `*firebase-adminsdk*.json`). Guardarlo en `~/Proyectos/bysd-secretos/`.
-3. En Render, servicio `bysd-backend` → Environment, crear la variable
-   `FCM_SERVICE_ACCOUNT_JSON` y pegar **el JSON completo en una sola línea**.
+Firebase → Configuración del proyecto → **Cuentas de servicio** → *Generar nueva
+clave privada*. **Es un secreto:** no va al repositorio (`.gitignore` ignora
+`*firebase-adminsdk*.json`); se guarda en `~/Proyectos/bysd-secretos/` y su
+contenido, **en una sola línea**, va a `FCM_SERVICE_ACCOUNT_JSON` en Render
+(servicio `bysd-backend` → Environment). El backend solo la lee al arrancar, así
+que hay que esperar a que Render reinicie. Para probar en local, la misma
+variable en `backend/.env`.
 
-Para probar en local, la misma variable en `backend/.env`.
+Para pasar el JSON a una línea y dejarlo en el portapapeles:
 
-### 4. Compilar la app
+```bash
+python3 -c "import json,os;print(json.dumps(json.load(open(os.path.expanduser('~/Proyectos/bysd-secretos/fcm-service-account.json'))),separators=(',',':')),end='')" | pbcopy
+```
+
+### Compilar la app
 
 ```bash
 cd frontend && yarn build && npx cap sync
