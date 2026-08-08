@@ -2797,3 +2797,50 @@ async def staff_emergency_info(race_code: Optional[str] = None):
     atletas.sort(key=lambda a: a.get("bib") or "999")
 
     return {"race_code": race_code, "total": len(atletas), "atletas": atletas}
+
+
+# ==================== CARGA AUTOMATICA DESDE ITRA ====================
+
+
+class ItraSyncRequest(BaseModel):
+    itra_url: Optional[str] = None
+
+
+@router.post("/itra/sync")
+async def sync_itra(data: ItraSyncRequest, authorization: str = Header(None)):
+    """Lee la ficha publica de ITRA del atleta y guarda sus datos.
+
+    Evita que el corredor tenga que copiar a mano indice, nivel, kilometros y
+    resultados desde itra.run. Si ITRA no se deja leer, se devuelve un 400 con
+    el motivo y el formulario manual sigue estando para escribirlos.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from services import itra_service
+
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+
+    athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    url = (data.itra_url or athlete.get("itra_url") or "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Falta el enlace de tu perfil de ITRA")
+
+    try:
+        snapshot = await itra_service.leer_perfil(url)
+    except itra_service.ItraError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await database.athletes.update_one(
+        {"_id": ObjectId(athlete_id)},
+        {"$set": {
+            "itra_url": url,
+            "itra_snapshot": snapshot,
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+
+    return {"success": True, "itra_url": url, "itra_snapshot": snapshot}
