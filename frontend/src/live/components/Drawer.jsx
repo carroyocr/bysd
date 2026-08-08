@@ -79,7 +79,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
           ))}
         </nav>
         <p className={`px-4 pt-4 pb-1 text-[10px] ${T.subtle}`}>
-          Backyard Ultra Santo Domingo · backyardultrasantodomingo.com
+          Backyard Ultra Santo Domingo
         </p>
         {/* La versión a la vista: cuando alguien reporta algo, es lo primero
             que hace falta saber. */}

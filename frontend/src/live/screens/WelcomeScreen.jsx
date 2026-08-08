@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Flame } from 'lucide-react';
+import { VERSION_CORTA } from '../version';
 
 /**
  * Pantalla de bienvenida: marca a pantalla completa y pase automático al
@@ -10,7 +11,8 @@ export default function WelcomeScreen() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const id = setTimeout(() => navigate('/live/carreras', { replace: true }), 2000);
+    // 4 s: da tiempo a leer la version antes de pasar, y se puede saltar tocando
+    const id = setTimeout(() => navigate('/live/carreras', { replace: true }), 4000);
     return () => clearTimeout(id);
   }, [navigate]);
 
@@ -28,6 +30,7 @@ export default function WelcomeScreen() {
       <p className="mt-2 text-sm text-[#9a9a9a] text-center">
         Backyard Ultra Santo Domingo
       </p>
+      <p className="mt-1.5 text-[11px] font-mono text-[#6b6b6b] text-center">{VERSION_CORTA}</p>
       <p className="mt-10 text-[11px] tracking-[0.25em] text-[#666666] uppercase">
         Last One Standing
       </p>

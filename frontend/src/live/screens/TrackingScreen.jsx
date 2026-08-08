@@ -171,8 +171,8 @@ export default function TrackingScreen() {
               onClick={() => setFilter(key)}
               className={`flex flex-col items-center leading-tight px-3 py-1.5 rounded-xl whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
             >
-              <span className="text-[10px] font-semibold">{label}</span>
-              <span className="text-[11px] font-bold opacity-70">{counts[key]}</span>
+              <span className="text-[10px] font-semibold text-center">{label}</span>
+              <span className="text-[11px] font-bold opacity-70 text-center">({counts[key]})</span>
             </button>
           ))}
         </div>
