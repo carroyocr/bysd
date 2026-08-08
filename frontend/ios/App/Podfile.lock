@@ -14,6 +14,8 @@ PODS:
     - Capacitor
   - CapacitorShare (7.0.4):
     - Capacitor
+  - CapgoCapacitorNativeBiometric (7.1.13):
+    - Capacitor
   - FirebaseCore (11.7.0):
     - FirebaseCoreInternal (~> 11.7.0)
     - GoogleUtilities/Environment (~> 8.0)
@@ -77,6 +79,7 @@ DEPENDENCIES:
   - "CapacitorFirebaseMessaging (from `../../node_modules/@capacitor-firebase/messaging`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - "CapgoCapacitorNativeBiometric (from `../../node_modules/@capgo/capacitor-native-biometric`)"
 
 SPEC REPOS:
   trunk:
@@ -105,6 +108,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/preferences"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
+  CapgoCapacitorNativeBiometric:
+    :path: "../../node_modules/@capgo/capacitor-native-biometric"
 
 SPEC CHECKSUMS:
   Capacitor: ff6bf01336ac353098378828aff465095a89e459
@@ -114,6 +119,7 @@ SPEC CHECKSUMS:
   CapacitorFirebaseMessaging: 1ac12c0dab16d1e4edcf9cb878620507ac868a4e
   CapacitorPreferences: 69d9991307507aeab8ef8019c10b9babfda0e9ca
   CapacitorShare: 25f7fc5dd0e4edbde5d6801c6de5d14a8b450a41
+  CapgoCapacitorNativeBiometric: c9a116d9516b3f52dd335aea6a0c5073be36fe5a
   FirebaseCore: 3227e35f4197a924206fbcdc0349325baf4f5de4
   FirebaseCoreInternal: d6c17dafc8dc33614733a8b52df78fcb4394c881
   FirebaseInstallations: 9347e719c3d52d8d7b9074b2c32407dd027305e9
@@ -124,6 +130,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
 
-PODFILE CHECKSUM: 5ba326e898fbae5d3c8540440170548bd2ad89d2
+PODFILE CHECKSUM: e25989497f5eeeccaacc08edf14cde3461bf55aa
 
 COCOAPODS: 1.17.0
