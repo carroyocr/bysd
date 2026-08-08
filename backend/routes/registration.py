@@ -1381,7 +1381,29 @@ async def submit_payment_receipt(
     
     if not registration:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
-    
+
+    # Sin cupo confirmado no se paga: quien esta en lista de espera todavia no
+    # tiene plaza y cobrarle antes obliga a devolver el dinero.
+    if registration.get("status") == "waitlist":
+        raise HTTPException(
+            status_code=400,
+            detail="Estas en lista de espera. Podras subir el comprobante cuando se libere un cupo y te confirmemos.",
+        )
+
+    # Un segundo comprobante sobre uno que aun se esta revisando solo genera
+    # trabajo duplicado a la organizacion.
+    recibo = registration.get("payment_receipt") or {}
+    if recibo.get("status") == "pending_review":
+        raise HTTPException(
+            status_code=400,
+            detail="Ya enviaste un comprobante y esta en revision.",
+        )
+    if registration.get("payment_status") == "paid":
+        raise HTTPException(
+            status_code=400,
+            detail="Tu pago ya esta confirmado.",
+        )
+
     # Validate file type
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]
     if receipt_image.content_type not in allowed_types:

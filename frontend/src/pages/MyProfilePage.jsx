@@ -1311,8 +1311,14 @@ export default function MyProfilePage() {
                       <div className="space-y-4">
                         {myRaces.map(race => {
                           const canCancel = !race.payment_receipt_status && race.status === 'registered';
-                          const showPaymentLink = race.edit_token && race.payment_status !== 'paid';
                           const receiptPending = race.payment_receipt_status === 'pending';
+                          // Desde la lista de espera no se paga: aun no hay cupo,
+                          // y cobrar antes obliga a devolver el dinero. Con un
+                          // comprobante ya enviado, otro solo duplica la revision.
+                          const showPaymentLink = race.edit_token &&
+                            race.status !== 'waitlist' &&
+                            race.payment_status !== 'paid' &&
+                            !race.payment_receipt_status;
                           
                           return (
                             <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>

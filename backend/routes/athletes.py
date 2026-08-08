@@ -17,6 +17,7 @@ from services.auth import (
     ALGORITHM,
     ATHLETE_SECRET_KEY,
     has_permission,
+    require_permission,
     verify_admin_token,
 )
 
@@ -2744,3 +2745,55 @@ async def admin_get_whatsapp_recipients(data: WhatsAppRecipientFilter, authoriza
         "with_phone": with_phone,
         "without_phone": len(recipients) - with_phone,
     }
+
+
+# ==================== FICHA DE EMERGENCIA (STAFF) ====================
+
+
+@router.get("/staff/emergency-info", dependencies=[Depends(require_permission("scanner"))])
+async def staff_emergency_info(race_code: Optional[str] = None):
+    """Datos de salud y contacto de emergencia de los inscritos a una carrera.
+
+    Es para el equipo de la carrera: si alguien se descompone en el corral hay
+    que saber en segundos su tipo de sangre, sus alergias y a quien llamar.
+
+    Va con el permiso "scanner" del panel, no con la clave de escaneo de la
+    carrera: esa clave se dicta por radio y por WhatsApp el dia del evento, y
+    con ella cualquiera que la oiga tendria la historia medica de todos. Aqui
+    hace falta haber entrado al panel con usuario y contrasena.
+    """
+    from server import db as database
+
+    if not race_code:
+        carrera = await database.race_configurations.find_one({"is_active": True})
+        if not carrera:
+            raise HTTPException(status_code=400, detail="No hay carrera activa")
+        race_code = carrera.get("code")
+
+    docs = await database.registrations.find(
+        {
+            "race_code": race_code,
+            "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
+        },
+        {
+            "_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1, "telefono": 1,
+            "fecha_nacimiento": 1, "status": 1, "tipo_sangre": 1,
+            "condicion_medica": 1, "condicion_medica_detalle": 1,
+            "alergias": 1, "alergias_detalle": 1,
+            "contacto_emergencia_nombre": 1, "contacto_emergencia_relacion": 1,
+            "contacto_emergencia_telefono": 1,
+        },
+    ).to_list(1000)
+
+    atletas = [
+        {
+            **d,
+            "bib": str(d["bib"]).zfill(3) if d.get("bib") else None,
+            "nombre_completo": f"{d.get('nombre', '')} {d.get('apellidos', '')}".strip(),
+        }
+        for d in docs
+    ]
+    # Por dorsal, que es como los busca el personal
+    atletas.sort(key=lambda a: a.get("bib") or "999")
+
+    return {"race_code": race_code, "total": len(atletas), "atletas": atletas}

@@ -1169,6 +1169,11 @@
   resolved "https://registry.yarnpkg.com/@capacitor/synapse/-/synapse-1.0.4.tgz#c6beb33119d9656b1f04cb7783989fb78933ef6d"
   integrity sha512-/C1FUo8/OkKuAT4nCIu/34ny9siNHr9qtFezu4kxm6GY1wNFxrCFWjfYx5C1tUhVGz3fxBABegupkpjXvjCHrw==
 
+"@capgo/capacitor-native-biometric@^8.6.4":
+  version "8.6.4"
+  resolved "https://registry.yarnpkg.com/@capgo/capacitor-native-biometric/-/capacitor-native-biometric-8.6.4.tgz#04f8261dc10f087302ebf9156351a8b89a4e95c3"
+  integrity sha512-ANzDZQU1tcFV2m/kVhOu/ajC/quWoG2hgShd9zJxr6tyIxEsnSvpblyLz5bpbT59aq06QsFV0lexZRWCVXxh/g==
+
 "@craco/craco@^7.1.0":
   version "7.1.0"
   resolved "https://registry.yarnpkg.com/@craco/craco/-/craco-7.1.0.tgz#12bd394c7f0334e214302e4d35a1768f68042fbb"

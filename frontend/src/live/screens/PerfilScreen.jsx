@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
-  GraduationCap, Check, XCircle, Calendar, Users as UsersIcon,
+  GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
+  Mountain, ExternalLink, ScanFace,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
+import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
 import Picker, { PickerSheet, Wheel } from '../components/Picker';
 
 const TOKEN_KEY = 'athlete_token';
@@ -21,6 +23,14 @@ const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
+const TABS = [
+  { key: 'datos', label: 'Datos', icon: User },
+  { key: 'carreras', label: 'Mis carreras', icon: Medal },
+  { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
+  { key: 'experiencia', label: 'Experiencia', icon: Mountain },
+  { key: 'historial', label: 'Historial', icon: Trophy },
+];
+
 const VUELTAS_OPCIONES = [
   'Al menos 1', 'De 2 a 5', 'De 6 a 10', 'De 11 a 15', 'De 16 a 20',
   'De 21 a 24', 'Hasta que sea el ganador', 'No estoy seguro',
@@ -34,6 +44,43 @@ function formatCapDate(iso) {
   const fecha = d.toLocaleDateString('es-DO', { weekday: 'short', day: 'numeric', month: 'short' });
   const hora = d.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
   return `${fecha} · ${hora}`;
+}
+
+// La duración se escribe a mano en el panel y casi siempre es un número suelto
+// ("2"), que sin unidad no dice nada.
+function formatDuracion(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  return /^\d+([.,]\d+)?$/.test(s) ? `${s} h` : s;
+}
+
+/**
+ * Convierte el programa (texto libre del panel) en una lista de piezas.
+ *
+ * Viene escrito con una convención estable: líneas "Módulo N — título",
+ * viñetas que abren con ●, y la pausa marcada con ☕. Volcarlo tal cual en HTML
+ * aplasta los saltos de línea y queda un ladrillo ilegible, así que se
+ * reconoce cada tipo de línea y se pinta por separado.
+ */
+function parsePrograma(raw) {
+  if (!raw) return [];
+  return String(raw)
+    .split('\n')
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+    .map((linea) => {
+      if (/^[●•*-]\s*/.test(linea)) {
+        return { tipo: 'punto', texto: linea.replace(/^[●•*-]\s*/, '').trim() };
+      }
+      if (/^☕/.test(linea)) {
+        // El icono lo pone la interfaz; el emoji del texto sobra.
+        return { tipo: 'pausa', texto: linea.replace(/^☕\s*/, '').trim() };
+      }
+      if (/^m[óo]dulo\s*\d+/i.test(linea)) {
+        return { tipo: 'modulo', texto: linea };
+      }
+      return { tipo: 'parrafo', texto: linea };
+    });
 }
 
 /* ---------- piezas de formulario con el tema de LiveApp ---------- */
@@ -160,6 +207,20 @@ function DateField({ T, value, onChange, fromYear, toYear, title = 'Fecha' }) {
   );
 }
 
+function Toggle({ on, onChange, disabled }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      onClick={onChange}
+      disabled={disabled}
+      className={`w-12 h-7 rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
+    >
+      <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
+    </button>
+  );
+}
+
 function InfoRow({ T, label, value }) {
   return (
     <div className={`flex justify-between gap-3 py-2 border-b last:border-b-0 ${T.divider}`}>
@@ -190,6 +251,9 @@ export default function PerfilScreen() {
   const [pendingEmail, setPendingEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [regData, setRegData] = useState({});
+  const [bio, setBio] = useState({ disponible: false, nombre: '', activada: false });
+  const [bioBusy, setBioBusy] = useState(false);
 
   // Panel
   const [athlete, setAthlete] = useState(null);
@@ -219,9 +283,103 @@ export default function PerfilScreen() {
   // Capacitaciones (mismos endpoints que la pestaña de /mi-perfil en la web)
   const [caps, setCaps] = useState([]);
   const [capBusy, setCapBusy] = useState(null);
+  // Acordeón: los programas son largos, así que arrancan cerrados y solo se
+  // abre uno a la vez.
+  const [capAbierta, setCapAbierta] = useState(null);
 
   // Cancelar la inscripción a una carrera
   const [cancelando, setCancelando] = useState(null);
+
+  const [tab, setTab] = useState('datos');
+
+  // Perfil público. Se guarda al vuelo y se pinta de inmediato, para que el
+  // interruptor no se quede quieto mientras responde el backend.
+  const [savingPrivacidad, setSavingPrivacidad] = useState(false);
+  const perfilPublico = athlete?.perfil_publico !== false;
+
+  const togglePerfilPublico = async () => {
+    if (savingPrivacidad) return;
+    const siguiente = !perfilPublico;
+    setSavingPrivacidad(true);
+    setMsg(null);
+    setAthlete((p) => ({ ...p, perfil_publico: siguiente }));
+    const { ok, data } = await authJson('PUT', '/api/athletes/profile', {
+      token: token(),
+      body: { perfil_publico: siguiente },
+    });
+    setSavingPrivacidad(false);
+    if (ok) {
+      setMsg({
+        type: 'ok',
+        text: siguiente
+          ? 'Tu perfil vuelve a ser público.'
+          : 'Tu perfil ya no aparece en las listas públicas.',
+      });
+    } else {
+      setAthlete((p) => ({ ...p, perfil_publico: perfilPublico }));  // se deshace
+      setMsg({ type: 'error', text: data.detail || 'No se pudo guardar' });
+    }
+  };
+
+  // Experiencia ITRA. ITRA no tiene API pública y bloquea la lectura desde
+  // servidores, así que el atleta copia sus datos a mano desde itra.run.
+  const [itraEdit, setItraEdit] = useState(false);
+  const [savingItra, setSavingItra] = useState(false);
+  const [itraData, setItraData] = useState({});
+  const itraSnap = athlete?.itra_snapshot || {};
+
+  const startItra = () => {
+    setItraData({
+      itra_url: athlete?.itra_url || '',
+      performance_index: itraSnap.performance_index ?? '',
+      level: itraSnap.level || '',
+      age_category: itraSnap.age_category || '',
+      finished_races: itraSnap.finished_races ?? '',
+      total_distance_km: itraSnap.total_distance_km ?? '',
+      total_elevation_m: itraSnap.total_elevation_m ?? '',
+      total_race_time: itraSnap.total_race_time || '',
+    });
+    setMsg(null);
+    setItraEdit(true);
+  };
+
+  const saveItra = async () => {
+    const url = (itraData.itra_url || '').trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      setMsg({ type: 'error', text: 'El enlace debe empezar por http:// o https://' });
+      return;
+    }
+    setSavingItra(true);
+    setMsg(null);
+    const numero = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+    const { ok, data } = await authJson('PUT', '/api/athletes/profile', {
+      token: token(),
+      body: {
+        itra_url: url,
+        itra_snapshot: {
+          performance_index: numero(itraData.performance_index),
+          level: itraData.level || null,
+          age_category: itraData.age_category || null,
+          finished_races: numero(itraData.finished_races),
+          total_distance_km: numero(itraData.total_distance_km),
+          total_elevation_m: numero(itraData.total_elevation_m),
+          total_race_time: itraData.total_race_time || null,
+          // El backend reemplaza el snapshot entero, así que los resultados
+          // que se cargaron desde la web hay que devolverlos tal cual o se
+          // perderían al guardar desde aquí.
+          results: itraSnap.results || [],
+        },
+      },
+    });
+    setSavingItra(false);
+    if (ok) {
+      setItraEdit(false);
+      setMsg({ type: 'ok', text: 'Experiencia actualizada' });
+      fetchAll();
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo guardar' });
+    }
+  };
 
   const token = () => localStorage.getItem(TOKEN_KEY);
 
@@ -292,8 +450,25 @@ export default function PerfilScreen() {
     }
   };
 
+  // Biometría: al abrir sin sesión, si está activada se ofrece entrar con la
+  // cara o la huella en vez de escribir la contraseña.
   useEffect(() => {
-    if (token()) fetchAll();
+    let cancelado = false;
+    (async () => {
+      const estado = await estadoBiometria();
+      if (cancelado) return;
+      setBio(estado);
+      if (token()) { fetchAll(); return; }
+      if (estado.activada) {
+        const guardado = await entrarConBiometria();
+        if (cancelado) return;
+        if (guardado) {
+          localStorage.setItem(TOKEN_KEY, guardado);
+          fetchAll();
+        }
+      }
+    })();
+    return () => { cancelado = true; };
   }, []);
 
   const doLogin = async (e) => {
@@ -304,6 +479,9 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
+      if (bio.disponible && !bio.activada) {
+        setMsg({ type: 'ok', text: `Puedes entrar con ${bio.nombre} la próxima vez: actívalo en la pestaña Datos.` });
+      }
       fetchAll();
     } else if (status === 403) {
       setPendingEmail(email);
@@ -312,6 +490,82 @@ export default function PerfilScreen() {
       setView('verificar');
     } else {
       setMsg({ type: 'error', text: data.detail || 'Error al iniciar sesión' });
+    }
+  };
+
+  const entrarBiometrico = async () => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    setMsg(null);
+    const guardado = await entrarConBiometria();
+    setBioBusy(false);
+    if (guardado) {
+      localStorage.setItem(TOKEN_KEY, guardado);
+      fetchAll();
+    } else {
+      setMsg({ type: 'error', text: 'No se pudo verificar. Entra con tu contraseña.' });
+    }
+  };
+
+  /** Activa o quita el acceso con cara o huella para esta cuenta. */
+  const toggleBiometria = async () => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    setMsg(null);
+    if (bio.activada) {
+      await desactivarBiometria();
+      setBio((p) => ({ ...p, activada: false }));
+      setMsg({ type: 'ok', text: `${bio.nombre} desactivado.` });
+    } else {
+      const { ok } = await activarBiometria(athlete?.email, token());
+      if (ok) {
+        setBio((p) => ({ ...p, activada: true }));
+        setMsg({ type: 'ok', text: `Listo: la próxima vez entra con ${bio.nombre}.` });
+      } else {
+        setMsg({ type: 'error', text: 'No se pudo activar. Inténtalo de nuevo.' });
+      }
+    }
+    setBioBusy(false);
+  };
+
+  const startRegistro = () => {
+    setRegData({
+      email: email || '', password: '', nombre: '', apellidos: '', telefono: '',
+      fecha_nacimiento: '', sexo: '', ciudad_residencia: '',
+    });
+    setMsg(null);
+    setView('registro');
+  };
+
+  const updReg = (campo) => (e) => setRegData((p) => ({ ...p, [campo]: e.target.value }));
+
+  /**
+   * Alta de cuenta. El backend crea el perfil y manda un código al correo, así
+   * que se sigue por la misma pantalla de verificación que ya usaba el login.
+   */
+  const doRegistro = async (e) => {
+    e.preventDefault();
+    if ((regData.password || '').length < 8) {
+      setMsg({ type: 'error', text: 'La contraseña debe tener al menos 8 caracteres' });
+      return;
+    }
+    setLoading(true);
+    setMsg(null);
+    const { ok, data } = await authJson('POST', '/api/athletes/register', {
+      body: {
+        ...regData,
+        email: (regData.email || '').trim().toLowerCase(),
+        nacionalidad: 'DOM',
+      },
+    });
+    setLoading(false);
+    if (ok) {
+      setPendingEmail(regData.email.trim().toLowerCase());
+      setCode('');
+      setMsg({ type: 'ok', text: 'Cuenta creada. Te enviamos un código a tu correo.' });
+      setView('verificar');
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo crear la cuenta' });
     }
   };
 
@@ -576,8 +830,12 @@ export default function PerfilScreen() {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem(TOKEN_KEY);
+    // El token guardado en el llavero es esta misma sesión: si se deja, cerrar
+    // sesión no cerraría nada, bastaría la cara para volver a entrar.
+    await desactivarBiometria();
+    setBio((p) => ({ ...p, activada: false }));
     setAthlete(null);
     setEditMode(false);
     setMsg(null);
@@ -631,14 +889,84 @@ export default function PerfilScreen() {
             <PrimaryButton type="submit" disabled={loading}>
               {loading ? 'Entrando…' : 'Iniciar sesión'}
             </PrimaryButton>
+            {bio.activada && (
+              <button
+                type="button"
+                onClick={entrarBiometrico}
+                disabled={bioBusy}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${T.divider}`}
+              >
+                <ScanFace className="w-4 h-4 text-[#E77622]" />
+                {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
+              </button>
+            )}
             <div className="flex justify-between pt-1">
               <button type="button" onClick={doForgot} className={`text-xs underline ${T.muted}`}>
                 Olvidé mi contraseña
               </button>
-              <button type="button" onClick={() => navigate('/mi-perfil')} className="text-xs underline text-[#E77622]">
+              <button type="button" onClick={startRegistro} className="text-xs underline text-[#E77622]">
                 Crear cuenta
               </button>
             </div>
+          </form>
+        ))}
+      </Screen>
+    );
+  }
+
+  if (view === 'registro') {
+    return (
+      <Screen title="Crear cuenta">
+        {authCard('Crear mi cuenta', 'Con ella te inscribes y sigues tu carrera', (
+          <form onSubmit={doRegistro} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Field T={T} label="Nombre *">
+                <TextInput T={T} value={regData.nombre} onChange={updReg('nombre')} required autoComplete="given-name" />
+              </Field>
+              <Field T={T} label="Apellidos *">
+                <TextInput T={T} value={regData.apellidos} onChange={updReg('apellidos')} required autoComplete="family-name" />
+              </Field>
+            </div>
+            <Field T={T} label="Email *">
+              <TextInput T={T} type="email" inputMode="email" autoCapitalize="none" value={regData.email} onChange={updReg('email')} required autoComplete="email" />
+            </Field>
+            <Field T={T} label="Contraseña * (mínimo 8 caracteres)">
+              <div className="relative">
+                <TextInput T={T} type={showPwd ? 'text' : 'password'} value={regData.password} onChange={updReg('password')} required autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field T={T} label="Teléfono">
+                <TextInput T={T} type="tel" inputMode="tel" value={regData.telefono} onChange={updReg('telefono')} autoComplete="tel" />
+              </Field>
+              <Field T={T} label="Sexo">
+                <SelectInput T={T} options={SEXOS} value={regData.sexo} onChange={updReg('sexo')} />
+              </Field>
+            </div>
+            <Field T={T} label="Fecha de nacimiento">
+              <DateField
+                T={T}
+                title="Fecha de nacimiento"
+                value={regData.fecha_nacimiento}
+                onChange={(v) => setRegData((p) => ({ ...p, fecha_nacimiento: v }))}
+              />
+            </Field>
+            <Field T={T} label="Ciudad de residencia">
+              <TextInput T={T} value={regData.ciudad_residencia} onChange={updReg('ciudad_residencia')} />
+            </Field>
+            <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+              Los datos médicos y el contacto de emergencia se completan después,
+              en la pestaña Datos. Hacen falta para poder inscribirte a la carrera.
+            </p>
+            <PrimaryButton type="submit" disabled={loading}>
+              {loading ? 'Creando…' : 'Crear cuenta'}
+            </PrimaryButton>
+            <button type="button" onClick={() => { setView('login'); setMsg(null); }} className={`block mx-auto text-xs underline ${T.muted}`}>
+              Ya tengo cuenta
+            </button>
           </form>
         ))}
       </Screen>
@@ -732,7 +1060,25 @@ export default function PerfilScreen() {
 
         <Msg T={T} msg={msg} />
 
-        {/* Datos personales */}
+        {/* Pestañas: el perfil creció demasiado para una sola columna. La fila
+            se desplaza en horizontal porque en un teléfono estrecho no caben
+            las cinco. */}
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden">
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              aria-current={tab === key}
+              className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-full whitespace-nowrap shrink-0 ${
+                tab === key ? T.chipOn : T.chip
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'datos' && (
         <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold flex items-center gap-2">
@@ -744,6 +1090,19 @@ export default function PerfilScreen() {
               </button>
             )}
           </div>
+
+          {/* Sin estos datos el bloque de inscripción no aparece; decirlo evita
+              que alguien recién registrado no entienda por qué no puede
+              inscribirse. */}
+          {!editMode && athlete && !athlete.profile_complete && (
+            <div className={`rounded-xl px-3 py-3 mb-3 ${T.itraBox}`}>
+              <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+                Para poder inscribirte a la carrera faltan tu <strong>tipo de sangre</strong>,
+                la <strong>talla de camiseta</strong> y el <strong>contacto de emergencia</strong>.
+                Toca Editar y complétalos.
+              </p>
+            </div>
+          )}
 
           {!editMode ? (
             <div>
@@ -807,6 +1166,42 @@ export default function PerfilScreen() {
           )}
         </div>
 
+        )}
+
+        {tab === 'datos' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <div className="flex items-center gap-3.5">
+              {perfilPublico
+                ? <Eye className="w-5 h-5 text-[#E77622] shrink-0" />
+                : <EyeOff className="w-5 h-5 text-[#E77622] shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">Perfil público</p>
+                <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
+                  {perfilPublico
+                    ? 'Apareces en la lista de corredores y cualquiera puede ver tu ficha.'
+                    : 'No apareces en la lista de corredores ni en el seguimiento público.'}
+                </p>
+              </div>
+              <Toggle on={perfilPublico} disabled={savingPrivacidad} onChange={togglePerfilPublico} />
+            </div>
+
+            {bio.disponible && (
+              <div className={`flex items-center gap-3.5 pt-4 mt-4 border-t ${T.divider}`}>
+                <ScanFace className="w-5 h-5 text-[#E77622] shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold">Entrar con {bio.nombre}</p>
+                  <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
+                    Sin escribir la contraseña. Tu sesión queda guardada en el
+                    llavero del teléfono, no en la app.
+                  </p>
+                </div>
+                <Toggle on={bio.activada} disabled={bioBusy} onChange={toggleBiometria} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'carreras' && (<>
         {/* Inscripción a la carrera activa */}
         {config && config.show_preregistration !== false && athlete?.profile_complete &&
           !myRaces.some((r) => r.is_active) && (
@@ -901,10 +1296,12 @@ export default function PerfilScreen() {
             myRaces.map((race) => {
               const enEspera = race.status === 'waitlist';
               const receiptPending = race.payment_receipt_status === 'pending';
-              // Igual que en la web: se puede subir el comprobante mientras el
-              // pago no esté confirmado, incluso desde la lista de espera.
-              const puedeSubirComprobante = race.edit_token &&
-                race.payment_status !== 'paid' && !receiptPending;
+              // Desde la lista de espera no se paga: aún no hay cupo, y cobrar
+              // antes obliga a devolver el dinero. Y con un comprobante ya
+              // enviado, otro solo duplica el trabajo de revisión.
+              const puedeSubirComprobante = race.edit_token && !enEspera &&
+                race.payment_status !== 'paid' && !receiptPending &&
+                !race.payment_receipt_status;
               // Una vez hay comprobante o pago no se puede soltar el lugar:
               // habría que devolver dinero y eso lo lleva la organización.
               const puedeCancelar = !race.payment_receipt_status &&
@@ -1021,59 +1418,240 @@ export default function PerfilScreen() {
           )}
         </div>
 
-        {/* Capacitaciones: solo aparece si la organización tiene alguna publicada */}
-        {caps.length > 0 && (
+        </>)}
+
+        {tab === 'capacitaciones' && (
           <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
             <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
               <GraduationCap className="w-4 h-4 text-[#E77622]" /> Capacitaciones
             </h3>
-            {caps.map((cap) => (
-              <div key={cap.id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold truncate">{cap.name}</p>
-                  {cap.my_registered && (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-green-500/15 text-green-500">
-                      Inscrito
-                    </span>
+            {caps.length === 0 && (
+              <p className={`text-xs py-3 ${T.muted}`}>
+                No hay capacitaciones publicadas por ahora.
+              </p>
+            )}
+            {caps.map((cap) => {
+              const abierta = capAbierta === cap.id;
+              const programa = abierta ? parsePrograma(cap.program) : [];
+              return (
+                <div key={cap.id} className={`border-b last:border-b-0 ${T.divider}`}>
+                  {/* Cabecera: lo justo para decidir si interesa abrirla */}
+                  <button
+                    onClick={() => setCapAbierta(abierta ? null : cap.id)}
+                    aria-expanded={abierta}
+                    className="w-full flex items-start gap-2.5 py-3 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold truncate">{cap.name}</p>
+                        {cap.my_registered && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-green-500/15 text-green-500">
+                            Inscrito
+                          </span>
+                        )}
+                      </div>
+                      <div className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[11px] ${T.muted}`}>
+                        {cap.datetime && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 shrink-0" /> {formatCapDate(cap.datetime)}
+                          </span>
+                        )}
+                        {cap.duration && <span>· {formatDuracion(cap.duration)}</span>}
+                        <span className={cap.is_free ? 'text-green-500 font-semibold' : ''}>
+                          · {cap.is_free ? 'Gratis' : `RD$${Number(cap.cost || 0).toLocaleString('es-DO')}`}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 mt-0.5 shrink-0 transition-transform ${abierta ? 'rotate-180' : ''} ${T.muted}`}
+                    />
+                  </button>
+
+                  {abierta && (
+                    <div className="pb-3.5">
+                      {programa.length > 0 && (
+                        <div className="space-y-2">
+                          {programa.map((item, i) => {
+                            if (item.tipo === 'modulo') {
+                              return (
+                                <p key={i} className="text-[11px] font-bold uppercase tracking-wide text-[#E77622] pt-1.5">
+                                  {item.texto}
+                                </p>
+                              );
+                            }
+                            if (item.tipo === 'pausa') {
+                              return (
+                                <p key={i} className={`flex items-center gap-1.5 text-[11px] italic ${T.subtle}`}>
+                                  <Coffee className="w-3.5 h-3.5 shrink-0" /> {item.texto}
+                                </p>
+                              );
+                            }
+                            if (item.tipo === 'punto') {
+                              return (
+                                <div key={i} className="flex gap-2">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#E77622] shrink-0 mt-[6px]" />
+                                  <p className={`text-[12px] leading-relaxed flex-1 ${T.muted}`}>{item.texto}</p>
+                                </div>
+                              );
+                            }
+                            return (
+                              <p key={i} className={`text-[12px] leading-relaxed ${T.muted}`}>{item.texto}</p>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between gap-3 mt-3.5">
+                        <span className={`flex items-center gap-1.5 text-[11px] ${T.subtle}`}>
+                          <UsersIcon className="w-3.5 h-3.5" /> {cap.registered_count} inscritos
+                        </span>
+                        <button
+                          onClick={() => toggleCap(cap)}
+                          disabled={capBusy === cap.id}
+                          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50 ${
+                            cap.my_registered ? 'text-red-500' : T.actionChip
+                          }`}
+                        >
+                          {capBusy === cap.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : cap.my_registered
+                              ? <XCircle className="w-3.5 h-3.5" />
+                              : <Check className="w-3.5 h-3.5 text-[#E77622]" />}
+                          {cap.my_registered ? 'Cancelar inscripción' : 'Inscribirme'}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div className={`flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-[11px] ${T.muted}`}>
-                  {cap.datetime && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" /> {formatCapDate(cap.datetime)}
-                    </span>
-                  )}
-                  {cap.duration && <span>{cap.duration}</span>}
-                  <span className="flex items-center gap-1">
-                    <UsersIcon className="w-3.5 h-3.5" /> {cap.registered_count} inscritos
-                  </span>
-                  <span className={cap.is_free ? 'text-green-500 font-semibold' : ''}>
-                    {cap.is_free ? 'Gratis' : `RD$${Number(cap.cost || 0).toLocaleString('es-DO')}`}
-                  </span>
-                </div>
-                {cap.program && (
-                  <p className={`text-[11px] mt-1.5 leading-relaxed ${T.muted}`}>{cap.program}</p>
-                )}
-                <button
-                  onClick={() => toggleCap(cap)}
-                  disabled={capBusy === cap.id}
-                  className={`mt-2.5 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50 ${
-                    cap.my_registered ? 'text-red-500' : T.actionChip
-                  }`}
-                >
-                  {capBusy === cap.id
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : cap.my_registered
-                      ? <XCircle className="w-3.5 h-3.5" />
-                      : <Check className="w-3.5 h-3.5 text-[#E77622]" />}
-                  {cap.my_registered ? 'Cancelar inscripción' : 'Inscribirme'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Historial y certificados */}
+        {tab === 'experiencia' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Mountain className="w-4 h-4 text-[#E77622]" /> Experiencia ITRA
+              </h3>
+              {!itraEdit && (
+                <button onClick={startItra} className="flex items-center gap-1 text-xs font-bold text-[#E77622]">
+                  <Pencil className="w-3.5 h-3.5" /> Editar
+                </button>
+              )}
+            </div>
+
+            {!itraEdit ? (
+              <div>
+                <p className={`text-[11px] leading-relaxed mb-2 ${T.muted}`}>
+                  ITRA no deja leer los perfiles desde fuera, así que estos datos
+                  los copias tú desde itra.run.
+                </p>
+                {athlete?.itra_url ? (
+                  <button
+                    onClick={() => openExternal(athlete.itra_url)}
+                    className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-1 ${T.actionChip}`}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-[#E77622]" /> Ver mi perfil en ITRA
+                  </button>
+                ) : (
+                  <p className={`text-xs py-2 ${T.muted}`}>Aún no has añadido tu perfil de ITRA.</p>
+                )}
+                <InfoRow T={T} label="Índice de rendimiento" value={itraSnap.performance_index} />
+                <InfoRow T={T} label="Nivel" value={itraSnap.level} />
+                <InfoRow T={T} label="Categoría de edad" value={itraSnap.age_category} />
+                <InfoRow T={T} label="Carreras finalizadas" value={itraSnap.finished_races} />
+                <InfoRow T={T} label="Distancia total" value={itraSnap.total_distance_km ? `${itraSnap.total_distance_km} km` : null} />
+                <InfoRow T={T} label="Desnivel total" value={itraSnap.total_elevation_m ? `${itraSnap.total_elevation_m} m` : null} />
+                <InfoRow T={T} label="Tiempo total en carrera" value={itraSnap.total_race_time} />
+
+                {(itraSnap.results || []).length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-[#E77622] mb-1.5">
+                      Resultados
+                    </p>
+                    {itraSnap.results.map((r, i) => (
+                      <div key={i} className={`py-2 border-b last:border-b-0 ${T.divider}`}>
+                        <p className="text-xs font-bold">{r.race}</p>
+                        <div className={`flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11px] ${T.muted}`}>
+                          {r.date && <span>{r.date}</span>}
+                          {r.distance_km != null && <span>{r.distance_km} km</span>}
+                          {r.time && <span>{r.time}</span>}
+                          {r.position && <span>Puesto {r.position}</span>}
+                        </div>
+                      </div>
+                    ))}
+                    <p className={`text-[11px] mt-2 ${T.subtle}`}>
+                      Los resultados uno a uno se editan desde la web, en Mi perfil.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3 mt-2">
+                <Field T={T} label="Enlace a tu perfil de ITRA">
+                  <TextInput
+                    T={T}
+                    type="url"
+                    inputMode="url"
+                    autoCapitalize="none"
+                    placeholder="https://itra.run/RunnerSpace/..."
+                    value={itraData.itra_url}
+                    onChange={(e) => setItraData((p) => ({ ...p, itra_url: e.target.value }))}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field T={T} label="Índice de rendimiento">
+                    <TextInput T={T} type="number" inputMode="numeric" placeholder="Ej: 520"
+                      value={itraData.performance_index}
+                      onChange={(e) => setItraData((p) => ({ ...p, performance_index: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Nivel">
+                    <TextInput T={T} placeholder="Ej: Intermediate 3" value={itraData.level}
+                      onChange={(e) => setItraData((p) => ({ ...p, level: e.target.value }))} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field T={T} label="Categoría de edad">
+                    <TextInput T={T} placeholder="Ej: M 45-49" value={itraData.age_category}
+                      onChange={(e) => setItraData((p) => ({ ...p, age_category: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Carreras finalizadas">
+                    <TextInput T={T} type="number" inputMode="numeric" placeholder="Ej: 24"
+                      value={itraData.finished_races}
+                      onChange={(e) => setItraData((p) => ({ ...p, finished_races: e.target.value }))} />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field T={T} label="Distancia total (km)">
+                    <TextInput T={T} type="number" step="0.1" inputMode="decimal" placeholder="Ej: 1840"
+                      value={itraData.total_distance_km}
+                      onChange={(e) => setItraData((p) => ({ ...p, total_distance_km: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Desnivel total (m)">
+                    <TextInput T={T} type="number" step="1" inputMode="numeric" placeholder="Ej: 42000"
+                      value={itraData.total_elevation_m}
+                      onChange={(e) => setItraData((p) => ({ ...p, total_elevation_m: e.target.value }))} />
+                  </Field>
+                </div>
+                <Field T={T} label="Tiempo total en carrera">
+                  <TextInput T={T} placeholder="Ej: 187:39:05" value={itraData.total_race_time}
+                    onChange={(e) => setItraData((p) => ({ ...p, total_race_time: e.target.value }))} />
+                </Field>
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setItraEdit(false)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
+                    Cancelar
+                  </button>
+                  <button onClick={saveItra} disabled={savingItra} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                    {savingItra ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'historial' && (
         <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
           <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-[#E77622]" /> Historial de carreras
@@ -1116,7 +1694,10 @@ export default function PerfilScreen() {
           )}
         </div>
 
-        {/* Contraseña */}
+        )}
+
+        {/* La contraseña es cosa de la cuenta: va con los datos personales */}
+        {tab === 'datos' && (
         <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
           <button onClick={() => setShowPwdForm(!showPwdForm)} className="w-full flex items-center justify-between">
             <h3 className="text-sm font-bold flex items-center gap-2">
@@ -1142,7 +1723,9 @@ export default function PerfilScreen() {
           )}
         </div>
 
-        {/* Cerrar sesión */}
+        )}
+
+        {/* Cerrar sesión: fuera de las pestañas, para no tener que buscarlo */}
         <button onClick={logout} className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-bold ${T.muted}`}>
           <LogOut className="w-4 h-4" /> Cerrar sesión
         </button>

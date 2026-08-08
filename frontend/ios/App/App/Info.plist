@@ -24,6 +24,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>La cámara se usa para escanear el código QR de los atletas y para tomar la foto de tu perfil.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID se usa para entrar a tu perfil de corredor sin escribir la contraseña.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Se accede a tus fotos para elegir la imagen de tu perfil y el comprobante de pago.</string>
 	<key>UILaunchStoryboardName</key>

@@ -23,6 +23,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
 import PerfilScreen from './screens/PerfilScreen';
 import StaffScreen from './screens/StaffScreen';
+import StaffAtletasScreen from './screens/StaffAtletasScreen';
 import ReglasScreen from './screens/ReglasScreen';
 import LogisticaScreen from './screens/LogisticaScreen';
 import FaqScreen from './screens/FaqScreen';
@@ -225,6 +226,7 @@ export default function LiveApp() {
         {/* Antes de :raceCode para que no se interpreten como código de carrera */}
         <Route path="perfil" element={<PerfilScreen />} />
         <Route path="staff" element={<StaffScreen />} />
+        <Route path="staff/atletas" element={<StaffAtletasScreen />} />
         <Route path=":raceCode/*" element={<RaceShell />} />
       </Routes>
     </LiveThemeProvider>

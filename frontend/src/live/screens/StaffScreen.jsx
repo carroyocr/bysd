@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
+  HeartPulse,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -119,6 +120,12 @@ export default function StaffScreen() {
       Icon: QrCode,
       title: 'Escáner QR',
       description: 'Registrar vueltas escaneando el código de cada atleta',
+    },
+    can('scanner') && {
+      to: '/live/staff/atletas',
+      Icon: HeartPulse,
+      title: 'Atletas',
+      description: 'Dorsal, tipo de sangre, alergias y contacto de emergencia',
     },
   ].filter(Boolean);
 
