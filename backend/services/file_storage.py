@@ -29,6 +29,11 @@ BUCKET_NAME = "uploads"
 PHOTO_MAX_SIDE = 1600
 PHOTO_QUALITY = 88
 
+# Ancho maximo de un banner de publicidad. La barra del pie mide como mucho
+# unos 400px logicos, asi que 1200 la cubre a 3x (pantallas retina) sin
+# desperdiciar peso.
+BANNER_MAX_WIDTH = 1200
+
 # Carpetas logicas (el equivalente a los directorios que se usaban en disco).
 FOLDER_ATHLETE_PHOTOS = "athlete_photos"
 FOLDER_PARTICIPANT_PHOTOS = "participant_photos"
@@ -155,4 +160,54 @@ def compress_image(
         return comprimida, "jpg", "image/jpeg"
     except Exception as e:
         logger.warning(f"No se pudo comprimir la imagen, se guarda el original: {e}")
+        return content, ext_original, content_type_original
+
+
+def compress_banner(
+    content: bytes,
+    ext_original: str = "png",
+    content_type_original: str = "image/png",
+) -> Tuple[bytes, str, str]:
+    """Prepara la imagen de un banner de publicidad.
+
+    No sirve `compress_image` aqui: esa convierte a JPEG y, de paso, aplana la
+    transparencia contra negro. Un banner PNG suele apoyarse justo en el canal
+    alfa para verse bien sobre la tarjeta, y en modo claro el resultado seria
+    un rectangulo negro. Asi que aqui solo se reescala si viene mas grande de
+    la cuenta y se conserva el formato de origen.
+
+    Si algo falla, devuelve el original: es preferible un archivo pesado a
+    perder la subida del patrocinador.
+    """
+    try:
+        from PIL import Image, ImageOps
+
+        imagen = Image.open(io.BytesIO(content))
+        # El formato se lee ANTES de exif_transpose: esa funcion devuelve una
+        # imagen nueva con .format en None, y leerlo despues hacia que la rama
+        # de "ya cabe, no lo toques" no se cumpliera nunca.
+        formato = (imagen.format or "").upper()
+        imagen = ImageOps.exif_transpose(imagen)
+
+        con_alfa = imagen.mode in ("RGBA", "LA", "P")
+
+        if imagen.width > BANNER_MAX_WIDTH:
+            alto = round(imagen.height * BANNER_MAX_WIDTH / imagen.width)
+            imagen = imagen.resize((BANNER_MAX_WIDTH, alto), Image.LANCZOS)
+        elif formato in ("PNG", "WEBP", "JPEG"):
+            # Ya cabe y el formato es bueno: no se toca, para no reencodear.
+            return content, ext_original, content_type_original
+
+        salida = io.BytesIO()
+        if con_alfa or formato == "PNG":
+            if imagen.mode == "P":
+                imagen = imagen.convert("RGBA")
+            imagen.save(salida, format="PNG", optimize=True)
+            return salida.getvalue(), "png", "image/png"
+
+        if imagen.mode not in ("RGB", "L"):
+            imagen = imagen.convert("RGB")
+        imagen.save(salida, format="JPEG", quality=PHOTO_QUALITY, optimize=True, progressive=True)
+        return salida.getvalue(), "jpg", "image/jpeg"
+    except Exception:
         return content, ext_original, content_type_original

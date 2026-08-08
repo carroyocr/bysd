@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API, getJson, postJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { openExternal } from '../../lib/nativeExport';
@@ -10,6 +11,7 @@ const AD_ROTATE_MS = 8000;
  */
 export default function AdFooter({ raceCode }) {
   const { T, theme } = useLiveTheme();
+  const navigate = useNavigate();
   // Color propio: la portada de la carrera fuerza texto blanco sobre la foto
   // y en modo claro la tarjeta es blanca, así que el nombre se perdía.
   const cardText = theme === 'dark' ? 'text-white' : 'text-[#232323]';
@@ -89,36 +91,62 @@ export default function AdFooter({ raceCode }) {
     if (!ad.is_sponsor_fallback) {
       postJson('/api/ads/track', { banner_id: ad.id, event: 'click' }).catch(() => {});
     }
+    // Con imagen ampliada el patrocinador se lee dentro de la app; solo se sale
+    // al navegador cuando no hay nada más que enseñar aquí.
+    if (ad.detail_url && raceCode) {
+      navigate(`/live/${raceCode}/patrocinador/${ad.id}`);
+      return;
+    }
     if (ad.link_url) {
       const url = ad.link_url.startsWith('http') ? ad.link_url : `https://${ad.link_url}`;
-      // La publicidad es lo único que sale de la app (navegador del sistema)
       openExternal(url);
     }
   };
 
+  const bannerCompleto = !!ad.banner_url;
+
   return (
     <footer className="sticky bottom-0 z-40 px-4 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-      <button onClick={handleClick} className={`w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left rounded-2xl shadow-lg overflow-hidden ${T.card} ${cardText}`}>
-        <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${T.subtle}`}>
-          Patrocinador
-        </span>
-        {ad.logo_url ? (
+      {/* Proporción fija en vez de alto fijo: el ancho de la barra cambia con
+          cada teléfono, así que con un alto fijo la pieza del patrocinador se
+          deformaría o se recortaría en casi todos. Con 5:1 la imagen llena la
+          barra exacta en cualquier pantalla. */}
+      <button
+        onClick={handleClick}
+        className={`w-full aspect-[5/1] flex items-center gap-3 relative text-left rounded-2xl shadow-lg overflow-hidden ${bannerCompleto ? '' : 'px-3.5'} ${T.card} ${cardText}`}
+      >
+        {bannerCompleto ? (
           <img
-            src={`${API}${ad.logo_url}`}
+            src={`${API}${ad.banner_url}`}
             alt={ad.name}
-            className="w-12 h-12 rounded-xl object-contain bg-white shrink-0"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold shrink-0">
-            {ad.name?.slice(0, 6)}
-          </div>
+          <>
+            {ad.logo_url ? (
+              <img
+                src={`${API}${ad.logo_url}`}
+                alt={ad.name}
+                className="w-12 h-12 rounded-xl object-contain bg-white shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold shrink-0">
+                {ad.name?.slice(0, 6)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold truncate">{ad.name}</p>
+              {ad.text && <p className={`text-[11px] truncate ${T.muted}`}>{ad.text}</p>}
+            </div>
+          </>
         )}
-        <div className="min-w-0">
-          <p className="text-[13px] font-bold truncate">{ad.name}</p>
-          {ad.text && <p className={`text-[11px] truncate ${T.muted}`}>{ad.text}</p>}
-        </div>
+
+        <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${bannerCompleto ? 'text-white/70 drop-shadow' : T.subtle}`}>
+          Patrocinador
+        </span>
+
         {banners.length > 1 && (
-          <div className="ml-auto flex gap-1.5 shrink-0">
+          <div className={`absolute bottom-1.5 right-3 flex gap-1.5 ${bannerCompleto ? '' : ''}`}>
             {banners.map((b) => (
               <span
                 key={b.id}

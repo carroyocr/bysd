@@ -179,32 +179,54 @@ export default function AdsManagement() {
     }
   };
 
-  const triggerLogoUpload = (bannerId) => {
-    uploadTargetRef.current = bannerId;
+  // Cada banner puede tener tres imágenes; el input de archivo es uno solo y
+  // se recuerda para cuál se abrió.
+  const ETIQUETA_IMAGEN = { logo: 'Logo', banner: 'Banner completo', detail: 'Imagen ampliada' };
+
+  const triggerImageUpload = (bannerId, tipo) => {
+    uploadTargetRef.current = { bannerId, tipo };
     fileInputRef.current?.click();
   };
 
-  const handleLogoFile = async (event) => {
+  const handleImageFile = async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    const bannerId = uploadTargetRef.current;
-    if (!file || !bannerId) return;
+    const destino = uploadTargetRef.current;
+    if (!file || !destino) return;
+    const { bannerId, tipo } = destino;
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const response = await adminFetch(`${API_URL}/api/ads/${bannerId}/logo`, {
+      const response = await adminFetch(`${API_URL}/api/ads/${bannerId}/imagen/${tipo}`, {
         method: 'POST',
         body: formData,
       });
       if (response.ok) {
-        toast.success('Logo subido');
+        toast.success(`${ETIQUETA_IMAGEN[tipo]} subido`);
         fetchBanners();
       } else {
         const data = await response.json().catch(() => ({}));
-        toast.error(data.detail || 'No se pudo subir el logo');
+        toast.error(data.detail || 'No se pudo subir la imagen');
       }
     } catch (error) {
-      toast.error('Error de conexión al subir el logo');
+      toast.error('Error de conexión al subir la imagen');
+    }
+  };
+
+  const quitarImagen = async (bannerId, tipo) => {
+    if (!window.confirm(`¿Quitar ${ETIQUETA_IMAGEN[tipo].toLowerCase()}?`)) return;
+    try {
+      const response = await adminFetch(`${API_URL}/api/ads/${bannerId}/imagen/${tipo}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        toast.success('Imagen quitada');
+        fetchBanners();
+      } else {
+        toast.error('No se pudo quitar la imagen');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
     }
   };
 
@@ -236,7 +258,7 @@ export default function AdsManagement() {
           type="file"
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
-          onChange={handleLogoFile}
+          onChange={handleImageFile}
         />
 
         {showForm && (
@@ -346,7 +368,13 @@ export default function AdsManagement() {
                   </button>
                 </div>
 
-                {banner.logo_url ? (
+                {banner.banner_url ? (
+                  <img
+                    src={`${API_URL}${banner.banner_url}`}
+                    alt={banner.name}
+                    className="w-28 aspect-[5/1] rounded-lg object-cover bg-white border"
+                  />
+                ) : banner.logo_url ? (
                   <img
                     src={`${API_URL}${banner.logo_url}`}
                     alt={banner.name}
@@ -362,6 +390,12 @@ export default function AdsManagement() {
                   <p className="font-semibold text-sm truncate">
                     {banner.name}{' '}
                     <Badge variant="outline" className="ml-1 align-middle">peso {banner.weight}×</Badge>
+                    {banner.banner_url && (
+                      <Badge variant="secondary" className="ml-1 align-middle">banner completo</Badge>
+                    )}
+                    {banner.detail_url && (
+                      <Badge variant="secondary" className="ml-1 align-middle">con imagen ampliada</Badge>
+                    )}
                   </p>
                   {banner.text && <p className="text-xs text-muted-foreground truncate">{banner.text}</p>}
                   <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -375,9 +409,29 @@ export default function AdsManagement() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1.5 ml-auto">
-                  <Button size="sm" variant="outline" onClick={() => triggerLogoUpload(banner.id)}>
+                <div className="flex flex-wrap items-center gap-1.5 ml-auto justify-end">
+                  <Button size="sm" variant="outline" onClick={() => triggerImageUpload(banner.id, 'logo')}>
                     <Upload className="w-3.5 h-3.5 mr-1" /> Logo
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={banner.banner_url ? 'secondary' : 'outline'}
+                    onClick={() => (banner.banner_url ? quitarImagen(banner.id, 'banner') : triggerImageUpload(banner.id, 'banner'))}
+                    title="PNG de 1200×240 px (proporción 5:1). Ocupa la barra completa y sustituye al logo y al texto."
+                  >
+                    {banner.banner_url
+                      ? <><X className="w-3.5 h-3.5 mr-1" /> Quitar banner</>
+                      : <><Upload className="w-3.5 h-3.5 mr-1" /> Banner 1200×240</>}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={banner.detail_url ? 'secondary' : 'outline'}
+                    onClick={() => (banner.detail_url ? quitarImagen(banner.id, 'detail') : triggerImageUpload(banner.id, 'detail'))}
+                    title="Imagen que se abre dentro de la app al tocar el banner. 1080 px de ancho, alto libre."
+                  >
+                    {banner.detail_url
+                      ? <><X className="w-3.5 h-3.5 mr-1" /> Quitar ampliada</>
+                      : <><Upload className="w-3.5 h-3.5 mr-1" /> Ampliada</>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => openEdit(banner)}>
                     <Edit className="w-3.5 h-3.5" />
