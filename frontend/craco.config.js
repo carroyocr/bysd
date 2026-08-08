@@ -1,6 +1,23 @@
 // craco.config.js
 const path = require("path");
+const webpack = require("webpack");
+const { execSync } = require("child_process");
 require("dotenv").config();
+
+// Version y revision de la app, para poder saber que build tiene alguien en el
+// telefono cuando reporta algo. La version sale de package.json y la revision
+// del commit; si git no esta disponible (algun entorno de build no lo tiene),
+// se queda vacia en vez de romper la compilacion.
+const { version: APP_VERSION } = require("./package.json");
+let APP_REVISION = "";
+try {
+  APP_REVISION = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+    .toString()
+    .trim();
+} catch {
+  APP_REVISION = "";
+}
+const APP_BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 // Environment variable overrides
 const config = {
@@ -44,6 +61,13 @@ const webpackConfig = {
       'firebase/messaging': path.resolve(__dirname, 'src/live/firebaseWebStub.js'),
     },
     configure: (webpackConfig) => {
+      webpackConfig.plugins.push(
+        new webpack.DefinePlugin({
+          "process.env.REACT_APP_VERSION": JSON.stringify(APP_VERSION),
+          "process.env.REACT_APP_REVISION": JSON.stringify(APP_REVISION),
+          "process.env.REACT_APP_BUILD_DATE": JSON.stringify(APP_BUILD_DATE),
+        })
+      );
 
       // Disable hot reload completely if environment variable is set
       if (config.disableHotReload) {

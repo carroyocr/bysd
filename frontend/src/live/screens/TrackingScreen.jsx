@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Star, Users, Loader2 } from 'lucide-react';
-import { getJson, flagOf, initialsOf, useFollowed } from '../liveApi';
+import { getJson, flagOf, initialsOf, useFollowed, raceStartMs } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -38,7 +38,7 @@ const vistaPorCarrera = new Map();
  */
 export default function TrackingScreen() {
   const { T } = useLiveTheme();
-  const { raceCode } = useRace();
+  const { raceCode, race } = useRace();
   const navigate = useNavigate();
 
   const [participants, setParticipants] = useState(null);
@@ -93,8 +93,15 @@ export default function TrackingScreen() {
   // se quedarían a cero y solo estorban.
   const concluida = cargado && counts.confirmados === 0 && counts.inscritos === 0;
 
+  // Antes de la salida nadie puede haberse retirado ni haber faltado, así que
+  // DNF y DNS solo estorban. Si la carrera no tiene fecha, se trata como que no
+  // ha empezado.
+  const inicio = raceStartMs(race);
+  const haEmpezado = inicio != null && Date.now() >= inicio;
+
   const visibleFilters = FILTERS.filter(({ key }) => {
     if (key === 'espera') return counts.espera > 0;          // se pidió ocultarlo si no hay
+    if ((key === 'retired' || key === 'dns') && !haEmpezado) return false;
     if (concluida) return key !== 'confirmados' && key !== 'inscritos';
     return true;
   });
@@ -162,9 +169,10 @@ export default function TrackingScreen() {
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-full whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
+              className={`flex flex-col items-center leading-tight px-3 py-1.5 rounded-xl whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
             >
-              {label} <span className="opacity-60 font-normal">{counts[key]}</span>
+              <span className="text-[10px] font-semibold">{label}</span>
+              <span className="text-[11px] font-bold opacity-70">{counts[key]}</span>
             </button>
           ))}
         </div>

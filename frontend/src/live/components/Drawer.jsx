@@ -2,9 +2,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck, LogIn,
+  BadgeInfo,
 } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { sesionesAbiertas } from '../sesion';
+import { VERSION_CORTA } from '../version';
 
 /**
  * Menú lateral expandible de izquierda a derecha (estilo app de maratón).
@@ -41,6 +43,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
+    { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
     ...accesos,
   ];
 
@@ -75,9 +78,12 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
             </button>
           ))}
         </nav>
-        <p className={`px-4 py-4 text-[10px] ${T.subtle}`}>
+        <p className={`px-4 pt-4 pb-1 text-[10px] ${T.subtle}`}>
           Backyard Ultra Santo Domingo · backyardultrasantodomingo.com
         </p>
+        {/* La versión a la vista: cuando alguien reporta algo, es lo primero
+            que hace falta saber. */}
+        <p className={`px-4 pb-4 text-[10px] font-mono ${T.subtle}`}>{VERSION_CORTA}</p>
       </aside>
     </div>
   );
