@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
+  ListChecks, Check, Users as UsersIcon,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -11,6 +12,12 @@ import { registrarStaff } from '../push';
 const TABS = [
   { key: 'datos', label: 'Datos', icon: User },
   { key: 'turnos', label: 'Turnos', icon: CalendarClock },
+  { key: 'elegir', label: 'Elegir', icon: ListChecks },
+];
+
+const EVENTOS = [
+  { valor: 'carrera', label: 'Carrera' },
+  { valor: 'campeonato', label: 'Campeonato' },
 ];
 
 /** "2027-01-23" + "06:30:00" -> "sáb, 23 ene · 6:30 a. m." */
@@ -37,12 +44,55 @@ export default function StaffPerfilScreen() {
   const [datos, setDatos] = useState(undefined);
   const [tab, setTab] = useState('datos');
 
+  // Elegir turnos: lo que el voluntario PIDE, distinto de lo que le asignan.
+  const [evento, setEvento] = useState('carrera');
+  const [oferta, setOferta] = useState(null);
+  const [elegidos, setElegidos] = useState([]);
+  const [guardando, setGuardando] = useState(false);
+  const [aviso, setAviso] = useState(null);
+
+  const cargarOferta = useCallback(async (ev) => {
+    setOferta(null);
+    const token = localStorage.getItem('admin_token');
+    const { ok, data } = await authJson('GET', `/api/staff/mi-perfil/turnos-disponibles?evento=${ev}`, { token });
+    setOferta(ok ? (data.positions || []) : []);
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'elegir') cargarOferta(evento);
+  }, [tab, evento, cargarOferta]);
+
+  const alternar = (slotId) => {
+    setElegidos((p) => (p.includes(slotId) ? p.filter((s) => s !== slotId) : [...p, slotId]));
+    setAviso(null);
+  };
+
+  const guardarTurnos = async () => {
+    setGuardando(true);
+    setAviso(null);
+    const token = localStorage.getItem('admin_token');
+    const { ok, data } = await authJson('PUT', '/api/staff/mi-perfil/turnos', {
+      token, body: { evento, slots_interes: elegidos },
+    });
+    setGuardando(false);
+    if (ok) {
+      setAviso({ tipo: 'ok', texto: 'Turnos guardados. La organización confirmará la asignación.' });
+    } else {
+      setAviso({ tipo: 'error', texto: data.detail || 'No se pudieron guardar' });
+      cargarOferta(evento);   // alguien pudo quedarse con un turno mientras tanto
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) { navigate('/live/login'); return; }
     authJson('GET', '/api/staff/mi-perfil', { token })
       .then(({ ok, data }) => {
         setDatos(ok ? data : null);
+        if (ok) {
+          setEvento(data.evento || 'carrera');
+          setElegidos(data.slots_interes || []);
+        }
         // Ligar el teléfono al voluntario es lo que permite avisarle 30 min
         // antes del turno; se hace aquí, que es donde ve que existen.
         if (ok && data.turnos?.length) registrarStaff(data.username);
@@ -164,6 +214,95 @@ export default function StaffPerfilScreen() {
                   </div>
                 ))}
               </>
+            )}
+          </div>
+        )}
+        {p && tab === 'elegir' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+              <ListChecks className="w-4 h-4 text-[#E77622]" /> Elegir turnos
+            </h3>
+            <p className={`text-[11px] leading-relaxed mb-3 ${T.muted}`}>
+              Marca los turnos que puedes cubrir. Es una solicitud: la
+              organización confirma después la asignación final.
+            </p>
+
+            <div className="flex gap-1.5 mb-3">
+              {EVENTOS.map(({ valor, label }) => (
+                <button
+                  key={valor}
+                  onClick={() => { setEvento(valor); setAviso(null); }}
+                  className={`flex-1 py-2 rounded-xl text-[11px] font-bold ${evento === valor ? T.chipOn : T.chip}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {oferta === null && (
+              <div className={`flex justify-center py-10 ${T.muted}`}>
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            )}
+
+            {oferta && oferta.length === 0 && (
+              <p className={`text-xs py-3 ${T.muted}`}>
+                No hay turnos publicados para este evento.
+              </p>
+            )}
+
+            {(oferta || []).map((puesto) => (
+              <div key={puesto.puesto} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
+                <p className="text-sm font-bold">{puesto.puesto}</p>
+                {puesto.descripcion && (
+                  <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>{puesto.descripcion}</p>
+                )}
+                <div className="mt-2 space-y-1.5">
+                  {(puesto.turnos || []).map((t) => {
+                    const marcado = elegidos.includes(t.slot_id);
+                    // Un turno lleno solo se puede tocar si ya es tuyo
+                    const lleno = (t.available_count || 0) === 0 && !marcado;
+                    return (
+                      <button
+                        key={t.slot_id}
+                        onClick={() => !lleno && alternar(t.slot_id)}
+                        disabled={lleno}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${marcado ? 'bg-[#E77622]/15' : T.input} ${lleno ? 'opacity-40' : ''}`}
+                      >
+                        <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${marcado ? 'bg-[#E77622] border-[#E77622]' : 'border-gray-500/50'}`}>
+                          {marcado && <Check className="w-3 h-3 text-white" />}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold">
+                            {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
+                            {t.turno ? ` · Turno ${t.turno}` : ''}
+                          </p>
+                          <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${T.subtle}`}>
+                            <UsersIcon className="w-3 h-3" />
+                            {lleno ? 'Sin plazas' : `${t.available_count} de ${t.total_count} libres`}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {aviso && (
+              <p className={`text-xs mt-3 ${aviso.tipo === 'ok' ? 'text-green-500' : 'text-red-500'}`}>
+                {aviso.texto}
+              </p>
+            )}
+
+            {oferta && oferta.length > 0 && (
+              <button
+                onClick={guardarTurnos}
+                disabled={guardando}
+                className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm mt-4 disabled:opacity-50"
+              >
+                {guardando ? 'Guardando…' : `Guardar ${elegidos.length} turno${elegidos.length === 1 ? '' : 's'}`}
+              </button>
             )}
           </div>
         )}

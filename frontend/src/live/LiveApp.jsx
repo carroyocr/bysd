@@ -28,6 +28,7 @@ import StaffScreen from './screens/StaffScreen';
 import StaffAtletasScreen from './screens/StaffAtletasScreen';
 import StaffEquipoScreen from './screens/StaffEquipoScreen';
 import StaffPerfilScreen from './screens/StaffPerfilScreen';
+import VoluntarioRegistroScreen from './screens/VoluntarioRegistroScreen';
 import ReglasScreen from './screens/ReglasScreen';
 import LogisticaScreen from './screens/LogisticaScreen';
 import FaqScreen from './screens/FaqScreen';
@@ -235,6 +236,7 @@ export default function LiveApp() {
         <Route path="staff/atletas" element={<StaffAtletasScreen />} />
         <Route path="staff/equipo" element={<StaffEquipoScreen />} />
         <Route path="staff/perfil" element={<StaffPerfilScreen />} />
+        <Route path="staff/voluntario" element={<VoluntarioRegistroScreen />} />
         <Route path=":raceCode/*" element={<RaceShell />} />
       </Routes>
     </LiveThemeProvider>
