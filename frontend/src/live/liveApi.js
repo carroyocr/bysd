@@ -22,6 +22,31 @@ export async function postJson(path, body) {
   return { ok: res.ok, data };
 }
 
+/**
+ * Ficha pública de un corredor. En carreras históricas la ficha completa
+ * puede no existir (sus resultados viven en la colección legada), así que
+ * se cae a los datos básicos del listado de participantes.
+ */
+export async function getAthleteProfile(bib, raceCode) {
+  try {
+    return await getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`);
+  } catch {
+    const list = await getJson(`/api/race/participants?race_code=${raceCode}`);
+    const p = (list || []).find((x) => x.bib === bib);
+    if (!p) throw new Error('Atleta no encontrado');
+    return p;
+  }
+}
+
+/** true si la carrera ya ocurrió (no activa y con fecha pasada). */
+export function raceIsPast(race) {
+  if (!race) return false;
+  if (race.is_active) return false;
+  if (race.archived_at) return true;
+  const today = new Date().toISOString().slice(0, 10);
+  return !!race.date && race.date < today;
+}
+
 /** Llamada con token (perfil del atleta o panel de staff) y cuerpo opcional. */
 export async function authJson(method, path, { token, body } = {}) {
   const headers = {};

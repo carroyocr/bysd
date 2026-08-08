@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Share2, Download, Loader2 } from 'lucide-react';
-import { getJson, formatDuration, statusLabel } from '../liveApi';
+import { getJson, getAthleteProfile, formatDuration, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -94,7 +94,7 @@ export default function ShareResultsScreen() {
 
   useEffect(() => {
     Promise.all([
-      getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`),
+      getAthleteProfile(bib, raceCode),
       getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
     ])
       .then(([profile, lapsData]) => setData({ profile, laps: lapsData.laps || [] }))
