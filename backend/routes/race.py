@@ -208,10 +208,26 @@ async def get_participants(
     search: Optional[str] = None,
     status: Optional[str] = None,
     race_code: Optional[str] = Query(None, description="Race code to filter by"),
+    include_waitlist: bool = Query(
+        False,
+        description="Incluir tambien a los de lista de espera (los usa la app movil)",
+    ),
     db=Depends(lambda: None)
 ):
+    """Corredores de una carrera.
+
+    Cada uno trae `confirmado`: es quien ya tiene su lugar asegurado. En las
+    carreras normales eso significa que pago; en el Campeonato son los
+    seleccionados, y en las historicas todos, porque ya corrieron. La app lo
+    usa para separar "Confirmados" de "Inscritos", y asi el resto de pantallas
+    no tiene que saber nada de pagos.
+
+    La lista de espera queda fuera salvo que se pida: este endpoint alimenta
+    tambien el panel de control, la web y los conteos de la carrera, y sumar
+    ahi gente que todavia no tiene plaza descuadraria todos esos numeros.
+    """
     from server import db as database
-    
+
     # Get race code - use parameter or get active race
     active_race_code = race_code
     if not active_race_code:
@@ -240,6 +256,9 @@ async def get_participants(
             "laps_completed": 0,
             "total_km": 0.0,
             "categoria": d.get("categoria"),
+            # En el Campeonato no hay inscripcion que pagar: estar en la nomina
+            # es lo que confirma la plaza.
+            "confirmado": True,
         } for d in docs]
         if search:
             s = search.lower()
@@ -258,22 +277,39 @@ async def get_participants(
             query["status"] = status
 
         participants = await database.participants.find(query, {"_id": 0}).to_list(1000)
+        # Carreras ya corridas: no queda pago pendiente que distinguir.
+        for p in participants:
+            p["confirmado"] = True
     else:
         # Try registrations collection first for new races
         if active_race_code:
             # Antes de la salida los inscritos estan en "registered": tambien
             # se muestran, incluidos los pendientes de pago (la lista de
             # espera y cancelados quedan fuera por el filtro de status).
+            estados = ["registered", "active", "retired", "dns", "winner", "honor"]
             query = {
                 "race_code": active_race_code,
-                "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
+                "status": {"$in": estados},
                 "bib": {"$exists": True, "$ne": None},  # Must have BIB assigned
                 # Atletas que pidieron no aparecer publicamente
                 "perfil_publico": {"$ne": False},
             }
 
-            if status and status in ["registered", "active", "retired", "dns", "winner", "honor"]:
+            if include_waitlist:
+                # A quien esta en espera aun puede no haberle tocado dorsal, asi
+                # que se le exime del filtro de BIB; los demas lo siguen
+                # necesitando para no sacar inscripciones a medio procesar.
+                del query["status"]
+                del query["bib"]
+                query["$or"] = [
+                    {"status": {"$in": estados}, "bib": {"$exists": True, "$ne": None}},
+                    {"status": "waitlist"},
+                ]
+
+            if status and status in estados:
+                query.pop("$or", None)
                 query["status"] = status
+                query["bib"] = {"$exists": True, "$ne": None}
             
             registrations = await database.registrations.find(
                 query,
@@ -292,6 +328,9 @@ async def get_participants(
                     "total_km": reg.get("total_km", 0.0),
                     "retired_at_lap": reg.get("retired_at_lap"),
                     "email": reg.get("email"),
+                    # Confirmado = pago verificado. Es lo que separa
+                    # "Confirmados" de "Inscritos" en la app.
+                    "confirmado": reg.get("payment_status") == "paid",
                     "personalizacion_camiseta": reg.get("personalizacion_camiseta"),
                     "talla_camiseta": reg.get("talla_camiseta")
                 })
@@ -310,7 +349,9 @@ async def get_participants(
         ]
     
     # Sort by laps completed (descending), then by BIB
-    participants.sort(key=lambda x: (-x.get("laps_completed", 0), x.get("bib", "999")))
+    # `or "999"` y no un default del get: quien esta en lista de espera puede
+    # traer bib None, y comparar None con texto reventaria el orden.
+    participants.sort(key=lambda x: (-(x.get("laps_completed") or 0), x.get("bib") or "999"))
     
     return participants
 
