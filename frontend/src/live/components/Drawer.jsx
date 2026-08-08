@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck,
+  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck, LogIn,
 } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
+import { sesionesAbiertas } from '../sesion';
 
 /**
  * Menú lateral expandible de izquierda a derecha (estilo app de maratón).
@@ -18,15 +19,26 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
   };
 
   const base = `/live/${raceCode}`;
+
+  // Sin sesión el menú no delata que exista un acceso de staff: se ofrece una
+  // sola entrada, "Iniciar sesión", y ahí dentro se elige quién eres. Cuando ya
+  // hay sesión se enseña la que corresponda, y las dos si se abrieron ambas.
+  const { atleta, staff } = sesionesAbiertas();
+  const accesos = [];
+  if (atleta) accesos.push({ label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') });
+  if (staff) accesos.push({ label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') });
+  if (accesos.length === 0) {
+    accesos.push({ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') });
+  }
+
   const items = [
     { label: 'Inicio', Icon: Home, action: () => go(base) },
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
-    { label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') },
+    ...accesos,
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
-    { label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
   ];
 
