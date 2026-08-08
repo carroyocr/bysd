@@ -83,7 +83,7 @@ export default function StaffScreen() {
   // segunda pantalla y una lista de campos que no vienen al caso.
   const [clave, setClave] = useState({
     modo: 'login',      // login | codigo | definir
-    email: '', email2: '', code: '', password: '',
+    email: '', code: '', password: '',
     conBio: false, cargando: false, msg: '',
   });
 
@@ -131,7 +131,7 @@ export default function StaffScreen() {
       const { ok: okBio } = await activarBiometria(email, data.token, STAFF);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
-    setClave({ modo: 'login', email: '', email2: '', code: '', password: '', conBio: false, cargando: false, msg: '' });
+    setClave({ modo: 'login', email: '', code: '', password: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
   };
 
@@ -173,8 +173,6 @@ export default function StaffScreen() {
 
   if (!logged) {
     const enVoluntario = clave.modo !== 'login';
-    const correosCoinciden =
-      clave.email.trim().toLowerCase() === clave.email2.trim().toLowerCase();
 
     return (
       <Screen title="Staff">
@@ -212,26 +210,6 @@ export default function StaffScreen() {
                   className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
                 />
               </label>
-
-              {/* Confirmar el correo: si se teclea mal, el código se va a una
-                  dirección ajena y el voluntario se queda esperando. */}
-              {clave.modo === 'codigo' && (
-                <label className="block">
-                  <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Confirma tu correo</span>
-                  <input
-                    type="email"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    value={clave.email2}
-                    onChange={(e) => setClave((p) => ({ ...p, email2: e.target.value }))}
-                    required
-                    className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
-                  />
-                  {clave.email2 && !correosCoinciden && (
-                    <span className="text-[11px] text-red-500 mt-1 block">Los correos no coinciden</span>
-                  )}
-                </label>
-              )}
 
               {clave.modo === 'definir' && (
                 <>
@@ -298,7 +276,7 @@ export default function StaffScreen() {
 
               <button
                 type="submit"
-                disabled={loading || clave.cargando || (clave.modo === 'codigo' && !correosCoinciden)}
+                disabled={loading || clave.cargando}
                 className="w-full bg-[#E77622] hover:bg-[#d96a1a] text-white font-bold rounded-xl py-3 text-sm transition-colors disabled:opacity-50"
               >
                 {clave.modo === 'login' && (loading ? 'Entrando…' : 'Iniciar sesión')}
