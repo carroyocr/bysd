@@ -19,6 +19,10 @@ const FILTERS = [
 const RING_COLORS = ['#E77622', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6', '#facc15'];
 const ringOf = (bib) => RING_COLORS[(parseInt(bib, 10) || 0) % RING_COLORS.length];
 
+// Filtro y búsqueda elegidos por carrera: al abrir la ficha de un corredor y
+// volver, la pantalla se vuelve a montar y debe conservar la selección.
+const vistaPorCarrera = new Map();
+
 /**
  * Seguimiento: lista de corredores con búsqueda por nombre o dorsal y filtros.
  * Cada tarjeta navega a la pantalla dedicada del atleta.
@@ -29,10 +33,14 @@ export default function TrackingScreen() {
   const navigate = useNavigate();
 
   const [participants, setParticipants] = useState(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('active');
+  const [search, setSearch] = useState(() => vistaPorCarrera.get(raceCode)?.search || '');
+  const [filter, setFilter] = useState(() => vistaPorCarrera.get(raceCode)?.filter || 'active');
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
+
+  useEffect(() => {
+    vistaPorCarrera.set(raceCode, { filter, search });
+  }, [raceCode, filter, search]);
 
   const fetchData = useCallback(async () => {
     try {
