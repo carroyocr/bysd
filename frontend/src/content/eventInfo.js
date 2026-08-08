@@ -64,6 +64,20 @@ export const REGLAS = {
   ],
 };
 
+/** Enlace oficial en Google Maps de la sede del evento. */
+export const SEDE_MAPS_URL = 'https://maps.app.goo.gl/BrntZd7xFPcrmDTe7';
+
+/**
+ * Enlace de mapa para el lugar de una carrera: usa el enlace oficial cuando
+ * la sede es el Hotel Caribbean Adventure y, si no, busca el texto del lugar
+ * en Google Maps (así funciona también para sedes futuras).
+ */
+export function mapsUrlDe(location) {
+  if (!location) return null;
+  if (/caribbean\s+adventure/i.test(location)) return SEDE_MAPS_URL;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+}
+
 // icon: nombre del ícono de lucide-react; cada consumidor lo resuelve.
 export const LOGISTICA = {
   instalaciones: [

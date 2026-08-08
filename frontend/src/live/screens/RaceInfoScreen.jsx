@@ -1,8 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Clock, MapPin, Repeat, ChevronRight, Info } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Repeat, ChevronRight, Info, Navigation } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { mapsUrlDe } from '../../content/eventInfo';
+import { openExternal } from '../../lib/nativeExport';
 
 const fmtDate = (iso) => {
   if (!iso) return '—';
@@ -25,10 +27,11 @@ export default function RaceInfoScreen() {
   const navigate = useNavigate();
   const base = `/live/${(raceCode || '').toLowerCase()}`;
 
+  const mapsUrl = mapsUrlDe(race?.location);
   const rows = [
     { Icon: CalendarDays, label: 'Fecha', value: fmtDate(race?.date) },
     { Icon: Clock, label: 'Hora de inicio', value: race?.start_time ? `${race.start_time} (hora RD)` : '—' },
-    { Icon: MapPin, label: 'Lugar', value: race?.location || '—' },
+    { Icon: MapPin, label: 'Lugar', value: race?.location || '—', mapsUrl },
     { Icon: Repeat, label: 'Formato', value: 'Vueltas de 6.7 km cada hora, hasta el Last One Standing' },
   ];
 
@@ -44,12 +47,20 @@ export default function RaceInfoScreen() {
       <div className="px-4 py-4">
         <div className={`rounded-2xl p-4 mb-4 ${T.card}`}>
           <p className="text-base font-extrabold mb-3">{race?.name || 'Backyard Ultra Santo Domingo'}</p>
-          {rows.map(({ Icon, label, value }) => (
+          {rows.map(({ Icon, label, value, mapsUrl: url }) => (
             <div key={label} className={`flex items-start gap-3 py-2.5 border-t ${T.divider}`}>
               <Icon className="w-5 h-5 text-[#E77622] shrink-0 mt-0.5" />
-              <div>
+              <div className="min-w-0">
                 <p className={`text-[10px] tracking-widest uppercase ${T.subtle}`}>{label}</p>
                 <p className="text-sm font-semibold mt-0.5">{value}</p>
+                {url && (
+                  <button
+                    onClick={() => openExternal(url)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-[#E77622] mt-1.5"
+                  >
+                    <Navigation className="w-3.5 h-3.5" /> Cómo llegar
+                  </button>
+                )}
               </div>
             </div>
           ))}
