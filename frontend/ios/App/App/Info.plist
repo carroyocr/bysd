@@ -23,7 +23,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>La cámara se usa para escanear el código QR de los atletas al registrar vueltas.</string>
+	<string>La cámara se usa para escanear el código QR de los atletas y para tomar la foto de tu perfil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Se accede a tus fotos para elegir la imagen de tu perfil y el comprobante de pago.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -32,18 +34,14 @@
 	<array>
 		<string>armv7</string>
 	</array>
+	<!-- Solo vertical: la app está diseñada para uso en carrera, con una mano -->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>

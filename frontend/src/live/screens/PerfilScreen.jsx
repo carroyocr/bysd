@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
-  ChevronDown, Medal, Heart, Upload, Paperclip,
+  ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -188,6 +188,7 @@ export default function PerfilScreen() {
   const [editData, setEditData] = useState({});
   const [showPwdForm, setShowPwdForm] = useState(false);
   const [pwdData, setPwdData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Inscripción a la carrera activa (mismo flujo que /mi-perfil en la web)
   const [showInscription, setShowInscription] = useState(false);
@@ -398,6 +399,42 @@ export default function PerfilScreen() {
     }
   };
 
+  const uploadPhoto = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    // Mismos límites que el sitio: alta resolución para la credencial
+    if (file.size < 1024 * 1024) {
+      setMsg({ type: 'error', text: 'La foto debe ser de alta resolución (mínimo 1MB)' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setMsg({ type: 'error', text: 'El archivo es demasiado grande (máximo 10MB)' });
+      return;
+    }
+    setUploadingPhoto(true);
+    setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await fetch(`${API}/api/athletes/upload-photo`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token()}` },
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'No se pudo subir la foto');
+      }
+      setMsg({ type: 'ok', text: 'Foto actualizada' });
+      fetchAll();
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const openReceiptForm = async (race) => {
     setReceiptRace(race.registration_id);
     setReceiptFile(null);
@@ -588,17 +625,32 @@ export default function PerfilScreen() {
       <div className="px-4 py-4 space-y-4">
         {/* Cabecera */}
         <div className={`rounded-2xl px-4 py-4 flex items-center gap-4 ${T.card}`}>
-          {athlete?.photo_url ? (
-            <img
-              src={`${API}${athlete.photo_url}`}
-              alt={athlete.nombre}
-              className="w-16 h-16 rounded-full object-cover border-2 border-[#E77622]"
-            />
-          ) : (
-            <span className={`w-16 h-16 rounded-full flex items-center justify-center text-lg font-extrabold ${T.avatar}`}>
-              {initialsOf(athlete?.nombre, athlete?.apellidos)}
+          {/* Tocar la foto abre la cámara o la galería del teléfono */}
+          <label className="relative shrink-0 cursor-pointer">
+            {athlete?.photo_url ? (
+              <img
+                src={`${API}${athlete.photo_url}`}
+                alt={athlete.nombre}
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#E77622]"
+              />
+            ) : (
+              <span className={`w-16 h-16 rounded-full flex items-center justify-center text-lg font-extrabold ${T.avatar}`}>
+                {initialsOf(athlete?.nombre, athlete?.apellidos)}
+              </span>
+            )}
+            <span className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-[#E77622] flex items-center justify-center border-2 border-[#0C0C0C]">
+              {uploadingPhoto
+                ? <Loader2 className="w-3 h-3 text-white animate-spin" />
+                : <Camera className="w-3 h-3 text-white" />}
             </span>
-          )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={uploadPhoto}
+              disabled={uploadingPhoto}
+              className="hidden"
+            />
+          </label>
           <div className="min-w-0 flex-1">
             <p className="font-bold truncate">{athlete?.nombre} {athlete?.apellidos}</p>
             <p className={`text-xs truncate ${T.muted}`}>{athlete?.email}</p>

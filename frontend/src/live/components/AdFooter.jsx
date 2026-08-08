@@ -9,7 +9,10 @@ const AD_ROTATE_MS = 8000;
  * Pie publicitario fijo: rota banners ponderados por peso y acumula métricas.
  */
 export default function AdFooter({ raceCode }) {
-  const { T } = useLiveTheme();
+  const { T, theme } = useLiveTheme();
+  // Color propio: la portada de la carrera fuerza texto blanco sobre la foto
+  // y en modo claro la tarjeta es blanca, así que el nombre se perdía.
+  const cardText = theme === 'dark' ? 'text-white' : 'text-[#232323]';
   const [banners, setBanners] = useState([]);
   const [index, setIndex] = useState(0);
   const impressionsSent = useRef(new Set());
@@ -95,7 +98,7 @@ export default function AdFooter({ raceCode }) {
 
   return (
     <footer className="sticky bottom-0 z-40 px-4 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-      <button onClick={handleClick} className={`w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left rounded-2xl shadow-lg overflow-hidden ${T.card}`}>
+      <button onClick={handleClick} className={`w-full h-[70px] flex items-center gap-3 px-3.5 relative text-left rounded-2xl shadow-lg overflow-hidden ${T.card} ${cardText}`}>
         <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${T.subtle}`}>
           Patrocinador
         </span>
