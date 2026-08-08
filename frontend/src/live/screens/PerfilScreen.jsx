@@ -779,7 +779,9 @@ export default function PerfilScreen() {
             myRaces.map((race) => {
               const enEspera = race.status === 'waitlist';
               const receiptPending = race.payment_receipt_status === 'pending';
-              const puedeSubirComprobante = !enEspera && race.edit_token &&
+              // Igual que en la web: se puede subir el comprobante mientras el
+              // pago no esté confirmado, incluso desde la lista de espera.
+              const puedeSubirComprobante = race.edit_token &&
                 race.payment_status !== 'paid' && !receiptPending;
               const badge = enEspera
                 ? { cls: 'bg-orange-500/15 text-[#E77622]', label: 'Lista de espera' }
