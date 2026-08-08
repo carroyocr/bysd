@@ -16,6 +16,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 const PERMISSIONS = [
   { id: 'race-control', label: 'Control', description: 'Gestión de la carrera en tiempo real' },
   { id: 'laps', label: 'Vueltas', description: 'Registro de vueltas' },
+  { id: 'app-avisos', label: 'Avisos App', description: 'Notificaciones push a BYSD Live' },
   { id: 'scanner', label: 'Escáner QR', description: 'Registrar vueltas con QR' },
   { id: 'registrations', label: 'Atletas', description: 'Inscripciones y BIBs' },
   { id: 'finances', label: 'Finanzas', description: 'Ingresos y gastos' },

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Naranja de la marca; Android lo usa para teñir el icono de las
+         notificaciones push. -->
+    <color name="bysd_naranja">#E77622</color>
+</resources>

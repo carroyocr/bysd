@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Routes, Route, useParams } from 'react-router-dom';
 import { LiveThemeProvider, useLiveTheme } from './liveTheme';
 import { getJson, FOLLOWED_KEY, NOTIF_KEY } from './liveApi';
+import { pushDisponible, refrescarPush } from './push';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
 import AdFooter from './components/AdFooter';
@@ -30,13 +31,20 @@ const RaceContext = createContext(null);
 export const useRace = () => useContext(RaceContext);
 
 /**
- * Aviso de vueltas: mientras la app está abierta y las notificaciones están
- * activadas en Configuración, avisa cuando un favorito completa una vuelta.
+ * Aviso de vueltas en el navegador: mientras la pestaña está abierta y las
+ * notificaciones están activadas en Configuración, avisa cuando un favorito
+ * completa una vuelta.
+ *
+ * En la app instalada esto no corre: allí los avisos llegan por push desde el
+ * backend, que además funciona con la app cerrada. Si corriesen los dos, cada
+ * vuelta se notificaría dos veces.
  */
 function useLapNotifications(raceCode) {
   const lastLaps = useRef({});
 
   useEffect(() => {
+    if (pushDisponible()) return undefined;
+
     const check = async () => {
       if (localStorage.getItem(NOTIF_KEY) !== 'on') return;
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -79,6 +87,13 @@ function RaceShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useLapNotifications(raceCode);
+
+  // El token de Firebase caduca y la carrera activa cambia de un año a otro:
+  // al entrar a una carrera se refresca el registro para que los avisos sigan
+  // llegando sin que el usuario tenga que volver a Configuración.
+  useEffect(() => {
+    refrescarPush(raceCode);
+  }, [raceCode]);
 
   useEffect(() => {
     let cancel = false;

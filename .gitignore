@@ -34,6 +34,9 @@ dist
 
 *token.json*
 *credentials.json*
+# Cuenta de servicio de Firebase (envia las notificaciones push). Es un
+# secreto: va en la variable FCM_SERVICE_ACCOUNT_JSON de Render, no en el repo.
+*firebase-adminsdk*.json
 
 # Logs and debug files
 npm-debug.log*

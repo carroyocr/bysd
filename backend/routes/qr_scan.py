@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
+import asyncio
 import os
 import qrcode
 import secrets
@@ -40,6 +41,34 @@ QR_CODES_DIR.mkdir(parents=True, exist_ok=True)
 # panel tambien sirve, para que el equipo de organizacion no tenga que buscarla.
 
 SCAN_KEY_LENGTH = 5
+
+
+# ============= AVISOS A LA APP =============
+#
+# El escaneo es lo unico que no puede ir lento el dia de la carrera: hay una
+# fila de corredores esperando. Por eso los avisos push salen en una tarea
+# aparte y el endpoint responde sin esperar a que FCM conteste.
+
+_tareas_push = set()
+
+
+def _avisar_push(database, race_code, athlete, titulo, cuerpo, data=None) -> None:
+    """Aviso en segundo plano a los telefonos que siguen a este corredor."""
+    from routes.push import avisar_a_seguidores
+
+    tarea = asyncio.create_task(
+        avisar_a_seguidores(
+            database, race_code, str(athlete.get("bib")), titulo, cuerpo, data
+        )
+    )
+    # Sin esta referencia, el recolector de basura puede llevarse la tarea
+    # antes de que termine y el aviso no llegaria nunca.
+    _tareas_push.add(tarea)
+    tarea.add_done_callback(_tareas_push.discard)
+
+
+def nombre_completo(athlete: dict) -> str:
+    return f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip()
 
 
 def generar_scan_key() -> str:
@@ -545,7 +574,16 @@ async def confirm_lap(
             "reason": "DNF manual confirmado",
             "created_at": local_time
         })
-        
+
+        _avisar_push(
+            database,
+            race_code,
+            athlete,
+            f"{nombre_completo(athlete)} ya no sigue en carrera",
+            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
+            {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
+        )
+
         return {
             "success": True,
             "action": "dnf",
@@ -629,7 +667,16 @@ async def confirm_lap(
             "reason": f"Regresó a los {minutes_into_lap} minutos (mínimo {MIN_LAP_TIME_MINUTES})",
             "created_at": local_time
         })
-        
+
+        _avisar_push(
+            database,
+            race_code,
+            athlete,
+            f"{nombre_completo(athlete)} ya no sigue en carrera",
+            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
+            {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
+        )
+
         return {
             "success": True,
             "action": "dnf_early_return",
@@ -669,7 +716,16 @@ async def confirm_lap(
             "reason": f"Tiempo agotado. Vuelta {expected_lap} debió completarse antes.",
             "created_at": local_time
         })
-        
+
+        _avisar_push(
+            database,
+            race_code,
+            athlete,
+            f"{nombre_completo(athlete)} ya no sigue en carrera",
+            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
+            {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
+        )
+
         return {
             "success": True,
             "action": "auto_dnf",
@@ -717,7 +773,21 @@ async def confirm_lap(
         "scanned_by": request.scanned_by or "unknown",
         "created_at": local_time
     })
-    
+
+    _avisar_push(
+        database,
+        race_code,
+        athlete,
+        f"{nombre_completo(athlete)} completó la vuelta {new_laps}",
+        f"#{athlete.get('bib')} · {round(new_km, 1)} km acumulados",
+        {
+            "tipo": "vuelta",
+            "bib": str(athlete.get("bib")),
+            "race_code": race_code,
+            "vuelta": new_laps,
+        },
+    )
+
     return {
         "success": True,
         "action": "lap_completed",

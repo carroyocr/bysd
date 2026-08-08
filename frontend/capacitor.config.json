@@ -7,6 +7,9 @@
       "backgroundColor": "#0C0C0C",
       "launchAutoHide": true,
       "androidScaleType": "CENTER_CROP"
+    },
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   }
 }
