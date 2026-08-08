@@ -4,6 +4,9 @@ import { HandHelping, ArrowLeft, Loader2 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
+import DateField from '../components/DateField';
+import Picker from '../components/Picker';
+import { COUNTRIES } from '../../data/countries';
 
 const SEXOS = ['Masculino', 'Femenino', 'Otro'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -126,7 +129,7 @@ export default function VoluntarioRegistroScreen() {
             </span>
             <p className={`text-xs text-center leading-relaxed ${T.muted}`}>
               {paso === 'email' && 'Te enviamos un código para confirmar tu correo.'}
-              {paso === 'codigo' && `Escribe el código que enviamos a ${email}.`}
+              {paso === 'codigo' && `Escribe el código que enviamos a ${email} y elige tu contraseña.`}
               {paso === 'datos' && 'Cuéntanos quién eres. Los datos de salud son para poder atenderte si hace falta.'}
             </p>
           </div>
@@ -152,7 +155,17 @@ export default function VoluntarioRegistroScreen() {
             <Campo T={T} label="Código de 6 dígitos">
               <input inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} className={clase} />
             </Campo>
-            <button onClick={verificar} disabled={cargando || !code.trim()}
+            {/* La contraseña va aquí, junto al código: es el momento en que
+                queda probado que el correo es suyo. En el formulario de datos
+                sobraba, perdida entre veinte campos. */}
+            <Campo T={T} label="Contraseña para tu perfil (mínimo 8)">
+              <input type="password" autoComplete="new-password" value={datos.password}
+                onChange={(e) => setDatos((p) => ({ ...p, password: e.target.value }))} className={clase} />
+            </Campo>
+            <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+              Con ella entras a ver tus turnos y recibes un aviso 30 minutos antes de cada uno.
+            </p>
+            <button onClick={verificar} disabled={cargando || !code.trim() || (datos.password || '').length < 8}
               className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
               {cargando ? 'Verificando…' : 'Continuar'}
             </button>
@@ -175,13 +188,18 @@ export default function VoluntarioRegistroScreen() {
               </Campo>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="Nombre *"><input value={datos.nombre} onChange={upd('nombre')} className={clase} /></Campo>
               <Campo T={T} label="Apellidos *"><input value={datos.apellidos} onChange={upd('apellidos')} className={clase} /></Campo>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="Fecha de nacimiento *">
-                <input type="date" value={datos.fecha_nacimiento} onChange={upd('fecha_nacimiento')} className={clase} />
+                <DateField
+                  T={T}
+                  title="Fecha de nacimiento"
+                  value={datos.fecha_nacimiento}
+                  onChange={(v) => setDatos((p) => ({ ...p, fecha_nacimiento: v }))}
+                />
               </Campo>
               <Campo T={T} label="Sexo *">
                 <select value={datos.sexo} onChange={upd('sexo')} className={clase}>
@@ -190,13 +208,20 @@ export default function VoluntarioRegistroScreen() {
                 </select>
               </Campo>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="Teléfono *"><input type="tel" inputMode="tel" value={datos.telefono} onChange={upd('telefono')} className={clase} /></Campo>
-              <Campo T={T} label="Nacionalidad *"><input value={datos.nacionalidad} onChange={upd('nacionalidad')} className={clase} /></Campo>
+              <Campo T={T} label="Nacionalidad *">
+                <Picker
+                  title="Nacionalidad"
+                  value={datos.nacionalidad}
+                  onSelect={(v) => setDatos((p) => ({ ...p, nacionalidad: v }))}
+                  options={COUNTRIES.map((c) => ({ value: c.name, label: c.name }))}
+                />
+              </Campo>
             </div>
             <Campo T={T} label="Ciudad de residencia *"><input value={datos.ciudad_residencia} onChange={upd('ciudad_residencia')} className={clase} /></Campo>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="¿Has sido voluntario antes?">
                 <select value={datos.experiencia_voluntariado} onChange={upd('experiencia_voluntariado')} className={clase}>
                   {SI_NO.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -210,7 +235,7 @@ export default function VoluntarioRegistroScreen() {
               </Campo>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="Tipo de sangre">
                 <select value={datos.tipo_sangre} onChange={upd('tipo_sangre')} className={clase}>
                   <option value="">Seleccionar</option>
@@ -236,17 +261,10 @@ export default function VoluntarioRegistroScreen() {
             )}
 
             <Campo T={T} label="Contacto de emergencia *"><input value={datos.contacto_emergencia_nombre} onChange={upd('contacto_emergencia_nombre')} className={clase} /></Campo>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
               <Campo T={T} label="Relación"><input value={datos.contacto_emergencia_relacion} onChange={upd('contacto_emergencia_relacion')} className={clase} /></Campo>
               <Campo T={T} label="Su teléfono *"><input type="tel" inputMode="tel" value={datos.contacto_emergencia_telefono} onChange={upd('contacto_emergencia_telefono')} className={clase} /></Campo>
             </div>
-
-            <Campo T={T} label="Contraseña para tu perfil (mínimo 8)">
-              <input type="password" autoComplete="new-password" value={datos.password} onChange={upd('password')} className={clase} />
-            </Campo>
-            <p className={`text-[11px] leading-relaxed ${T.muted}`}>
-              Con ella entras a ver tus turnos y recibes un aviso 30 minutos antes de cada uno.
-            </p>
 
             <button onClick={enviar} disabled={cargando}
               className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
