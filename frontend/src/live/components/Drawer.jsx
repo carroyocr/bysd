@@ -31,15 +31,17 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     accesos.push({ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') });
   }
 
+  // Los accesos van al final: el menú es para seguir la carrera, y entrar a la
+  // cuenta es lo que menos se hace.
   const items = [
     { label: 'Inicio', Icon: Home, action: () => go(base) },
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
-    ...accesos,
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
+    ...accesos,
   ];
 
   return (

@@ -65,6 +65,8 @@ async def startup_db_indexes():
         await db.push_devices.create_index([("token", 1)], unique=True)
         await db.push_devices.create_index([("followed", 1)])
         await db.push_devices.create_index([("race_code", 1)])
+        # Resuelve "a que telefono aviso del turno de este voluntario"
+        await db.push_devices.create_index([("staff_email", 1)])
 
         # Initialize admin user if not exists
         await initialize_race_data()
@@ -420,6 +422,10 @@ app.include_router(prensa_router, prefix="/api")
 # Notificaciones push de la app movil
 from routes.push import router as push_router
 app.include_router(push_router)
+
+# Cuenta y perfil del equipo de staff (voluntarios con contrasena propia)
+from routes.staff_account import router as staff_account_router
+app.include_router(staff_account_router)
 
 cors_origins = [o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()]
 

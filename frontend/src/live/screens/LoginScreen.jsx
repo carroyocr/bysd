@@ -56,26 +56,8 @@ export default function LoginScreen() {
   };
 
   const opciones = [
-    {
-      quien: ATLETA,
-      Icon: User,
-      titulo: 'Soy corredor',
-      texto: hayAtleta()
-        ? 'Vuelve a tu perfil'
-        : 'Tu perfil, inscripciones, capacitaciones y resultados',
-      ruta: '/live/perfil',
-      bio: bioAtleta,
-    },
-    {
-      quien: STAFF,
-      Icon: ShieldCheck,
-      titulo: 'Soy del staff',
-      texto: hayStaff()
-        ? 'Vuelve a las herramientas del staff'
-        : 'Escáner de vueltas y ficha de emergencia de los atletas',
-      ruta: '/live/staff',
-      bio: bioStaff,
-    },
+    { quien: ATLETA, Icon: User, titulo: 'Soy corredor', ruta: '/live/perfil', bio: bioAtleta },
+    { quien: STAFF, Icon: ShieldCheck, titulo: 'Soy del staff', ruta: '/live/staff', bio: bioStaff },
   ];
 
   return (
@@ -85,7 +67,7 @@ export default function LoginScreen() {
 
         {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
-        {opciones.map(({ quien, Icon, titulo, texto, ruta, bio }) => (
+        {opciones.map(({ quien, Icon, titulo, ruta, bio }) => (
           <div key={quien} className={`rounded-2xl mb-3 ${T.card}`}>
             <button
               onClick={() => navigate(ruta)}
@@ -94,10 +76,7 @@ export default function LoginScreen() {
               <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">
                 <Icon className="w-5 h-5 text-[#E77622]" />
               </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold">{titulo}</p>
-                <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>{texto}</p>
-              </div>
+              <p className="flex-1 min-w-0 text-sm font-bold">{titulo}</p>
               <ChevronRight className={`w-4 h-4 shrink-0 ${T.subtle}`} />
             </button>
 

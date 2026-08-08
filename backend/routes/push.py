@@ -36,6 +36,9 @@ class RegistroDispositivo(BaseModel):
     platform: str = "unknown"
     race_code: Optional[str] = None
     followed: List[str] = Field(default_factory=list)
+    # Correo del voluntario, cuando quien usa el telefono entro como staff. Es
+    # lo que permite avisarle media hora antes de su turno.
+    staff_email: Optional[str] = None
 
 
 class Baja(BaseModel):
@@ -106,15 +109,21 @@ async def registrar_dispositivo(registro: RegistroDispositivo, request: Request)
     seguidos = [str(b).strip() for b in (registro.followed or []) if str(b).strip()]
     seguidos = list(dict.fromkeys(seguidos))[:MAX_SEGUIDOS]
 
+    campos = {
+        "platform": registro.platform or "unknown",
+        "race_code": registro.race_code,
+        "followed": seguidos,
+        "updated_at": _ahora(),
+    }
+    # Solo se toca si viene: la app del corredor y la del staff registran el
+    # mismo token desde pantallas distintas y una no debe borrar lo de la otra.
+    if registro.staff_email is not None:
+        campos["staff_email"] = registro.staff_email.strip().lower() or None
+
     await database.push_devices.update_one(
         {"token": token},
         {
-            "$set": {
-                "platform": registro.platform or "unknown",
-                "race_code": registro.race_code,
-                "followed": seguidos,
-                "updated_at": _ahora(),
-            },
+            "$set": campos,
             "$setOnInsert": {"created_at": _ahora()},
         },
         upsert=True,
