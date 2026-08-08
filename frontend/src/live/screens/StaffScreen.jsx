@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
-  HeartPulse, ScanFace, Loader2, Users, UserRound,
+  HeartPulse, ScanFace, Loader2, Users, UserRound, Check,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -78,34 +78,47 @@ export default function StaffScreen() {
     setBioBusy(false);
   };
 
-  // Alta de contraseña del voluntario: pide un código a su correo y elige
-  // clave. Sirve igual para los que ya estaban registrados y para los nuevos,
-  // y evita mandarle a nadie una contraseña por correo.
-  const [clave, setClave] = useState({ vista: null, email: '', code: '', password: '', cargando: false, msg: '' });
-  const setClaveVista = (vista) => setClave((p) => ({ ...p, vista, msg: '' }));
+  // El acceso es un solo formulario que cambia de forma: credenciales del
+  // panel, o alta de contraseña del voluntario en dos pasos. Se evita así una
+  // segunda pantalla y una lista de campos que no vienen al caso.
+  const [clave, setClave] = useState({
+    modo: 'login',      // login | codigo | definir
+    email: '', email2: '', code: '', password: '',
+    conBio: false, cargando: false, msg: '',
+  });
+
+  const cambiarModo = (modo) => {
+    setError('');
+    setClave((p) => ({ ...p, modo, msg: '', code: '', password: '' }));
+  };
 
   const pedirCodigo = async () => {
-    setClave((p) => ({ ...p, cargando: true }));
+    setClave((p) => ({ ...p, cargando: true, msg: '' }));
     setError('');
     const { ok, data } = await authJson('POST', '/api/staff/password/request-code', {
       body: { email: clave.email.trim().toLowerCase() },
     });
-    setClave((p) => ({ ...p, cargando: false, vista: ok ? 'definir' : p.vista, msg: ok ? data.message : '' }));
+    setClave((p) => ({
+      ...p,
+      cargando: false,
+      modo: ok ? 'definir' : p.modo,
+      // Con biometría disponible viene marcado: es lo que casi todo el mundo
+      // querrá, y desmarcarlo cuesta un toque.
+      conBio: ok ? bio.disponible : p.conBio,
+      msg: ok ? data.message : '',
+    }));
     if (!ok) setError(data.detail || 'No se pudo enviar el código');
   };
 
   const definirClave = async () => {
-    setClave((p) => ({ ...p, cargando: true }));
+    setClave((p) => ({ ...p, cargando: true, msg: '' }));
     setError('');
+    const email = clave.email.trim().toLowerCase();
     const { ok, data } = await authJson('POST', '/api/staff/password/set', {
-      body: {
-        email: clave.email.trim().toLowerCase(),
-        code: clave.code.trim(),
-        password: clave.password,
-      },
+      body: { email, code: clave.code.trim(), password: clave.password },
     });
-    setClave((p) => ({ ...p, cargando: false }));
     if (!ok) {
+      setClave((p) => ({ ...p, cargando: false }));
       setError(data.detail || 'No se pudo guardar la contraseña');
       return;
     }
@@ -113,12 +126,24 @@ export default function StaffScreen() {
     localStorage.setItem('admin_username', data.username);
     localStorage.setItem('admin_is_admin', 'false');
     localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
-    setClave({ vista: null, email: '', code: '', password: '', cargando: false, msg: '' });
+
+    if (clave.conBio && bio.disponible) {
+      const { ok: okBio } = await activarBiometria(email, data.token, STAFF);
+      if (okBio) setBio((p) => ({ ...p, activada: true }));
+    }
+    setClave({ modo: 'login', email: '', email2: '', code: '', password: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
   };
 
-  const doLogin = async (e) => {
+  /** El mismo submit sirve para los tres estados del formulario. */
+  const enviarFormulario = (e) => {
     e.preventDefault();
+    if (clave.modo === 'login') return doLogin(e);
+    if (clave.modo === 'codigo') return pedirCodigo();
+    return definirClave();
+  };
+
+  const doLogin = async () => {
     setLoading(true);
     setError('');
     const { ok, data } = await authJson('POST', '/api/race/auth/admin-login', {
@@ -147,6 +172,10 @@ export default function StaffScreen() {
   };
 
   if (!logged) {
+    const enVoluntario = clave.modo !== 'login';
+    const correosCoinciden =
+      clave.email.trim().toLowerCase() === clave.email2.trim().toLowerCase();
+
     return (
       <Screen title="Staff">
         <div className="px-4 py-6">
@@ -156,43 +185,128 @@ export default function StaffScreen() {
                 <ShieldCheck className="w-7 h-7 text-[#E77622]" />
               </span>
               <h2 className="text-lg font-bold">Acceso del staff</h2>
-              <p className={`text-xs mt-1 ${T.muted}`}>Usa tus credenciales del panel</p>
+              <p className={`text-xs mt-1 text-center ${T.muted}`}>
+                {clave.modo === 'login' && 'Usa tus credenciales del panel'}
+                {clave.modo === 'codigo' && 'Te enviamos un código al correo con el que te registraste'}
+                {clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`}
+              </p>
             </div>
-            <form onSubmit={doLogin} className="space-y-3">
+
+            <form onSubmit={enviarFormulario} className="space-y-3">
+              {/* Usuario, o correo del voluntario: el mismo hueco cambia de
+                  papel para no llenar la pantalla de campos. */}
               <label className="block">
-                <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Usuario</span>
+                <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>
+                  {enVoluntario ? 'Tu correo' : 'Usuario'}
+                </span>
                 <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type={enVoluntario ? 'email' : 'text'}
+                  inputMode={enVoluntario ? 'email' : 'text'}
+                  value={enVoluntario ? clave.email : username}
+                  onChange={(e) => (enVoluntario
+                    ? setClave((p) => ({ ...p, email: e.target.value }))
+                    : setUsername(e.target.value))}
+                  readOnly={clave.modo === 'definir'}
                   required
                   autoCapitalize="none"
-                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
                 />
               </label>
-              <label className="block">
-                <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Contraseña</span>
-                <div className="relative">
+
+              {/* Confirmar el correo: si se teclea mal, el código se va a una
+                  dirección ajena y el voluntario se queda esperando. */}
+              {clave.modo === 'codigo' && (
+                <label className="block">
+                  <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Confirma tu correo</span>
                   <input
-                    type={showPwd ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    value={clave.email2}
+                    onChange={(e) => setClave((p) => ({ ...p, email2: e.target.value }))}
                     required
                     className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
                   />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
-                    {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </label>
+                  {clave.email2 && !correosCoinciden && (
+                    <span className="text-[11px] text-red-500 mt-1 block">Los correos no coinciden</span>
+                  )}
+                </label>
+              )}
+
+              {clave.modo === 'definir' && (
+                <>
+                  <label className="block">
+                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Código de 6 dígitos</span>
+                    <input
+                      inputMode="numeric"
+                      value={clave.code}
+                      onChange={(e) => setClave((p) => ({ ...p, code: e.target.value }))}
+                      required
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Nueva contraseña (mínimo 8)</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={clave.password}
+                      onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
+                      required
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                  </label>
+                </>
+              )}
+
+              {clave.modo === 'login' && (
+                <label className="block">
+                  <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Contraseña</span>
+                  <div className="relative">
+                    <input
+                      type={showPwd ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                      {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </label>
+              )}
+
+              {/* Activar la biometría aquí ahorra tener que buscarla después */}
+              {clave.modo === 'definir' && bio.disponible && (
+                <button
+                  type="button"
+                  onClick={() => setClave((p) => ({ ...p, conBio: !p.conBio }))}
+                  className="w-full flex items-center gap-2.5 text-left"
+                >
+                  <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${clave.conBio ? 'bg-[#E77622] border-[#E77622]' : 'border-gray-500/50'}`}>
+                    {clave.conBio && <Check className="w-3 h-3 text-white" />}
+                  </span>
+                  <span className="text-xs flex items-center gap-1.5">
+                    <ScanFace className="w-4 h-4 text-[#E77622]" /> Entrar con {bio.nombre} la próxima vez
+                  </span>
+                </button>
+              )}
+
               {error && <p className="text-xs text-red-500">{error}</p>}
+              {clave.msg && <p className="text-xs text-green-500">{clave.msg}</p>}
+
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || clave.cargando || (clave.modo === 'codigo' && !correosCoinciden)}
                 className="w-full bg-[#E77622] hover:bg-[#d96a1a] text-white font-bold rounded-xl py-3 text-sm transition-colors disabled:opacity-50"
               >
-                {loading ? 'Entrando…' : 'Iniciar sesión'}
+                {clave.modo === 'login' && (loading ? 'Entrando…' : 'Iniciar sesión')}
+                {clave.modo === 'codigo' && (clave.cargando ? 'Enviando…' : 'Enviarme el código')}
+                {clave.modo === 'definir' && (clave.cargando ? 'Guardando…' : 'Guardar e ingresar')}
               </button>
-              {bio.activada && (
+
+              {clave.modo === 'login' && bio.activada && (
                 <button
                   type="button"
                   onClick={entrarBiometrico}
@@ -205,81 +319,28 @@ export default function StaffScreen() {
                   {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
                 </button>
               )}
+
               <div className="flex flex-col items-center gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => { setClaveVista(clave.vista ? null : 'pedir'); setError(''); }}
+                  onClick={() => cambiarModo(clave.modo === 'login' ? 'codigo' : 'login')}
                   className={`text-xs underline ${T.muted}`}
                 >
-                  Soy voluntario y no tengo contraseña
+                  {clave.modo === 'login'
+                    ? 'Soy voluntario y no tengo contraseña'
+                    : 'Ya tengo contraseña, quiero entrar'}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/live/staff/voluntario')}
-                  className="text-xs underline text-[#E77622]"
-                >
-                  Quiero ser voluntario
-                </button>
+                {clave.modo === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/live/staff/voluntario')}
+                    className="text-xs underline text-[#E77622]"
+                  >
+                    Quiero ser voluntario
+                  </button>
+                )}
               </div>
             </form>
-
-            {clave.vista && (
-              <div className={`mt-4 pt-4 border-t space-y-3 ${T.divider}`}>
-                <p className={`text-[11px] leading-relaxed ${T.muted}`}>
-                  {clave.vista === 'pedir'
-                    ? 'Escribe el correo con el que te registraste como voluntario y te enviamos un código.'
-                    : `Escribe el código que enviamos a ${clave.email} y elige tu contraseña.`}
-                </p>
-
-                {clave.vista === 'pedir' ? (
-                  <>
-                    <input
-                      type="email"
-                      inputMode="email"
-                      autoCapitalize="none"
-                      placeholder="tu@correo.com"
-                      value={clave.email}
-                      onChange={(e) => setClave((p) => ({ ...p, email: e.target.value }))}
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={pedirCodigo}
-                      disabled={clave.cargando || !clave.email.trim()}
-                      className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
-                    >
-                      {clave.cargando ? 'Enviando…' : 'Enviarme el código'}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <input
-                      inputMode="numeric"
-                      placeholder="Código de 6 dígitos"
-                      value={clave.code}
-                      onChange={(e) => setClave((p) => ({ ...p, code: e.target.value }))}
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
-                    />
-                    <input
-                      type="password"
-                      placeholder="Nueva contraseña (mínimo 8)"
-                      value={clave.password}
-                      onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={definirClave}
-                      disabled={clave.cargando}
-                      className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
-                    >
-                      {clave.cargando ? 'Guardando…' : 'Guardar y entrar'}
-                    </button>
-                  </>
-                )}
-                {clave.msg && <p className="text-xs text-green-500">{clave.msg}</p>}
-              </div>
-            )}
           </div>
         </div>
       </Screen>
