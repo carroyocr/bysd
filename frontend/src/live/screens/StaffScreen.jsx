@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
-  HeartPulse,
+  HeartPulse, ScanFace, Loader2,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
+import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, STAFF } from '../biometria';
+import { cerrarSesionStaff } from '../sesion';
 
 /**
  * Acceso del staff dentro de BYSD Live: inicia sesión con las credenciales
@@ -23,6 +25,58 @@ export default function StaffScreen() {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Biometría del staff: guarda su propio token, aparte del de corredor.
+  const [bio, setBio] = useState({ disponible: false, nombre: '', activada: false });
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const estado = await estadoBiometria(STAFF);
+      if (cancel) return;
+      setBio(estado);
+      // Con biometría activada se pide siempre, aunque quede sesión guardada:
+      // estas herramientas abren la ficha médica de todos los inscritos.
+      if (estado.activada && !localStorage.getItem('admin_token')) {
+        const token = await entrarConBiometria(STAFF);
+        if (!cancel && token) {
+          localStorage.setItem('admin_token', token);
+          setLogged(true);
+        }
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  const entrarBiometrico = async () => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    setError('');
+    const token = await entrarConBiometria(STAFF);
+    setBioBusy(false);
+    if (token) {
+      localStorage.setItem('admin_token', token);
+      setLogged(true);
+    } else {
+      setError('No se pudo verificar. Entra con tu usuario y contraseña.');
+    }
+  };
+
+  const toggleBiometria = async () => {
+    if (bioBusy) return;
+    setBioBusy(true);
+    if (bio.activada) {
+      await desactivarBiometria(STAFF);
+      setBio((p) => ({ ...p, activada: false }));
+    } else {
+      const { ok } = await activarBiometria(
+        localStorage.getItem('admin_username'), localStorage.getItem('admin_token'), STAFF,
+      );
+      if (ok) setBio((p) => ({ ...p, activada: true }));
+    }
+    setBioBusy(false);
+  };
 
   const doLogin = async (e) => {
     e.preventDefault();
@@ -44,11 +98,12 @@ export default function StaffScreen() {
     setLogged(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_username');
-    localStorage.removeItem('admin_is_admin');
-    localStorage.removeItem('admin_permissions');
+  const logout = async () => {
+    cerrarSesionStaff();
+    // El token del llavero es esta misma sesión: dejarlo haría que cerrar
+    // sesión no cerrara nada.
+    await desactivarBiometria(STAFF);
+    setBio((p) => ({ ...p, activada: false }));
     setLogged(false);
   };
 
@@ -98,6 +153,19 @@ export default function StaffScreen() {
               >
                 {loading ? 'Entrando…' : 'Iniciar sesión'}
               </button>
+              {bio.activada && (
+                <button
+                  type="button"
+                  onClick={entrarBiometrico}
+                  disabled={bioBusy}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${T.divider}`}
+                >
+                  {bioBusy
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <ScanFace className="w-4 h-4 text-[#E77622]" />}
+                  {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
+                </button>
+              )}
             </form>
           </div>
         </div>
@@ -164,6 +232,27 @@ export default function StaffScreen() {
             </button>
           ))}
         </div>
+
+        {bio.disponible && (
+          <div className={`rounded-2xl mt-4 px-4 py-4 flex items-center gap-3.5 ${T.card}`}>
+            <ScanFace className="w-5 h-5 text-[#E77622] shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">Entrar con {bio.nombre}</p>
+              <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
+                Sin escribir usuario y contraseña cada vez.
+              </p>
+            </div>
+            <button
+              role="switch"
+              aria-checked={bio.activada}
+              onClick={toggleBiometria}
+              disabled={bioBusy}
+              className={`w-12 h-7 rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${bio.activada ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
+            >
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${bio.activada ? 'left-6' : 'left-1'}`} />
+            </button>
+          </div>
+        )}
 
         <div className={`rounded-2xl mt-4 ${T.card}`}>
           <button onClick={logout} className="w-full flex items-center gap-3.5 px-4 py-4 text-left">

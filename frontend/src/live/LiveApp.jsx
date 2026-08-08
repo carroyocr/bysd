@@ -23,6 +23,7 @@ import PatrocinadorScreen from './screens/PatrocinadorScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
 import PerfilScreen from './screens/PerfilScreen';
+import LoginScreen from './screens/LoginScreen';
 import StaffScreen from './screens/StaffScreen';
 import StaffAtletasScreen from './screens/StaffAtletasScreen';
 import ReglasScreen from './screens/ReglasScreen';
@@ -226,6 +227,7 @@ export default function LiveApp() {
         <Route index element={<WelcomeScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
         {/* Antes de :raceCode para que no se interpreten como código de carrera */}
+        <Route path="login" element={<LoginScreen />} />
         <Route path="perfil" element={<PerfilScreen />} />
         <Route path="staff" element={<StaffScreen />} />
         <Route path="staff/atletas" element={<StaffAtletasScreen />} />

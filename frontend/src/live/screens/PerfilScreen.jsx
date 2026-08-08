@@ -12,6 +12,7 @@ import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
+import { marcarAccesoAtleta, accesoAtletaCaducado, cerrarSesionAtleta, HORAS_SESION } from '../sesion';
 import Picker, { PickerSheet, Wheel } from '../components/Picker';
 
 const TOKEN_KEY = 'athlete_token';
@@ -412,12 +413,13 @@ export default function PerfilScreen() {
 
   const token = () => localStorage.getItem(TOKEN_KEY);
 
+  /** Devuelve si la sesión seguía siendo válida, para poder avisar al llamar. */
   const fetchAll = async () => {
     const { ok, data } = await authJson('GET', '/api/athletes/profile', { token: token() });
     if (!ok) {
       localStorage.removeItem(TOKEN_KEY);
       setView('login');
-      return;
+      return false;
     }
     setAthlete(data);
     setView('panel');
@@ -426,6 +428,22 @@ export default function PerfilScreen() {
     authJson('GET', '/api/athletes/race-history', { token: token() })
       .then((r) => { if (r.ok) setHistory(r.data.history || []); });
     fetchCaps();
+    return true;
+  };
+
+  /**
+   * La sesión que guarda la biometría caduca a los 3 días como cualquier otra.
+   * Sin esto, pasado ese plazo el teléfono te reconocía la cara y te dejaba en
+   * el login sin explicación, como si Face ID estuviera roto. Se avisa y se
+   * borra la credencial guardada, que ya no sirve para nada.
+   */
+  const sesionBiometricaCaducada = async () => {
+    await desactivarBiometria();
+    setBio((p) => ({ ...p, activada: false }));
+    setMsg({
+      type: 'error',
+      text: `Tu sesión caducó (dura 3 días). Entra con tu contraseña y vuelve a activar ${bio.nombre || 'la biometría'}.`,
+    });
   };
 
   const fetchCaps = () =>
@@ -479,23 +497,40 @@ export default function PerfilScreen() {
     }
   };
 
-  // Biometría: al abrir sin sesión, si está activada se ofrece entrar con la
-  // cara o la huella en vez de escribir la contraseña.
+  /**
+   * Puerta de entrada al perfil.
+   *
+   * Con biometría activada se pide la cara o la huella SIEMPRE, aunque la
+   * sesión siga abierta: el teléfono se presta y se deja encima de la mesa, y
+   * aquí dentro hay datos médicos y de contacto. Sin biometría, la sesión de la
+   * app dura 3 horas y luego toca la contraseña, aunque el token del backend
+   * aguante más.
+   */
   useEffect(() => {
     let cancelado = false;
     (async () => {
       const estado = await estadoBiometria();
       if (cancelado) return;
       setBio(estado);
-      if (token()) { fetchAll(); return; }
+
       if (estado.activada) {
+        setView('bloqueado');
         const guardado = await entrarConBiometria();
         if (cancelado) return;
-        if (guardado) {
-          localStorage.setItem(TOKEN_KEY, guardado);
-          fetchAll();
-        }
+        if (!guardado) return;                       // canceló: se queda bloqueado
+        localStorage.setItem(TOKEN_KEY, guardado);
+        marcarAccesoAtleta();
+        if (!(await fetchAll()) && !cancelado) await sesionBiometricaCaducada();
+        return;
       }
+
+      if (accesoAtletaCaducado()) {
+        cerrarSesionAtleta();
+        setMsg({ type: 'error', text: `Han pasado más de ${HORAS_SESION} horas. Entra otra vez.` });
+        setView('login');
+        return;
+      }
+      if (token()) fetchAll();
     })();
     return () => { cancelado = true; };
   }, []);
@@ -508,6 +543,7 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
+      marcarAccesoAtleta();
       if (bio.disponible && !bio.activada) {
         setMsg({ type: 'ok', text: `Puedes entrar con ${bio.nombre} la próxima vez: actívalo en la pestaña Datos.` });
       }
@@ -530,7 +566,8 @@ export default function PerfilScreen() {
     setBioBusy(false);
     if (guardado) {
       localStorage.setItem(TOKEN_KEY, guardado);
-      fetchAll();
+      marcarAccesoAtleta();
+      if (!(await fetchAll())) await sesionBiometricaCaducada();
     } else {
       setMsg({ type: 'error', text: 'No se pudo verificar. Entra con tu contraseña.' });
     }
@@ -608,6 +645,7 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
+      marcarAccesoAtleta();
       fetchAll();
     } else {
       setMsg({ type: 'error', text: data.detail || 'Código incorrecto' });
@@ -860,7 +898,7 @@ export default function PerfilScreen() {
   };
 
   const logout = async () => {
-    localStorage.removeItem(TOKEN_KEY);
+    cerrarSesionAtleta();
     // El token guardado en el llavero es esta misma sesión: si se deja, cerrar
     // sesión no cerraría nada, bastaría la cara para volver a entrar.
     await desactivarBiometria();
@@ -895,6 +933,38 @@ export default function PerfilScreen() {
     return (
       <Screen title="Perfil del corredor">
         <p className={`text-center text-sm py-16 ${T.muted}`}>Cargando…</p>
+      </Screen>
+    );
+  }
+
+  // Biometría activada y todavía sin pasar: el perfil no se enseña.
+  if (view === 'bloqueado') {
+    return (
+      <Screen title="Perfil del corredor">
+        <div className="px-4 py-10 text-center">
+          <span className="w-20 h-20 rounded-full bg-[#E77622]/15 flex items-center justify-center mx-auto mb-5">
+            <ScanFace className="w-9 h-9 text-[#E77622]" />
+          </span>
+          <p className="font-bold">Perfil protegido</p>
+          <p className={`text-xs mt-1.5 mb-6 leading-relaxed ${T.muted}`}>
+            Usa {bio.nombre || 'tu biometría'} para entrar.
+          </p>
+          <Msg T={T} msg={msg} />
+          <button
+            onClick={entrarBiometrico}
+            disabled={bioBusy}
+            className="w-full flex items-center justify-center gap-2 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
+          >
+            {bioBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanFace className="w-4 h-4" />}
+            {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
+          </button>
+          <button
+            onClick={async () => { await desactivarBiometria(); setBio((p) => ({ ...p, activada: false })); cerrarSesionAtleta(); setView('login'); }}
+            className={`block mx-auto text-xs underline mt-5 ${T.muted}`}
+          >
+            Entrar con mi contraseña
+          </button>
+        </div>
       </Screen>
     );
   }
