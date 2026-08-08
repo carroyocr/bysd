@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
+  GraduationCap, Check, XCircle, Calendar, Users as UsersIcon,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -24,6 +25,16 @@ const VUELTAS_OPCIONES = [
   'Al menos 1', 'De 2 a 5', 'De 6 a 10', 'De 11 a 15', 'De 16 a 20',
   'De 21 a 24', 'Hasta que sea el ganador', 'No estoy seguro',
 ];
+
+// Fecha y hora de una capacitación, en formato corto y legible.
+function formatCapDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const fecha = d.toLocaleDateString('es-DO', { weekday: 'short', day: 'numeric', month: 'short' });
+  const hora = d.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
+  return `${fecha} · ${hora}`;
+}
 
 /* ---------- piezas de formulario con el tema de LiveApp ---------- */
 
@@ -205,6 +216,13 @@ export default function PerfilScreen() {
   const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
   const [submittingReceipt, setSubmittingReceipt] = useState(false);
 
+  // Capacitaciones (mismos endpoints que la pestaña de /mi-perfil en la web)
+  const [caps, setCaps] = useState([]);
+  const [capBusy, setCapBusy] = useState(null);
+
+  // Cancelar la inscripción a una carrera
+  const [cancelando, setCancelando] = useState(null);
+
   const token = () => localStorage.getItem(TOKEN_KEY);
 
   const fetchAll = async () => {
@@ -220,6 +238,58 @@ export default function PerfilScreen() {
       .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
     authJson('GET', '/api/athletes/race-history', { token: token() })
       .then((r) => { if (r.ok) setHistory(r.data.history || []); });
+    fetchCaps();
+  };
+
+  const fetchCaps = () =>
+    authJson('GET', '/api/capacitaciones/list', { token: token() })
+      .then((r) => { if (r.ok) setCaps(r.data.capacitaciones || []); });
+
+  /** Inscribirse o darse de baja de una capacitación (el mismo endpoint, según el verbo). */
+  const toggleCap = async (cap) => {
+    if (capBusy) return;
+    if (cap.my_registered &&
+        !window.confirm(`¿Cancelar tu inscripción a "${cap.name}"?`)) return;
+    setCapBusy(cap.id);
+    setMsg(null);
+    const { ok, data } = await authJson(
+      cap.my_registered ? 'DELETE' : 'POST',
+      `/api/capacitaciones/${cap.id}/register`,
+      { token: token() },
+    );
+    setCapBusy(null);
+    if (ok) {
+      setMsg({ type: 'ok', text: cap.my_registered ? 'Inscripción cancelada' : '¡Te inscribiste!' });
+      fetchCaps();
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo completar la operación' });
+    }
+  };
+
+  /**
+   * Cancelar la inscripción a una carrera. El backend solo lo permite mientras
+   * no haya comprobante de pago; aquí el botón ya se esconde en ese caso, pero
+   * la comprobación buena es la suya.
+   */
+  const cancelarCarrera = async (race) => {
+    if (cancelando) return;
+    const nombre = race.race_name || race.race_code;
+    if (!window.confirm(
+      `¿Cancelar tu inscripción a ${nombre}?\n\nPerderás tu lugar y no se puede deshacer.`
+    )) return;
+    setCancelando(race.registration_id);
+    setMsg(null);
+    const { ok, data } = await authJson(
+      'DELETE', `/api/athletes/cancel-race/${race.registration_id}`, { token: token() },
+    );
+    setCancelando(null);
+    if (ok) {
+      setMsg({ type: 'ok', text: 'Inscripción cancelada' });
+      authJson('GET', '/api/athletes/my-races', { token: token() })
+        .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo cancelar' });
+    }
   };
 
   useEffect(() => {
@@ -835,6 +905,11 @@ export default function PerfilScreen() {
               // pago no esté confirmado, incluso desde la lista de espera.
               const puedeSubirComprobante = race.edit_token &&
                 race.payment_status !== 'paid' && !receiptPending;
+              // Una vez hay comprobante o pago no se puede soltar el lugar:
+              // habría que devolver dinero y eso lo lleva la organización.
+              const puedeCancelar = !race.payment_receipt_status &&
+                race.payment_status !== 'paid' &&
+                ['registered', 'waitlist'].includes(race.status);
               const badge = enEspera
                 ? { cls: 'bg-orange-500/15 text-[#E77622]', label: 'Lista de espera' }
                 : race.payment_status === 'paid'
@@ -863,13 +938,29 @@ export default function PerfilScreen() {
                     </p>
                   )}
 
-                  {puedeSubirComprobante && receiptRace !== race.registration_id && (
-                    <button
-                      onClick={() => openReceiptForm(race)}
-                      className={`mt-2.5 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
-                    >
-                      <Upload className="w-3.5 h-3.5 text-[#E77622]" /> Subir comprobante de pago
-                    </button>
+                  {receiptRace !== race.registration_id && (puedeSubirComprobante || puedeCancelar) && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                      {puedeSubirComprobante && (
+                        <button
+                          onClick={() => openReceiptForm(race)}
+                          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                        >
+                          <Upload className="w-3.5 h-3.5 text-[#E77622]" /> Subir comprobante de pago
+                        </button>
+                      )}
+                      {puedeCancelar && (
+                        <button
+                          onClick={() => cancelarCarrera(race)}
+                          disabled={cancelando === race.registration_id}
+                          className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg text-red-500 disabled:opacity-50"
+                        >
+                          {cancelando === race.registration_id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <XCircle className="w-3.5 h-3.5" />}
+                          Cancelar inscripción
+                        </button>
+                      )}
+                    </div>
                   )}
 
                   {receiptRace === race.registration_id && (
@@ -929,6 +1020,58 @@ export default function PerfilScreen() {
             })
           )}
         </div>
+
+        {/* Capacitaciones: solo aparece si la organización tiene alguna publicada */}
+        {caps.length > 0 && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
+              <GraduationCap className="w-4 h-4 text-[#E77622]" /> Capacitaciones
+            </h3>
+            {caps.map((cap) => (
+              <div key={cap.id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold truncate">{cap.name}</p>
+                  {cap.my_registered && (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 bg-green-500/15 text-green-500">
+                      Inscrito
+                    </span>
+                  )}
+                </div>
+                <div className={`flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-[11px] ${T.muted}`}>
+                  {cap.datetime && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" /> {formatCapDate(cap.datetime)}
+                    </span>
+                  )}
+                  {cap.duration && <span>{cap.duration}</span>}
+                  <span className="flex items-center gap-1">
+                    <UsersIcon className="w-3.5 h-3.5" /> {cap.registered_count} inscritos
+                  </span>
+                  <span className={cap.is_free ? 'text-green-500 font-semibold' : ''}>
+                    {cap.is_free ? 'Gratis' : `RD$${Number(cap.cost || 0).toLocaleString('es-DO')}`}
+                  </span>
+                </div>
+                {cap.program && (
+                  <p className={`text-[11px] mt-1.5 leading-relaxed ${T.muted}`}>{cap.program}</p>
+                )}
+                <button
+                  onClick={() => toggleCap(cap)}
+                  disabled={capBusy === cap.id}
+                  className={`mt-2.5 flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50 ${
+                    cap.my_registered ? 'text-red-500' : T.actionChip
+                  }`}
+                >
+                  {capBusy === cap.id
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : cap.my_registered
+                      ? <XCircle className="w-3.5 h-3.5" />
+                      : <Check className="w-3.5 h-3.5 text-[#E77622]" />}
+                  {cap.my_registered ? 'Cancelar inscripción' : 'Inscribirme'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Historial y certificados */}
         <div className={`rounded-2xl px-4 py-4 ${T.card}`}>

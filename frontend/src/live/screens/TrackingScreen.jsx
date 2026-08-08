@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Star, Users, Loader2 } from 'lucide-react';
 import { getJson, flagOf, initialsOf, useFollowed } from '../liveApi';
@@ -7,13 +7,22 @@ import { Screen, useRace } from '../LiveApp';
 
 const POLL_MS = 30000;
 
+// "Confirmados" hace de lo que antes era "Activos": quien tiene su plaza
+// asegurada y sigue en carrera. Antes de la salida son los que ya pagaron;
+// durante la carrera, los que aún no se han retirado. Un solo chip para las
+// dos situaciones, para que el día de la carrera la app siga abriendo en la
+// lista que de verdad se mira.
 const FILTERS = [
-  { key: 'all', label: 'Todos' },
-  { key: 'active', label: 'Activos' },
+  { key: 'confirmados', label: 'Confirmados' },
+  { key: 'inscritos', label: 'Inscritos' },
+  { key: 'espera', label: 'Espera' },
   { key: 'retired', label: 'DNF' },
   { key: 'dns', label: 'DNS' },
   { key: 'favoritos', label: 'Fav' },
+  { key: 'all', label: 'Todos' },
 ];
+
+const FILTRO_INICIAL = 'confirmados';
 
 // Colores para el aro del avatar (estilo tracking de maratón)
 const RING_COLORS = ['#E77622', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6', '#facc15'];
@@ -34,7 +43,12 @@ export default function TrackingScreen() {
 
   const [participants, setParticipants] = useState(null);
   const [search, setSearch] = useState(() => vistaPorCarrera.get(raceCode)?.search || '');
-  const [filter, setFilter] = useState(() => vistaPorCarrera.get(raceCode)?.filter || 'active');
+  const [filter, setFilter] = useState(() => vistaPorCarrera.get(raceCode)?.filter || FILTRO_INICIAL);
+  // Carrera para la que ya se ajustó el filtro automáticamente. Guardar el
+  // código y no un booleano evita las dos trampas: repetir el ajuste en cada
+  // recarga de participantes (pisando al usuario) y no hacerlo al cambiar de
+  // carrera.
+  const yaAjustado = useRef(null);
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
 
@@ -44,7 +58,9 @@ export default function TrackingScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await getJson(`/api/race/participants?race_code=${raceCode}`);
+      // include_waitlist solo lo pide esta pantalla: el resto del sitio cuenta
+      // corredores con plaza y sumarles la espera le descuadraría los números.
+      const data = await getJson(`/api/race/participants?race_code=${raceCode}&include_waitlist=true`);
       setParticipants(data);
     } catch {
       setParticipants((prev) => prev || []);
@@ -57,30 +73,47 @@ export default function TrackingScreen() {
     return () => clearInterval(id);
   }, [fetchData]);
 
-  // Antes de la salida los inscritos están en "registered": cuentan como activos
-  const esActivo = (p) => p.status === 'active' || p.status === 'registered';
+  // Antes de la salida los que van a correr están en "registered"
+  const enCarrera = (p) => p.status === 'active' || p.status === 'registered';
+  const esConfirmado = (p) => enCarrera(p) && p.confirmado;
+  const esInscrito = (p) => enCarrera(p) && !p.confirmado;
 
   const counts = useMemo(() => ({
-    active: (participants || []).filter(esActivo).length,
+    confirmados: (participants || []).filter(esConfirmado).length,
+    inscritos: (participants || []).filter(esInscrito).length,
+    espera: (participants || []).filter((p) => p.status === 'waitlist').length,
     retired: (participants || []).filter((p) => p.status === 'retired').length,
     dns: (participants || []).filter((p) => p.status === 'dns').length,
     favoritos: (participants || []).filter((p) => followed.includes(p.bib)).length,
     all: (participants || []).length,
   }), [participants, followed]);
 
-  // Carrera concluida: ya nadie está activo ni en espera de salida. Sin
-  // corredores activos el filtro "Activos" sobra y se entra a "Todos".
-  const concluida = participants !== null && counts.all > 0 && counts.active === 0;
-  const visibleFilters = concluida ? FILTERS.filter(({ key }) => key !== 'active') : FILTERS;
+  const cargado = participants !== null && counts.all > 0;
+  // En una carrera ya corrida no queda nadie por salir: los dos primeros chips
+  // se quedarían a cero y solo estorban.
+  const concluida = cargado && counts.confirmados === 0 && counts.inscritos === 0;
 
+  const visibleFilters = FILTERS.filter(({ key }) => {
+    if (key === 'espera') return counts.espera > 0;          // se pidió ocultarlo si no hay
+    if (concluida) return key !== 'confirmados' && key !== 'inscritos';
+    return true;
+  });
+
+  // Se arranca en Confirmados, pero si esa lista está vacía (carrera histórica,
+  // o edición nueva donde todavía nadie ha pagado) abrir en una pantalla vacía
+  // no ayuda a nadie: se cae a Todos.
   useEffect(() => {
-    if (concluida && filter === 'active') setFilter('all');
-  }, [concluida, filter]);
+    if (!cargado || yaAjustado.current === raceCode) return;
+    if (filter === FILTRO_INICIAL && counts.confirmados === 0) setFilter('all');
+    yaAjustado.current = raceCode;
+  }, [cargado, counts.confirmados, filter, raceCode]);
 
   const filtered = useMemo(() => {
     let list = participants || [];
     if (filter === 'favoritos') list = list.filter((p) => followed.includes(p.bib));
-    else if (filter === 'active') list = list.filter(esActivo);
+    else if (filter === 'confirmados') list = list.filter(esConfirmado);
+    else if (filter === 'inscritos') list = list.filter(esInscrito);
+    else if (filter === 'espera') list = list.filter((p) => p.status === 'waitlist');
     else if (filter !== 'all') list = list.filter((p) => p.status === filter);
     const q = search.trim().toLowerCase();
     if (q) {
@@ -95,10 +128,12 @@ export default function TrackingScreen() {
   const toggleFollow = (bib) => setFollowed(followedStore.toggle(bib));
 
   const progressLine = (p) => {
+    if (p.status === 'waitlist') return 'En lista de espera';
     if (p.status === 'registered') {
-      return p.categoria
-        ? (p.categoria === 'titular' ? 'Titular de la selección' : 'Reserva de la selección')
-        : 'Inscrito · listo para la salida';
+      if (p.categoria) {
+        return p.categoria === 'titular' ? 'Titular de la selección' : 'Reserva de la selección';
+      }
+      return p.confirmado ? 'Confirmado · listo para la salida' : 'Inscrito · pago pendiente';
     }
     if (p.status === 'dns') return 'No inició la carrera';
     if (p.status === 'retired') return `DNF · se retiró en la vuelta ${p.retired_at_lap || p.laps_completed || '—'}`;
@@ -154,7 +189,7 @@ export default function TrackingScreen() {
           <div
             key={p.bib || `sin-bib-${idx}`}
             onClick={() => p.bib && navigate(`/live/${raceCode}/atleta/${p.bib}`)}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 mb-2.5 ${p.bib ? 'cursor-pointer' : ''} ${p.status === 'retired' || p.status === 'dns' ? T.cardOff : T.card}`}
+            className={`flex items-center gap-3 rounded-2xl px-3 py-3.5 mb-2.5 ${p.bib ? 'cursor-pointer' : ''} ${['retired', 'dns', 'waitlist'].includes(p.status) ? T.cardOff : T.card}`}
           >
             <div
               className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shrink-0 border-2 ${T.avatar}`}
