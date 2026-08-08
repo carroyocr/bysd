@@ -205,13 +205,13 @@ export default function MyProfilePage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { ok, status, data } = await apiCall('POST', `${API_URL}/api/athletes/login`, { email, password });
+      const { ok, status, data } = await apiCall('POST', `${API_URL}/api/athletes/login`, { email: email.trim(), password });
       if (ok) {
         localStorage.setItem('athlete_token', data.token);
         toast.success('Bienvenido!');
         await fetchProfile();
       } else if (status === 403) {
-        setPendingEmail(email);
+        setPendingEmail(email.trim());
         toast.info('Te enviamos un codigo de verificacion');
         setCurrentView(VIEW_VERIFY);
       } else {
@@ -244,9 +244,9 @@ export default function MyProfilePage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { ok } = await apiCall('POST', `${API_URL}/api/athletes/forgot-password`, { email });
+      const { ok } = await apiCall('POST', `${API_URL}/api/athletes/forgot-password`, { email: email.trim() });
       if (ok) {
-        setPendingEmail(email);
+        setPendingEmail(email.trim());
         toast.success('Codigo enviado a tu correo');
         setCurrentView(VIEW_RESET);
       }
@@ -303,7 +303,7 @@ export default function MyProfilePage() {
     if (result === false) return;
     if (result === 'check_email') {
       setLoading(true);
-      const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/check-email`, { email: regData.email });
+      const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/check-email`, { email: regData.email.trim() });
       setLoading(false);
       if (!ok) { toast.error(data.detail || 'Este correo ya esta registrado'); return; }
     }

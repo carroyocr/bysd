@@ -9,6 +9,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, STAFF } from '../biometria';
 import { cerrarSesionStaff } from '../sesion';
+import InputClave from '../components/InputClave';
 
 /**
  * Acceso del staff dentro de BYSD Live: inicia sesión con las credenciales
@@ -83,13 +84,13 @@ export default function StaffScreen() {
   // segunda pantalla y una lista de campos que no vienen al caso.
   const [clave, setClave] = useState({
     modo: 'login',      // login | codigo | definir
-    email: '', code: '', password: '',
+    email: '', code: '', password: '', password2: '',
     conBio: false, cargando: false, msg: '',
   });
 
   const cambiarModo = (modo) => {
     setError('');
-    setClave((p) => ({ ...p, modo, msg: '', code: '', password: '' }));
+    setClave((p) => ({ ...p, modo, msg: '', code: '', password: '', password2: '' }));
   };
 
   const pedirCodigo = async () => {
@@ -131,7 +132,7 @@ export default function StaffScreen() {
       const { ok: okBio } = await activarBiometria(email, data.token, STAFF);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
-    setClave({ modo: 'login', email: '', code: '', password: '', conBio: false, cargando: false, msg: '' });
+    setClave({ modo: 'login', email: '', code: '', password: '', password2: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
   };
 
@@ -147,7 +148,7 @@ export default function StaffScreen() {
     setLoading(true);
     setError('');
     const { ok, data } = await authJson('POST', '/api/race/auth/admin-login', {
-      body: { username, password },
+      body: { username: username.trim(), password },
     });
     setLoading(false);
     if (!ok) {
@@ -225,14 +226,26 @@ export default function StaffScreen() {
                   </label>
                   <label className="block">
                     <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Nueva contraseña (mínimo 8)</span>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
+                    <InputClave
+                      T={T}
                       value={clave.password}
                       onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
                       required
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
                     />
+                  </label>
+                  {/* Repetirla: es la unica ocasion en que se escribe a ciegas
+                      y no hay forma de recuperarla si sale un dedazo. */}
+                  <label className="block">
+                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Repite la contraseña</span>
+                    <InputClave
+                      T={T}
+                      value={clave.password2}
+                      onChange={(e) => setClave((p) => ({ ...p, password2: e.target.value }))}
+                      required
+                    />
+                    {clave.password2 && clave.password !== clave.password2 && (
+                      <span className="text-[11px] text-red-500 mt-1 block">Las contraseñas no coinciden</span>
+                    )}
                   </label>
                 </>
               )}
@@ -276,7 +289,7 @@ export default function StaffScreen() {
 
               <button
                 type="submit"
-                disabled={loading || clave.cargando}
+                disabled={loading || clave.cargando || (clave.modo === 'definir' && (clave.password.length < 8 || clave.password !== clave.password2))}
                 className="w-full bg-[#E77622] hover:bg-[#d96a1a] text-white font-bold rounded-xl py-3 text-sm transition-colors disabled:opacity-50"
               >
                 {clave.modo === 'login' && (loading ? 'Entrando…' : 'Iniciar sesión')}

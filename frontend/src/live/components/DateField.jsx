@@ -83,17 +83,3 @@ export default function DateField({ T, value, onChange, fromYear, toYear, title 
     </>
   );
 }
-
-function Toggle({ on, onChange, disabled }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={on}
-      onClick={onChange}
-      disabled={disabled}
-      className={`w-12 h-7 rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
-    >
-      <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
-    </button>
-  );
-}
