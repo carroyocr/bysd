@@ -1,6 +1,6 @@
 {
   "appId": "com.backyardultrasd.app",
-  "appName": "Backyard Ultra SD",
+  "appName": "BYSD Live",
   "webDir": "build",
   "plugins": {
     "SplashScreen": {
