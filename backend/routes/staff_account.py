@@ -225,6 +225,10 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         "es_voluntario": voluntario is not None,
         "perfil": perfil,
         "turnos": [_turno_legible(s) for s in asignaciones],
+        # Lo que el voluntario pidio, que no es lo mismo que lo que le
+        # asignaron: la organizacion decide despues.
+        "evento": (voluntario or {}).get("evento") or "carrera",
+        "slots_interes": (voluntario or {}).get("slots_interes") or [],
     }
 
 
@@ -257,3 +261,70 @@ async def equipo_emergency_info(race_code: Optional[str] = None):
     equipo.sort(key=lambda v: v["nombre_completo"].lower())
 
     return {"total": len(equipo), "equipo": equipo}
+
+
+# ==================== ELEGIR TURNOS ====================
+
+
+class SeleccionTurnos(BaseModel):
+    evento: Optional[str] = None
+    slots_interes: list = []
+
+
+@router.get("/mi-perfil/turnos-disponibles")
+async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depends(require_admin)):
+    """Puestos y turnos con plazas libres, para que el voluntario elija.
+
+    Reusa el mismo listado del registro publico, pero pasandole su correo: asi
+    los turnos que el mismo ya pidio siguen apareciendo como elegibles y no se
+    los cuenta como ocupados por otro.
+    """
+    from routes.volunteer_registration import get_available_slots
+
+    email = (payload.get("username") or "").lower()
+    return await get_available_slots(evento=evento, email=email)
+
+
+@router.put("/mi-perfil/turnos")
+async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_admin)):
+    """Guarda el evento y los turnos que el voluntario quiere cubrir.
+
+    Antes esto solo se podia hacer desde la web, con el enlace que llegaba por
+    correo. Aqui basta con su sesion.
+    """
+    from server import db
+    from routes.volunteer_registration import (
+        VALID_EVENTOS, eventos_abiertos, nombre_evento, validar_slots_libres,
+    )
+
+    email = (payload.get("username") or "").lower()
+    registro = await _buscar_voluntario(db, email)
+    if not registro:
+        raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
+
+    evento = datos.evento if datos.evento in VALID_EVENTOS else (registro.get("evento") or "carrera")
+
+    # Cambiarse a un evento cerrado no vale; quedarse en el suyo, si.
+    if evento != (registro.get("evento") or "carrera"):
+        carrera = await db.race_configurations.find_one({"is_active": True})
+        if evento not in eventos_abiertos(carrera):
+            raise HTTPException(
+                status_code=400,
+                detail=f"El registro de voluntarios para {nombre_evento(carrera, evento)} esta cerrado por ahora",
+            )
+
+    slots = [int(s) for s in (datos.slots_interes or [])]
+    # Que sigan libres: entre que se cargo la pantalla y se pulso guardar,
+    # otro voluntario pudo quedarse con el turno.
+    await validar_slots_libres(db, slots, email)
+
+    await db.volunteer_registrations.update_one(
+        {"_id": registro["_id"]},
+        {"$set": {
+            "evento": evento,
+            "slots_interes": slots,
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+
+    return {"success": True, "evento": evento, "slots_interes": slots}

@@ -205,13 +205,22 @@ export default function StaffScreen() {
                   {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => { setClaveVista(clave.vista ? null : 'pedir'); setError(''); }}
-                className={`block mx-auto text-xs underline ${T.muted}`}
-              >
-                Soy voluntario y no tengo contraseña
-              </button>
+              <div className="flex flex-col items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setClaveVista(clave.vista ? null : 'pedir'); setError(''); }}
+                  className={`text-xs underline ${T.muted}`}
+                >
+                  Soy voluntario y no tengo contraseña
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/live/staff/voluntario')}
+                  className="text-xs underline text-[#E77622]"
+                >
+                  Quiero ser voluntario
+                </button>
+              </div>
             </form>
 
             {clave.vista && (
