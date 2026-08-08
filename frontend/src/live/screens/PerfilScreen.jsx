@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
-  ChevronDown, ExternalLink, Medal, Heart, Upload, Paperclip,
+  ChevronDown, Medal, Heart, Upload, Paperclip,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -876,9 +876,6 @@ export default function PerfilScreen() {
               );
             })
           )}
-          <button onClick={() => navigate('/mi-perfil')} className={`mt-3 flex items-center gap-1.5 text-xs underline ${T.muted}`}>
-            <ExternalLink className="w-3 h-3" /> Comprobantes de pago y gestión completa en el sitio
-          </button>
         </div>
 
         {/* Historial y certificados */}
