@@ -6,6 +6,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import DateField from '../components/DateField';
 import Picker from '../components/Picker';
+import InputClave from '../components/InputClave';
 import { COUNTRIES } from '../../data/countries';
 
 const SEXOS = ['Masculino', 'Femenino', 'Otro'];
@@ -67,6 +68,7 @@ export default function VoluntarioRegistroScreen() {
   const [paso, setPaso] = useState('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [password2, setPassword2] = useState('');
   const [sesion, setSesion] = useState(null);
   const [eventos, setEventos] = useState([]);
   const [evento, setEvento] = useState('carrera');
@@ -159,13 +161,21 @@ export default function VoluntarioRegistroScreen() {
                 queda probado que el correo es suyo. En el formulario de datos
                 sobraba, perdida entre veinte campos. */}
             <Campo T={T} label="Contraseña para tu perfil (mínimo 8)">
-              <input type="password" autoComplete="new-password" value={datos.password}
-                onChange={(e) => setDatos((p) => ({ ...p, password: e.target.value }))} className={clase} />
+              <InputClave T={T} value={datos.password}
+                onChange={(e) => setDatos((p) => ({ ...p, password: e.target.value }))} />
+            </Campo>
+            {/* Repetirla: es la unica ocasion en que se escribe a ciegas y no
+                hay forma de recuperarla si sale un dedazo. */}
+            <Campo T={T} label="Repite la contraseña">
+              <InputClave T={T} value={password2} onChange={(e) => setPassword2(e.target.value)} />
+              {password2 && datos.password !== password2 && (
+                <span className="text-[11px] text-red-500 mt-1 block">Las contraseñas no coinciden</span>
+              )}
             </Campo>
             <p className={`text-[11px] leading-relaxed ${T.muted}`}>
               Con ella entras a ver tus turnos y recibes un aviso 30 minutos antes de cada uno.
             </p>
-            <button onClick={verificar} disabled={cargando || !code.trim() || (datos.password || '').length < 8}
+            <button onClick={verificar} disabled={cargando || !code.trim() || (datos.password || '').length < 8 || datos.password !== password2}
               className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
               {cargando ? 'Verificando…' : 'Continuar'}
             </button>

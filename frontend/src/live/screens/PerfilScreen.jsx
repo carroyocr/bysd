@@ -134,6 +134,20 @@ function Msg({ T, msg }) {
  * nativo del sistema desentona con el tema oscuro y no se puede estilizar.
  */
 
+function Toggle({ on, onChange, disabled }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      onClick={onChange}
+      disabled={disabled}
+      className={`w-12 h-7 rounded-full relative transition-colors shrink-0 disabled:opacity-50 ${on ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
+    >
+      <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
+    </button>
+  );
+}
+
 function InfoRow({ T, label, value }) {
   return (
     <div className={`flex justify-between gap-3 py-2 border-b last:border-b-0 ${T.divider}`}>
@@ -451,7 +465,7 @@ export default function PerfilScreen() {
     e.preventDefault();
     setLoading(true);
     setMsg(null);
-    const { ok, status, data } = await authJson('POST', '/api/athletes/login', { body: { email, password } });
+    const { ok, status, data } = await authJson('POST', '/api/athletes/login', { body: { email: email.trim(), password } });
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
@@ -461,7 +475,7 @@ export default function PerfilScreen() {
       }
       fetchAll();
     } else if (status === 403) {
-      setPendingEmail(email);
+      setPendingEmail(email.trim());
       setCode('');
       setMsg({ type: 'ok', text: 'Te enviamos un código de verificación a tu correo.' });
       setView('verificar');
@@ -572,10 +586,10 @@ export default function PerfilScreen() {
     }
     setLoading(true);
     setMsg(null);
-    const { ok } = await authJson('POST', '/api/athletes/forgot-password', { body: { email } });
+    const { ok } = await authJson('POST', '/api/athletes/forgot-password', { body: { email: email.trim() } });
     setLoading(false);
     if (ok) {
-      setPendingEmail(email);
+      setPendingEmail(email.trim());
       setCode('');
       setNewPassword('');
       setMsg({ type: 'ok', text: 'Código enviado a tu correo.' });

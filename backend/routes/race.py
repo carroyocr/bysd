@@ -45,11 +45,18 @@ def verify_token(authorization: Optional[str] = Header(None)):
 async def admin_login(credentials: AdminLogin, request: Request = None, db=Depends(lambda: None)):
     from server import db as database
 
-    ip = rate_limit.limitar_login(request, credentials.username)
+    ip = rate_limit.limitar_login(request, (credentials.username or "").strip().lower())
+
+    # El usuario se guarda siempre en minusculas, pero aqui se buscaba tal cual
+    # se escribia. Con los usuarios de siempre apenas se notaba; desde que los
+    # voluntarios entran con su correo es un fallo constante, porque el teclado
+    # del telefono capitaliza la primera letra y el espacio de mas que deja el
+    # autocompletado tampoco perdonaba.
+    usuario = (credentials.username or "").strip().lower()
 
     # Find admin user
-    admin = await database.admin_users.find_one({"username": credentials.username}, {"_id": 0})
-    
+    admin = await database.admin_users.find_one({"username": usuario}, {"_id": 0})
+
     if not admin:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     
@@ -58,12 +65,12 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     
     # Get user permissions (admin user has all permissions)
-    is_admin = credentials.username.lower() == "admin"
+    is_admin = usuario == "admin"
     permissions = admin.get("permissions", [])
     
     # Create JWT token with permissions
     token_data = {
-        "username": credentials.username,
+        "username": usuario,
         "is_admin": is_admin,
         "permissions": permissions if not is_admin else ["all"],
         "exp": datetime.now(timezone.utc) + timedelta(hours=12)
@@ -75,7 +82,7 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
 
     return {
         "token": token, 
-        "username": credentials.username,
+        "username": usuario,
         "is_admin": is_admin,
         "permissions": permissions if not is_admin else ["all"]
     }
