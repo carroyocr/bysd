@@ -125,6 +125,194 @@ const getDiaTipoInfo = (diaTipo) => {
   return { value: diaTipo, label: diaTipo, color: "gray" };
 };
 
+// Ayudantes de turnos. Son puros —reciben la lista y su setter— asi que viven
+// a nivel de modulo y no se recrean en cada render.
+const updateShift = (turnos, setTurnos, index, field, value) => {
+  const updated = [...turnos];
+  updated[index] = { ...updated[index], [field]: value };
+  setTurnos(updated);
+};
+// El turno nuevo continúa la secuencia: arranca donde terminó el anterior y
+// dura lo mismo. Si el anterior cruzó la medianoche, el nuevo cae al día siguiente.
+const addShift = (turnos, setTurnos) => {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const usedLetters = turnos.map(t => t.turno);
+  const nextLetter = letters.split('').find(l => !usedLetters.includes(l)) || 'X';
+
+  const anterior = turnos[turnos.length - 1];
+  let horaInicio = '08:00';
+  let horaFin = '12:00';
+  let diaTipo = 'carrera_dia1';
+
+  if (anterior) {
+    const inicioPrev = toMinutos(anterior.hora_inicio);
+    const finPrev = toMinutos(anterior.hora_fin);
+    const cruzaMedianoche = finPrev <= inicioPrev;
+    const duracion = cruzaMedianoche ? finPrev - inicioPrev + 1440 : finPrev - inicioPrev;
+
+    horaInicio = toHora(finPrev);
+    horaFin = toHora(finPrev + duracion);
+    diaTipo = cruzaMedianoche
+      ? siguienteDiaTipo(anterior.dia_tipo || 'carrera_dia1')
+      : (anterior.dia_tipo || 'carrera_dia1');
+  }
+
+  setTurnos([...turnos, {
+    turno: nextLetter,
+    hora_inicio: horaInicio,
+    hora_fin: horaFin,
+    slots_count: 2,
+    dia_tipo: diaTipo
+  }]);
+};
+
+const removeShift = (turnos, setTurnos, index) => {
+  setTurnos(turnos.filter((_, i) => i !== index));
+};
+
+/**
+ * Editor de turnos.
+ *
+ * Va FUERA del componente a proposito. Definido dentro, React lo trata como un
+ * tipo distinto en cada render: desmontaba el subarbol y los campos perdian el
+ * foco, de modo que habia que volver a hacer clic tras escribir cada caracter.
+ * Lo unico que tomaba del ambito exterior y no es puro es `programacion`, que
+ * ahora llega por props.
+ */
+// según la programación; si no se pasa, se usa setTurnos.
+const ShiftEditor = ({ turnos, setTurnos, programacion, disabled = false, onGenerate = null }) => {
+  // Get color classes based on dia_tipo
+  const getDiaTipoClasses = (diaTipo) => {
+    const info = getDiaTipoInfo(diaTipo);
+    switch(info.color) {
+      case 'purple': return 'border-purple-300 bg-purple-50 text-purple-700';
+      case 'blue': return 'border-blue-300 bg-blue-50 text-blue-700';
+      case 'green': return 'border-green-300 bg-green-50 text-green-700';
+      case 'orange': return 'border-orange-300 bg-orange-50 text-orange-700';
+      default: return 'border-gray-300 bg-gray-50 text-gray-700';
+    }
+  };
+
+  return (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between flex-wrap gap-2">
+      <Label className="text-sm font-medium">Turnos</Label>
+      {!disabled && (
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const generados = generarTurnosProgramacion(programacion);
+              if (!generados) {
+                toast.error('Configura y guarda primero la programación del evento (fechas y duración del turno)');
+                return;
+              }
+              if (turnos.length > 0 && !window.confirm(`Se reemplazarán los ${turnos.length} turnos actuales por ${generados.length} turnos generados según la programación del evento. Al guardar, los slots anteriores de la posición (incluyendo asignados) serán reemplazados para evitar duplicados. ¿Continuar?`)) {
+                return;
+              }
+              if (onGenerate) {
+                onGenerate(generados);
+              } else {
+                setTurnos(generados);
+              }
+            }}
+            className="text-primary"
+          >
+            <Wand2 className="w-3 h-3 mr-1" />
+            Generar según Programación
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addShift(turnos, setTurnos)}
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Agregar Turno
+          </Button>
+        </div>
+      )}
+    </div>
+    
+    <div className="space-y-2">
+      {turnos.map((turno, index) => (
+        <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg flex-wrap">
+          <div className="w-14">
+            <Input
+              value={turno.turno}
+              onChange={(e) => updateShift(turnos, setTurnos, index, 'turno', e.target.value.toUpperCase())}
+              placeholder="A"
+              maxLength={2}
+              disabled={disabled}
+              className="text-center font-bold"
+            />
+          </div>
+          <select
+            value={turno.dia_tipo || 'carrera_dia1'}
+            onChange={(e) => updateShift(turnos, setTurnos, index, 'dia_tipo', e.target.value)}
+            disabled={disabled}
+            className={`px-2 py-1.5 text-xs border rounded-md ${getDiaTipoClasses(turno.dia_tipo)}`}
+          >
+            {DIA_TIPO_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1 flex-1">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="time"
+              value={turno.hora_inicio}
+              onChange={(e) => updateShift(turnos, setTurnos, index, 'hora_inicio', e.target.value)}
+              disabled={disabled}
+              className="w-28"
+            />
+            <span className="text-muted-foreground">-</span>
+            <Input
+              type="time"
+              value={turno.hora_fin}
+              onChange={(e) => updateShift(turnos, setTurnos, index, 'hora_fin', e.target.value)}
+              disabled={disabled}
+              className="w-28"
+            />
+          </div>
+          <div className="flex items-center gap-1 w-24">
+            <Users className="w-4 h-4 text-muted-foreground" />
+            <Input
+              type="number"
+              min="1"
+              max="20"
+              value={turno.slots_count}
+              onChange={(e) => updateShift(turnos, setTurnos, index, 'slots_count', parseInt(e.target.value) || 1)}
+              disabled={disabled}
+              className="w-16"
+            />
+          </div>
+          {!disabled && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeShift(turnos, setTurnos, index)}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      ))}
+      
+      {turnos.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          No hay turnos configurados. Agrega al menos uno.
+        </p>
+      )}
+    </div>
+  </div>
+);
+};
+
 export default function VolunteerConfigManagement() {
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -571,184 +759,8 @@ export default function VolunteerConfigManagement() {
     }));
   };
 
-  const updateShift = (turnos, setTurnos, index, field, value) => {
-    const updated = [...turnos];
-    updated[index] = { ...updated[index], [field]: value };
-    setTurnos(updated);
-  };
-
-  // El turno nuevo continúa la secuencia: arranca donde terminó el anterior y
-  // dura lo mismo. Si el anterior cruzó la medianoche, el nuevo cae al día siguiente.
-  const addShift = (turnos, setTurnos) => {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const usedLetters = turnos.map(t => t.turno);
-    const nextLetter = letters.split('').find(l => !usedLetters.includes(l)) || 'X';
-
-    const anterior = turnos[turnos.length - 1];
-    let horaInicio = '08:00';
-    let horaFin = '12:00';
-    let diaTipo = 'carrera_dia1';
-
-    if (anterior) {
-      const inicioPrev = toMinutos(anterior.hora_inicio);
-      const finPrev = toMinutos(anterior.hora_fin);
-      const cruzaMedianoche = finPrev <= inicioPrev;
-      const duracion = cruzaMedianoche ? finPrev - inicioPrev + 1440 : finPrev - inicioPrev;
-
-      horaInicio = toHora(finPrev);
-      horaFin = toHora(finPrev + duracion);
-      diaTipo = cruzaMedianoche
-        ? siguienteDiaTipo(anterior.dia_tipo || 'carrera_dia1')
-        : (anterior.dia_tipo || 'carrera_dia1');
-    }
-
-    setTurnos([...turnos, {
-      turno: nextLetter,
-      hora_inicio: horaInicio,
-      hora_fin: horaFin,
-      slots_count: 2,
-      dia_tipo: diaTipo
-    }]);
-  };
-
-  const removeShift = (turnos, setTurnos, index) => {
-    setTurnos(turnos.filter((_, i) => i !== index));
-  };
 
   // Shift editor component. onGenerate (opcional) recibe los turnos generados
-  // según la programación; si no se pasa, se usa setTurnos.
-  const ShiftEditor = ({ turnos, setTurnos, disabled = false, onGenerate = null }) => {
-    // Get color classes based on dia_tipo
-    const getDiaTipoClasses = (diaTipo) => {
-      const info = getDiaTipoInfo(diaTipo);
-      switch(info.color) {
-        case 'purple': return 'border-purple-300 bg-purple-50 text-purple-700';
-        case 'blue': return 'border-blue-300 bg-blue-50 text-blue-700';
-        case 'green': return 'border-green-300 bg-green-50 text-green-700';
-        case 'orange': return 'border-orange-300 bg-orange-50 text-orange-700';
-        default: return 'border-gray-300 bg-gray-50 text-gray-700';
-      }
-    };
-
-    return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <Label className="text-sm font-medium">Turnos</Label>
-        {!disabled && (
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const generados = generarTurnosProgramacion(programacion);
-                if (!generados) {
-                  toast.error('Configura y guarda primero la programación del evento (fechas y duración del turno)');
-                  return;
-                }
-                if (turnos.length > 0 && !window.confirm(`Se reemplazarán los ${turnos.length} turnos actuales por ${generados.length} turnos generados según la programación del evento. Al guardar, los slots anteriores de la posición (incluyendo asignados) serán reemplazados para evitar duplicados. ¿Continuar?`)) {
-                  return;
-                }
-                if (onGenerate) {
-                  onGenerate(generados);
-                } else {
-                  setTurnos(generados);
-                }
-              }}
-              className="text-primary"
-            >
-              <Wand2 className="w-3 h-3 mr-1" />
-              Generar según Programación
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => addShift(turnos, setTurnos)}
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Agregar Turno
-            </Button>
-          </div>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        {turnos.map((turno, index) => (
-          <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg flex-wrap">
-            <div className="w-14">
-              <Input
-                value={turno.turno}
-                onChange={(e) => updateShift(turnos, setTurnos, index, 'turno', e.target.value.toUpperCase())}
-                placeholder="A"
-                maxLength={2}
-                disabled={disabled}
-                className="text-center font-bold"
-              />
-            </div>
-            <select
-              value={turno.dia_tipo || 'carrera_dia1'}
-              onChange={(e) => updateShift(turnos, setTurnos, index, 'dia_tipo', e.target.value)}
-              disabled={disabled}
-              className={`px-2 py-1.5 text-xs border rounded-md ${getDiaTipoClasses(turno.dia_tipo)}`}
-            >
-              {DIA_TIPO_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <div className="flex items-center gap-1 flex-1">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="time"
-                value={turno.hora_inicio}
-                onChange={(e) => updateShift(turnos, setTurnos, index, 'hora_inicio', e.target.value)}
-                disabled={disabled}
-                className="w-28"
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input
-                type="time"
-                value={turno.hora_fin}
-                onChange={(e) => updateShift(turnos, setTurnos, index, 'hora_fin', e.target.value)}
-                disabled={disabled}
-                className="w-28"
-              />
-            </div>
-            <div className="flex items-center gap-1 w-24">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="number"
-                min="1"
-                max="20"
-                value={turno.slots_count}
-                onChange={(e) => updateShift(turnos, setTurnos, index, 'slots_count', parseInt(e.target.value) || 1)}
-                disabled={disabled}
-                className="w-16"
-              />
-            </div>
-            {!disabled && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeShift(turnos, setTurnos, index)}
-                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-        ))}
-        
-        {turnos.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No hay turnos configurados. Agrega al menos uno.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-  };
 
   if (loading) {
     return (
@@ -965,6 +977,7 @@ export default function VolunteerConfigManagement() {
             <ShiftEditor 
               turnos={newPosition.turnos}
               setTurnos={(turnos) => setNewPosition({...newPosition, turnos})}
+              programacion={programacion}
             />
             
             <div className="flex justify-end gap-2 pt-4 border-t">
@@ -1086,6 +1099,7 @@ export default function VolunteerConfigManagement() {
                         turnos={editData.turnos}
                         setTurnos={(turnos) => setEditData({...editData, turnos})}
                         onGenerate={(turnos) => setEditData({...editData, turnos, reemplazar_slots: true})}
+                        programacion={programacion}
                       />
                       
                       <div className="flex justify-end gap-2 pt-4 border-t">
