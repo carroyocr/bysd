@@ -4,7 +4,7 @@ import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
-  Mountain, ExternalLink, ScanFace,
+  Mountain, ExternalLink, ScanFace, RefreshCw,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -326,7 +326,36 @@ export default function PerfilScreen() {
   const [itraEdit, setItraEdit] = useState(false);
   const [savingItra, setSavingItra] = useState(false);
   const [itraData, setItraData] = useState({});
+  const [cargandoItra, setCargandoItra] = useState(false);
   const itraSnap = athlete?.itra_snapshot || {};
+
+  /**
+   * Trae los datos desde itra.run. Es lo que hace innecesario copiarlos a
+   * mano; el formulario manual se queda como plan B, porque esto depende de
+   * una página ajena que puede cambiar o no dejarse leer.
+   */
+  const cargarDesdeItra = async (url) => {
+    const enlace = (url ?? athlete?.itra_url ?? '').trim();
+    if (!enlace) {
+      setMsg({ type: 'error', text: 'Escribe primero el enlace de tu perfil de ITRA' });
+      return;
+    }
+    setCargandoItra(true);
+    setMsg(null);
+    const { ok, data } = await authJson('POST', '/api/athletes/itra/sync', {
+      token: token(),
+      body: { itra_url: enlace },
+    });
+    setCargandoItra(false);
+    if (ok) {
+      setAthlete((p) => ({ ...p, itra_url: data.itra_url, itra_snapshot: data.itra_snapshot }));
+      setItraEdit(false);
+      const n = (data.itra_snapshot?.results || []).length;
+      setMsg({ type: 'ok', text: `Datos actualizados desde ITRA${n ? ` · ${n} carreras` : ''}.` });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudieron cargar los datos' });
+    }
+  };
 
   const startItra = () => {
     setItraData({
@@ -1060,20 +1089,23 @@ export default function PerfilScreen() {
 
         <Msg T={T} msg={msg} />
 
-        {/* Pestañas: el perfil creció demasiado para una sola columna. La fila
-            se desplaza en horizontal porque en un teléfono estrecho no caben
-            las cinco. */}
-        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [&::-webkit-scrollbar]:hidden">
+        {/* Pestañas solo con icono: con texto no caben las cinco en un teléfono
+            estrecho y alguna quedaba fuera de la pantalla. Repartidas a partes
+            iguales entran siempre. El nombre de la sección lo dice el título de
+            la tarjeta que se abre debajo. */}
+        <div className="flex gap-1.5">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               aria-current={tab === key}
-              className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-full whitespace-nowrap shrink-0 ${
+              aria-label={label}
+              title={label}
+              className={`flex-1 flex items-center justify-center py-2.5 rounded-xl ${
                 tab === key ? T.chipOn : T.chip
               }`}
             >
-              <Icon className="w-3.5 h-3.5" /> {label}
+              <Icon className="w-[18px] h-[18px]" />
             </button>
           ))}
         </div>
@@ -1544,16 +1576,27 @@ export default function PerfilScreen() {
             {!itraEdit ? (
               <div>
                 <p className={`text-[11px] leading-relaxed mb-2 ${T.muted}`}>
-                  ITRA no deja leer los perfiles desde fuera, así que estos datos
-                  los copias tú desde itra.run.
+                  Se leen de tu ficha pública de itra.run cuando pulsas actualizar.
                 </p>
                 {athlete?.itra_url ? (
-                  <button
-                    onClick={() => openExternal(athlete.itra_url)}
-                    className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-1 ${T.actionChip}`}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-[#E77622]" /> Ver mi perfil en ITRA
-                  </button>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <button
+                      onClick={() => cargarDesdeItra()}
+                      disabled={cargandoItra}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-[#E77622] text-white disabled:opacity-50"
+                    >
+                      {cargandoItra
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <RefreshCw className="w-3.5 h-3.5" />}
+                      {cargandoItra ? 'Cargando…' : 'Actualizar desde ITRA'}
+                    </button>
+                    <button
+                      onClick={() => openExternal(athlete.itra_url)}
+                      className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-[#E77622]" /> Ver en ITRA
+                    </button>
+                  </div>
                 ) : (
                   <p className={`text-xs py-2 ${T.muted}`}>Aún no has añadido tu perfil de ITRA.</p>
                 )}
@@ -1582,7 +1625,7 @@ export default function PerfilScreen() {
                       </div>
                     ))}
                     <p className={`text-[11px] mt-2 ${T.subtle}`}>
-                      Los resultados uno a uno se editan desde la web, en Mi perfil.
+                      Vienen de tu ficha de ITRA. Vuelve a cargarlos cuando corras algo nuevo.
                     </p>
                   </div>
                 )}
@@ -1600,6 +1643,20 @@ export default function PerfilScreen() {
                     onChange={(e) => setItraData((p) => ({ ...p, itra_url: e.target.value }))}
                   />
                 </Field>
+                <button
+                  onClick={() => cargarDesdeItra(itraData.itra_url)}
+                  disabled={cargandoItra || !(itraData.itra_url || '').trim()}
+                  className="w-full flex items-center justify-center gap-2 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
+                >
+                  {cargandoItra
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <RefreshCw className="w-4 h-4" />}
+                  {cargandoItra ? 'Cargando desde ITRA…' : 'Cargar datos de ITRA'}
+                </button>
+                <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+                  Se leen solos de tu ficha pública de itra.run. Si ITRA no responde,
+                  puedes escribirlos abajo a mano.
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   <Field T={T} label="Índice de rendimiento">
                     <TextInput T={T} type="number" inputMode="numeric" placeholder="Ej: 520"
