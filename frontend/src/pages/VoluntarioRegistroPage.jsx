@@ -72,6 +72,7 @@ const FORM_VACIO = {
 
   // Preferences
   talla_camiseta: '',
+  password: '',
   como_se_entero: '',
   comentarios: '',
 };
@@ -1329,6 +1330,29 @@ export default function VoluntarioRegistroPage() {
             {/* Step: Preferences */}
             {currentStepId === 'preferences' && (
               <div className="space-y-6">
+                {/* La contrasena crea su cuenta: con ella entra a la app a ver
+                    sus turnos y recibe el aviso 30 min antes de cada uno. */}
+                {!editMode && (
+                  <div className="space-y-2 p-4 rounded-lg border bg-muted/30">
+                    <Label>Contraseña para tu perfil (opcional)</Label>
+                    <Input
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="Mínimo 8 caracteres"
+                      value={formData.password}
+                      onChange={(e) => handleInputChange('password', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Con ella entras a la app BYSD Live para ver tus turnos y recibir
+                      un aviso 30 minutos antes de cada uno. Si la dejas en blanco podrás
+                      crearla después desde la app.
+                    </p>
+                    {formData.password && formData.password.length < 8 && (
+                      <p className="text-xs text-destructive">Debe tener al menos 8 caracteres.</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label>Talla de Camiseta</Label>
                   <select

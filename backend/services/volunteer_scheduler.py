@@ -77,6 +77,50 @@ async def send_shift_reminder(slot_id: int):
         logger.error(f"Error sending reminder for slot {slot_id}: {str(e)}")
 
 
+async def send_shift_push(slot_id: int):
+    """Aviso push al voluntario, media hora antes de su turno.
+
+    Se manda a los telefonos que ese voluntario tenga registrados en la app.
+    Si no tiene ninguno, o el push no esta configurado, no pasa nada: el correo
+    de la hora previa sigue saliendo igual.
+    """
+    try:
+        from server import db as database
+        from services import push_service
+
+        if not push_service.esta_configurado():
+            return
+
+        slot = await database.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+        if not slot:
+            return
+        email = (slot.get("email_asignado") or "").lower()
+        if not email:
+            return
+
+        tokens = [
+            d["token"]
+            async for d in database.push_devices.find({"staff_email": email}, {"token": 1})
+        ]
+        if not tokens:
+            return
+
+        hora = (slot.get("hora_inicio") or "")[:5]
+        puesto = slot.get("puesto") or "tu puesto"
+        resultado = await push_service.enviar(
+            tokens,
+            "Tu turno empieza en 30 minutos",
+            f"{hora} · {puesto}",
+            {"tipo": "turno", "slot_id": str(slot_id)},
+        )
+        muertos = resultado.get("tokens_muertos") or []
+        if muertos:
+            await database.push_devices.delete_many({"token": {"$in": muertos}})
+        logger.info(f"Push de turno {slot_id} enviado a {resultado.get('enviados')} dispositivos")
+    except Exception as e:
+        logger.error(f"No se pudo enviar el push del turno {slot_id}: {e}")
+
+
 async def send_friday_mass_email():
     """Send assignments summary email to all volunteers with assignments"""
     try:
@@ -193,16 +237,16 @@ async def schedule_all_reminders():
                 continue
             
             reminder_time = start_time - timedelta(hours=1)
-            
+
             # Only schedule if reminder time is in the future
             if reminder_time > now:
                 job_id = f"reminder_slot_{slot_id}"
-                
+
                 # Remove existing job if any
                 existing_job = scheduler.get_job(job_id)
                 if existing_job:
                     scheduler.remove_job(job_id)
-                
+
                 # Schedule the reminder
                 scheduler.add_job(
                     send_shift_reminder,
@@ -215,6 +259,22 @@ async def schedule_all_reminders():
                 logger.info(f"Scheduled reminder for slot {slot_id} at {reminder_time}")
             else:
                 skipped_count += 1
+
+            # Aviso push media hora antes, aparte del correo de la hora previa.
+            # El correo se lee cuando se lee; el push llega al bolsillo justo
+            # cuando toca salir hacia el puesto.
+            push_time = start_time - timedelta(minutes=30)
+            if push_time > now:
+                push_job = f"push_slot_{slot_id}"
+                if scheduler.get_job(push_job):
+                    scheduler.remove_job(push_job)
+                scheduler.add_job(
+                    send_shift_push,
+                    trigger=DateTrigger(run_date=push_time),
+                    args=[slot_id],
+                    id=push_job,
+                    name=f"Push for slot {slot_id}",
+                )
         
         logger.info(f"Scheduled {scheduled_count} reminders, skipped {skipped_count} (past dates)")
         return {

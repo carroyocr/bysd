@@ -29,19 +29,44 @@ function leerSeguidos() {
   }
 }
 
-async function registrarEnBackend(token, raceCode) {
+async function registrarEnBackend(token, raceCode, staffEmail) {
+  const cuerpo = {
+    token,
+    platform: Capacitor.getPlatform(),
+    race_code: raceCode || localStorage.getItem(RACE_KEY) || null,
+    followed: leerSeguidos(),
+  };
+  // Solo se manda cuando se registra desde el acceso de staff: si fuera
+  // siempre, entrar como corredor borraría el vínculo con el voluntario y se
+  // perderían los avisos de turno.
+  if (staffEmail) cuerpo.staff_email = staffEmail;
+
   const res = await fetch(`${API}/api/push/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      token,
-      platform: Capacitor.getPlatform(),
-      race_code: raceCode || localStorage.getItem(RACE_KEY) || null,
-      followed: leerSeguidos(),
-    }),
+    body: JSON.stringify(cuerpo),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+/**
+ * Liga este teléfono al voluntario que acaba de entrar como staff, para que le
+ * llegue el aviso 30 minutos antes de su turno. Pide permiso si hace falta.
+ */
+export async function registrarStaff(email) {
+  if (!pushDisponible() || !email) return;
+  try {
+    const permiso = await FirebaseMessaging.requestPermissions();
+    if (permiso.receive !== 'granted') return;
+    const { token } = await FirebaseMessaging.getToken();
+    if (!token) return;
+    await registrarEnBackend(token, null, email);
+    localStorage.setItem(TOKEN_KEY, token);
+    await ponerListeners();
+  } catch {
+    /* sin avisos de turno; el correo de la hora previa sigue saliendo */
+  }
 }
 
 /**

@@ -91,6 +91,9 @@ class VolunteerRegistrationData(BaseModel):
     talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL"]] = None
     como_se_entero: Optional[str] = None
     comentarios: Optional[str] = None
+    # Contrasena para entrar luego a su perfil y ver sus turnos. Opcional: si
+    # no la pone aqui, puede ponersela despues con un codigo al correo.
+    password: Optional[str] = None
 
 
 class VolunteerCancellationRequest(BaseModel):
@@ -518,9 +521,14 @@ async def register_volunteer(
     # Generate edit token
     edit_token = generate_edit_token()
     
+    # La contrasena no se guarda en la ficha del voluntario: va cifrada a su
+    # usuario del sistema, mas abajo.
+    datos = data.dict()
+    password = (datos.pop("password", None) or "").strip()
+
     # Create registration
     registration = {
-        **data.dict(),
+        **datos,
         "evento": evento,
         "email": email,
         "race_code": race_code,
@@ -532,7 +540,25 @@ async def register_volunteer(
     }
     
     await db.volunteer_registrations.insert_one(registration)
-    
+
+    # Cuenta para entrar a su perfil y ver sus turnos. Sin ningun permiso: solo
+    # lo suyo. Los permisos (escaner, fichas medicas) los da despues la
+    # organizacion desde la pestana Usuarios.
+    if password and len(password) >= 8 and not await db.admin_users.find_one({"username": email}):
+        import bcrypt
+
+        ahora = datetime.now(timezone.utc)
+        await db.admin_users.insert_one({
+            "username": email,
+            "password": bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
+            "nombre": f"{data.nombre} {data.apellidos}".strip(),
+            "email": email,
+            "permissions": [],
+            "es_voluntario": True,
+            "created_at": ahora,
+            "updated_at": ahora,
+        })
+
     # Clean up session
     await db.volunteer_sessions.delete_many({"email": email})
     

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
-  HeartPulse, ScanFace, Loader2,
+  HeartPulse, ScanFace, Loader2, Users, UserRound,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -76,6 +76,45 @@ export default function StaffScreen() {
       if (ok) setBio((p) => ({ ...p, activada: true }));
     }
     setBioBusy(false);
+  };
+
+  // Alta de contraseña del voluntario: pide un código a su correo y elige
+  // clave. Sirve igual para los que ya estaban registrados y para los nuevos,
+  // y evita mandarle a nadie una contraseña por correo.
+  const [clave, setClave] = useState({ vista: null, email: '', code: '', password: '', cargando: false, msg: '' });
+  const setClaveVista = (vista) => setClave((p) => ({ ...p, vista, msg: '' }));
+
+  const pedirCodigo = async () => {
+    setClave((p) => ({ ...p, cargando: true }));
+    setError('');
+    const { ok, data } = await authJson('POST', '/api/staff/password/request-code', {
+      body: { email: clave.email.trim().toLowerCase() },
+    });
+    setClave((p) => ({ ...p, cargando: false, vista: ok ? 'definir' : p.vista, msg: ok ? data.message : '' }));
+    if (!ok) setError(data.detail || 'No se pudo enviar el código');
+  };
+
+  const definirClave = async () => {
+    setClave((p) => ({ ...p, cargando: true }));
+    setError('');
+    const { ok, data } = await authJson('POST', '/api/staff/password/set', {
+      body: {
+        email: clave.email.trim().toLowerCase(),
+        code: clave.code.trim(),
+        password: clave.password,
+      },
+    });
+    setClave((p) => ({ ...p, cargando: false }));
+    if (!ok) {
+      setError(data.detail || 'No se pudo guardar la contraseña');
+      return;
+    }
+    localStorage.setItem('admin_token', data.token);
+    localStorage.setItem('admin_username', data.username);
+    localStorage.setItem('admin_is_admin', 'false');
+    localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    setClave({ vista: null, email: '', code: '', password: '', cargando: false, msg: '' });
+    setLogged(true);
   };
 
   const doLogin = async (e) => {
@@ -166,7 +205,72 @@ export default function StaffScreen() {
                   {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => { setClaveVista(clave.vista ? null : 'pedir'); setError(''); }}
+                className={`block mx-auto text-xs underline ${T.muted}`}
+              >
+                Soy voluntario y no tengo contraseña
+              </button>
             </form>
+
+            {clave.vista && (
+              <div className={`mt-4 pt-4 border-t space-y-3 ${T.divider}`}>
+                <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+                  {clave.vista === 'pedir'
+                    ? 'Escribe el correo con el que te registraste como voluntario y te enviamos un código.'
+                    : `Escribe el código que enviamos a ${clave.email} y elige tu contraseña.`}
+                </p>
+
+                {clave.vista === 'pedir' ? (
+                  <>
+                    <input
+                      type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      placeholder="tu@correo.com"
+                      value={clave.email}
+                      onChange={(e) => setClave((p) => ({ ...p, email: e.target.value }))}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={pedirCodigo}
+                      disabled={clave.cargando || !clave.email.trim()}
+                      className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
+                    >
+                      {clave.cargando ? 'Enviando…' : 'Enviarme el código'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      inputMode="numeric"
+                      placeholder="Código de 6 dígitos"
+                      value={clave.code}
+                      onChange={(e) => setClave((p) => ({ ...p, code: e.target.value }))}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Nueva contraseña (mínimo 8)"
+                      value={clave.password}
+                      onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={definirClave}
+                      disabled={clave.cargando}
+                      className="w-full bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50"
+                    >
+                      {clave.cargando ? 'Guardando…' : 'Guardar y entrar'}
+                    </button>
+                  </>
+                )}
+                {clave.msg && <p className="text-xs text-green-500">{clave.msg}</p>}
+              </div>
+            )}
           </div>
         </div>
       </Screen>
@@ -195,6 +299,20 @@ export default function StaffScreen() {
       title: 'Atletas',
       description: 'Dorsal, tipo de sangre, alergias y contacto de emergencia',
     },
+    can('scanner') && {
+      to: '/live/staff/equipo',
+      Icon: Users,
+      title: 'Equipo',
+      description: 'Salud y contacto de emergencia del propio staff',
+    },
+    // Su perfil lo ve cualquiera del equipo: no hace falta permiso para
+    // consultar los datos de uno mismo.
+    {
+      to: '/live/staff/perfil',
+      Icon: UserRound,
+      title: 'Mi perfil',
+      description: 'Tus datos y los turnos que tienes asignados',
+    },
   ].filter(Boolean);
 
   return (
@@ -205,8 +323,8 @@ export default function StaffScreen() {
             <ShieldCheck className="w-5 h-5 text-[#E77622]" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold truncate">{localStorage.getItem('admin_username')}</p>
-            <p className={`text-xs ${T.muted}`}>{isAdmin ? 'Administrador' : 'Miembro del staff'}</p>
+            <p className="text-sm font-bold truncate">{isAdmin ? 'Administrador' : 'Staff'}</p>
+            <p className={`text-xs truncate ${T.muted}`}>{localStorage.getItem('admin_username')}</p>
           </div>
         </div>
 
