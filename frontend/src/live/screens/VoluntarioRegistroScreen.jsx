@@ -32,6 +32,22 @@ const OBLIGATORIOS = [
 ];
 
 /**
+ * Etiqueta + campo.
+ *
+ * Va FUERA del componente a propósito. Definida dentro, React la trata como un
+ * tipo de componente distinto en cada render: desmonta el input, este pierde el
+ * foco y el teclado del teléfono se cierra tras escribir una sola letra.
+ */
+function Campo({ T, label, children }) {
+  return (
+    <label className="block">
+      <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+/**
  * Alta de voluntario desde la app.
  *
  * Hasta ahora solo se podía desde la web. El flujo es el mismo de allí —código
@@ -98,12 +114,6 @@ export default function VoluntarioRegistroScreen() {
     else setError(data.detail || 'No se pudo completar el registro');
   };
 
-  const Campo = ({ label, children }) => (
-    <label className="block">
-      <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>{label}</span>
-      {children}
-    </label>
-  );
   const clase = `w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`;
 
   return (
@@ -126,7 +136,7 @@ export default function VoluntarioRegistroScreen() {
 
         {paso === 'email' && (
           <div className="space-y-3">
-            <Campo label="Tu correo">
+            <Campo T={T} label="Tu correo">
               <input type="email" inputMode="email" autoCapitalize="none" value={email}
                 onChange={(e) => setEmail(e.target.value)} className={clase} placeholder="tu@correo.com" />
             </Campo>
@@ -139,7 +149,7 @@ export default function VoluntarioRegistroScreen() {
 
         {paso === 'codigo' && (
           <div className="space-y-3">
-            <Campo label="Código de 6 dígitos">
+            <Campo T={T} label="Código de 6 dígitos">
               <input inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} className={clase} />
             </Campo>
             <button onClick={verificar} disabled={cargando || !code.trim()}
@@ -156,7 +166,7 @@ export default function VoluntarioRegistroScreen() {
         {paso === 'datos' && (
           <div className="space-y-3">
             {eventos.length > 1 && (
-              <Campo label="¿En qué evento quieres ayudar?">
+              <Campo T={T} label="¿En qué evento quieres ayudar?">
                 <select value={evento} onChange={(e) => setEvento(e.target.value)} className={clase}>
                   {eventos.map((ev) => (
                     <option key={ev} value={ev}>{ev === 'campeonato' ? 'Campeonato' : 'Carrera'}</option>
@@ -166,14 +176,14 @@ export default function VoluntarioRegistroScreen() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Nombre *"><input value={datos.nombre} onChange={upd('nombre')} className={clase} /></Campo>
-              <Campo label="Apellidos *"><input value={datos.apellidos} onChange={upd('apellidos')} className={clase} /></Campo>
+              <Campo T={T} label="Nombre *"><input value={datos.nombre} onChange={upd('nombre')} className={clase} /></Campo>
+              <Campo T={T} label="Apellidos *"><input value={datos.apellidos} onChange={upd('apellidos')} className={clase} /></Campo>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Fecha de nacimiento *">
+              <Campo T={T} label="Fecha de nacimiento *">
                 <input type="date" value={datos.fecha_nacimiento} onChange={upd('fecha_nacimiento')} className={clase} />
               </Campo>
-              <Campo label="Sexo *">
+              <Campo T={T} label="Sexo *">
                 <select value={datos.sexo} onChange={upd('sexo')} className={clase}>
                   <option value="">Seleccionar</option>
                   {SEXOS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -181,18 +191,18 @@ export default function VoluntarioRegistroScreen() {
               </Campo>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Teléfono *"><input type="tel" inputMode="tel" value={datos.telefono} onChange={upd('telefono')} className={clase} /></Campo>
-              <Campo label="Nacionalidad *"><input value={datos.nacionalidad} onChange={upd('nacionalidad')} className={clase} /></Campo>
+              <Campo T={T} label="Teléfono *"><input type="tel" inputMode="tel" value={datos.telefono} onChange={upd('telefono')} className={clase} /></Campo>
+              <Campo T={T} label="Nacionalidad *"><input value={datos.nacionalidad} onChange={upd('nacionalidad')} className={clase} /></Campo>
             </div>
-            <Campo label="Ciudad de residencia *"><input value={datos.ciudad_residencia} onChange={upd('ciudad_residencia')} className={clase} /></Campo>
+            <Campo T={T} label="Ciudad de residencia *"><input value={datos.ciudad_residencia} onChange={upd('ciudad_residencia')} className={clase} /></Campo>
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="¿Has sido voluntario antes?">
+              <Campo T={T} label="¿Has sido voluntario antes?">
                 <select value={datos.experiencia_voluntariado} onChange={upd('experiencia_voluntariado')} className={clase}>
                   {SI_NO.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Campo>
-              <Campo label="Talla de camiseta">
+              <Campo T={T} label="Talla de camiseta">
                 <select value={datos.talla_camiseta} onChange={upd('talla_camiseta')} className={clase}>
                   <option value="">Seleccionar</option>
                   {TALLAS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -201,37 +211,37 @@ export default function VoluntarioRegistroScreen() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Tipo de sangre">
+              <Campo T={T} label="Tipo de sangre">
                 <select value={datos.tipo_sangre} onChange={upd('tipo_sangre')} className={clase}>
                   <option value="">Seleccionar</option>
                   {SANGRES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Campo>
-              <Campo label="¿Condición médica?">
+              <Campo T={T} label="¿Condición médica?">
                 <select value={datos.condicion_medica} onChange={upd('condicion_medica')} className={clase}>
                   {SI_NO.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Campo>
             </div>
             {datos.condicion_medica === 'Sí' && (
-              <Campo label="¿Cuál?"><input value={datos.condicion_medica_detalle} onChange={upd('condicion_medica_detalle')} className={clase} /></Campo>
+              <Campo T={T} label="¿Cuál?"><input value={datos.condicion_medica_detalle} onChange={upd('condicion_medica_detalle')} className={clase} /></Campo>
             )}
-            <Campo label="¿Alergias?">
+            <Campo T={T} label="¿Alergias?">
               <select value={datos.alergias} onChange={upd('alergias')} className={clase}>
                 {SI_NO.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Campo>
             {datos.alergias === 'Sí' && (
-              <Campo label="¿A qué?"><input value={datos.alergias_detalle} onChange={upd('alergias_detalle')} className={clase} /></Campo>
+              <Campo T={T} label="¿A qué?"><input value={datos.alergias_detalle} onChange={upd('alergias_detalle')} className={clase} /></Campo>
             )}
 
-            <Campo label="Contacto de emergencia *"><input value={datos.contacto_emergencia_nombre} onChange={upd('contacto_emergencia_nombre')} className={clase} /></Campo>
+            <Campo T={T} label="Contacto de emergencia *"><input value={datos.contacto_emergencia_nombre} onChange={upd('contacto_emergencia_nombre')} className={clase} /></Campo>
             <div className="grid grid-cols-2 gap-3">
-              <Campo label="Relación"><input value={datos.contacto_emergencia_relacion} onChange={upd('contacto_emergencia_relacion')} className={clase} /></Campo>
-              <Campo label="Su teléfono *"><input type="tel" inputMode="tel" value={datos.contacto_emergencia_telefono} onChange={upd('contacto_emergencia_telefono')} className={clase} /></Campo>
+              <Campo T={T} label="Relación"><input value={datos.contacto_emergencia_relacion} onChange={upd('contacto_emergencia_relacion')} className={clase} /></Campo>
+              <Campo T={T} label="Su teléfono *"><input type="tel" inputMode="tel" value={datos.contacto_emergencia_telefono} onChange={upd('contacto_emergencia_telefono')} className={clase} /></Campo>
             </div>
 
-            <Campo label="Contraseña para tu perfil (mínimo 8)">
+            <Campo T={T} label="Contraseña para tu perfil (mínimo 8)">
               <input type="password" autoComplete="new-password" value={datos.password} onChange={upd('password')} className={clase} />
             </Campo>
             <p className={`text-[11px] leading-relaxed ${T.muted}`}>
