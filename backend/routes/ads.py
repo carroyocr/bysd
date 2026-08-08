@@ -20,7 +20,17 @@ solo_sponsors = Depends(require_permission("sponsors"))
 # Solo estos campos salen al publico; las metricas y fechas son del panel.
 PUBLIC_FIELDS = {
     "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
-    "logo_url": 1, "weight": 1, "order": 1,
+    "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
+}
+
+# banner_url: PNG del tamano exacto de la barra (1200x240, proporcion 5:1).
+# Cuando existe, sustituye al icono y al texto.
+# detail_url: imagen que se abre dentro de la app al tocar el banner, para que
+# el patrocinador pueda contar algo mas largo sin sacar al usuario de BYSD.
+IMAGENES = {
+    "logo": "logo_url",
+    "banner": "banner_url",
+    "detail": "detail_url",
 }
 
 
@@ -119,6 +129,8 @@ async def create_banner(data: BannerCreate, db=Depends(get_db)):
         "text": (data.text or "").strip(),
         "link_url": (data.link_url or "").strip(),
         "logo_url": None,
+        "banner_url": None,
+        "detail_url": None,
         "weight": data.weight,
         "start_at": data.start_at,
         "end_at": data.end_at,
@@ -166,16 +178,30 @@ async def delete_banner(banner_id: str, db=Depends(get_db)):
     if not banner:
         raise HTTPException(status_code=404, detail="Banner no encontrado")
     await db.ad_banners.delete_one({"id": banner_id})
-    # Limpiar el logo de GridFS para no acumular huerfanos.
-    logo_url = banner.get("logo_url") or ""
-    if logo_url.startswith("/api/uploads/ads/"):
-        from services import file_storage
-        await file_storage.delete(logo_url.rsplit("/", 1)[-1])
+    # Limpiar las imagenes de GridFS para no acumular huerfanos.
+    from services import file_storage
+
+    for campo in IMAGENES.values():
+        url = banner.get(campo) or ""
+        if url.startswith("/api/uploads/ads/"):
+            await file_storage.delete(url.rsplit("/", 1)[-1])
     return {"message": "Banner eliminado"}
 
 
-@router.post("/{banner_id}/logo", dependencies=[solo_sponsors])
-async def upload_banner_logo(banner_id: str, file: UploadFile = File(...), db=Depends(get_db)):
+@router.post("/{banner_id}/imagen/{tipo}", dependencies=[solo_sponsors])
+async def upload_banner_image(
+    banner_id: str, tipo: str, file: UploadFile = File(...), db=Depends(get_db)
+):
+    """Sube una de las tres imagenes del banner.
+
+    - logo:   el icono cuadrado de siempre, junto al nombre y el texto.
+    - banner: la pieza completa que ocupa la barra entera (1200x240).
+    - detail: la imagen que se abre dentro de la app al tocar el banner.
+    """
+    campo = IMAGENES.get(tipo)
+    if not campo:
+        raise HTTPException(status_code=400, detail="Tipo de imagen no valido")
+
     banner = await db.ad_banners.find_one({"id": banner_id})
     if not banner:
         raise HTTPException(status_code=404, detail="Banner no encontrado")
@@ -188,18 +214,58 @@ async def upload_banner_logo(banner_id: str, file: UploadFile = File(...), db=De
     from services import file_storage
 
     content = await file.read()
-    ext_original = file.filename.split(".")[-1] if file.filename and "." in file.filename else "png"
-    content, ext, content_type = file_storage.compress_image(content, ext_original, file.content_type)
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="La imagen no puede pasar de 8MB")
 
-    filename = f"{banner['race_code']}_{banner_id}.{ext}"
+    ext_original = file.filename.split(".")[-1] if file.filename and "." in file.filename else "png"
+
+    # El logo cuadrado puede pasar por la compresion normal; el banner y la
+    # imagen ampliada no, porque suelen ser PNG con transparencia y esa
+    # compresion los pasa a JPEG aplanando el alfa contra negro.
+    if tipo == "logo":
+        content, ext, content_type = file_storage.compress_image(content, ext_original, file.content_type)
+    else:
+        content, ext, content_type = file_storage.compress_banner(content, ext_original, file.content_type)
+
+    sufijo = "" if tipo == "logo" else f"_{tipo}"
+    filename = f"{banner['race_code']}_{banner_id}{sufijo}.{ext}"
     await file_storage.save(filename, content, content_type, file_storage.FOLDER_ADS)
 
-    logo_url = f"/api/uploads/ads/{filename}"
+    url = f"/api/uploads/ads/{filename}"
     await db.ad_banners.update_one(
         {"id": banner_id},
-        {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc)}},
+        {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
     )
-    return {"message": "Logo subido exitosamente", "logo_url": logo_url}
+    return {"message": "Imagen subida exitosamente", "tipo": tipo, "url": url, campo: url}
+
+
+@router.delete("/{banner_id}/imagen/{tipo}", dependencies=[solo_sponsors])
+async def delete_banner_image(banner_id: str, tipo: str, db=Depends(get_db)):
+    """Quita una imagen: sirve para volver del banner completo al icono+texto."""
+    campo = IMAGENES.get(tipo)
+    if not campo:
+        raise HTTPException(status_code=400, detail="Tipo de imagen no valido")
+
+    banner = await db.ad_banners.find_one({"id": banner_id})
+    if not banner:
+        raise HTTPException(status_code=404, detail="Banner no encontrado")
+
+    url = banner.get(campo) or ""
+    if url.startswith("/api/uploads/ads/"):
+        from services import file_storage
+        await file_storage.delete(url.rsplit("/", 1)[-1])
+
+    await db.ad_banners.update_one(
+        {"id": banner_id},
+        {"$set": {campo: None, "updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"message": "Imagen eliminada", "tipo": tipo}
+
+
+@router.post("/{banner_id}/logo", dependencies=[solo_sponsors])
+async def upload_banner_logo(banner_id: str, file: UploadFile = File(...), db=Depends(get_db)):
+    """Ruta antigua del logo. Se mantiene para no romper el panel ya publicado."""
+    return await upload_banner_image(banner_id, "logo", file, db)
 
 
 class TrackRequest(BaseModel):

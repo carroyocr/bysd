@@ -19,10 +19,12 @@ import CheerScreen from './screens/CheerScreen';
 import WinnersScreen from './screens/WinnersScreen';
 import RaceInfoScreen from './screens/RaceInfoScreen';
 import SponsorsScreen from './screens/SponsorsScreen';
+import PatrocinadorScreen from './screens/PatrocinadorScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
 import PerfilScreen from './screens/PerfilScreen';
 import StaffScreen from './screens/StaffScreen';
+import StaffAtletasScreen from './screens/StaffAtletasScreen';
 import ReglasScreen from './screens/ReglasScreen';
 import LogisticaScreen from './screens/LogisticaScreen';
 import FaqScreen from './screens/FaqScreen';
@@ -127,6 +129,7 @@ function RaceShell() {
         <Route path="logistica" element={<LogisticaScreen />} />
         <Route path="faq" element={<FaqScreen />} />
         <Route path="patrocinadores" element={<SponsorsScreen />} />
+        <Route path="patrocinador/:adId" element={<PatrocinadorScreen />} />
         <Route path="config" element={<SettingsScreen />} />
         <Route path="sos" element={<SosScreen />} />
       </Routes>
@@ -225,6 +228,7 @@ export default function LiveApp() {
         {/* Antes de :raceCode para que no se interpreten como código de carrera */}
         <Route path="perfil" element={<PerfilScreen />} />
         <Route path="staff" element={<StaffScreen />} />
+        <Route path="staff/atletas" element={<StaffAtletasScreen />} />
         <Route path=":raceCode/*" element={<RaceShell />} />
       </Routes>
     </LiveThemeProvider>
