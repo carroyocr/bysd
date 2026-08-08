@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// Firma de release: las credenciales viven fuera del repo (bysd-secretos).
+// Sin ese archivo el build de release sale sin firmar, util para compilar
+// en cualquier maquina sin las llaves.
+def signingPropsFile = file(System.getProperty("user.home") + "/Proyectos/bysd-secretos/bysd-android-signing.properties")
+def signingProps = new Properties()
+if (signingPropsFile.exists()) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
+}
+
 android {
     namespace "com.backyardultrasd.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,10 +25,23 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (signingProps.containsKey('storeFile')) {
+            release {
+                storeFile file(signingProps['storeFile'])
+                storePassword signingProps['storePassword']
+                keyAlias signingProps['keyAlias']
+                keyPassword signingProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (signingProps.containsKey('storeFile')) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
