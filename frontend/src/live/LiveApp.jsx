@@ -20,6 +20,11 @@ import RaceInfoScreen from './screens/RaceInfoScreen';
 import SponsorsScreen from './screens/SponsorsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import SosScreen from './screens/SosScreen';
+import PerfilScreen from './screens/PerfilScreen';
+import StaffScreen from './screens/StaffScreen';
+import ReglasScreen from './screens/ReglasScreen';
+import LogisticaScreen from './screens/LogisticaScreen';
+import FaqScreen from './screens/FaqScreen';
 
 const RaceContext = createContext(null);
 export const useRace = () => useContext(RaceContext);
@@ -66,7 +71,10 @@ function useLapNotifications(raceCode) {
  * menú lateral y expone la carrera a todas las pantallas internas.
  */
 function RaceShell() {
-  const { raceCode } = useParams();
+  const { raceCode: rawCode } = useParams();
+  // El backend distingue mayúsculas en los códigos; se normaliza una sola
+  // vez aquí para que la URL funcione venga como venga (bysd-2026, BYSD-2026).
+  const raceCode = rawCode?.toUpperCase();
   const [race, setRace] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -81,7 +89,7 @@ function RaceShell() {
   }, [raceCode]);
 
   const ctx = {
-    raceCode: raceCode?.toUpperCase(),
+    raceCode,
     race,
     openDrawer: () => setDrawerOpen(true),
   };
@@ -100,6 +108,9 @@ function RaceShell() {
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
+        <Route path="reglas" element={<ReglasScreen />} />
+        <Route path="logistica" element={<LogisticaScreen />} />
+        <Route path="faq" element={<FaqScreen />} />
         <Route path="patrocinadores" element={<SponsorsScreen />} />
         <Route path="config" element={<SettingsScreen />} />
         <Route path="sos" element={<SosScreen />} />
@@ -115,20 +126,78 @@ function RaceShell() {
 }
 
 /**
- * Plantilla de pantalla estándar: barra superior + contenido + pie publicitario.
+ * Plantilla de pantalla estándar: barra superior + contenido. El pie
+ * publicitario solo aparece donde se pide con showAds (inicio, detalle del
+ * corredor, ganadores y enviar ánimo). Dentro de una carrera usa su menú
+ * lateral; fuera (perfil, staff) monta uno propio con la carrera activa.
  */
-export function Screen({ title, back = false, children, noAds = false }) {
-  const { T } = useLiveTheme();
-  const { raceCode, openDrawer } = useRace() || {};
+export function Screen(props) {
+  const ctx = useRace();
+  return ctx ? <RaceScreen {...props} ctx={ctx} /> : <StandaloneScreen {...props} />;
+}
 
+function ScreenLayout({ T, title, back, onMenu, raceCode, showAds, children, footer }) {
   return (
     <div className={`min-h-[100dvh] flex flex-col ${T.page}`} style={{ WebkitTapHighlightColor: 'transparent' }}>
       <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-[100dvh]">
-        <TopBar title={title} back={back} onMenu={openDrawer} raceCode={raceCode} />
+        <TopBar title={title} back={back} onMenu={onMenu} raceCode={raceCode} />
         <main className="flex-1">{children}</main>
-        {!noAds && <AdFooter raceCode={raceCode} />}
+        {showAds && <AdFooter raceCode={raceCode} />}
+        {footer}
       </div>
     </div>
+  );
+}
+
+function RaceScreen({ title, back = false, children, showAds = false, ctx }) {
+  const { T } = useLiveTheme();
+  return (
+    <ScreenLayout
+      T={T}
+      title={title}
+      back={back}
+      onMenu={ctx.openDrawer}
+      raceCode={ctx.raceCode}
+      showAds={showAds}
+    >
+      {children}
+    </ScreenLayout>
+  );
+}
+
+/** Pantallas fuera de una carrera: el menú lateral usa la carrera activa. */
+function StandaloneScreen({ title, back = false, children, showAds = false }) {
+  const { T } = useLiveTheme();
+  const [active, setActive] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    let cancel = false;
+    getJson('/api/race-config/active')
+      .then((data) => { if (!cancel) setActive(data); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, []);
+
+  return (
+    <ScreenLayout
+      T={T}
+      title={title}
+      back={back}
+      onMenu={() => setDrawerOpen(true)}
+      raceCode={active?.code}
+      showAds={showAds}
+      footer={(
+        <Drawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          raceCode={active?.code}
+          raceName={active?.name}
+        />
+      )}
+    >
+      {children}
+    </ScreenLayout>
   );
 }
 
@@ -138,6 +207,9 @@ export default function LiveApp() {
       <Routes>
         <Route index element={<WelcomeScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
+        {/* Antes de :raceCode para que no se interpreten como código de carrera */}
+        <Route path="perfil" element={<PerfilScreen />} />
+        <Route path="staff" element={<StaffScreen />} />
         <Route path=":raceCode/*" element={<RaceShell />} />
       </Routes>
     </LiveThemeProvider>

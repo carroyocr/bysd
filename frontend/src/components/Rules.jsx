@@ -2,51 +2,14 @@ import React from 'react';
 import { Ban, CheckCircle2, XCircle, AlertTriangle, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { REGLAS } from '../content/eventInfo';
 
 export default function Rules() {
-  const formatRules = [
-    { text: 'Circuito de 6.706 km (4.167 millas) por vuelta', icon: <CheckCircle2 className="w-5 h-5 text-primary" /> },
-    { text: 'Cada vuelta debe completarse en 60 minutos o menos', icon: <CheckCircle2 className="w-5 h-5 text-primary" /> },
-    { text: 'Todas las vueltas comienzan puntualmente al inicio de cada hora', icon: <CheckCircle2 className="w-5 h-5 text-primary" /> },
-    { text: 'Tres llamadas antes de iniciar: 3 minutos, 2 minutos y 1 minuto', icon: <CheckCircle2 className="w-5 h-5 text-primary" /> },
-    { text: 'Los corredores deben estar dentro del corral al inicio', icon: <CheckCircle2 className="w-5 h-5 text-primary" /> },
-  ];
-
-  const mandatoryRules = [
-    'Los corredores que no regresen antes de que el tiempo llegue a cero son eliminados',
-    'No se puede iniciar una vuelta antes de que el reloj oficial comience',
-    'Las vueltas deben completarse únicamente por el atleta (sin acompañantes)',
-    'No se permite compañía, bicicletas, mascotas o cualquier otro tipo de ayuda en el circuito',
-    'Los corredores pueden descansar, hidratarse y comer en el área de meta entre vueltas',
-  ];
-
-  const prohibitions = [
-    { text: 'Consumo de alcohol durante la competencia', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Correr con dolor intenso, mareos, juicio alterado o agotamiento extremo', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Conducta ofensiva, agresiva, irrespetuosa o discriminatoria', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Interferir con el rendimiento o área de descanso de otros corredores', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Tirar basura en el circuito o áreas comunes', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Alterar vegetación, fauna o estructuras naturales', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Hacer fogatas', icon: <Ban className="w-5 h-5" /> },
-    { text: 'Tomar atajos o cortar camino', icon: <Ban className="w-5 h-5" /> },
-  ];
-
-  const winnerRules = [
-    'Solo hay un ganador: el "Último en Pie" (Last One Standing)',
-    'El ganador es el último corredor en completar una vuelta válida',
-    'Para ganar, el atleta debe completar una vuelta adicional después de que todos los demás hayan abandonado o sido eliminados',
-    'Si no se completa esta última vuelta, no hay ganador',
-  ];
-
-  const sportsmanship = [
-    'Mantener actitud respetuosa hacia atletas, voluntarios, personal, acompañantes y público',
-    'Se espera deportividad ejemplar y apoyo saludable entre participantes',
-    'Cualquier conflicto debe reportarse al Comité Organizador',
-    'Moderar volumen de música y conversación en área de carpas',
-    'Los atletas que decidan retirarse deben notificar al personal en la línea de meta',
-    'No se permite reingreso después del retiro',
-    'Los corredores no pueden permanecer en el corral durante vueltas posteriores',
-  ];
+  const formatRules = REGLAS.formato.map((text) => ({ text, icon: <CheckCircle2 className="w-5 h-5 text-primary" /> }));
+  const mandatoryRules = REGLAS.obligatorias;
+  const prohibitions = REGLAS.prohibiciones.map((text) => ({ text, icon: <Ban className="w-5 h-5" /> }));
+  const winnerRules = REGLAS.ganador;
+  const sportsmanship = REGLAS.deportividad;
 
   return (
     <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
@@ -185,22 +148,12 @@ export default function Rules() {
                     <strong className="text-foreground"> "Leave No Trace"</strong> (No Dejar Rastro).
                   </p>
                   <ul className="space-y-2">
-                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-                      <span>Toda la basura debe ser traída de vuelta al área de meta</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-                      <span>Puntos de eliminación de basura estarán disponibles, pero no se permite basura en carpas ni en el circuito</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-                      <span>Respetar áreas de camping designadas</span>
-                    </li>
-                    <li className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
-                      <span className="font-semibold text-destructive">El incumplimiento puede llevar a descalificación inmediata</span>
-                    </li>
+                    {REGLAS.ambiental.map((item, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0"></span>
+                        <span className={index === REGLAS.ambiental.length - 1 ? 'font-semibold text-destructive' : ''}>{item}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -222,43 +175,23 @@ export default function Rules() {
                   <div className="space-y-2">
                     <h4 className="font-bold text-foreground">Señalización del Circuito</h4>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        150 banderas cada 40 metros
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Material reflectante en banderas
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Señales adicionales en puntos clave
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Cinta/marcadores en giros
-                      </li>
+                      {REGLAS.senalizacion.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
+                          {item}
+                        </li>
+                      ))}
                     </ul>
                   </div>
                   <div className="space-y-2">
                     <h4 className="font-bold text-foreground">Terreno del Circuito</h4>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Tierra compactada
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Áreas sombreadas y expuestas
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Tramos amplios para ritmo consistente
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
-                        Curvas suaves, no técnico
-                      </li>
+                      {REGLAS.terreno.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></span>
+                          {item}
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 </div>

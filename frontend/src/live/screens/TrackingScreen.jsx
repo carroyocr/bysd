@@ -8,16 +8,20 @@ import { Screen, useRace } from '../LiveApp';
 const POLL_MS = 30000;
 
 const FILTERS = [
+  { key: 'all', label: 'Todos' },
   { key: 'active', label: 'Activos' },
   { key: 'retired', label: 'DNF' },
   { key: 'dns', label: 'DNS' },
   { key: 'favoritos', label: 'Fav' },
-  { key: 'all', label: 'Todos' },
 ];
 
 // Colores para el aro del avatar (estilo tracking de maratón)
 const RING_COLORS = ['#E77622', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6', '#facc15'];
 const ringOf = (bib) => RING_COLORS[(parseInt(bib, 10) || 0) % RING_COLORS.length];
+
+// Filtro y búsqueda elegidos por carrera: al abrir la ficha de un corredor y
+// volver, la pantalla se vuelve a montar y debe conservar la selección.
+const vistaPorCarrera = new Map();
 
 /**
  * Seguimiento: lista de corredores con búsqueda por nombre o dorsal y filtros.
@@ -29,10 +33,14 @@ export default function TrackingScreen() {
   const navigate = useNavigate();
 
   const [participants, setParticipants] = useState(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('active');
+  const [search, setSearch] = useState(() => vistaPorCarrera.get(raceCode)?.search || '');
+  const [filter, setFilter] = useState(() => vistaPorCarrera.get(raceCode)?.filter || 'active');
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
+
+  useEffect(() => {
+    vistaPorCarrera.set(raceCode, { filter, search });
+  }, [raceCode, filter, search]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -59,6 +67,15 @@ export default function TrackingScreen() {
     favoritos: (participants || []).filter((p) => followed.includes(p.bib)).length,
     all: (participants || []).length,
   }), [participants, followed]);
+
+  // Carrera concluida: ya nadie está activo ni en espera de salida. Sin
+  // corredores activos el filtro "Activos" sobra y se entra a "Todos".
+  const concluida = participants !== null && counts.all > 0 && counts.active === 0;
+  const visibleFilters = concluida ? FILTERS.filter(({ key }) => key !== 'active') : FILTERS;
+
+  useEffect(() => {
+    if (concluida && filter === 'active') setFilter('all');
+  }, [concluida, filter]);
 
   const filtered = useMemo(() => {
     let list = participants || [];
@@ -106,7 +123,7 @@ export default function TrackingScreen() {
 
         {/* Filtros: compactos para caber en una fila sin scroll horizontal */}
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {FILTERS.map(({ key, label }) => (
+          {visibleFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw,
+  Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck,
 } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 
@@ -23,9 +23,10 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
-    { label: 'Perfil del corredor', Icon: User, action: () => { onClose(); window.location.href = '/mi-perfil'; } },
+    { label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') },
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
+    { label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
   ];
 
@@ -35,7 +36,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     >
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <aside
-        className={`absolute top-0 left-0 h-full w-[82%] max-w-[320px] flex flex-col transition-transform duration-250 ease-out ${T.drawer} ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`absolute top-0 left-0 h-full w-[82%] max-w-[320px] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-transform duration-250 ease-out ${T.drawer} ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex items-center justify-between px-4 h-16 shrink-0">
           <div className="font-extrabold tracking-wide text-base">

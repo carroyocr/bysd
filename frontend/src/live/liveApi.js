@@ -22,6 +22,50 @@ export async function postJson(path, body) {
   return { ok: res.ok, data };
 }
 
+/**
+ * Ficha pública de un corredor. En carreras históricas la ficha completa
+ * puede no existir (sus resultados viven en la colección legada), así que
+ * se cae a los datos básicos del listado de participantes.
+ */
+export async function getAthleteProfile(bib, raceCode) {
+  try {
+    return await getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`);
+  } catch {
+    const list = await getJson(`/api/race/participants?race_code=${raceCode}`);
+    const p = (list || []).find((x) => x.bib === bib);
+    if (!p) throw new Error('Atleta no encontrado');
+    return p;
+  }
+}
+
+/** true si la carrera ya ocurrió (no activa y con fecha pasada). */
+export function raceIsPast(race) {
+  if (!race) return false;
+  if (race.is_active) return false;
+  if (race.archived_at) return true;
+  const today = new Date().toISOString().slice(0, 10);
+  return !!race.date && race.date < today;
+}
+
+/** Llamada con token (perfil del atleta o panel de staff) y cuerpo opcional. */
+export async function authJson(method, path, { token, body } = {}) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    return { ok: false, status: 0, data: {} };
+  }
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
 // ISO3 -> ISO2 para banderas; si no está en el mapa se muestra solo el texto
 const ISO3_TO_ISO2 = {
   DOM: 'DO', CRC: 'CR', PAN: 'PA', MEX: 'MX', USA: 'US', PUR: 'PR', COL: 'CO',

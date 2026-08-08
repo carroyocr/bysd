@@ -2,83 +2,21 @@ import React from 'react';
 import { MapPin, Bed, Utensils, Car, Tent, Droplet, TreePine } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { LOGISTICA } from '../content/eventInfo';
+
+const FACILITY_ICONS = {
+  MapPin: <MapPin className="w-6 h-6" />,
+  Car: <Car className="w-6 h-6" />,
+  Tent: <Tent className="w-6 h-6" />,
+  Bed: <Bed className="w-6 h-6" />,
+  Utensils: <Utensils className="w-6 h-6" />,
+  Droplet: <Droplet className="w-6 h-6" />,
+};
 
 export default function Logistics() {
-  const facilities = [
-    {
-      icon: <MapPin className="w-6 h-6" />,
-      title: 'Ubicación',
-      items: [
-        'Hotel Caribbean Adventure',
-        'Sierra Prieta, Santo Domingo',
-        'Circuito cerrado y controlado',
-      ],
-      link: 'https://maps.app.goo.gl/BrntZd7xFPcrmDTe7',
-    },
-    {
-      icon: <Car className="w-6 h-6" />,
-      title: 'Estacionamiento',
-      items: [
-        'Estacionamiento seguro y gratuito',
-        'Disponible en la propiedad',
-        'Capacidad amplia',
-        'Vigilancia 24/7',
-      ],
-    },
-    {
-      icon: <Tent className="w-6 h-6" />,
-      title: 'Zona de Camping',
-      items: [
-        'Espacio asignado de 4m x 4m por atleta',
-        'Carpas solo en áreas marcadas',
-        'No bloquear pasillos',
-        
-      ],
-    },
-    {
-      icon: <Bed className="w-6 h-6" />,
-      title: 'Alojamiento',
-      items: [
-        'Hotel disponible para acompañantes',
-        'Reserva previa requerida',
-        'Piscina y áreas verdes',
-        'Actividades recreativas disponibles',
-      ],
-    },
-    {
-      icon: <Utensils className="w-6 h-6" />,
-      title: 'Alimentación',
-      items: [
-        'Foodtruck Disponible',
-        'Snacks y frutas en línea de meta',
-        'Se recomienda llevar alimentos propios',
-      ],
-    },
-    {
-      icon: <Droplet className="w-6 h-6" />,
-      title: 'Hidratación',
-      items: [
-        'Agua potable en área de evento',
-        'Bebidas isotónicas en meta',
-        'Solo disponible en salida/meta',
-        'Llevar sistema de hidratación personal',
-      ],
-    },
-  ];
-
-  const bathrooms = [
-    '4 baños portátiles distribuidos en el sitio',
-    'Mantenimiento regular durante el evento',
-    'Puntos de agua potable en áreas específicas',
-  ];
-
-  const supportCrew = [
-    'Acompañantes y equipo de apoyo permitidos en áreas sociales',
-    'Áreas designadas: zona de carpas o Rancho',
-    'NO pueden ingresar al circuito',
-    'NO pueden correr con los atletas o caminar el circuito',
-    'Deben respetar áreas delimitadas',
-  ];
+  const facilities = LOGISTICA.instalaciones.map((f) => ({ ...f, icon: FACILITY_ICONS[f.icon] }));
+  const bathrooms = LOGISTICA.banos;
+  const supportCrew = LOGISTICA.acompanantes;
 
   return (
     <section className="py-10 bg-gradient-to-b from-muted/20 to-background">

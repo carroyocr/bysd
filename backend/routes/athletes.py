@@ -903,6 +903,46 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
             "itra_snapshot": None,
         }
 
+    # Carreras historicas: los resultados viven en la coleccion legada
+    # `participants`, no en `registrations`.
+    from routes.race import LEGACY_RACE_CODES
+    if code in LEGACY_RACE_CODES:
+        bib_str = str(bib).zfill(3)
+        part = await database.participants.find_one(
+            {"bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]}}, {"_id": 0}
+        )
+        if not part:
+            raise HTTPException(status_code=404, detail="Atleta no encontrado")
+        legacy_profile = {
+            "bib": part.get("bib"),
+            "nombre": part.get("nombre"),
+            "apellidos": part.get("apellidos"),
+            "sexo": part.get("sexo"),
+            "nacionalidad": part.get("nacionalidad"),
+            "ciudad_residencia": None,
+            "photo_url": None,
+            "status": part.get("status"),
+            "laps_completed": part.get("laps_completed", 0),
+            "total_km": part.get("total_km", 0.0),
+            "retired_at_lap": part.get("retired_at_lap"),
+            "anos_experiencia": None,
+            "maxima_distancia_km": None,
+            "itra_url": None,
+            "itra_snapshot": None,
+        }
+        # Si el atleta reclamo este resultado desde su cuenta, su foto y su
+        # experiencia ITRA enriquecen la ficha.
+        if part.get("claimed_by"):
+            try:
+                athlete = await database.athletes.find_one({"_id": ObjectId(part["claimed_by"])})
+            except Exception:
+                athlete = None
+            if athlete:
+                legacy_profile["photo_url"] = athlete.get("photo_url")
+                legacy_profile["itra_url"] = athlete.get("itra_url")
+                legacy_profile["itra_snapshot"] = athlete.get("itra_snapshot")
+        return legacy_profile
+
     registration = await database.registrations.find_one({
         "race_code": code,
         "bib": str(bib).zfill(3),

@@ -85,7 +85,7 @@ export default function HomeScreen() {
         </div>
 
         {/* Controles superiores sobre la imagen */}
-        <div className="relative z-10 flex items-center justify-between px-3 pt-3">
+        <div className="relative z-10 flex items-center justify-between px-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
           <button
             aria-label="Menú"
             onClick={openDrawer}
@@ -148,7 +148,7 @@ export default function HomeScreen() {
         )}
 
         {/* Accesos rápidos */}
-        <div className="relative z-10 mt-auto pb-5 px-6">
+        <div className="relative z-10 mt-auto px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="flex justify-center gap-8">
             {quickActions.map(({ label, Icon, to }) => (
               <button key={label} onClick={() => navigate(to)} className="flex flex-col items-center gap-2">

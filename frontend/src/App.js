@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { RaceConfigProvider } from './contexts/RaceConfigContext';
 import Navigation from './components/Navigation';
@@ -32,6 +32,7 @@ import MyProfilePage from './pages/MyProfilePage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import LiveApp from './live/LiveApp';
+import { isNative } from './lib/platform';
 import './App.css';
 
 export default function App() {
@@ -41,6 +42,10 @@ export default function App() {
       <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Routes>
+          {/* App nativa: entra directo a BYSD Live; el perfil del atleta y el
+              acceso de staff son opciones dentro de su menú lateral */}
+          {isNative() && <Route path="/" element={<Navigate to="/live" replace />} />}
+
           {/* Admin routes without Navigation/Footer */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/race-control" element={<RaceControlPage />} />
@@ -60,7 +65,8 @@ export default function App() {
             element={
               <>
                 <Navigation />
-                <main className="flex-1">
+                {/* Compensa la altura extra que el safe-area agrega al nav fijo */}
+                <main className="flex-1 pt-[env(safe-area-inset-top)]">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/evento" element={<EventoPage />} />

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import useHasSponsors from '../hooks/useHasSponsors';
+import { isNative } from '../lib/platform';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -154,7 +155,7 @@ export default function Navigation() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)] transition-all duration-300 ${
         isScrolled
           ? 'bg-background/98 backdrop-blur-md shadow-soft border-b border-border'
           : 'bg-background/90 backdrop-blur-sm border-b border-border/50'
@@ -471,6 +472,17 @@ export default function Navigation() {
                       </Link>
                     )
                   ))}
+
+                  {/* Solo en la app nativa: volver a BYSD Live */}
+                  {isNative() && (
+                    <Link
+                      to="/live"
+                      onClick={handleLinkClick}
+                      className="px-4 py-3 text-base font-medium rounded-lg transition-colors text-foreground hover:text-primary hover:bg-secondary"
+                    >
+                      Volver a la app en vivo
+                    </Link>
+                  )}
                 </div>
               </div>
             </SheetContent>

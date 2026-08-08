@@ -3,7 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Contact, MessageCircle, Trophy, Star, Mountain, Loader2,
 } from 'lucide-react';
-import { API, getJson, flagOf, initialsOf, formatDuration, formatPace, useFollowed, statusLabel } from '../liveApi';
+import {
+  API, getJson, getAthleteProfile, raceIsPast, flagOf, initialsOf,
+  formatDuration, formatPace, useFollowed, statusLabel,
+} from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -66,7 +69,7 @@ const STATUS_STYLES = {
  */
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
-  const { raceCode } = useRace();
+  const { raceCode, race } = useRace();
   const { bib } = useParams();
   const navigate = useNavigate();
 
@@ -82,7 +85,7 @@ export default function AthleteScreen() {
     setProfile(null);
     setFailed(false);
     Promise.all([
-      getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`),
+      getAthleteProfile(bib, raceCode),
       getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
     ])
       .then(([prof, lapsData]) => {
@@ -95,20 +98,23 @@ export default function AthleteScreen() {
   }, [bib, raceCode]);
 
   const base = `/live/${raceCode}/atleta/${bib}`;
+  // En carreras pasadas el dorsal ya no sirve para presentarse ni para
+  // animar en vivo: solo quedan la experiencia y los resultados.
+  const esPasada = raceIsPast(race);
   const actions = [
     // Fotos oculta por ahora (la pantalla /fotos sigue lista para reactivarla)
     { label: 'Experiencia', Icon: Mountain, to: `${base}/experiencia` },
-    { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
-    { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
+    !esPasada && { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
+    !esPasada && { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
     { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
-  ];
+  ].filter(Boolean);
 
   const statusText = profile?.status === 'active'
     ? 'Aún en carrera'
     : `${statusLabel(profile?.status)}${profile?.status === 'retired' && profile?.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}`;
 
   return (
-    <Screen title="Detalle del corredor" back>
+    <Screen title="Detalle del corredor" back showAds>
       {!profile && !failed && (
         <div className={`flex justify-center py-20 ${T.muted}`}>
           <Loader2 className="w-6 h-6 animate-spin" />

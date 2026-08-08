@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Mountain, ExternalLink, Loader2 } from 'lucide-react';
-import { getJson, initialsOf } from '../liveApi';
+import { getAthleteProfile, initialsOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -16,7 +16,7 @@ export default function ExperienciaScreen() {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`)
+    getAthleteProfile(bib, raceCode)
       .then(setProfile)
       .catch(() => setFailed(true));
   }, [bib, raceCode]);

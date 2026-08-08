@@ -94,7 +94,7 @@ export default function CheerScreen() {
   };
 
   return (
-    <Screen title="Enviar ánimo" back>
+    <Screen title="Enviar ánimo" back showAds>
       <div className="px-4 py-4">
         {bibParam && profile && (
           <div className="flex items-center gap-3 mb-4">

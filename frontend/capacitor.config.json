@@ -1,0 +1,12 @@
+{
+  "appId": "com.backyardultrasd.app",
+  "appName": "BYSD Live",
+  "webDir": "build",
+  "plugins": {
+    "SplashScreen": {
+      "backgroundColor": "#0C0C0C",
+      "launchAutoHide": true,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}

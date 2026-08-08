@@ -23,7 +23,7 @@ export default function SosScreen() {
   };
 
   return (
-    <Screen title="SOS" back noAds>
+    <Screen title="SOS" back>
       <div className="px-4 py-5">
         <div className={`rounded-2xl p-4 mb-4 ${T.card}`}>
           <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>Contacto de emergencia</p>

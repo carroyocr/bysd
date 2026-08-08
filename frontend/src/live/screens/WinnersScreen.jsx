@@ -36,7 +36,7 @@ export default function WinnersScreen() {
     .slice(0, 3);
 
   return (
-    <Screen title="Ganadores">
+    <Screen title="Ganadores" showAds>
       <div className="px-4 py-4">
         {participants === null && (
           <div className={`flex justify-center py-16 ${T.muted}`}>

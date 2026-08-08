@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/android": "^7",
+    "@capacitor/browser": "^7",
+    "@capacitor/core": "^7",
+    "@capacitor/filesystem": "^7",
+    "@capacitor/ios": "^7",
+    "@capacitor/preferences": "^7",
+    "@capacitor/share": "^7",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.8",
     "@radix-ui/react-alert-dialog": "^1.1.11",
@@ -61,7 +68,10 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "build:mobile": "REACT_APP_BACKEND_URL=https://bysd-backend.onrender.com craco build && cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
   },
   "browserslist": {
     "production": [
@@ -77,6 +87,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@capacitor/cli": "^7",
     "@craco/craco": "^7.1.0",
     "@eslint/js": "9.23.0",
     "autoprefixer": "^10.4.20",
