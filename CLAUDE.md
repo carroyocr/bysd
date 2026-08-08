@@ -29,6 +29,7 @@ Este es un sitio **en producción en vivo** (`backyardultrasantodomingo.com`). L
 - `CORS_ORIGINS` del backend debe listar los orígenes separados por coma **sin espacios**.
 - **Autenticación:** el secreto JWT vive en un solo sitio, `backend/services/auth.py`, y sale de `JWT_SECRET_KEY` (obligatoria: sin ella el backend no arranca). No escribas `os.getenv("JWT_SECRET_KEY", "algo")` con valor por defecto ni decodifiques tokens a mano en un router.
 - **Endpoint nuevo del panel = endpoint protegido.** Usa `Depends(require_permission("<permiso>"))` de `services.auth` (permisos: `control`, `athletes`, `finances`, `volunteers`, `sponsors`, `surveys`, `config`, `scanner`, `users`, `emails`). Desde el frontend, llámalo con `adminFetch` de `src/lib/adminApi.js`, que adjunta el token.
+- **Notificaciones push (app BYSD Live):** van por Firebase Cloud Messaging desde `backend/services/push_service.py`, con la cuenta de servicio en `FCM_SERVICE_ACCOUNT_JSON` (variable de entorno; si falta, el push queda inactivo pero el backend arranca igual). Los avisos automáticos salen del escaneo y no deben bloquearlo: se disparan con `asyncio.create_task`. Ver `frontend/NOTIFICACIONES_PUSH.md`.
 - El escaneo de vueltas (`/api/qr-scan/athlete`, `/confirm`) se autoriza con la **clave de escaneo** de la carrera (cabecera `X-Scan-Key`) o con token del panel. La clave está en `race_configurations.scan_key` y **no debe salir** en ninguna respuesta pública.
 
 Ver **WORKFLOW.md** para el detalle completo del flujo de desarrollo y despliegue.

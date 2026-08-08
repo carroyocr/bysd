@@ -36,6 +36,12 @@ const webpackConfig = {
   webpack: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // El plugin de push trae una implementación para navegador que importa
+      // el SDK web de Firebase. En el navegador no hay push (solo en la app
+      // instalada), así que se apunta a un sustituto vacío en vez de instalar
+      // el SDK completo. Ver src/live/firebaseWebStub.js.
+      'firebase/app': path.resolve(__dirname, 'src/live/firebaseWebStub.js'),
+      'firebase/messaging': path.resolve(__dirname, 'src/live/firebaseWebStub.js'),
     },
     configure: (webpackConfig) => {
 

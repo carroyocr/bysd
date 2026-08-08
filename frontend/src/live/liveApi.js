@@ -129,6 +129,10 @@ export function useFollowed() {
       const list = read();
       const next = list.includes(bib) ? list.filter((b) => b !== bib) : [...list, bib];
       localStorage.setItem(FOLLOWED_KEY, JSON.stringify(next));
+      // El backend guarda a quién sigue cada teléfono para saber a quién
+      // mandarle el push. La importación es dinámica porque push.js importa
+      // de este módulo: estática serían dos módulos esperándose al arrancar.
+      import('./push').then((m) => m.sincronizarSeguidos()).catch(() => {});
       return next;
     },
   };

@@ -58,7 +58,14 @@ async def startup_db_indexes():
         await db.participants.create_index([("bib", 1)], unique=True)
         await db.laps_log.create_index([("participant_bib", 1)])
         await db.laps_log.create_index([("completed_at", -1)])
-        
+
+        # Dispositivos con la app movil instalada: un documento por token de
+        # FCM. El indice sobre followed es el que resuelve "a quien aviso
+        # cuando el BIB 42 completa una vuelta".
+        await db.push_devices.create_index([("token", 1)], unique=True)
+        await db.push_devices.create_index([("followed", 1)])
+        await db.push_devices.create_index([("race_code", 1)])
+
         # Initialize admin user if not exists
         await initialize_race_data()
         
@@ -409,6 +416,10 @@ app.include_router(seleccionados_router, prefix="/api")
 
 from routes.prensa import router as prensa_router
 app.include_router(prensa_router, prefix="/api")
+
+# Notificaciones push de la app movil
+from routes.push import router as push_router
+app.include_router(push_router)
 
 cors_origins = [o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()]
 

@@ -21,6 +21,15 @@
             </intent-filter>
         </activity>
 
+        <!-- Notificaciones push: sin esto Android usa el icono de la app como
+             silueta y sale un cuadrado blanco en la barra de estado. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/bysd_naranja" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

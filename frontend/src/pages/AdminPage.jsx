@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
 import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone, Bell
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -25,6 +25,7 @@ import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
+import PushComposer from '../components/PushComposer';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
@@ -32,6 +33,7 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
 const TAB_PERMISSIONS = {
   'control': ['race-control', 'control'],
   'lap-registry': ['laps', 'control'],
+  'app-avisos': ['app-avisos', 'control'],
   'registrations': ['registrations', 'athletes'],
   'finances': ['finances'],
   'volunteers': ['shifts', 'volunteers'],
@@ -187,6 +189,14 @@ export default function AdminPage() {
                 <Clock className="w-4 h-4" />
                 <span className="hidden sm:inline">Vueltas</span>
                 <span className="sm:hidden">Vueltas</span>
+              </TabsTrigger>
+            )}
+            {/* 2b. Avisos a la app móvil */}
+            {hasAccess('app-avisos') && (
+              <TabsTrigger value="app-avisos" className="flex items-center gap-2" data-testid="tab-app-avisos">
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Avisos App</span>
+                <span className="sm:hidden">Avisos</span>
               </TabsTrigger>
             )}
             {/* 3. Escáner QR */}
@@ -353,6 +363,12 @@ export default function AdminPage() {
           {hasAccess('lap-registry') && (
             <TabsContent value="lap-registry">
               <LapRegistrationsPanel />
+            </TabsContent>
+          )}
+
+          {hasAccess('app-avisos') && (
+            <TabsContent value="app-avisos">
+              <PushComposer />
             </TabsContent>
           )}
 

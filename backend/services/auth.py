@@ -101,6 +101,7 @@ def require_admin(authorization: Optional[str] = Header(None)) -> dict:
 TAB_PERMISSION_GROUPS = {
     "race-control": "control",      # tab Control
     "laps": "control",              # tab Vueltas
+    "app-avisos": "control",        # tab Avisos App (push)
     "registrations": "athletes",    # tab Atletas
     "results-2026": "athletes",     # tab Resultados 2026
     "athlete-profiles": "athletes", # tab Perfiles
