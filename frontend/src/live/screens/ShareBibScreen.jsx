@@ -9,6 +9,9 @@ import { Screen, useRace } from '../LiveApp';
 const W = 1080;
 const H = 1920;
 
+/** Dorsal siempre a tres cifras, como va impreso en la carrera (001). */
+const bibDe3 = (bib) => String(bib ?? '').trim().padStart(3, '0');
+
 function drawBibCard(ctx, { profile, raceName, siteUrl }) {
   // Fondo Linterna Nocturna
   ctx.fillStyle = '#0C0C0C';
@@ -57,10 +60,10 @@ function drawBibCard(ctx, { profile, raceName, siteUrl }) {
   ctx.fillText('BACKYARD ULTRA SANTO DOMINGO', W / 2, cardY + 95, cardW - 80);
   ctx.restore();
 
-  // Número
+  // Número: siempre a tres cifras, como en el dorsal impreso (001)
   ctx.fillStyle = '#0C0C0C';
   ctx.font = '900 300px -apple-system, Helvetica, Arial';
-  ctx.fillText(`${parseInt(profile.bib, 10) || profile.bib}`, W / 2, cardY + 500);
+  ctx.fillText(bibDe3(profile.bib), W / 2, cardY + 500);
 
   // Nombre
   ctx.font = '800 64px -apple-system, Helvetica, Arial';
@@ -81,7 +84,7 @@ function drawBibCard(ctx, { profile, raceName, siteUrl }) {
   ctx.fillText('¡Sígueme en vivo!', W / 2, 1420);
   ctx.fillStyle = '#9a9a9a';
   ctx.font = '600 40px -apple-system, Helvetica, Arial';
-  ctx.fillText(`Busca mi dorsal #${profile.bib} en`, W / 2, 1500);
+  ctx.fillText(`Busca mi dorsal #${bibDe3(profile.bib)} en`, W / 2, 1500);
   ctx.fillStyle = '#E77622';
   ctx.font = '800 44px -apple-system, Helvetica, Arial';
   ctx.fillText(siteUrl, W / 2, 1575);
@@ -128,7 +131,7 @@ export default function ShareBibScreen() {
     setSharing(true);
     try {
       const blob = await toBlob();
-      const file = new File([blob], `bib-${profile.bib}-bysd.png`, { type: 'image/png' });
+      const file = new File([blob], `bib-${bibDe3(profile.bib)}-bysd.png`, { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -181,7 +184,7 @@ export default function ShareBibScreen() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `bib-${profile.bib}-bysd.png`;
+                a.download = `bib-${bibDe3(profile.bib)}-bysd.png`;
                 a.click();
                 URL.revokeObjectURL(url);
               }}
