@@ -164,7 +164,7 @@ export default function AthleteScreen() {
           {/* Enviar ánimo */}
           <div className="mx-4 mt-4">
             <button
-              onClick={() => navigate(`${base}/animo`)}
+              onClick={() => navigate(`${base}/animo`, { replace: true })}
               className="w-full rounded-xl py-3 text-sm font-bold bg-[#E77622] text-white flex items-center justify-center gap-2"
             >
               <MessageCircle className="w-4 h-4" /> Enviar mensaje de apoyo
