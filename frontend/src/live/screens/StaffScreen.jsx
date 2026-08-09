@@ -37,6 +37,9 @@ export default function StaffScreen() {
       const estado = await estadoBiometria(STAFF);
       if (cancel) return;
       setBio(estado);
+      // Marcada de entrada: activarla desde el propio login es lo que casi
+      // todo el mundo quiere, y desmarcarla cuesta un toque.
+      setClave((p) => ({ ...p, conBio: estado.disponible && !estado.activada }));
       // Con biometría activada se pide siempre, aunque quede sesión guardada:
       // estas herramientas abren la ficha médica de todos los inscritos.
       if (estado.activada && !localStorage.getItem('admin_token')) {
@@ -105,7 +108,7 @@ export default function StaffScreen() {
       modo: ok ? 'definir' : p.modo,
       // Con biometría disponible viene marcado: es lo que casi todo el mundo
       // querrá, y desmarcarlo cuesta un toque.
-      conBio: ok ? bio.disponible : p.conBio,
+      conBio: ok ? (bio.disponible && !bio.activada) : p.conBio,
       msg: ok ? data.message : '',
     }));
     if (!ok) setError(data.detail || 'No se pudo enviar el código');
@@ -159,6 +162,10 @@ export default function StaffScreen() {
     localStorage.setItem('admin_username', data.username);
     localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
     localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    if (clave.conBio && bio.disponible && !bio.activada) {
+      const { ok: okBio } = await activarBiometria(username.trim(), data.token, STAFF);
+      if (okBio) setBio((p) => ({ ...p, activada: true }));
+    }
     setPassword('');
     setLogged(true);
   };
@@ -186,7 +193,7 @@ export default function StaffScreen() {
               <h2 className="text-lg font-bold">Acceso del staff</h2>
               <p className={`text-xs mt-1 text-center ${T.muted}`}>
                 {clave.modo === 'login' && 'Usa tus credenciales del panel'}
-                {clave.modo === 'codigo' && 'Te enviamos un código al correo con el que te registraste'}
+                {clave.modo === 'codigo' && 'Te enviamos un código al correo de tu cuenta para que pongas una contraseña nueva'}
                 {clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`}
               </p>
             </div>
@@ -269,7 +276,7 @@ export default function StaffScreen() {
               )}
 
               {/* Activar la biometría aquí ahorra tener que buscarla después */}
-              {clave.modo === 'definir' && bio.disponible && (
+              {clave.modo !== 'codigo' && bio.disponible && !bio.activada && (
                 <button
                   type="button"
                   onClick={() => setClave((p) => ({ ...p, conBio: !p.conBio }))}
@@ -311,23 +318,42 @@ export default function StaffScreen() {
                 </button>
               )}
 
+              {/* El código al correo sirve para las dos cosas: ponerse la
+                  primera contraseña y recuperar la que se olvidó. Se enuncian
+                  por separado porque quien la olvidó no se busca en "soy
+                  voluntario y no tengo contraseña". */}
               <div className="flex flex-col items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => cambiarModo(clave.modo === 'login' ? 'codigo' : 'login')}
-                  className={`text-xs underline ${T.muted}`}
-                >
-                  {clave.modo === 'login'
-                    ? 'Soy voluntario y no tengo contraseña'
-                    : 'Ya tengo contraseña, quiero entrar'}
-                </button>
-                {clave.modo === 'login' && (
+                {clave.modo === 'login' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => cambiarModo('codigo')}
+                      className={`text-xs underline ${T.muted}`}
+                    >
+                      Olvidé mi contraseña
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cambiarModo('codigo')}
+                      className={`text-xs underline ${T.muted}`}
+                    >
+                      Soy voluntario y no tengo contraseña
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/live/staff/voluntario')}
+                      className="text-xs underline text-[#E77622]"
+                    >
+                      Quiero ser voluntario
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => navigate('/live/staff/voluntario')}
-                    className="text-xs underline text-[#E77622]"
+                    onClick={() => cambiarModo('login')}
+                    className={`text-xs underline ${T.muted}`}
                   >
-                    Quiero ser voluntario
+                    Ya tengo contraseña, quiero entrar
                   </button>
                 )}
               </div>
@@ -379,23 +405,13 @@ export default function StaffScreen() {
   return (
     <Screen title="Staff">
       <div className="px-4 py-4">
-        <div className={`rounded-2xl px-4 py-4 flex items-center gap-3 ${T.card}`}>
-          <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5 text-[#E77622]" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold truncate">{isAdmin ? 'Administrador' : 'Staff'}</p>
-            <p className={`text-xs truncate ${T.muted}`}>{localStorage.getItem('admin_username')}</p>
-          </div>
-        </div>
-
         {tools.length === 0 && (
-          <p className={`text-xs mt-4 px-1 ${T.muted}`}>
+          <p className={`text-xs px-1 ${T.muted}`}>
             Tu usuario no tiene herramientas habilitadas. Contacta al administrador.
           </p>
         )}
 
-        <div className={`rounded-2xl mt-4 ${T.card}`}>
+        <div className={`rounded-2xl ${T.card}`}>
           {tools.map(({ to, Icon, title, description }, i) => (
             <button
               key={to}

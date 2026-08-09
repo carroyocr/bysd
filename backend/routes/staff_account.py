@@ -95,7 +95,7 @@ async def solicitar_codigo(datos: SolicitarCodigo, request: Request = None):
             logger.error(f"No se pudo enviar el codigo de staff a {email}: {e}")
 
     return {
-        "message": "Si ese correo esta registrado como voluntario, te enviamos un codigo.",
+        "message": "Si ese correo tiene cuenta en el equipo, te enviamos un codigo.",
         "email": email,
     }
 
@@ -125,7 +125,7 @@ async def definir_password(datos: DefinirPassword, request: Request = None):
     voluntario = await _buscar_voluntario(db, email)
     usuario = await db.admin_users.find_one({"username": email})
     if not voluntario and not usuario:
-        raise HTTPException(status_code=404, detail="Ese correo no esta registrado como voluntario")
+        raise HTTPException(status_code=404, detail="Ese correo no tiene cuenta en el equipo")
 
     hashed = bcrypt.hashpw(datos.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     ahora = datetime.now(timezone.utc)

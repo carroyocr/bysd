@@ -146,6 +146,7 @@ export function statusLabel(status) {
     case 'dns': return 'DNS';
     case 'winner': return 'Ganador';
     case 'honor': return 'Mención de honor';
+    case 'waitlist': return 'En lista de espera';
     default: return status || '';
   }
 }
