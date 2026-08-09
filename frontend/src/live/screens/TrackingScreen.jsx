@@ -127,7 +127,8 @@ export default function TrackingScreen() {
       if (p.categoria) {
         return p.categoria === 'titular' ? 'Titular de la selección' : 'Reserva de la selección';
       }
-      return p.confirmado ? 'Confirmado · listo para la salida' : 'Inscrito · pago pendiente';
+      // El estado del pago no se airea en una lista pública.
+      return p.confirmado ? 'Confirmado · listo para la salida' : 'Inscrito';
     }
     if (p.status === 'dns') return 'No inició la carrera';
     if (p.status === 'retired') return `DNF · se retiró en la vuelta ${p.retired_at_lap || p.laps_completed || '—'}`;

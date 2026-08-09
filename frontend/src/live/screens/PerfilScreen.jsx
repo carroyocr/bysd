@@ -12,11 +12,15 @@ import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
+import { registrarAtleta } from '../push';
 import { marcarAccesoAtleta, accesoAtletaCaducado, cerrarSesionAtleta, HORAS_SESION } from '../sesion';
 import Picker from '../components/Picker';
 import DateField from '../components/DateField';
 
 const TOKEN_KEY = 'athlete_token';
+
+/** "https://www.instagram.com/pepe" -> "pepe". Para enseñarlo sin la URL entera. */
+const usuarioDeEnlace = (url) => (url ? url.replace(/\/+$/, '').split('/').pop() : '');
 
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -353,6 +357,9 @@ export default function PerfilScreen() {
     }
     setAthlete(data);
     setView('panel');
+    // Liga el teléfono a su cuenta: es lo que permite que la organización le
+    // mande un aviso "a los inscritos" y no solo el de sus favoritos.
+    registrarAtleta(data.email);
     authJson('GET', '/api/athletes/my-races', { token: token() })
       .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
     authJson('GET', '/api/athletes/race-history', { token: token() })
@@ -640,6 +647,8 @@ export default function PerfilScreen() {
       talla_camiseta: athlete?.talla_camiseta || '',
       personalizacion_camiseta: athlete?.personalizacion_camiseta || '',
       como_se_entero: athlete?.como_se_entero || '',
+      instagram_url: athlete?.instagram_url || '',
+      strava_url: athlete?.strava_url || '',
     });
     setEditMode(true);
     setMsg(null);
@@ -1159,6 +1168,8 @@ export default function PerfilScreen() {
                   para saber con qué cuenta se entró, pero no tiene por qué
                   encabezar la pantalla. */}
               <InfoRow T={T} label="Correo" value={athlete?.email} />
+              <InfoRow T={T} label="Instagram" value={usuarioDeEnlace(athlete?.instagram_url)} />
+              <InfoRow T={T} label="Strava" value={usuarioDeEnlace(athlete?.strava_url)} />
               <InfoRow T={T} label="Teléfono" value={athlete?.telefono} />
               <InfoRow T={T} label="Fecha de nacimiento" value={athlete?.fecha_nacimiento} />
               <InfoRow T={T} label="Sexo" value={athlete?.sexo} />
@@ -1207,6 +1218,14 @@ export default function PerfilScreen() {
                 <Field T={T} label="Talla de camiseta"><SelectInput T={T} options={TALLAS} value={editData.talla_camiseta} onChange={upd('talla_camiseta')} /></Field>
                 <Field T={T} label="Nombre en camiseta"><TextInput T={T} maxLength={15} value={editData.personalizacion_camiseta} onChange={upd('personalizacion_camiseta')} /></Field>
               </div>
+              {/* Redes. Vale el enlace completo o solo el usuario: el backend
+                  lo normaliza, porque casi nadie copia la URL entera. */}
+              <Field T={T} label="Instagram (usuario o enlace)">
+                <TextInput T={T} autoCapitalize="none" placeholder="@micuenta" value={editData.instagram_url} onChange={upd('instagram_url')} />
+              </Field>
+              <Field T={T} label="Strava (número de atleta o enlace)">
+                <TextInput T={T} autoCapitalize="none" placeholder="12345678" value={editData.strava_url} onChange={upd('strava_url')} />
+              </Field>
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setEditMode(false)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
                   Cancelar

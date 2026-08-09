@@ -1727,8 +1727,10 @@ async def submit_cheer_message(
         bib_formas = [request.athlete_bib, request.athlete_bib.zfill(3)]
         if bib_digits.isdigit():
             bib_formas.append(int(bib_digits))
+        # "waitlist" incluido: la app los muestra en la categoria Espera y en la
+        # ficha, asi que se les podia escribir y el envio moria con un 404.
         athlete = await database.registrations.find_one(
-            {"race_code": active_race_code, "bib": {"$in": bib_formas}, "status": {"$in": ["registered", "active", "retired", "winner", "honor"]}},
+            {"race_code": active_race_code, "bib": {"$in": bib_formas}, "status": {"$in": ["registered", "active", "retired", "winner", "honor", "waitlist"]}},
             {"_id": 0, "edit_token": 0}
         )
     
@@ -1845,9 +1847,14 @@ async def get_cheer_messages(
     
     # Get messages sorted by created_at descending with pagination
     messages = await collection.find(
-        query,
-        {"_id": 0}
+        query
     ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+
+    # El identificador sale para que se le pueda dar "me gusta"; el _id crudo no
+    # es serializable y ademas no hace falta fuera.
+    for msg in messages:
+        msg["id"] = str(msg.pop("_id"))
+        msg["likes"] = msg.get("likes", 0)
     
     # Enrich with athlete names - check registrations first for new races
     for msg in messages:
@@ -1886,6 +1893,36 @@ async def get_cheer_messages(
             "has_prev": page > 1
         }
     }
+
+
+@router.post("/cheers/{cheer_id}/like")
+async def like_cheer_message(cheer_id: str, quitar: bool = False):
+    """Suma o resta un "me gusta" a un mensaje de animo.
+
+    Quien anima no tiene cuenta, asi que no hay a quien atribuir el voto: el
+    telefono recuerda a cuales dio y el servidor solo lleva la cuenta. Es un
+    muro de apoyo, no una votacion; no merece la pena montar identidades para
+    esto. El contador no baja de cero por si llegan dos "quitar" seguidos.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        doc = await coleccion.find_one({"_id": oid}, {"likes": 1})
+        if not doc:
+            continue
+        actuales = doc.get("likes", 0)
+        nuevos = max(0, actuales - 1) if quitar else actuales + 1
+        await coleccion.update_one({"_id": oid}, {"$set": {"likes": nuevos}})
+        return {"id": cheer_id, "likes": nuevos}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
 
 
 @router.get("/cheers/count")

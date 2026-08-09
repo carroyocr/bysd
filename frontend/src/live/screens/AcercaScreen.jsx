@@ -50,7 +50,7 @@ export default function AcercaScreen() {
             <Mail className="w-5 h-5 text-[#E77622] shrink-0" />
             <div className="min-w-0">
               <p className={`text-[10px] uppercase tracking-wide ${T.subtle}`}>Correo</p>
-              <p className="text-sm font-semibold break-all">{CONTACTO.email}</p>
+              <p className="text-[13px] font-semibold whitespace-nowrap">{CONTACTO.email}</p>
             </div>
           </a>
 
@@ -61,7 +61,7 @@ export default function AcercaScreen() {
             <Globe className="w-5 h-5 text-[#E77622] shrink-0" />
             <div className="min-w-0">
               <p className={`text-[10px] uppercase tracking-wide ${T.subtle}`}>Web</p>
-              <p className="text-sm font-semibold break-all">{CONTACTO.webTexto}</p>
+              <p className="text-[13px] font-semibold whitespace-nowrap">{CONTACTO.webTexto}</p>
             </div>
           </button>
 
@@ -69,7 +69,7 @@ export default function AcercaScreen() {
             <Phone className="w-5 h-5 text-[#E77622] shrink-0" />
             <div className="min-w-0">
               <p className={`text-[10px] uppercase tracking-wide ${T.subtle}`}>Teléfono</p>
-              <p className="text-sm font-semibold">{CONTACTO.telefono}</p>
+              <p className="text-[13px] font-semibold whitespace-nowrap">{CONTACTO.telefono}</p>
             </div>
           </a>
         </div>

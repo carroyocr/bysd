@@ -4,6 +4,7 @@ import { Share2, Download, Loader2 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
 
 // Lienzo 9:16 (1080x1920): tamaño nativo de las historias de Instagram
 const W = 1080;
@@ -130,21 +131,11 @@ export default function ShareBibScreen() {
   const handleShare = async () => {
     setSharing(true);
     try {
-      const blob = await toBlob();
-      const file = new File([blob], `bib-${bibDe3(profile.bib)}-bysd.png`, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Sigue a ${profile.nombre} en el BYSD`,
-        });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      await shareImage(
+        `bib-${bibDe3(profile.bib)}-bysd.png`,
+        await toBlob(),
+        `Sigue a ${profile.nombre} en el BYSD`,
+      );
     } catch {
       /* usuario canceló el share */
     } finally {
@@ -178,20 +169,16 @@ export default function ShareBibScreen() {
               {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
               Compartir mi BIB
             </button>
-            <button
-              onClick={async () => {
-                const blob = await toBlob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `bib-${bibDe3(profile.bib)}-bysd.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className={`mt-2.5 w-full rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 ${T.chip}`}
-            >
-              <Download className="w-4 h-4" /> Descargar imagen
-            </button>
+            {/* En la app no hay descargas del navegador: la imagen se guarda
+                desde la misma hoja de compartir, así que el botón sobra. */}
+            {!enApp() && (
+              <button
+                onClick={async () => descargarBlob(`bib-${bibDe3(profile.bib)}-bysd.png`, await toBlob())}
+                className={`mt-2.5 w-full rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 ${T.chip}`}
+              >
+                <Download className="w-4 h-4" /> Descargar imagen
+              </button>
+            )}
           </>
         )}
       </div>

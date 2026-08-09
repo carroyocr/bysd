@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Contact, MessageCircle, Trophy, Star, Mountain, Loader2,
+  Contact, MessageCircle, Trophy, Star, Mountain, Loader2, Instagram, Activity,
 } from 'lucide-react';
 import {
   API, getJson, getAthleteProfile, raceIsPast, flagOf, initialsOf,
@@ -9,6 +9,7 @@ import {
 } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { openExternal } from '../../lib/nativeExport';
 
 /**
  * Gráfico de línea: ritmo promedio por vuelta.
@@ -128,7 +129,10 @@ export default function AthleteScreen() {
 
       {profile && (
         <div className="pb-4">
-          {/* Encabezado del atleta */}
+          {/* Encabezado y acciones anclados bajo la barra superior: al bajar por
+              las vueltas se sigue sabiendo de quién es la ficha y se puede
+              cambiar de sección sin volver arriba. */}
+          <div className={`sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 ${T.page}`}>
           <div className="flex items-center gap-3.5 px-4 pt-4 pb-3">
             {profile.photo_url ? (
               <img
@@ -151,6 +155,29 @@ export default function AthleteScreen() {
                   profile.ciudad_residencia]
                   .filter(Boolean).join(' | ')}
               </p>
+              {/* Redes del corredor: solo aparecen si él las puso en su perfil */}
+              {(profile.instagram_url || profile.strava_url) && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  {profile.instagram_url && (
+                    <button
+                      aria-label="Instagram del corredor"
+                      onClick={() => openExternal(profile.instagram_url)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
+                    >
+                      <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
+                    </button>
+                  )}
+                  {profile.strava_url && (
+                    <button
+                      aria-label="Strava del corredor"
+                      onClick={() => openExternal(profile.strava_url)}
+                      className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
+                    >
+                      <Activity className="w-3.5 h-3.5 text-[#E77622]" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div className="text-right shrink-0">
               <span className={`text-sm font-mono font-extrabold px-2.5 py-1 rounded-lg ${T.chipOn}`}>#{profile.bib}</span>
@@ -174,6 +201,7 @@ export default function AthleteScreen() {
                 <span className={`text-[9.5px] text-center leading-tight ${T.muted}`}>{label}</span>
               </button>
             ))}
+          </div>
           </div>
 
           {/* Vueltas y kilómetros como protagonistas + estado */}

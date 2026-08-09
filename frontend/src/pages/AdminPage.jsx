@@ -33,7 +33,9 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
 const TAB_PERMISSIONS = {
   'control': ['race-control', 'control'],
   'lap-registry': ['laps', 'control'],
-  'app-avisos': ['app-avisos', 'control'],
+  // Tambien lo abre quien lleva las comunicaciones: es el mismo trabajo
+  // que el envio de correos, con otro canal.
+  'app-avisos': ['app-avisos', 'control', 'emails'],
   'registrations': ['registrations', 'athletes'],
   'finances': ['finances'],
   'volunteers': ['shifts', 'volunteers'],
@@ -195,8 +197,8 @@ export default function AdminPage() {
             {hasAccess('app-avisos') && (
               <TabsTrigger value="app-avisos" className="flex items-center gap-2" data-testid="tab-app-avisos">
                 <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline">Avisos App</span>
-                <span className="sm:hidden">Avisos</span>
+                <span className="hidden sm:inline">Mensajes App</span>
+                <span className="sm:hidden">Mensajes</span>
               </TabsTrigger>
             )}
             {/* 3. Escáner QR */}

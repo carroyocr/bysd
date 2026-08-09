@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Send, MessageCircle, Loader2, Search, X } from 'lucide-react';
+import { Send, MessageCircle, Loader2, Search, X, Heart } from 'lucide-react';
 import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+
+const LIKES_KEY = 'bysd_live_cheer_likes';
 
 /**
  * Enviar mensaje de apoyo.
@@ -25,6 +27,34 @@ export default function CheerScreen() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
+  // A qué mensajes dio "me gusta" este teléfono. Quien anima no tiene cuenta,
+  // así que el propio aparato es el que se acuerda.
+  const [misLikes, setMisLikes] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(LIKES_KEY)) || []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const alternarLike = async (mensaje) => {
+    const id = mensaje.id;
+    if (!id) return;
+    const yaEstaba = misLikes.has(id);
+    const siguientes = new Set(misLikes);
+    if (yaEstaba) siguientes.delete(id); else siguientes.add(id);
+    setMisLikes(siguientes);
+    localStorage.setItem(LIKES_KEY, JSON.stringify([...siguientes]));
+    // Se pinta ya y se corrige con lo que responda el servidor: si falla la
+    // red, el contador vuelve a su sitio en la próxima carga.
+    setCheers((prev) => prev.map((c) => (
+      c.id === id ? { ...c, likes: Math.max(0, (c.likes || 0) + (yaEstaba ? -1 : 1)) } : c
+    )));
+    const { ok, data } = await postJson(`/api/race/cheers/${id}/like?quitar=${yaEstaba}`, {});
+    if (ok && typeof data.likes === 'number') {
+      setCheers((prev) => prev.map((c) => (c.id === id ? { ...c, likes: data.likes } : c)));
+    }
+  };
 
   const fetchCheers = useCallback((forBib) => {
     const filtro = forBib ? `&athlete_bib=${forBib}` : '';
@@ -40,9 +70,9 @@ export default function CheerScreen() {
         .then(setProfile)
         .catch(() => {});
     } else {
-      getJson(`/api/race/participants?race_code=${raceCode}`)
+      getJson(`/api/race/participants?race_code=${raceCode}&include_waitlist=true`)
         .then((data) => setParticipants(
-          data.filter((p) => p.bib && ['registered', 'active', 'retired', 'winner', 'honor'].includes(p.status))
+          data.filter((p) => p.bib && ['registered', 'active', 'retired', 'winner', 'honor', 'waitlist'].includes(p.status))
         ))
         .catch(() => {});
     }
@@ -197,14 +227,29 @@ export default function CheerScreen() {
             <p className="text-xs">Sé la primera persona en enviar ánimo.</p>
           </div>
         ) : (
-          cheers.map((c, i) => (
-            <div key={i} className={`rounded-2xl px-3.5 py-3 mb-2.5 ${T.card}`}>
-              <p className="text-sm leading-snug">{c.message}</p>
-              <p className={`text-[11px] mt-1.5 ${T.muted}`}>
-                — {c.fan_name}{!bibParam && (c.athlete_name || c.athlete_bib) ? ` para ${c.athlete_name || `#${c.athlete_bib}`}` : ''}
-              </p>
-            </div>
-          ))
+          cheers.map((c, i) => {
+            const miLike = c.id && misLikes.has(c.id);
+            return (
+              <div key={c.id || i} className={`rounded-2xl px-3.5 py-3 mb-2.5 ${T.card}`}>
+                <p className="text-sm leading-snug">{c.message}</p>
+                <div className="flex items-end justify-between gap-3 mt-1.5">
+                  <p className={`text-[11px] flex-1 min-w-0 ${T.muted}`}>
+                    — {c.fan_name}{!bibParam && (c.athlete_name || c.athlete_bib) ? ` para ${c.athlete_name || `#${c.athlete_bib}`}` : ''}
+                  </p>
+                  <button
+                    aria-label={miLike ? 'Quitar me gusta' : 'Me gusta'}
+                    aria-pressed={!!miLike}
+                    onClick={() => alternarLike(c)}
+                    disabled={!c.id}
+                    className={`flex items-center gap-1 shrink-0 text-[11px] font-bold disabled:opacity-40 ${miLike ? 'text-[#E77622]' : T.subtle}`}
+                  >
+                    <Heart className={`w-4 h-4 ${miLike ? 'fill-[#E77622]' : ''}`} />
+                    {c.likes > 0 ? c.likes : ''}
+                  </button>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </Screen>

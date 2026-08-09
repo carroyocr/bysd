@@ -36,6 +36,56 @@ export async function exportTextFile(filename, content, mimeType) {
   URL.revokeObjectURL(url);
 }
 
+/** true dentro de la app instalada (Android o iOS), false en el navegador. */
+export const enApp = () => Capacitor.isNativePlatform();
+
+function blobABase64(blob) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onerror = reject;
+    // readAsDataURL da "data:image/png;base64,XXXX"; Filesystem solo quiere XXXX
+    lector.onload = () => resolve(String(lector.result).split(',')[1]);
+    lector.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Comparte una imagen generada en un canvas.
+ *
+ * En la app no sirve `navigator.share` con ficheros —el WebView de Android no
+ * lo trae— ni el enlace con `download`, así que el botón no hacía nada: la
+ * imagen se escribe al caché y se entrega por la hoja de compartir del sistema,
+ * que es también desde donde se guarda en la galería.
+ */
+export async function shareImage(filename, blob, title) {
+  if (enApp()) {
+    const written = await Filesystem.writeFile({
+      path: filename,
+      data: await blobABase64(blob),
+      directory: Directory.Cache,
+    });
+    await Share.share({ title, files: [written.uri] });
+    return;
+  }
+
+  const file = new File([blob], filename, { type: 'image/png' });
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title });
+    return;
+  }
+  descargarBlob(filename, blob);
+}
+
+/** Descarga por el navegador. Solo tiene sentido fuera de la app. */
+export function descargarBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** Abre un enlace externo: pestaña nueva en la web, Browser nativo en la app. */
 export async function openExternal(url) {
   if (Capacitor.isNativePlatform()) {
