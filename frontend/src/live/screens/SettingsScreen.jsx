@@ -26,7 +26,13 @@ function Toggle({ on, onChange }) {
 export default function SettingsScreen() {
   const { theme, toggleTheme, T } = useLiveTheme();
   const { raceCode } = useRace() || {};
-  const [notifOn, setNotifOn] = useState(() => localStorage.getItem(NOTIF_KEY) === 'on');
+  // En la app vienen activadas de fábrica, así que sin preferencia guardada el
+  // interruptor tiene que salir encendido; en el navegador no hay push y se
+  // queda apagado hasta que se pida.
+  const [notifOn, setNotifOn] = useState(() => {
+    const guardado = localStorage.getItem(NOTIF_KEY);
+    return guardado ? guardado === 'on' : pushDisponible();
+  });
   const [notifMsg, setNotifMsg] = useState(null);
   const [ocupado, setOcupado] = useState(false);
 

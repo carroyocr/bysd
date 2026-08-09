@@ -4,6 +4,7 @@ import { Share2, Download, Loader2 } from 'lucide-react';
 import { getJson, getAthleteProfile, formatDuration, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
 
 const W = 1080;
 const H = 1920;
@@ -119,18 +120,11 @@ export default function ShareResultsScreen() {
   const handleShare = async () => {
     setSharing(true);
     try {
-      const blob = await toBlob();
-      const file = new File([blob], `resultados-${data.profile.bib}-bysd.png`, { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Resultados de ${data.profile.nombre} en el BYSD` });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        a.click();
-        URL.revokeObjectURL(url);
-      }
+      await shareImage(
+        `resultados-${data.profile.bib}-bysd.png`,
+        await toBlob(),
+        `Resultados de ${data.profile.nombre} en el BYSD`,
+      );
     } catch {
       /* usuario canceló */
     } finally {
@@ -159,20 +153,14 @@ export default function ShareResultsScreen() {
               {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
               Compartir resultados
             </button>
-            <button
-              onClick={async () => {
-                const blob = await toBlob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `resultados-${data.profile.bib}-bysd.png`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className={`mt-2.5 w-full rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 ${T.chip}`}
-            >
-              <Download className="w-4 h-4" /> Descargar imagen
-            </button>
+            {!enApp() && (
+              <button
+                onClick={async () => descargarBlob(`resultados-${data.profile.bib}-bysd.png`, await toBlob())}
+                className={`mt-2.5 w-full rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 ${T.chip}`}
+              >
+                <Download className="w-4 h-4" /> Descargar imagen
+              </button>
+            )}
           </>
         )}
       </div>

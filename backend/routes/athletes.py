@@ -101,6 +101,24 @@ class ItraSnapshot(BaseModel):
     results: list[ItraResult] = []
 
 
+def _url_instagram(valor: str) -> str:
+    """Enlace de Instagram a partir de la URL o del usuario suelto (@nombre)."""
+    v = valor.strip().rstrip("/")
+    if re.match(r"^https?://", v, re.I):
+        return v
+    return f"https://www.instagram.com/{v.lstrip('@')}"
+
+
+def _url_strava(valor: str) -> str:
+    """Enlace de Strava a partir de la URL o del numero de atleta."""
+    v = valor.strip().rstrip("/")
+    if re.match(r"^https?://", v, re.I):
+        return v
+    if v.isdigit():
+        return f"https://www.strava.com/athletes/{v}"
+    return f"https://www.strava.com/athletes/{v.lstrip('@')}"
+
+
 class UpdateProfileRequest(BaseModel):
     nombre: Optional[str] = None
     apellidos: Optional[str] = None
@@ -122,6 +140,8 @@ class UpdateProfileRequest(BaseModel):
     como_se_entero: Optional[str] = None
     itra_url: Optional[str] = None
     itra_snapshot: Optional[ItraSnapshot] = None
+    instagram_url: Optional[str] = None
+    strava_url: Optional[str] = None
     perfil_publico: Optional[bool] = None
 
 class RaceRegistrationRequest(BaseModel):
@@ -746,6 +766,8 @@ async def get_profile(authorization: str = Header(None)):
         "photo_url": athlete.get("photo_url"),
         "itra_url": athlete.get("itra_url"),
         "itra_snapshot": athlete.get("itra_snapshot"),
+        "instagram_url": athlete.get("instagram_url"),
+        "strava_url": athlete.get("strava_url"),
         "perfil_publico": athlete.get("perfil_publico", True),
         "email_verified": athlete.get("email_verified", False),
         "claimed_results": athlete.get("claimed_results", []),
@@ -792,6 +814,16 @@ async def update_profile(data: UpdateProfileRequest, authorization: str = Header
         snapshot = data.itra_snapshot.model_dump()
         snapshot["results"] = snapshot.get("results", [])[:30]
         update_data["itra_snapshot"] = snapshot
+    # Redes del corredor. Se admite el enlace completo o solo el usuario, y se
+    # guarda siempre normalizado a URL: es lo que el boton del perfil publico
+    # necesita abrir. Cadena vacia borra el enlace.
+    for campo, normaliza in (("instagram_url", _url_instagram), ("strava_url", _url_strava)):
+        valor = getattr(data, campo, None)
+        if valor is None:
+            continue
+        valor = valor.strip()
+        update_data[campo] = normaliza(valor) if valor else None
+
     if data.perfil_publico is not None:
         update_data["perfil_publico"] = data.perfil_publico
 
@@ -973,6 +1005,8 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
         "maxima_distancia_km": registration.get("maxima_distancia_km"),
         "itra_url": None,
         "itra_snapshot": None,
+        "instagram_url": None,
+        "strava_url": None,
     }
 
     # La experiencia ITRA vive en la cuenta del atleta, no en la inscripcion.
@@ -989,6 +1023,8 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
     if athlete:
         profile["itra_url"] = athlete.get("itra_url")
         profile["itra_snapshot"] = athlete.get("itra_snapshot")
+        profile["instagram_url"] = athlete.get("instagram_url")
+        profile["strava_url"] = athlete.get("strava_url")
         # La foto vigente del perfil manda sobre la copia de la inscripcion:
         # el atleta puede haberla subido o cambiado despues de inscribirse.
         profile["photo_url"] = athlete.get("photo_url") or profile["photo_url"]

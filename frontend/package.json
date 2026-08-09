@@ -5,6 +5,7 @@
   "dependencies": {
     "@capacitor-firebase/messaging": "^7",
     "@capacitor/android": "^7",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^7",
     "@capacitor/core": "^7",
     "@capacitor/filesystem": "^7",

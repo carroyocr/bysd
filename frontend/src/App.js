@@ -33,6 +33,7 @@ import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
+import useAndroidBack from './lib/androidBack';
 import './App.css';
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
     <RaceConfigProvider>
     <Router>
       <ScrollToTop />
+      <BotonAtrasAndroid />
       <div className="min-h-screen flex flex-col">
         <Routes>
           {/* App nativa: entra directo a BYSD Live; el perfil del atleta y el
@@ -115,4 +117,10 @@ export default function App() {
     </Router>
     </RaceConfigProvider>
   );
+}
+
+/** Atiende el botón/gesto de atrás de Android. Vive dentro del Router. */
+function BotonAtrasAndroid() {
+  useAndroidBack();
+  return null;
 }

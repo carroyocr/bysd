@@ -13,11 +13,11 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from services import push_service, rate_limit
-from services.auth import require_permission
+from services.auth import has_permission, require_permission, verify_admin_token
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,10 @@ class RegistroDispositivo(BaseModel):
     # Correo del voluntario, cuando quien usa el telefono entro como staff. Es
     # lo que permite avisarle media hora antes de su turno.
     staff_email: Optional[str] = None
+    # Correo del corredor, cuando entro con su cuenta de atleta. Sin esto no
+    # habia forma de mandar un aviso "a los inscritos": el registro solo sabia
+    # a quien sigue el telefono, no de quien es.
+    athlete_email: Optional[str] = None
 
 
 class Baja(BaseModel):
@@ -119,6 +123,8 @@ async def registrar_dispositivo(registro: RegistroDispositivo, request: Request)
     # mismo token desde pantallas distintas y una no debe borrar lo de la otra.
     if registro.staff_email is not None:
         campos["staff_email"] = registro.staff_email.strip().lower() or None
+    if registro.athlete_email is not None:
+        campos["athlete_email"] = registro.athlete_email.strip().lower() or None
 
     await database.push_devices.update_one(
         {"token": token},
@@ -235,3 +241,214 @@ async def avisar_a_seguidores(
         await _enviar_y_limpiar(database, tokens, titulo, cuerpo, data)
     except Exception as e:
         logger.warning(f"No se pudo enviar el aviso push del BIB {bib}: {e}")
+
+
+# ============= ENVIO DIRIGIDO (modulo de mensajes) =============
+#
+# El aviso automatico de vuelta va a quien sigue a un corredor, y /broadcast va
+# a todo el mundo. Faltaba lo de en medio: escribir a un grupo concreto —los
+# inscritos de una carrera, los que aun deben el pago, el equipo de un evento,
+# una persona suelta— igual que ya se hace con el correo.
+#
+# Un telefono queda ligado a una cuenta al entrar en la app: al de staff por
+# `staff_email` y al del corredor por `athlete_email`. Ahi es donde se apoya
+# todo lo que sigue; un telefono sin cuenta solo es alcanzable por "todos".
+
+
+class FiltroPush(BaseModel):
+    # 'todos' | 'atletas' | 'staff' | 'seguidores' | 'manual'
+    audiencia: str
+    race_code: Optional[str] = None
+    # Solo 'atletas'
+    reg_status: Optional[str] = None
+    payment: Optional[str] = None
+    # Solo 'staff'
+    evento: Optional[str] = None
+    solo_con_turno: bool = False
+    # Solo 'seguidores': dorsales concretos
+    bibs: List[str] = Field(default_factory=list)
+    # Solo 'manual': correos de las cuentas a las que escribir
+    correos: List[str] = Field(default_factory=list)
+
+
+class EnvioPush(FiltroPush):
+    title: str
+    body: str
+
+
+def _puede_enviar(authorization: Optional[str] = Header(None)) -> dict:
+    """Manda quien lleva las comunicaciones ("emails") o el control de carrera.
+
+    Son los dos perfiles que hoy escriben a los participantes; exigir uno solo
+    dejaria fuera a la mitad de quienes ya hacen esto por correo.
+    """
+    payload = verify_admin_token(authorization)
+    if not (has_permission(payload, "emails") or has_permission(payload, "control")):
+        raise HTTPException(status_code=403, detail="No tienes permiso para enviar avisos")
+    return payload
+
+
+async def _correos_atletas(database, filtro: FiltroPush) -> List[str]:
+    """Correos de los corredores que cumplen el filtro de inscripcion."""
+    query: dict = {}
+    if filtro.race_code:
+        query["race_code"] = filtro.race_code
+    if filtro.reg_status:
+        query["status"] = filtro.reg_status
+    if filtro.payment:
+        query["payment_status"] = filtro.payment
+
+    correos = await database.registrations.distinct("email", query)
+    return [c.strip().lower() for c in correos if isinstance(c, str) and c.strip()]
+
+
+async def _correos_staff(database, filtro: FiltroPush) -> List[str]:
+    """Correos del equipo: todos, los de un evento, o solo los que tienen turno."""
+    if filtro.solo_con_turno:
+        query = {"email_asignado": {"$nin": [None, ""]}}
+        if filtro.evento:
+            from routes.volunteer_registration import evento_query
+            query.update(evento_query(filtro.evento))
+        correos = await database.volunteer_assignments.distinct("email_asignado", query)
+    else:
+        query = {"status": {"$ne": "cancelled"}}
+        if filtro.evento:
+            query["evento"] = filtro.evento
+        correos = await database.volunteer_registrations.distinct("email", query)
+
+    return [c.strip().lower() for c in correos if isinstance(c, str) and c.strip()]
+
+
+async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:
+    """Dispositivos alcanzados por el filtro, sin repetir token."""
+    if filtro.audiencia == "todos":
+        query = {"race_code": filtro.race_code} if filtro.race_code else {}
+
+    elif filtro.audiencia == "seguidores":
+        formas: List[str] = []
+        for bib in filtro.bibs:
+            formas.extend(variantes_bib(bib))
+        if not formas:
+            return []
+        query = {"followed": {"$in": formas}}
+        if filtro.race_code:
+            query["race_code"] = {"$in": [filtro.race_code, None]}
+
+    else:
+        if filtro.audiencia == "atletas":
+            correos = await _correos_atletas(database, filtro)
+            campo = "athlete_email"
+        elif filtro.audiencia == "staff":
+            correos = await _correos_staff(database, filtro)
+            campo = "staff_email"
+        elif filtro.audiencia == "manual":
+            correos = [c.strip().lower() for c in filtro.correos if c and c.strip()]
+            # A mano no se sabe si el correo es de un corredor o del equipo: se
+            # busca por los dos lados.
+            if not correos:
+                return []
+            query = {"$or": [{"athlete_email": {"$in": correos}}, {"staff_email": {"$in": correos}}]}
+            return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
+        else:
+            raise HTTPException(status_code=400, detail="Audiencia desconocida")
+
+        if not correos:
+            return []
+        query = {campo: {"$in": correos}}
+
+    return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
+
+
+@router.post("/destinatarios")
+async def previsualizar_destinatarios(filtro: FiltroPush, _=Depends(_puede_enviar)):
+    """A cuantos telefonos llegaria este envio, antes de mandarlo.
+
+    Los correos con cuenta pero sin la app instalada se cuentan aparte: es la
+    diferencia entre "no le llego" y "no lo tiene instalado", y sin ese numero
+    parece que el envio falla cuando en realidad no hay a donde mandarlo.
+    """
+    from server import db as database
+
+    dispositivos = await _dispositivos_de(database, filtro)
+    tokens = {d["token"] for d in dispositivos if d.get("token")}
+
+    esperados = 0
+    if filtro.audiencia == "atletas":
+        esperados = len(await _correos_atletas(database, filtro))
+    elif filtro.audiencia == "staff":
+        esperados = len(await _correos_staff(database, filtro))
+    elif filtro.audiencia == "manual":
+        esperados = len([c for c in filtro.correos if c and c.strip()])
+
+    con_app = len({
+        (d.get("athlete_email") or d.get("staff_email"))
+        for d in dispositivos
+        if d.get("athlete_email") or d.get("staff_email")
+    })
+
+    return {
+        "dispositivos": len(tokens),
+        "android": sum(1 for d in dispositivos if d.get("platform") == "android"),
+        "ios": sum(1 for d in dispositivos if d.get("platform") == "ios"),
+        "personas_con_app": con_app,
+        "personas_en_la_lista": esperados,
+        "sin_app": max(0, esperados - con_app) if esperados else 0,
+        "configurado": push_service.esta_configurado(),
+    }
+
+
+@router.post("/enviar")
+async def enviar_push_dirigido(envio: EnvioPush, payload: dict = Depends(_puede_enviar)):
+    """Manda el aviso al grupo elegido y guarda el envio en el historial."""
+    from server import db as database
+
+    titulo = (envio.title or "").strip()
+    cuerpo = (envio.body or "").strip()
+    if not titulo or not cuerpo:
+        raise HTTPException(status_code=400, detail="El aviso necesita titulo y mensaje")
+
+    if not push_service.esta_configurado():
+        raise HTTPException(
+            status_code=503,
+            detail="Las notificaciones push no estan configuradas (falta FCM_SERVICE_ACCOUNT_JSON)",
+        )
+
+    dispositivos = await _dispositivos_de(database, envio)
+    tokens = list({d["token"] for d in dispositivos if d.get("token")})
+    if not tokens:
+        raise HTTPException(
+            status_code=400,
+            detail="Ese grupo no tiene ningun telefono con la app instalada y los avisos activados",
+        )
+
+    resultado = await _enviar_y_limpiar(
+        database, tokens, titulo, cuerpo, {"tipo": "mensaje"}
+    )
+
+    await database.push_history.insert_one({
+        "title": titulo,
+        "body": cuerpo,
+        "audiencia": envio.audiencia,
+        "filtro": envio.model_dump(exclude={"title", "body"}),
+        "dispositivos": len(tokens),
+        "enviados": resultado["enviados"],
+        "fallidos": resultado["fallidos"],
+        "enviado_por": payload.get("username"),
+        "created_at": _ahora(),
+    })
+
+    return {
+        "success": True,
+        "dispositivos": len(tokens),
+        "enviados": resultado["enviados"],
+        "fallidos": resultado["fallidos"],
+    }
+
+
+@router.get("/historial")
+async def historial_envios(limit: int = 30, _=Depends(_puede_enviar)):
+    """Ultimos avisos enviados a mano, para saber que se dijo y a quien."""
+    from server import db as database
+
+    envios = await database.push_history.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 100))
+    return {"envios": envios}

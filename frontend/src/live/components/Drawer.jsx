@@ -38,13 +38,13 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
-    { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     // Sin sesión, la única entrada es "Iniciar sesión" y ahí dentro se elige
-    // quién eres. Va al final: el menú es para seguir la carrera.
+    // quién eres. El menú es para seguir la carrera.
     ...(accesos.length === 0
       ? [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]
       : []),
+    { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
   ];
 
   return (

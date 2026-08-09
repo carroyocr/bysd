@@ -29,7 +29,7 @@ function leerSeguidos() {
   }
 }
 
-async function registrarEnBackend(token, raceCode, staffEmail) {
+async function registrarEnBackend(token, raceCode, staffEmail, atletaEmail) {
   const cuerpo = {
     token,
     platform: Capacitor.getPlatform(),
@@ -40,6 +40,7 @@ async function registrarEnBackend(token, raceCode, staffEmail) {
   // siempre, entrar como corredor borraría el vínculo con el voluntario y se
   // perderían los avisos de turno.
   if (staffEmail) cuerpo.staff_email = staffEmail;
+  if (atletaEmail) cuerpo.athlete_email = atletaEmail;
 
   const res = await fetch(`${API}/api/push/register`, {
     method: 'POST',
@@ -48,6 +49,26 @@ async function registrarEnBackend(token, raceCode, staffEmail) {
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
+}
+
+/**
+ * Liga este teléfono a la cuenta del corredor que acaba de entrar, para que
+ * pueda recibir los avisos dirigidos a los inscritos. Silenciosa: si no hay
+ * permiso de notificaciones no se insiste, solo se queda sin ese canal.
+ */
+export async function registrarAtleta(email) {
+  if (!pushDisponible() || !email) return;
+  try {
+    const permiso = await FirebaseMessaging.checkPermissions();
+    if (permiso.receive !== 'granted') return;
+    const { token } = await FirebaseMessaging.getToken();
+    if (!token) return;
+    await registrarEnBackend(token, null, undefined, email);
+    localStorage.setItem(TOKEN_KEY, token);
+    await ponerListeners();
+  } catch {
+    /* sigue recibiendo los avisos de sus favoritos */
+  }
 }
 
 /**
@@ -157,7 +178,20 @@ export async function sincronizarSeguidos(raceCode) {
  */
 export async function refrescarPush(raceCode) {
   if (!pushDisponible()) return;
-  if (localStorage.getItem(NOTIF_KEY) !== 'on') return;
+
+  const preferencia = localStorage.getItem(NOTIF_KEY);
+  // Apagadas a mano: no se vuelven a encender solas.
+  if (preferencia === 'off') return;
+  // Sin preferencia guardada es la primera vez: en la app vienen activadas,
+  // que es lo que espera quien se instala una app de seguimiento en vivo. Aquí
+  // sale el permiso del sistema; si lo deniega, queda apagado hasta que lo
+  // active en Configuración.
+  if (!preferencia) {
+    const { ok } = await activarPush(raceCode);
+    if (ok) localStorage.setItem(NOTIF_KEY, 'on');
+    return;
+  }
+
   try {
     const permiso = await FirebaseMessaging.checkPermissions();
     if (permiso.receive !== 'granted') return;
