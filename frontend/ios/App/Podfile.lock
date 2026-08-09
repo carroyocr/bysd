@@ -1,6 +1,8 @@
 PODS:
   - Capacitor (7.6.8):
     - CapacitorCordova
+  - CapacitorApp (8.1.1):
+    - Capacitor
   - CapacitorBrowser (7.0.5):
     - Capacitor
   - CapacitorCordova (7.6.8)
@@ -73,6 +75,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
@@ -96,6 +99,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorApp:
+    :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/@capacitor/browser"
   CapacitorCordova:
@@ -113,6 +118,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Capacitor: ff6bf01336ac353098378828aff465095a89e459
+  CapacitorApp: 305bd13c44f6f9d164e2ee66a4faa956ed8c0e06
   CapacitorBrowser: 6d09f59655e89aede71654ef08b98de55cf032b6
   CapacitorCordova: e61ee8c40101b8cd011d0224261606a290c082cf
   CapacitorFilesystem: c63fc54df41e5a6761785a7f3c49dc696c22e296
@@ -130,6 +136,6 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
 
-PODFILE CHECKSUM: e25989497f5eeeccaacc08edf14cde3461bf55aa
+PODFILE CHECKSUM: e428935d887ebcf5d512f1b852bc405f234747cc
 
 COCOAPODS: 1.17.0
