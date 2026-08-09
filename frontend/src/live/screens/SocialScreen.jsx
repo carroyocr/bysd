@@ -1,11 +1,9 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Instagram, Activity, ExternalLink, AtSign } from 'lucide-react';
+import { usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { openExternal } from '../../lib/nativeExport';
-
-/** "https://www.instagram.com/pepe" -> "pepe". El enlace entero no se lee. */
-const usuarioDeEnlace = (url) => (url ? url.replace(/\/+$/, '').split('/').pop() : '');
 
 /**
  * Sección "Social" de la ficha: las cuentas que el propio corredor publicó en
@@ -56,7 +54,9 @@ export default function SocialScreen() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold">{nombre}</p>
-              <p className={`text-[11px] truncate ${T.muted}`}>{usuarioDeEnlace(url)}</p>
+              {usuarioDeEnlace(url) && (
+                <p className={`text-[11px] truncate ${T.muted}`}>{usuarioDeEnlace(url)}</p>
+              )}
             </div>
             <ExternalLink className={`w-4 h-4 shrink-0 ${T.subtle}`} />
           </button>

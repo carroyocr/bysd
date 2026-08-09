@@ -138,6 +138,22 @@ export function useFollowed() {
   };
 }
 
+/**
+ * Nombre legible de una cuenta a partir de su enlace: "pepe" para
+ * instagram.com/pepe. Los enlaces para compartir de la propia app de Strava
+ * (strava.app.link/ZxLR8c0wt5b) no llevan el usuario dentro, asi que ahi no se
+ * inventa nada y se deja sin subtitulo en vez de ensenar el codigo suelto.
+ */
+export function usuarioDeEnlace(url) {
+  if (!url) return '';
+  const limpio = url.replace(/\/+$/, '');
+  const conocido = /^https?:\/\/(www\.)?(instagram\.com|strava\.com)\//i.test(limpio);
+  if (!conocido) return '';
+  const ultimo = limpio.split('/').pop();
+  // strava.com/athletes/12345: el numero no dice nada, mejor callarlo
+  return /^\d+$/.test(ultimo) ? '' : ultimo;
+}
+
 export function statusLabel(status) {
   switch (status) {
     case 'registered': return 'Inscrito';

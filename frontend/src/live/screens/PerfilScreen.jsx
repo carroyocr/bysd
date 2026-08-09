@@ -6,7 +6,7 @@ import {
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
 } from 'lucide-react';
-import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
+import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
@@ -18,9 +18,6 @@ import Picker from '../components/Picker';
 import DateField from '../components/DateField';
 
 const TOKEN_KEY = 'athlete_token';
-
-/** "https://www.instagram.com/pepe" -> "pepe". Para enseñarlo sin la URL entera. */
-const usuarioDeEnlace = (url) => (url ? url.replace(/\/+$/, '').split('/').pop() : '');
 
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -1792,7 +1789,7 @@ export default function PerfilScreen() {
                 className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
               >
                 <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
-                {usuarioDeEnlace(athlete.instagram_url)}
+                {usuarioDeEnlace(athlete.instagram_url) || 'Abrir'}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
             )}
@@ -1812,7 +1809,7 @@ export default function PerfilScreen() {
                 className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
               >
                 <Activity className="w-3.5 h-3.5 text-[#E77622]" />
-                {usuarioDeEnlace(athlete.strava_url)}
+                {usuarioDeEnlace(athlete.strava_url) || 'Abrir'}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
             )}
