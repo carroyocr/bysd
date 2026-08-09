@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
@@ -33,6 +33,21 @@ function formatoTurno(dia, hora) {
 
 const soloHora = (hora) => (hora || '').slice(0, 5);
 
+/**
+ * Momento de entrada y de salida de un turno, en milisegundos.
+ * El que cierra a medianoche —o a una hora menor que la de entrada— termina
+ * al día siguiente; sin esto, el de 20:00 a 00:00 parecería durar menos veinte
+ * horas y no chocaría con ninguno.
+ */
+function tramoTurno(t) {
+  if (!t?.fecha) return null;
+  const ini = new Date(`${t.fecha}T${soloHora(t.hora_inicio) || '00:00'}`);
+  let fin = new Date(`${t.fecha}T${soloHora(t.hora_fin) || '00:00'}`);
+  if (Number.isNaN(ini.getTime()) || Number.isNaN(fin.getTime())) return null;
+  if (fin <= ini) fin = new Date(fin.getTime() + 86400000);
+  return [ini.getTime(), fin.getTime()];
+}
+
 /** "2027-01-23" -> "sáb, 23 ene". Sin la hora, para encabezar un turno. */
 function diaFecha(fecha) {
   if (!fecha) return '';
@@ -66,6 +81,15 @@ export default function StaffPerfilScreen() {
   // toda desplegada. Arrancan cerrados y solo se abre uno a la vez.
   const [puestoAbierto, setPuestoAbierto] = useState(null);
 
+  // Al desplegar, subir el puesto al borde de arriba. Si no, la lista que se
+  // abre empuja la pantalla y el nombre y la descripción quedan fuera de
+  // vista: se ve el final de los turnos sin saber de qué puesto son.
+  const refsPuesto = useRef({});
+  useEffect(() => {
+    if (!puestoAbierto) return;
+    refsPuesto.current[puestoAbierto]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [puestoAbierto]);
+
   const cargarOferta = useCallback(async (ev) => {
     setOferta(null);
     setPuestoAbierto(null);
@@ -77,6 +101,21 @@ export default function StaffPerfilScreen() {
   useEffect(() => {
     if (tab === 'elegir') cargarOferta(evento);
   }, [tab, evento, cargarOferta]);
+
+  // Horario que ya ocupa lo marcado. El mismo turno (misma letra, mismo
+  // horario) se ofrece en varios puestos, así que marcar dos era fácil; y
+  // nadie puede cubrir dos puestos a la vez.
+  const tramosElegidos = useMemo(() => {
+    const porSlot = new Map();
+    (oferta || []).forEach((p) => (p.turnos || []).forEach((t) => porSlot.set(t.slot_id, t)));
+    return elegidos.map((id) => tramoTurno(porSlot.get(id))).filter(Boolean);
+  }, [oferta, elegidos]);
+
+  const chocaConLoElegido = (t) => {
+    const tramo = tramoTurno(t);
+    if (!tramo) return false;
+    return tramosElegidos.some(([ini, fin]) => tramo[0] < fin && ini < tramo[1]);
+  };
 
   const alternar = (slotId) => {
     setElegidos((p) => (p.includes(slotId) ? p.filter((s) => s !== slotId) : [...p, slotId]));
@@ -271,7 +310,13 @@ export default function StaffPerfilScreen() {
               const abierto = puestoAbierto === puesto.puesto;
               const marcadosAqui = (puesto.turnos || []).filter((t) => elegidos.includes(t.slot_id)).length;
               return (
-              <div key={puesto.puesto} className={`py-1 border-b last:border-b-0 ${T.divider}`}>
+              <div
+                key={puesto.puesto}
+                ref={(el) => { refsPuesto.current[puesto.puesto] = el; }}
+                // El margen de desplazamiento deja sitio a la barra superior,
+                // que es fija y taparía el nombre del puesto.
+                className={`py-1 border-b last:border-b-0 scroll-mt-[calc(4.5rem+env(safe-area-inset-top))] ${T.divider}`}
+              >
                 <button
                   onClick={() => setPuestoAbierto(abierto ? null : puesto.puesto)}
                   className="w-full flex items-center gap-2 py-2.5 text-left"
@@ -293,12 +338,14 @@ export default function StaffPerfilScreen() {
                     const marcado = elegidos.includes(t.slot_id);
                     // Un turno lleno solo se puede tocar si ya es tuyo
                     const lleno = (t.available_count || 0) === 0 && !marcado;
+                    const choca = !marcado && !lleno && chocaConLoElegido(t);
+                    const bloqueado = lleno || choca;
                     return (
                       <button
                         key={t.slot_id}
-                        onClick={() => !lleno && alternar(t.slot_id)}
-                        disabled={lleno}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${marcado ? 'bg-[#E77622]/15' : T.input} ${lleno ? 'opacity-40' : ''}`}
+                        onClick={() => !bloqueado && alternar(t.slot_id)}
+                        disabled={bloqueado}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left ${marcado ? 'bg-[#E77622]/15' : T.input} ${bloqueado ? 'opacity-40' : ''}`}
                       >
                         <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${marcado ? 'bg-[#E77622] border-[#E77622]' : 'border-gray-500/50'}`}>
                           {marcado && <Check className="w-3 h-3 text-white" />}
@@ -314,7 +361,9 @@ export default function StaffPerfilScreen() {
                           <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${T.subtle}`}>
                             <UsersIcon className="w-3 h-3" />
                             {t.turno ? `Turno ${t.turno} · ` : ''}
-                            {lleno ? 'Sin plazas' : `${t.available_count} de ${t.total_count} libres`}
+                            {lleno && 'Sin plazas'}
+                            {choca && 'Coincide con otro turno que ya marcaste'}
+                            {!lleno && !choca && `${t.available_count} de ${t.total_count} libres`}
                           </p>
                         </div>
                       </button>

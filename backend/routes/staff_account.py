@@ -295,6 +295,7 @@ async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_
     from server import db
     from routes.volunteer_registration import (
         VALID_EVENTOS, eventos_abiertos, nombre_evento, validar_slots_libres,
+        validar_sin_solapes,
     )
 
     email = (payload.get("username") or "").lower()
@@ -317,6 +318,8 @@ async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_
     # Que sigan libres: entre que se cargo la pantalla y se pulso guardar,
     # otro voluntario pudo quedarse con el turno.
     await validar_slots_libres(db, slots, email)
+    # Y que no se pisen entre ellos: nadie cubre dos puestos a la vez.
+    await validar_sin_solapes(db, slots, evento)
 
     await db.volunteer_registrations.update_one(
         {"_id": registro["_id"]},

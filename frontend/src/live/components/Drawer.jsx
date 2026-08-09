@@ -22,32 +22,29 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
 
   const base = `/live/${raceCode}`;
 
-  // Sin ninguna sesión el menú no delata que exista un acceso de staff: se
-  // ofrece una sola entrada, "Iniciar sesión", y ahí dentro se elige quién
-  // eres. En cuanto hay sesión se enseñan los dos accesos, siempre en el mismo
-  // orden —corredor y debajo staff—, aunque solo uno esté iniciado: quien es
-  // voluntario y corredor a la vez no tiene que cerrar sesión para cambiar, y
-  // el que falte lleva a su propio login.
+  // Cada acceso se muestra solo si su sesión está abierta: el corredor no ve
+  // que exista un acceso de staff, y el del staff no ve el del corredor. Van
+  // justo debajo de Inicio, que es lo primero que busca quien ya entró.
   const { atleta, staff } = sesionesAbiertas();
-  const accesos = (atleta || staff)
-    ? [
-      { label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') },
-      { label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') },
-    ]
-    : [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }];
+  const accesos = [];
+  if (atleta) accesos.push({ label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') });
+  if (staff) accesos.push({ label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') });
 
-  // Los accesos van al final: el menú es para seguir la carrera, y entrar a la
-  // cuenta es lo que menos se hace.
   const items = [
     { label: 'Inicio', Icon: Home, action: () => go(base) },
-    { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
-    { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
+    { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
+    ...accesos,
     { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
-    { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
+    { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
     { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
-    ...accesos,
+    { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
+    // Sin sesión, la única entrada es "Iniciar sesión" y ahí dentro se elige
+    // quién eres. Va al final: el menú es para seguir la carrera.
+    ...(accesos.length === 0
+      ? [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]
+      : []),
   ];
 
   return (

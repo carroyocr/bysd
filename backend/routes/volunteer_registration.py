@@ -185,6 +185,77 @@ def _fecha_turno(base_date: str, dia_tipo: Optional[str]) -> str:
     return (base + timedelta(days=offset)).strftime("%Y-%m-%d")
 
 
+def fecha_de_slot(slot: dict, base_date: str) -> str:
+    """Fecha real de un turno. Los documentos antiguos la traen puesta en
+    'dia'; los actuales la deducen de su 'dia_tipo' y la fecha del evento."""
+    dia = str(slot.get("dia") or "")
+    if len(dia) == 10 and dia[4] == "-" and dia[7] == "-":
+        return dia
+    return _fecha_turno(base_date, slot.get("dia_tipo"))
+
+
+async def fecha_base_evento(db, evento: str) -> str:
+    """Fecha de inicio del evento: la programacion propia del evento manda (el
+    campeonato tiene fechas distintas a la carrera), y si no la hay se toma la
+    de la carrera activa."""
+    schedule = await db.volunteer_event_schedules.find_one({"evento": evento})
+    if schedule and schedule.get("fecha_inicio"):
+        return str(schedule["fecha_inicio"])[:10]
+    active_race = await db.race_configurations.find_one({"is_active": True})
+    return active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
+
+
+def _momentos_turno(fecha: str, hora_inicio: str, hora_fin: str):
+    """(inicio, fin) de un turno como datetimes, o None si no se pueden leer.
+
+    Un turno que cierra a medianoche o a una hora menor que la de entrada
+    termina al dia siguiente; sin esto, el de 20:00 a 00:00 pareceria durar
+    menos veinte horas y no chocaria con nada.
+    """
+    try:
+        inicio = datetime.fromisoformat(f"{fecha}T{(hora_inicio or '')[:5]}")
+        fin = datetime.fromisoformat(f"{fecha}T{(hora_fin or '')[:5]}")
+    except (ValueError, TypeError):
+        return None
+    if fin <= inicio:
+        fin += timedelta(days=1)
+    return inicio, fin
+
+
+async def validar_sin_solapes(db, slots: Optional[List[int]], evento: str):
+    """Corta con 400 si dos de los turnos elegidos se pisan en el tiempo.
+
+    Un voluntario no puede estar a la vez en dos puestos, y el mismo turno
+    (misma letra, mismo horario) se ofrece en varios puestos a la vez, asi que
+    marcar dos era facil.
+    """
+    if not slots or len(slots) < 2:
+        return
+
+    docs = await db.volunteer_assignments.find({"id": {"$in": list(slots)}}, {"_id": 0}).to_list(200)
+    base_date = await fecha_base_evento(db, evento)
+
+    tramos = []
+    for doc in docs:
+        momentos = _momentos_turno(
+            fecha_de_slot(doc, base_date), doc.get("hora_inicio"), doc.get("hora_fin")
+        )
+        if momentos:
+            tramos.append((momentos[0], momentos[1], doc))
+
+    tramos.sort(key=lambda t: t[0])
+    for (ini_a, fin_a, doc_a), (ini_b, fin_b, doc_b) in zip(tramos, tramos[1:]):
+        if ini_b < fin_a:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"El turno {doc_b.get('turno')} de \"{doc_b.get('puesto')}\" coincide en horario "
+                    f"con el turno {doc_a.get('turno')} de \"{doc_a.get('puesto')}\". "
+                    "No puedes cubrir los dos a la vez."
+                ),
+            )
+
+
 async def slots_reservados(db, excluir_email: Optional[str] = None) -> set:
     """IDs de turnos ya solicitados por algun voluntario (slots_interes).
 
@@ -218,13 +289,7 @@ async def get_available_slots(evento: Optional[str] = None, email: Optional[str]
     # Fecha base del evento: la programacion de turnos del propio evento si
     # existe (el campeonato tiene fechas distintas a la carrera activa);
     # como respaldo, la fecha de la carrera activa.
-    race_date = None
-    schedule = await db.volunteer_event_schedules.find_one({"evento": evento_norm})
-    if schedule and schedule.get("fecha_inicio"):
-        race_date = str(schedule["fecha_inicio"])[:10]
-    if not race_date:
-        active_race = await db.race_configurations.find_one({"is_active": True})
-        race_date = active_race.get("date", "2027-01-23") if active_race else "2027-01-23"
+    race_date = await fecha_base_evento(db, evento_norm)
 
     # Get all slots from the correct collection, filtered by event
     query = evento_query(evento) if evento in VALID_EVENTOS else {}
@@ -254,7 +319,7 @@ async def get_available_slots(evento: Optional[str] = None, email: Optional[str]
                 "hora_fin": slot.get("hora_fin", ""),
                 "dia": slot.get("dia", ""),
                 "dia_tipo": slot.get("dia_tipo", "carrera"),
-                "fecha": _fecha_turno(race_date, slot.get("dia_tipo")),
+                "fecha": fecha_de_slot(slot, race_date),
             }
         
         # Build position info
@@ -272,7 +337,7 @@ async def get_available_slots(evento: Optional[str] = None, email: Optional[str]
                 "hora_inicio": slot.get("hora_inicio"),
                 "hora_fin": slot.get("hora_fin"),
                 "dia_tipo": slot.get("dia_tipo", "carrera"),
-                "fecha": _fecha_turno(race_date, slot.get("dia_tipo")),
+                "fecha": fecha_de_slot(slot, race_date),
             }
         
         positions[puesto]["turnos"][turno]["total_count"] += 1
