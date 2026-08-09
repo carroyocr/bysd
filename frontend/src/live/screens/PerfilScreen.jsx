@@ -4,7 +4,7 @@ import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
-  Mountain, ExternalLink, ScanFace, RefreshCw,
+  Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -30,6 +30,7 @@ const TABS = [
   { key: 'carreras', label: 'Mis carreras', icon: Medal },
   { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
   { key: 'experiencia', label: 'Experiencia', icon: Mountain },
+  { key: 'social', label: 'Social', icon: AtSign },
   { key: 'historial', label: 'Historial', icon: Trophy },
 ];
 
@@ -258,6 +259,8 @@ export default function PerfilScreen() {
 
   // Experiencia ITRA. ITRA no tiene API pública y bloquea la lectura desde
   // servidores, así que el atleta copia sus datos a mano desde itra.run.
+  const [socialData, setSocialData] = useState({ instagram_url: '', strava_url: '' });
+  const [savingSocial, setSavingSocial] = useState(false);
   const [itraEdit, setItraEdit] = useState(false);
   const [savingItra, setSavingItra] = useState(false);
   const [itraData, setItraData] = useState({});
@@ -305,6 +308,30 @@ export default function PerfilScreen() {
     });
     setMsg(null);
     setItraEdit(true);
+  };
+
+  /**
+   * Redes del corredor. Se guardan solas, sin pasar por el formulario de
+   * Datos: son opcionales, cambian por su cuenta y son lo unico del perfil que
+   * se publica hacia fuera, en su ficha.
+   */
+  const saveSocial = async () => {
+    setSavingSocial(true);
+    setMsg(null);
+    const { ok, data } = await authJson('PUT', '/api/athletes/profile', {
+      token: token(),
+      body: {
+        instagram_url: (socialData.instagram_url || '').trim(),
+        strava_url: (socialData.strava_url || '').trim(),
+      },
+    });
+    setSavingSocial(false);
+    if (ok) {
+      setMsg({ type: 'ok', text: 'Redes guardadas.' });
+      fetchAll();
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudieron guardar' });
+    }
   };
 
   const saveItra = async () => {
@@ -357,6 +384,10 @@ export default function PerfilScreen() {
     }
     setAthlete(data);
     setView('panel');
+    setSocialData({
+      instagram_url: data.instagram_url || '',
+      strava_url: data.strava_url || '',
+    });
     // Liga el teléfono a su cuenta: es lo que permite que la organización le
     // mande un aviso "a los inscritos" y no solo el de sus favoritos.
     registrarAtleta(data.email);
@@ -647,8 +678,6 @@ export default function PerfilScreen() {
       talla_camiseta: athlete?.talla_camiseta || '',
       personalizacion_camiseta: athlete?.personalizacion_camiseta || '',
       como_se_entero: athlete?.como_se_entero || '',
-      instagram_url: athlete?.instagram_url || '',
-      strava_url: athlete?.strava_url || '',
     });
     setEditMode(true);
     setMsg(null);
@@ -1168,8 +1197,6 @@ export default function PerfilScreen() {
                   para saber con qué cuenta se entró, pero no tiene por qué
                   encabezar la pantalla. */}
               <InfoRow T={T} label="Correo" value={athlete?.email} />
-              <InfoRow T={T} label="Instagram" value={usuarioDeEnlace(athlete?.instagram_url)} />
-              <InfoRow T={T} label="Strava" value={usuarioDeEnlace(athlete?.strava_url)} />
               <InfoRow T={T} label="Teléfono" value={athlete?.telefono} />
               <InfoRow T={T} label="Fecha de nacimiento" value={athlete?.fecha_nacimiento} />
               <InfoRow T={T} label="Sexo" value={athlete?.sexo} />
@@ -1218,14 +1245,6 @@ export default function PerfilScreen() {
                 <Field T={T} label="Talla de camiseta"><SelectInput T={T} options={TALLAS} value={editData.talla_camiseta} onChange={upd('talla_camiseta')} /></Field>
                 <Field T={T} label="Nombre en camiseta"><TextInput T={T} maxLength={15} value={editData.personalizacion_camiseta} onChange={upd('personalizacion_camiseta')} /></Field>
               </div>
-              {/* Redes. Vale el enlace completo o solo el usuario: el backend
-                  lo normaliza, porque casi nadie copia la URL entera. */}
-              <Field T={T} label="Instagram (usuario o enlace)">
-                <TextInput T={T} autoCapitalize="none" placeholder="@micuenta" value={editData.instagram_url} onChange={upd('instagram_url')} />
-              </Field>
-              <Field T={T} label="Strava (número de atleta o enlace)">
-                <TextInput T={T} autoCapitalize="none" placeholder="12345678" value={editData.strava_url} onChange={upd('strava_url')} />
-              </Field>
               <div className="flex gap-3 pt-1">
                 <button onClick={() => setEditMode(false)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
                   Cancelar
@@ -1745,6 +1764,69 @@ export default function PerfilScreen() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'social' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+              <AtSign className="w-4 h-4 text-[#E77622]" /> Redes
+            </h3>
+            <p className={`text-[11px] leading-relaxed mb-4 ${T.muted}`}>
+              Si las pones, aparecen como iconos en tu ficha pública y cualquiera
+              podrá seguirte desde la app. Déjalas vacías para no publicarlas.
+            </p>
+
+            <Field T={T} label="Instagram">
+              <TextInput
+                T={T}
+                autoCapitalize="none"
+                placeholder="@micuenta"
+                value={socialData.instagram_url}
+                onChange={(e) => setSocialData((p) => ({ ...p, instagram_url: e.target.value }))}
+              />
+            </Field>
+            {athlete?.instagram_url && (
+              <button
+                onClick={() => openExternal(athlete.instagram_url)}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
+              >
+                <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
+                {usuarioDeEnlace(athlete.instagram_url)}
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </button>
+            )}
+
+            <Field T={T} label="Strava">
+              <TextInput
+                T={T}
+                autoCapitalize="none"
+                placeholder="Número de atleta o enlace de tu perfil"
+                value={socialData.strava_url}
+                onChange={(e) => setSocialData((p) => ({ ...p, strava_url: e.target.value }))}
+              />
+            </Field>
+            {athlete?.strava_url && (
+              <button
+                onClick={() => openExternal(athlete.strava_url)}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
+              >
+                <Activity className="w-3.5 h-3.5 text-[#E77622]" />
+                {usuarioDeEnlace(athlete.strava_url)}
+                <ExternalLink className="w-3 h-3 opacity-60" />
+              </button>
+            )}
+
+            {/* Vale el usuario suelto o el enlace entero: casi nadie copia la
+                URL completa desde el teléfono, y el backend la normaliza. */}
+            <p className={`text-[11px] leading-relaxed mb-3 ${T.subtle}`}>
+              Puedes escribir solo tu usuario (@micuenta) o pegar el enlace completo.
+              En Strava, el número que sale en la dirección de tu perfil también sirve.
+            </p>
+
+            <PrimaryButton onClick={saveSocial} disabled={savingSocial}>
+              {savingSocial ? 'Guardando…' : 'Guardar redes'}
+            </PrimaryButton>
           </div>
         )}
 
