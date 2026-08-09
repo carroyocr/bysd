@@ -60,6 +60,7 @@ const STATUS_STYLES = {
   active: 'bg-green-500/15 text-green-500 border border-green-500/40',
   retired: 'bg-red-500/15 text-red-500 border border-red-500/40',
   dns: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',
+  waitlist: 'bg-amber-500/15 text-amber-500 border border-amber-500/40',
   winner: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
   honor: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
 };

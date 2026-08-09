@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Star, Users, Loader2 } from 'lucide-react';
 import { getJson, flagOf, initialsOf, useFollowed, raceStartMs } from '../liveApi';
@@ -7,22 +7,23 @@ import { Screen, useRace } from '../LiveApp';
 
 const POLL_MS = 30000;
 
+// "Todos" va primero y es donde abre la pantalla: es la única lista que nunca
+// sale vacía, sea cual sea el momento de la carrera.
 // "Confirmados" hace de lo que antes era "Activos": quien tiene su plaza
 // asegurada y sigue en carrera. Antes de la salida son los que ya pagaron;
 // durante la carrera, los que aún no se han retirado. Un solo chip para las
-// dos situaciones, para que el día de la carrera la app siga abriendo en la
-// lista que de verdad se mira.
+// dos situaciones.
 const FILTERS = [
+  { key: 'all', label: 'Todos' },
   { key: 'confirmados', label: 'Confirmados' },
   { key: 'inscritos', label: 'Inscritos' },
   { key: 'espera', label: 'Espera' },
   { key: 'retired', label: 'DNF' },
   { key: 'dns', label: 'DNS' },
   { key: 'favoritos', label: 'Fav' },
-  { key: 'all', label: 'Todos' },
 ];
 
-const FILTRO_INICIAL = 'confirmados';
+const FILTRO_INICIAL = 'all';
 
 // Colores para el aro del avatar (estilo tracking de maratón)
 const RING_COLORS = ['#E77622', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6', '#facc15'];
@@ -44,11 +45,6 @@ export default function TrackingScreen() {
   const [participants, setParticipants] = useState(null);
   const [search, setSearch] = useState(() => vistaPorCarrera.get(raceCode)?.search || '');
   const [filter, setFilter] = useState(() => vistaPorCarrera.get(raceCode)?.filter || FILTRO_INICIAL);
-  // Carrera para la que ya se ajustó el filtro automáticamente. Guardar el
-  // código y no un booleano evita las dos trampas: repetir el ajuste en cada
-  // recarga de participantes (pisando al usuario) y no hacerlo al cambiar de
-  // carrera.
-  const yaAjustado = useRef(null);
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
 
@@ -105,15 +101,6 @@ export default function TrackingScreen() {
     if (concluida) return key !== 'confirmados' && key !== 'inscritos';
     return true;
   });
-
-  // Se arranca en Confirmados, pero si esa lista está vacía (carrera histórica,
-  // o edición nueva donde todavía nadie ha pagado) abrir en una pantalla vacía
-  // no ayuda a nadie: se cae a Todos.
-  useEffect(() => {
-    if (!cargado || yaAjustado.current === raceCode) return;
-    if (filter === FILTRO_INICIAL && counts.confirmados === 0) setFilter('all');
-    yaAjustado.current = raceCode;
-  }, [cargado, counts.confirmados, filter, raceCode]);
 
   const filtered = useMemo(() => {
     let list = participants || [];

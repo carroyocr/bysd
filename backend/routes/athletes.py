@@ -944,10 +944,13 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
                 legacy_profile["itra_snapshot"] = athlete.get("itra_snapshot")
         return legacy_profile
 
+    # "waitlist" entra aqui aunque no corra: la lista de Seguimiento los muestra
+    # en la categoria Espera, y sin este estado la ficha respondia 404 y la app
+    # se quedaba con los datos sueltos del listado (atleta visible, sin datos).
     registration = await database.registrations.find_one({
         "race_code": code,
         "bib": str(bib).zfill(3),
-        "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
+        "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor", "waitlist"]},
     })
     if not registration:
         raise HTTPException(status_code=404, detail="Atleta no encontrado")

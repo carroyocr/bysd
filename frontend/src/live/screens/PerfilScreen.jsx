@@ -181,6 +181,10 @@ export default function PerfilScreen() {
   const [regData, setRegData] = useState({});
   const [bio, setBio] = useState({ disponible: false, nombre: '', activada: false });
   const [bioBusy, setBioBusy] = useState(false);
+  // Dejar activada la biometría desde el propio login: antes había que entrar
+  // con la contraseña y luego buscarla en la pestaña Datos, y casi nadie la
+  // encontraba. Viene marcada porque es lo que casi todo el mundo quiere.
+  const [conBio, setConBio] = useState(true);
 
   // Panel
   const [athlete, setAthlete] = useState(null);
@@ -470,8 +474,12 @@ export default function PerfilScreen() {
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
       marcarAccesoAtleta();
-      if (bio.disponible && !bio.activada) {
-        setMsg({ type: 'ok', text: `Puedes entrar con ${bio.nombre} la próxima vez: actívalo en la pestaña Datos.` });
+      if (conBio && bio.disponible && !bio.activada) {
+        const { ok: okBio } = await activarBiometria(email.trim(), data.token);
+        if (okBio) {
+          setBio((p) => ({ ...p, activada: true }));
+          setMsg({ type: 'ok', text: `Listo: la próxima vez entra con ${bio.nombre}.` });
+        }
       }
       fetchAll();
     } else if (status === 403) {
@@ -911,6 +919,20 @@ export default function PerfilScreen() {
                 </button>
               </div>
             </Field>
+            {bio.disponible && !bio.activada && (
+              <button
+                type="button"
+                onClick={() => setConBio(!conBio)}
+                className="w-full flex items-center gap-2.5 text-left"
+              >
+                <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${conBio ? 'bg-[#E77622] border-[#E77622]' : 'border-gray-500/50'}`}>
+                  {conBio && <Check className="w-3 h-3 text-white" />}
+                </span>
+                <span className="text-xs flex items-center gap-1.5">
+                  <ScanFace className="w-4 h-4 text-[#E77622]" /> Entrar con {bio.nombre} la próxima vez
+                </span>
+              </button>
+            )}
             <PrimaryButton type="submit" disabled={loading}>
               {loading ? 'Entrando…' : 'Iniciar sesión'}
             </PrimaryButton>
@@ -1076,7 +1098,6 @@ export default function PerfilScreen() {
           </label>
           <div className="min-w-0 flex-1">
             <p className="font-bold truncate">{athlete?.nombre} {athlete?.apellidos}</p>
-            <p className={`text-xs truncate ${T.muted}`}>{athlete?.email}</p>
             {athlete?.nacionalidad && (
               <p className={`text-xs mt-0.5 ${T.muted}`}>{flagOf(athlete.nacionalidad)} {athlete.nacionalidad}</p>
             )}
@@ -1134,6 +1155,10 @@ export default function PerfilScreen() {
 
           {!editMode ? (
             <div>
+              {/* El correo baja aquí desde la cabecera: sigue haciendo falta
+                  para saber con qué cuenta se entró, pero no tiene por qué
+                  encabezar la pantalla. */}
+              <InfoRow T={T} label="Correo" value={athlete?.email} />
               <InfoRow T={T} label="Teléfono" value={athlete?.telefono} />
               <InfoRow T={T} label="Fecha de nacimiento" value={athlete?.fecha_nacimiento} />
               <InfoRow T={T} label="Sexo" value={athlete?.sexo} />

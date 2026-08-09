@@ -3,6 +3,7 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { LiveThemeProvider, useLiveTheme } from './liveTheme';
 import { getJson, FOLLOWED_KEY, NOTIF_KEY } from './liveApi';
 import { pushDisponible, refrescarPush } from './push';
+import useSwipeBack from './useSwipeBack';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
 import AdFooter from './components/AdFooter';
@@ -160,6 +161,7 @@ export function Screen(props) {
 }
 
 function ScreenLayout({ T, title, back, onMenu, raceCode, showAds, children, footer }) {
+  useSwipeBack(!!back);
   return (
     <div className={`min-h-[100dvh] flex flex-col ${T.page}`} style={{ WebkitTapHighlightColor: 'transparent' }}>
       <div className="w-full max-w-md mx-auto flex flex-col flex-1 min-h-[100dvh]">

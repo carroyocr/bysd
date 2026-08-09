@@ -2,17 +2,20 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
-  ListChecks, Check, Users as UsersIcon,
+  ListChecks, Check, Users as UsersIcon, ChevronDown,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { registrarStaff } from '../push';
 
+// El orden sigue lo que hace el voluntario: primero se ve, luego pide turnos y
+// al final consulta lo que le confirmaron. "Asignados" y no "Turnos", que se
+// confundía con los que uno elige.
 const TABS = [
   { key: 'datos', label: 'Datos', icon: User },
-  { key: 'turnos', label: 'Turnos', icon: CalendarClock },
   { key: 'elegir', label: 'Elegir', icon: ListChecks },
+  { key: 'turnos', label: 'Asignados', icon: CalendarClock },
 ];
 
 const EVENTOS = [
@@ -29,6 +32,14 @@ function formatoTurno(dia, hora) {
 }
 
 const soloHora = (hora) => (hora || '').slice(0, 5);
+
+/** "2027-01-23" -> "sáb, 23 ene". Sin la hora, para encabezar un turno. */
+function diaFecha(fecha) {
+  if (!fecha) return '';
+  const d = new Date(`${fecha}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return fecha;
+  return d.toLocaleDateString('es-DO', { weekday: 'short', day: 'numeric', month: 'short' });
+}
 
 /**
  * Perfil del miembro del staff: sus datos y los turnos que le asignaron.
@@ -51,8 +62,13 @@ export default function StaffPerfilScreen() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState(null);
 
+  // Acordeón de puestos: la lista completa son decenas de turnos y llegaba
+  // toda desplegada. Arrancan cerrados y solo se abre uno a la vez.
+  const [puestoAbierto, setPuestoAbierto] = useState(null);
+
   const cargarOferta = useCallback(async (ev) => {
     setOferta(null);
+    setPuestoAbierto(null);
     const token = localStorage.getItem('admin_token');
     const { ok, data } = await authJson('GET', `/api/staff/mi-perfil/turnos-disponibles?evento=${ev}`, { token });
     setOferta(ok ? (data.positions || []) : []);
@@ -188,7 +204,7 @@ export default function StaffPerfilScreen() {
         {p && tab === 'turnos' && (
           <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
             <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
-              <CalendarClock className="w-4 h-4 text-[#E77622]" /> Mis turnos
+              <CalendarClock className="w-4 h-4 text-[#E77622]" /> Turnos asignados
             </h3>
             {turnos.length === 0 ? (
               <p className={`text-xs py-3 ${T.muted}`}>
@@ -251,13 +267,28 @@ export default function StaffPerfilScreen() {
               </p>
             )}
 
-            {(oferta || []).map((puesto) => (
-              <div key={puesto.puesto} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
-                <p className="text-sm font-bold">{puesto.puesto}</p>
-                {puesto.descripcion && (
-                  <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>{puesto.descripcion}</p>
+            {(oferta || []).map((puesto) => {
+              const abierto = puestoAbierto === puesto.puesto;
+              const marcadosAqui = (puesto.turnos || []).filter((t) => elegidos.includes(t.slot_id)).length;
+              return (
+              <div key={puesto.puesto} className={`py-1 border-b last:border-b-0 ${T.divider}`}>
+                <button
+                  onClick={() => setPuestoAbierto(abierto ? null : puesto.puesto)}
+                  className="w-full flex items-center gap-2 py-2.5 text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold">{puesto.puesto}</p>
+                    <p className={`text-[11px] mt-0.5 ${T.subtle}`}>
+                      {(puesto.turnos || []).length} turno{(puesto.turnos || []).length === 1 ? '' : 's'} con plazas
+                      {marcadosAqui > 0 ? ` · ${marcadosAqui} marcado${marcadosAqui === 1 ? '' : 's'}` : ''}
+                    </p>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 shrink-0 transition-transform ${T.muted} ${abierto ? 'rotate-180' : ''}`} />
+                </button>
+                {abierto && puesto.descripcion && (
+                  <p className={`text-[11px] mb-2 leading-relaxed ${T.muted}`}>{puesto.descripcion}</p>
                 )}
-                <div className="mt-2 space-y-1.5">
+                <div className={`space-y-1.5 ${abierto ? 'mb-3' : 'hidden'}`}>
                   {(puesto.turnos || []).map((t) => {
                     const marcado = elegidos.includes(t.slot_id);
                     // Un turno lleno solo se puede tocar si ya es tuyo
@@ -273,12 +304,16 @@ export default function StaffPerfilScreen() {
                           {marcado && <Check className="w-3 h-3 text-white" />}
                         </span>
                         <div className="flex-1 min-w-0">
+                          {/* El día y la fecha delante: sin ellos dos turnos de
+                              días distintos se ven idénticos. */}
                           <p className="text-xs font-semibold">
+                            {diaFecha(t.fecha)}
+                            {t.fecha ? ' · ' : ''}
                             {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
-                            {t.turno ? ` · Turno ${t.turno}` : ''}
                           </p>
                           <p className={`text-[10px] mt-0.5 flex items-center gap-1 ${T.subtle}`}>
                             <UsersIcon className="w-3 h-3" />
+                            {t.turno ? `Turno ${t.turno} · ` : ''}
                             {lleno ? 'Sin plazas' : `${t.available_count} de ${t.total_count} libres`}
                           </p>
                         </div>
@@ -287,7 +322,8 @@ export default function StaffPerfilScreen() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {aviso && (
               <p className={`text-xs mt-3 ${aviso.tipo === 'ok' ? 'text-green-500' : 'text-red-500'}`}>
