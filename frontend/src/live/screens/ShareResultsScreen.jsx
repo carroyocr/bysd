@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import { Share2, Download, Loader2 } from 'lucide-react';
 import { getJson, getAthleteProfile, formatDuration, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -86,6 +86,9 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl }) {
  * Compartir resultados: imagen 9:16 con vueltas, km y tiempo, lista para Instagram.
  */
 export default function ShareResultsScreen() {
+  // Dentro de la ficha del corredor esto es una sección más; suelta, es
+  // una pantalla con su propio título.
+  const enFicha = !!useOutletContext();
   const { T } = useLiveTheme();
   const { raceCode, race } = useRace();
   const { bib } = useParams();
@@ -132,8 +135,8 @@ export default function ShareResultsScreen() {
     }
   };
 
-  return (
-    <Screen title="Compartir resultados" back>
+  const contenido = (
+    <>
       <div className="px-4 py-4 flex flex-col items-center">
         {!data ? (
           <div className={`flex justify-center py-20 ${T.muted}`}>
@@ -164,6 +167,13 @@ export default function ShareResultsScreen() {
           </>
         )}
       </div>
-    </Screen>
+    </>
   );
+
+  // Suelta (fuera de la ficha del corredor) necesita su propia pantalla;
+  // dentro, el encabezado y el botón de volver ya los pone FichaAtleta.
+  return enFicha ? contenido : (
+    <Screen title="Compartir resultados" back>{contenido}</Screen>
+  );
+
 }

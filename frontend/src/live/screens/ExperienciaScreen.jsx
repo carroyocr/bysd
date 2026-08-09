@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import { Mountain, ExternalLink, Loader2 } from 'lucide-react';
 import { getAthleteProfile, initialsOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -9,10 +9,16 @@ import { Screen, useRace } from '../LiveApp';
  * Experiencia del corredor: trayectoria previa e ITRA en pantalla dedicada.
  */
 export default function ExperienciaScreen() {
+  // Dentro de la ficha del corredor esto es una sección más; suelta, es
+  // una pantalla con su propio título.
+  // La ficha ya trae el perfil cargado: dentro de ella se aprovecha en vez
+  // de pedirlo otra vez y enseñar un spinner por algo que ya estaba a la vista.
+  const contexto = useOutletContext();
+  const enFicha = !!contexto;
   const { T } = useLiveTheme();
   const { raceCode } = useRace();
   const { bib } = useParams();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(contexto?.profile || null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -25,8 +31,8 @@ export default function ExperienciaScreen() {
   const hasItra = snapshot || profile?.itra_url;
   const hasPrevia = profile?.anos_experiencia != null || profile?.maxima_distancia_km != null;
 
-  return (
-    <Screen title="Experiencia" back>
+  const contenido = (
+    <>
       {!profile && !failed && (
         <div className={`flex justify-center py-20 ${T.muted}`}>
           <Loader2 className="w-6 h-6 animate-spin" />
@@ -36,7 +42,9 @@ export default function ExperienciaScreen() {
 
       {profile && (
         <div className="px-4 py-4">
-          <div className="flex items-center gap-3 mb-4">
+          {/* Suelta hace falta decir de quién es; dentro de la ficha ya está
+              arriba y repetirlo solo gasta pantalla. */}
+          <div className={`items-center gap-3 mb-4 ${enFicha ? 'hidden' : 'flex'}`}>
             <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 border-[#E77622] ${T.avatar}`}>
               {initialsOf(profile.nombre, profile.apellidos)}
             </div>
@@ -133,6 +141,13 @@ export default function ExperienciaScreen() {
           )}
         </div>
       )}
-    </Screen>
+    </>
   );
+
+  // Suelta (fuera de la ficha del corredor) necesita su propia pantalla;
+  // dentro, el encabezado y el botón de volver ya los pone FichaAtleta.
+  return enFicha ? contenido : (
+    <Screen title="Experiencia" back>{contenido}</Screen>
+  );
+
 }
