@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Contact, MessageCircle, Trophy, Star, Mountain, Loader2, Instagram, Activity,
-} from 'lucide-react';
-import {
-  API, getJson, getAthleteProfile, raceIsPast, flagOf, initialsOf,
-  formatDuration, formatPace, useFollowed, statusLabel,
-} from '../liveApi';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { MessageCircle } from 'lucide-react';
+import { getJson, formatDuration, formatPace, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
-import { Screen, useRace } from '../LiveApp';
-import { openExternal } from '../../lib/nativeExport';
 
 /**
  * Gráfico de línea: ritmo promedio por vuelta.
@@ -67,143 +60,36 @@ const STATUS_STYLES = {
 };
 
 /**
- * Pantalla dedicada del atleta: datos, acciones y vueltas (gráfico de línea y tabla).
+ * Sección "Seguimiento" de la ficha: vueltas, kilómetros y ritmo.
+ *
+ * El encabezado con el nombre del corredor y los botones de sección los pone
+ * FichaAtleta, que es quien envuelve a todas; aquí solo va el contenido.
  */
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
-  const { raceCode, race } = useRace();
-  const { bib } = useParams();
+  const { profile, raceCode, bib } = useOutletContext();
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState(null);
-  const [failed, setFailed] = useState(false);
   const [laps, setLaps] = useState([]);
   const [tab, setTab] = useState('grafico');
-  const followedStore = useFollowed();
-  const [followed, setFollowed] = useState(followedStore.read());
 
   useEffect(() => {
     let cancel = false;
-    setProfile(null);
-    setFailed(false);
-    Promise.all([
-      getAthleteProfile(bib, raceCode),
-      getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`).catch(() => ({ laps: [] })),
-    ])
-      .then(([prof, lapsData]) => {
-        if (cancel) return;
-        setProfile(prof);
-        setLaps(lapsData.laps || []);
-      })
-      .catch(() => { if (!cancel) setFailed(true); });
+    setLaps([]);
+    getJson(`/api/race/athlete-laps/${bib}?race_code=${raceCode}`)
+      .then((d) => { if (!cancel) setLaps(d.laps || []); })
+      .catch(() => { if (!cancel) setLaps([]); });
     return () => { cancel = true; };
   }, [bib, raceCode]);
 
   const base = `/live/${raceCode}/atleta/${bib}`;
-  // En carreras pasadas el dorsal ya no sirve para presentarse ni para
-  // animar en vivo: solo quedan la experiencia y los resultados.
-  const esPasada = raceIsPast(race);
-  const actions = [
-    // Fotos oculta por ahora (la pantalla /fotos sigue lista para reactivarla)
-    { label: 'Experiencia', Icon: Mountain, to: `${base}/experiencia` },
-    !esPasada && { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
-    !esPasada && { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
-    { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
-  ].filter(Boolean);
 
   const statusText = profile?.status === 'active'
     ? 'Aún en carrera'
     : `${statusLabel(profile?.status)}${profile?.status === 'retired' && profile?.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}`;
 
   return (
-    <Screen title="Detalle del corredor" back showAds>
-      {!profile && !failed && (
-        <div className={`flex justify-center py-20 ${T.muted}`}>
-          <Loader2 className="w-6 h-6 animate-spin" />
-        </div>
-      )}
-
-      {failed && (
-        <p className={`text-sm text-center py-16 ${T.muted}`}>No se pudo cargar la ficha del corredor.</p>
-      )}
-
-      {profile && (
-        <div className="pb-4">
-          {/* Encabezado y acciones anclados bajo la barra superior: al bajar por
-              las vueltas se sigue sabiendo de quién es la ficha y se puede
-              cambiar de sección sin volver arriba. */}
-          <div className={`sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 ${T.page}`}>
-          <div className="flex items-center gap-3.5 px-4 pt-4 pb-3">
-            {profile.photo_url ? (
-              <img
-                src={`${API}${profile.photo_url}`}
-                alt={profile.nombre}
-                className="w-14 h-14 rounded-full object-cover border-2 border-[#E77622] shrink-0"
-              />
-            ) : (
-              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold border-2 border-[#E77622] shrink-0 ${T.avatar}`}>
-                {initialsOf(profile.nombre, profile.apellidos)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-[17px] font-extrabold leading-tight truncate">
-                {profile.nombre} {profile.apellidos}
-              </p>
-              <p className={`text-xs mt-0.5 ${T.muted}`}>
-                {[profile.sexo ? profile.sexo.charAt(0).toUpperCase() : null,
-                  `${flagOf(profile.nacionalidad)} ${profile.nacionalidad || ''}`.trim(),
-                  profile.ciudad_residencia]
-                  .filter(Boolean).join(' | ')}
-              </p>
-              {/* Redes del corredor: solo aparecen si él las puso en su perfil */}
-              {(profile.instagram_url || profile.strava_url) && (
-                <div className="flex items-center gap-2 mt-1.5">
-                  {profile.instagram_url && (
-                    <button
-                      aria-label="Instagram del corredor"
-                      onClick={() => openExternal(profile.instagram_url)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
-                    >
-                      <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
-                    </button>
-                  )}
-                  {profile.strava_url && (
-                    <button
-                      aria-label="Strava del corredor"
-                      onClick={() => openExternal(profile.strava_url)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
-                    >
-                      <Activity className="w-3.5 h-3.5 text-[#E77622]" />
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="text-right shrink-0">
-              <span className={`text-sm font-mono font-extrabold px-2.5 py-1 rounded-lg ${T.chipOn}`}>#{profile.bib}</span>
-              <button
-                aria-label="Seguir"
-                onClick={() => setFollowed(followedStore.toggle(profile.bib))}
-                className="block ml-auto mt-2"
-              >
-                <Star className={`w-5 h-5 ${followed.includes(profile.bib) ? 'text-[#E77622] fill-[#E77622]' : T.subtle}`} />
-              </button>
-            </div>
-          </div>
-
-          {/* Acciones: rejilla fija, sin scroll horizontal */}
-          <div className={`grid px-4 pb-4 gap-2 ${actions.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
-            {actions.map(({ label, Icon, to }) => (
-              <button key={label} onClick={() => navigate(to)} className="flex flex-col items-center gap-1.5 min-w-0">
-                <span className={`w-11 h-11 rounded-full flex items-center justify-center ${T.actionChip}`}>
-                  <Icon className="w-[18px] h-[18px] text-[#E77622]" />
-                </span>
-                <span className={`text-[9.5px] text-center leading-tight ${T.muted}`}>{label}</span>
-              </button>
-            ))}
-          </div>
-          </div>
-
+    <>
           {/* Vueltas y kilómetros como protagonistas + estado */}
           <div className={`mx-4 rounded-2xl p-5 ${T.card}`}>
             <div className="flex justify-center mb-4">
@@ -284,8 +170,6 @@ export default function AthleteScreen() {
               <MessageCircle className="w-4 h-4" /> Enviar mensaje de apoyo
             </button>
           </div>
-        </div>
-      )}
-    </Screen>
+    </>
   );
 }

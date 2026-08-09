@@ -11,6 +11,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import RaceSelectScreen from './screens/RaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
+import FichaAtleta from './screens/FichaAtleta';
 import AthleteScreen from './screens/AthleteScreen';
 import ShareBibScreen from './screens/ShareBibScreen';
 import FotosScreen from './screens/FotosScreen';
@@ -122,12 +123,18 @@ function RaceShell() {
       <Routes>
         <Route index element={<HomeScreen />} />
         <Route path="seguimiento" element={<TrackingScreen />} />
-        <Route path="atleta/:bib" element={<AthleteScreen />} />
-        <Route path="atleta/:bib/bib" element={<ShareBibScreen />} />
+        {/* Todas las secciones del corredor cuelgan de la misma ficha, que es
+            quien pone el encabezado y los botones para pasar de una a otra */}
+        <Route path="atleta/:bib" element={<FichaAtleta />}>
+          <Route index element={<AthleteScreen />} />
+          <Route path="bib" element={<ShareBibScreen />} />
+          <Route path="experiencia" element={<ExperienciaScreen />} />
+          <Route path="resultados" element={<ShareResultsScreen />} />
+          <Route path="animo" element={<CheerScreen />} />
+        </Route>
+        {/* Fotos sigue fuera de la ficha: no está entre sus secciones y
+            conserva su propia pantalla. */}
         <Route path="atleta/:bib/fotos" element={<FotosScreen />} />
-        <Route path="atleta/:bib/experiencia" element={<ExperienciaScreen />} />
-        <Route path="atleta/:bib/resultados" element={<ShareResultsScreen />} />
-        <Route path="atleta/:bib/animo" element={<CheerScreen />} />
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import { Send, MessageCircle, Loader2, Search, X, Heart } from 'lucide-react';
 import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -14,12 +14,18 @@ const LIKES_KEY = 'bysd_live_cheer_likes';
  * (acceso rápido del Home) muestra el selector para escribir de una vez.
  */
 export default function CheerScreen() {
+  // Dentro de la ficha del corredor esto es una sección más; suelta, es
+  // una pantalla con su propio título.
+  // La ficha ya trae el perfil cargado: dentro de ella se aprovecha en vez
+  // de pedirlo otra vez y enseñar un spinner por algo que ya estaba a la vista.
+  const contexto = useOutletContext();
+  const enFicha = !!contexto;
   const { T } = useLiveTheme();
   const { raceCode } = useRace();
   const { bib: bibParam } = useParams();
 
   const [bib, setBib] = useState(bibParam || '');
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(contexto?.profile || null);
   const [participants, setParticipants] = useState([]);
   const [query, setQuery] = useState('');
   const [cheers, setCheers] = useState([]);
@@ -123,10 +129,10 @@ export default function CheerScreen() {
     setSending(false);
   };
 
-  return (
-    <Screen title="Enviar ánimo" back showAds>
+  const contenido = (
+    <>
       <div className="px-4 py-4">
-        {bibParam && profile && (
+        {bibParam && profile && !enFicha && (
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 border-[#E77622] ${T.avatar}`}>
               {initialsOf(profile.nombre, profile.apellidos)}
@@ -252,6 +258,13 @@ export default function CheerScreen() {
           })
         )}
       </div>
-    </Screen>
+    </>
   );
+
+  // Suelta (fuera de la ficha del corredor) necesita su propia pantalla;
+  // dentro, el encabezado y el botón de volver ya los pone FichaAtleta.
+  return enFicha ? contenido : (
+    <Screen title="Enviar ánimo" back showAds>{contenido}</Screen>
+  );
+
 }

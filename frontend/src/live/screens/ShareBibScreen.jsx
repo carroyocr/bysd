@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import { Share2, Download, Loader2 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -100,11 +100,17 @@ function drawBibCard(ctx, { profile, raceName, siteUrl }) {
  * a seguir al corredor en vivo.
  */
 export default function ShareBibScreen() {
+  // Dentro de la ficha del corredor esto es una sección más; suelta, es
+  // una pantalla con su propio título.
+  // La ficha ya trae el perfil cargado: dentro de ella se aprovecha en vez
+  // de pedirlo otra vez y enseñar un spinner por algo que ya estaba a la vista.
+  const contexto = useOutletContext();
+  const enFicha = !!contexto;
   const { T } = useLiveTheme();
   const { raceCode, race } = useRace();
   const { bib } = useParams();
   const canvasRef = useRef(null);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(contexto?.profile || null);
   const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
@@ -143,8 +149,8 @@ export default function ShareBibScreen() {
     }
   };
 
-  return (
-    <Screen title="Compartir BIB" back>
+  const contenido = (
+    <>
       <div className="px-4 py-4 flex flex-col items-center">
         {!profile ? (
           <div className={`flex justify-center py-20 ${T.muted}`}>
@@ -182,6 +188,13 @@ export default function ShareBibScreen() {
           </>
         )}
       </div>
-    </Screen>
+    </>
   );
+
+  // Suelta (fuera de la ficha del corredor) necesita su propia pantalla;
+  // dentro, el encabezado y el botón de volver ya los pone FichaAtleta.
+  return enFicha ? contenido : (
+    <Screen title="Compartir BIB" back>{contenido}</Screen>
+  );
+
 }
