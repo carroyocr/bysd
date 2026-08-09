@@ -54,6 +54,11 @@ export default function FichaAtleta() {
     { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
   ].filter(Boolean);
 
+  // Cambiar de sección sustituye la entrada del historial en vez de apilar
+  // una nueva: las secciones son la misma ficha, no pasos de un camino. Si se
+  // apilaran, volver atrás —con la flecha o deslizando— iría deshaciendo cada
+  // botón pulsado en lugar de salir de la ficha.
+  //
   // La de Seguimiento es la ruta base, que es prefijo de todas las demás: se
   // compara exacta o se quedaría siempre marcada.
   const activa = (to) => (to === base ? pathname.replace(/\/$/, '') === base : pathname.startsWith(to));
@@ -138,7 +143,7 @@ export default function FichaAtleta() {
                 return (
                   <button
                     key={label}
-                    onClick={() => navigate(to)}
+                    onClick={() => navigate(to, { replace: true })}
                     aria-current={puesta}
                     className="flex flex-col items-center gap-1.5 min-w-0"
                   >
