@@ -5,7 +5,7 @@ import {
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
-  MessageCircle, Send,
+  MessageCircle, Send, Trash2,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -362,6 +362,20 @@ export default function PerfilScreen() {
       setMsg({ type: 'ok', text: data.reply ? 'Respuesta enviada.' : 'Respuesta borrada.' });
     } else {
       setMsg({ type: 'error', text: data.detail || 'No se pudo enviar la respuesta' });
+    }
+  };
+
+  const borrarMensaje = async (mensaje) => {
+    if (!window.confirm('¿Quitar este mensaje? Dejará de verse en tu perfil y en el muro público.')) return;
+    setRespondiendo(mensaje.id);
+    setMsg(null);
+    const { ok, data } = await authJson('DELETE', `/api/athletes/my-messages/${mensaje.id}`, { token: token() });
+    setRespondiendo(null);
+    if (ok) {
+      setMensajes((prev) => (prev || []).filter((m) => m.id !== mensaje.id));
+      setMsg({ type: 'ok', text: 'Mensaje quitado.' });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo quitar el mensaje' });
     }
   };
 
@@ -1931,10 +1945,20 @@ export default function PerfilScreen() {
             {(mensajes || []).map((m) => (
               <div key={m.id} className={`rounded-xl px-3 py-3 mb-2.5 ${T.input}`}>
                 <p className="text-sm leading-snug">{m.message}</p>
-                <p className={`text-[11px] mt-1.5 ${T.muted}`}>
-                  — {m.fan_name} · {fechaHora(m.created_at)}
-                  {carreraMsg === '' && m.race_name ? ` · ${m.race_name}` : ''}
-                </p>
+                <div className="flex items-start justify-between gap-2 mt-1.5">
+                  <p className={`text-[11px] flex-1 min-w-0 ${T.muted}`}>
+                    — {m.fan_name} · {fechaHora(m.created_at)}
+                    {carreraMsg === '' && m.race_name ? ` · ${m.race_name}` : ''}
+                  </p>
+                  <button
+                    aria-label="Quitar mensaje"
+                    onClick={() => borrarMensaje(m)}
+                    disabled={respondiendo === m.id}
+                    className={`shrink-0 disabled:opacity-40 ${T.subtle}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 {m.reply && (
                   <div className={`mt-2 pl-3 border-l-2 border-[#E77622]`}>

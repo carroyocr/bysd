@@ -1363,7 +1363,9 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
         if is_archived:
             # For 2026 race: query BOTH collections to handle prod/preview differences
             # 1) archived_cheer_messages (preview may store them here)
-            arch_msgs = await database.archived_cheer_messages.find(bib_query).sort("created_at", -1).to_list(500)
+            arch_msgs = await database.archived_cheer_messages.find(
+                {**bib_query, "deleted_by_athlete": {"$ne": True}}
+            ).sort("created_at", -1).to_list(500)
             messages.extend(arch_msgs)
             logging.info(f"Cheer archived query for {rc}: found={len(arch_msgs)}")
             
@@ -1377,12 +1379,14 @@ async def get_my_cheer_messages(authorization: str = Header(None), race_code: st
                     {"race_code": rc}
                 ]
             }
-            legacy_msgs = await database.cheer_messages.find(legacy_query).sort("created_at", -1).to_list(500)
+            legacy_msgs = await database.cheer_messages.find(
+                {**legacy_query, "deleted_by_athlete": {"$ne": True}}
+            ).sort("created_at", -1).to_list(500)
             messages.extend(legacy_msgs)
             logging.info(f"Cheer legacy query for {rc}: found={len(legacy_msgs)}")
         else:
             # For current races: only cheer_messages with matching race_code
-            query = {**bib_query, "race_code": rc}
+            query = {**bib_query, "race_code": rc, "deleted_by_athlete": {"$ne": True}}
             messages = await database.cheer_messages.find(query).sort("created_at", -1).to_list(500)
         
         # Deduplicate by message content + fan_name + created_at
@@ -1539,6 +1543,50 @@ async def responder_mensaje_de_animo(
             cambio = {"$unset": {"athlete_reply": "", "athlete_reply_at": ""}}
         await coleccion.update_one({"_id": oid}, cambio)
         return {"success": True, "reply": respuesta or None}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+
+@router.delete("/my-messages/{cheer_id}")
+async def borrar_mensaje_de_animo(cheer_id: str, authorization: str = Header(None)):
+    """El corredor quita de su muro un mensaje que le escribieron.
+
+    Se marca como borrado en vez de eliminarlo: lo normal es que se borre por
+    ofensivo, y entonces la organizacion necesita poder verlo. Deja de salir en
+    su perfil, en el muro publico, en el conteo y en la tabla de mas animados.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    payload = await get_current_athlete(authorization)
+    athlete_id = payload["athlete_id"]
+
+    athlete = await database.athletes.find_one({"_id": ObjectId(athlete_id)})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    dorsales = await _dorsales_del_atleta(database, athlete_id, athlete)
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        mensaje = await coleccion.find_one({"_id": oid}, {"athlete_bib": 1})
+        if not mensaje:
+            continue
+        if mensaje.get("athlete_bib") not in dorsales:
+            raise HTTPException(status_code=403, detail="Ese mensaje no es tuyo")
+        await coleccion.update_one(
+            {"_id": oid},
+            {"$set": {
+                "deleted_by_athlete": True,
+                "deleted_by_athlete_at": datetime.now(timezone.utc),
+            }},
+        )
+        return {"success": True}
 
     raise HTTPException(status_code=404, detail="Mensaje no encontrado")
 
