@@ -49,6 +49,7 @@ export default function VolunteerAssignmentsManagement() {
   const [rechazoSlotId, setRechazoSlotId] = useState(null); // null = la solicitud completa
   const [rechazoMotivo, setRechazoMotivo] = useState('');
   const [eventoFilter, setEventoFilter] = useState('all');
+  const [estadoFilter, setEstadoFilter] = useState('all'); // all | asignados | pendientes
   const [raceName, setRaceName] = useState('');
   const [changingEventoEmail, setChangingEventoEmail] = useState(null);
 
@@ -196,8 +197,25 @@ export default function VolunteerAssignmentsManagement() {
     eventoFilter === 'all' || (s.evento || 'carrera') === eventoFilter
   );
 
+  // Un voluntario puede estar en los dos grupos a la vez: con parte de sus
+  // turnos ya confirmados y el resto todavía esperando.
+  const tieneAsignados = (v) => availableSlots.some(s =>
+    s.email_asignado === v.email && (s.evento || 'carrera') === (v.evento || 'carrera')
+  );
+  const tienePendientes = (v) => (v.slots_interes || []).length > 0;
+
+  const cumpleEstado = (v) => {
+    if (estadoFilter === 'asignados') return tieneAsignados(v);
+    if (estadoFilter === 'pendientes') return tienePendientes(v);
+    return true;
+  };
+
+  const conAsignados = eventVolunteers.filter(tieneAsignados).length;
+  const conPendientes = eventVolunteers.filter(tienePendientes).length;
+
   // Filter volunteers
   const filteredVolunteers = eventVolunteers.filter(v => {
+    if (!cumpleEstado(v)) return false;
     const term = searchTerm.toLowerCase();
     return !searchTerm ||
       (v.nombre && v.nombre.toLowerCase().includes(term)) ||
@@ -547,7 +565,7 @@ export default function VolunteerAssignmentsManagement() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -557,6 +575,39 @@ export default function VolunteerAssignmentsManagement() {
               className="pl-10"
             />
           </div>
+
+          {/* Quién ya tiene turno y quién sigue esperando */}
+          <div className="flex flex-wrap gap-2" data-testid="assignments-estado-filter">
+            {[
+              { value: 'all', label: 'Todos', count: eventVolunteers.length },
+              { value: 'asignados', label: 'Asignados', count: conAsignados },
+              { value: 'pendientes', label: 'Pendientes de asignar', count: conPendientes },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                data-testid={`filter-estado-${opt.value}`}
+                onClick={() => setEstadoFilter(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  estadoFilter === opt.value
+                    ? 'bg-primary text-white shadow'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                }`}
+              >
+                {opt.label}
+                <span className={`ml-2 text-xs ${estadoFilter === opt.value ? 'text-white/80' : 'text-muted-foreground'}`}>
+                  {opt.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          {estadoFilter !== 'all' && (
+            <p className="text-xs text-muted-foreground">
+              {estadoFilter === 'asignados'
+                ? 'Voluntarios con al menos un turno confirmado. Los que tengan turnos sin confirmar también aparecen en “Pendientes”.'
+                : 'Voluntarios con turnos pedidos que todavía no has confirmado.'}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -567,7 +618,9 @@ export default function VolunteerAssignmentsManagement() {
             <div className="text-center py-8 text-muted-foreground">Cargando...</div>
           ) : filteredVolunteers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'No se encontraron voluntarios' : 'No hay voluntarios registrados'}
+              {searchTerm || estadoFilter !== 'all'
+                ? 'Ningún voluntario cumple con lo que estás filtrando'
+                : 'No hay voluntarios registrados'}
             </div>
           ) : (
             <div className="divide-y">
