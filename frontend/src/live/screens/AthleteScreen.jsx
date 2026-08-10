@@ -142,7 +142,7 @@ export default function AthleteScreen() {
             <div
               className="mt-3 overflow-y-auto"
               style={{
-                height: 'calc(100dvh - 30rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+                height: 'calc(100dvh - 28rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
                 minHeight: '170px',
                 maxHeight: '360px',
               }}
