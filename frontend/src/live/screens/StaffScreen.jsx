@@ -102,11 +102,32 @@ export default function StaffScreen() {
     setClave((p) => ({ ...p, modo, msg: '', code: '', password: '', password2: '' }));
   };
 
+  /**
+   * Que se puede hacer con este correo. Se pregunta antes de meter a nadie en
+   * un camino que no le toca: sin esto, quien no esta registrado pedia codigo,
+   * esperaba un correo que no llegaba y volvia a empezar.
+   */
+  const estadoDelCorreo = async (correo) => {
+    const { ok, data } = await authJson(
+      'GET', `/api/staff/account-status?email=${encodeURIComponent(correo)}`,
+    );
+    return ok ? data : null;
+  };
+
   const pedirCodigo = async () => {
+    const correo = clave.email.trim().toLowerCase();
     setClave((p) => ({ ...p, cargando: true, msg: '' }));
     setError('');
+
+    const estado = await estadoDelCorreo(correo);
+    if (estado && !estado.es_voluntario && !estado.tiene_cuenta) {
+      setClave((p) => ({ ...p, cargando: false }));
+      setError('Ese correo no está registrado en el equipo. Si quieres ser voluntario, usa "Quiero ser voluntario".');
+      return;
+    }
+
     const { ok, data } = await authJson('POST', '/api/staff/password/request-code', {
-      body: { email: clave.email.trim().toLowerCase() },
+      body: { email: correo },
     });
     setClave((p) => ({
       ...p,
@@ -161,6 +182,22 @@ export default function StaffScreen() {
     });
     setLoading(false);
     if (!ok) {
+      // Si es un voluntario que aun no se ha puesto contrasena, ninguna que
+      // escriba va a funcionar: se le lleva directo a ponersela en vez de
+      // dejarlo probando.
+      const correo = username.trim().toLowerCase();
+      if (correo.includes('@')) {
+        const estado = await estadoDelCorreo(correo);
+        if (estado?.es_voluntario && !estado.tiene_password) {
+          setError('');
+          setClave((p) => ({
+            ...p, modo: 'codigo', email: correo, code: '', password: '', password2: '',
+            msg: 'Todavía no tienes contraseña. Te enviamos un código para ponerla.',
+          }));
+          setPassword('');
+          return;
+        }
+      }
       setError(data.detail || 'Usuario o contraseña incorrectos');
       return;
     }

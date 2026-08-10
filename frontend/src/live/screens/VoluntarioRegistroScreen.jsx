@@ -79,9 +79,24 @@ export default function VoluntarioRegistroScreen() {
   const upd = (campo) => (e) => setDatos((p) => ({ ...p, [campo]: e.target.value }));
 
   const pedirCodigo = async () => {
+    const correo = email.trim().toLowerCase();
     setCargando(true); setError('');
+
+    // Se comprueba antes de mandar nada: quien ya está apuntado se enteraba al
+    // final, después de pedir el código, esperarlo y escribirlo.
+    const { ok: okEstado, data: estado } = await authJson(
+      'GET', `/api/staff/account-status?email=${encodeURIComponent(correo)}`,
+    );
+    if (okEstado && estado.es_voluntario) {
+      setCargando(false);
+      setError(estado.tiene_password
+        ? 'Ese correo ya está registrado como voluntario. Entra con tu contraseña en el acceso de staff.'
+        : 'Ese correo ya está registrado como voluntario. Usa "Soy voluntario y no tengo contraseña" para ponerte una.');
+      return;
+    }
+
     const { ok, data } = await authJson('POST', '/api/volunteer-registration/send-verification', {
-      body: { email: email.trim().toLowerCase() },
+      body: { email: correo },
     });
     setCargando(false);
     if (ok) setPaso('codigo');

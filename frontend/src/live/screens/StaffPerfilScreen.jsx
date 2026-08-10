@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
-  ListChecks, Check, Users as UsersIcon, ChevronDown,
+  ListChecks, Check, Users as UsersIcon, ChevronDown, X,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -120,6 +120,27 @@ export default function StaffPerfilScreen() {
   const alternar = (slotId) => {
     setElegidos((p) => (p.includes(slotId) ? p.filter((s) => s !== slotId) : [...p, slotId]));
     setAviso(null);
+  };
+
+  /**
+   * Soltar un turno asignado. Antes habia que escribir a la organizacion para
+   * que lo quitara a mano.
+   */
+  const [soltando, setSoltando] = useState(null);
+
+  const soltarTurno = async (turno) => {
+    if (!window.confirm(`¿Cancelar el turno de ${turno.puesto}? Quedará libre para otro voluntario.`)) return;
+    setSoltando(turno.slot_id);
+    setAviso(null);
+    const token = localStorage.getItem('admin_token');
+    const { ok, data } = await authJson('DELETE', `/api/staff/mi-perfil/turnos/${turno.slot_id}`, { token });
+    setSoltando(null);
+    if (ok) {
+      setDatos((p) => ({ ...p, turnos: (p.turnos || []).filter((t) => t.slot_id !== turno.slot_id) }));
+      setAviso({ tipo: 'ok', texto: 'Turno cancelado. Ya no cuentas para ese puesto.' });
+    } else {
+      setAviso({ tipo: 'error', texto: data.detail || 'No se pudo cancelar el turno' });
+    }
   };
 
   const guardarTurnos = async () => {
@@ -257,17 +278,36 @@ export default function StaffPerfilScreen() {
                 </p>
                 {turnos.map((t) => (
                   <div key={t.slot_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
-                    <p className="text-sm font-bold">{formatoTurno(t.dia, t.hora_inicio)}</p>
-                    <p className={`text-xs mt-0.5 ${T.muted}`}>
-                      {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
-                      {t.turno ? ` · Turno ${t.turno}` : ''}
-                    </p>
-                    <p className="text-[11px] mt-1 flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#E77622] shrink-0 mt-px" />
-                      <span>{t.puesto}</span>
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold">{formatoTurno(t.dia, t.hora_inicio)}</p>
+                        <p className={`text-xs mt-0.5 ${T.muted}`}>
+                          {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
+                          {t.turno ? ` · Turno ${t.turno}` : ''}
+                        </p>
+                        <p className="text-[11px] mt-1 flex items-start gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-[#E77622] shrink-0 mt-px" />
+                          <span>{t.puesto}</span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => soltarTurno(t)}
+                        disabled={soltando === t.slot_id}
+                        className={`shrink-0 flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg disabled:opacity-40 ${T.chip}`}
+                      >
+                        {soltando === t.slot_id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <X className="w-3.5 h-3.5" />}
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 ))}
+                {aviso && (
+                  <p className={`text-xs mt-3 ${aviso.tipo === 'ok' ? 'text-green-500' : 'text-red-500'}`}>
+                    {aviso.texto}
+                  </p>
+                )}
               </>
             )}
           </div>

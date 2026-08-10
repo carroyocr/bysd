@@ -145,17 +145,21 @@ export default function FichaAtleta() {
             >
               {secciones.map(({ label, Icon, to }) => {
                 const puesta = activa(to);
+                // Solo el icono: con seis secciones los rótulos se partían en
+                // dos líneas y estiraban el encabezado. El nombre queda en
+                // aria-label para quien use lector de pantalla.
                 return (
                   <button
                     key={label}
                     onClick={() => navigate(to, { replace: true })}
                     aria-current={puesta}
-                    className="flex flex-col items-center gap-1.5 min-w-0"
+                    aria-label={label}
+                    title={label}
+                    className="flex items-center justify-center min-w-0"
                   >
                     <span className={`w-11 h-11 rounded-full flex items-center justify-center ${puesta ? T.chipOn : T.actionChip}`}>
                       <Icon className={`w-[18px] h-[18px] ${puesta ? '' : 'text-[#E77622]'}`} />
                     </span>
-                    <span className={`text-[9.5px] text-center leading-tight ${puesta ? 'font-bold' : T.muted}`}>{label}</span>
                   </button>
                 );
               })}

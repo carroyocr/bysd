@@ -54,6 +54,42 @@ async def _buscar_voluntario(db, email: str) -> Optional[dict]:
     return docs[0] if docs else None
 
 
+# ==================== ESTADO DE LA CUENTA ====================
+
+
+@router.get("/account-status")
+async def estado_de_la_cuenta(email: EmailStr, request: Request = None):
+    """Que se puede hacer con este correo, antes de meterse en un flujo.
+
+    Sin esto, quien no esta registrado pasa por pedir codigo, esperar un correo
+    que no llega y volver a empezar; y quien ya tiene cuenta se mete en el alta
+    de voluntario para acabar en un error al final. Es lo que permite mandarlo
+    de entrada al camino que le toca.
+
+    Va con limite de peticiones porque, por su naturaleza, dice si un correo
+    esta apuntado como voluntario.
+    """
+    from server import db
+
+    rate_limit.comprobar(
+        "estado_cuenta",
+        rate_limit.ip_cliente(request),
+        limite=30,
+        ventana_segundos=300,
+        mensaje="Demasiadas comprobaciones. Espera un momento.",
+    )
+
+    correo = email.lower().strip()
+    voluntario = await _buscar_voluntario(db, correo)
+    usuario = await db.admin_users.find_one({"username": correo}, {"password": 1})
+
+    return {
+        "es_voluntario": voluntario is not None,
+        "tiene_cuenta": usuario is not None,
+        "tiene_password": bool(usuario and usuario.get("password")),
+    }
+
+
 # ==================== CONTRASENA ====================
 
 
@@ -230,6 +266,37 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         "evento": (voluntario or {}).get("evento") or "carrera",
         "slots_interes": (voluntario or {}).get("slots_interes") or [],
     }
+
+
+@router.delete("/mi-perfil/turnos/{slot_id}")
+async def soltar_turno(slot_id: int, payload: dict = Depends(require_admin)):
+    """El voluntario suelta un turno que le habian asignado.
+
+    Antes tenia que escribir a la organizacion para que se lo quitara a mano.
+    El turno vuelve a quedar libre y se le retira tambien de lo que pidio, para
+    que no se lo vuelvan a asignar en la siguiente ronda.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Ese turno no existe")
+    if (slot.get("email_asignado") or "").lower() != email:
+        raise HTTPException(status_code=403, detail="Ese turno no es tuyo")
+
+    await db.volunteer_assignments.update_one(
+        {"id": slot_id},
+        {"$set": {"email_asignado": None, "nombre_asignado": None,
+                  "updated_at": datetime.now(timezone.utc)}},
+    )
+    await db.volunteer_registrations.update_many(
+        {"email": email},
+        {"$pull": {"slots_interes": slot_id}},
+    )
+
+    return {"success": True}
 
 
 @router.get("/equipo/emergency-info", dependencies=[Depends(require_permission("scanner"))])
