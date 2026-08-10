@@ -114,6 +114,25 @@ class BitacoraEntry(BaseModel):
     nota: str
 
 
+class SponsorCopy(BaseModel):
+    """Traer patrocinadores de una edicion a otra."""
+    from_race_code: str
+    to_race_code: str
+    names: List[str]
+
+
+def logo_filename(race_code: str, sponsor_name: str, ext: str = "png") -> str:
+    """Nombre del archivo del logo: sin acentos ni simbolos, y por carrera."""
+    import unicodedata
+    import re
+
+    safe_name = unicodedata.normalize("NFKD", sponsor_name.lower())
+    safe_name = safe_name.encode("ascii", "ignore").decode("ascii")
+    safe_name = re.sub(r"[^a-z0-9\-]", "-", safe_name)
+    safe_name = re.sub(r"-+", "-", safe_name).strip("-")
+    return f"{race_code.upper()}_{safe_name}.{ext}"
+
+
 def get_db():
     from server import db
     return db
@@ -284,18 +303,8 @@ async def upload_sponsor_logo(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG, WEBP o SVG")
     
-    # Create filename - sanitize to remove special characters
-    import unicodedata
-    import re
-    
     ext = file.filename.split(".")[-1] if "." in file.filename else "png"
-    # Normalize unicode to ASCII equivalents, remove accents
-    safe_name = unicodedata.normalize('NFKD', sponsor_name.lower())
-    safe_name = safe_name.encode('ascii', 'ignore').decode('ascii')
-    safe_name = re.sub(r'[^a-z0-9\-]', '-', safe_name)
-    safe_name = re.sub(r'-+', '-', safe_name).strip('-')
-    
-    filename = f"{race_code.upper()}_{safe_name}.{ext}"
+    filename = logo_filename(race_code, sponsor_name, ext)
 
     # Guardar en GridFS: el disco del contenedor se borra en cada despliegue.
     from services import file_storage
@@ -370,6 +379,96 @@ async def add_bitacora_entry(
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
     return {"message": "Contacto registrado en la bitácora"}
+
+
+@router.post("/copy", dependencies=[solo_sponsors])
+async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
+    """Traer patrocinadores de otra edicion a la carrera indicada.
+
+    Llega lo que sirve para volver a tocar la puerta (descripcion, Instagram,
+    logo y los datos de contacto), pero no el resultado de la negociacion
+    anterior: el proceso empieza otra vez en "prospecto" y el monto de aquella
+    vez queda solo como referencia en la bitacora, no como propuesta vigente.
+    """
+    origen = payload.from_race_code.upper()
+    destino = payload.to_race_code.upper()
+
+    if origen == destino:
+        raise HTTPException(status_code=400, detail="El origen y el destino son la misma carrera")
+    if not payload.names:
+        raise HTTPException(status_code=400, detail="No se indicó ningún patrocinador")
+
+    from services import file_storage
+
+    ultimo = await db.sponsors.find_one({"race_code": destino}, sort=[("order", -1)])
+    siguiente_orden = (ultimo.get("order", 0) + 1) if ultimo else 1
+
+    copiados, omitidos = [], []
+
+    for name in payload.names:
+        fuente = await db.sponsors.find_one({"name": name, "race_code": origen})
+        if not fuente:
+            omitidos.append({"name": name, "motivo": "no existe en la carrera de origen"})
+            continue
+
+        if await db.sponsors.find_one({"name": name, "race_code": destino}):
+            omitidos.append({"name": name, "motivo": "ya está en esta carrera"})
+            continue
+
+        # El logo se duplica con el nombre de la carrera destino: si luego se
+        # cambia el de una edicion, la otra conserva el suyo.
+        logo_url = None
+        if fuente.get("logo_url"):
+            origen_archivo = fuente["logo_url"].rsplit("/", 1)[-1]
+            ext = origen_archivo.rsplit(".", 1)[-1] if "." in origen_archivo else "png"
+            contenido = await file_storage.load(origen_archivo)
+            if contenido:
+                destino_archivo = logo_filename(destino, name, ext)
+                await file_storage.save(
+                    destino_archivo, contenido[0], contenido[1], file_storage.FOLDER_SPONSORS
+                )
+                logo_url = f"/api/uploads/sponsors/{destino_archivo}"
+
+        monto_anterior = fuente.get("propuesta_monto")
+        referencia = f" Aportó RD${monto_anterior:,.2f}." if monto_anterior else ""
+
+        await db.sponsors.insert_one({
+            "name": name,
+            "description": fuente.get("description", ""),
+            "instagram": fuente.get("instagram"),
+            "race_code": destino,
+            "order": siguiente_orden,
+            "logo_url": logo_url,
+            "is_active": True,
+            "razon_social": fuente.get("razon_social", ""),
+            "rnc": fuente.get("rnc", ""),
+            "nombre_contacto": fuente.get("nombre_contacto", ""),
+            "posicion_contacto": fuente.get("posicion_contacto", ""),
+            "telefono": fuente.get("telefono", ""),
+            "correo": fuente.get("correo", ""),
+            "pagina_web": fuente.get("pagina_web", ""),
+            "propuesta_categoria": "",
+            "propuesta_monto": None,
+            "status": "prospecto",
+            "publicar_desde": fuente.get("publicar_desde") or DEFAULT_PUBLICAR_DESDE,
+            "bitacora": [{
+                "id": str(uuid.uuid4()),
+                "fecha": datetime.now(timezone.utc).isoformat(),
+                "nota": f"Traído de {origen}.{referencia}",
+                "tipo": "status",
+            }],
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        })
+
+        siguiente_orden += 1
+        copiados.append(name)
+
+    return {
+        "message": f"{len(copiados)} patrocinador(es) traídos de {origen}",
+        "copiados": copiados,
+        "omitidos": omitidos,
+    }
 
 
 @router.post("/reorder", dependencies=[solo_sponsors])

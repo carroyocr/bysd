@@ -5,7 +5,6 @@ import {
   BadgeInfo,
 } from 'lucide-react';
 import { getJson } from '../liveApi';
-import { LEGACY_RACE_CODES } from '../../content/legacySponsors';
 import { useLiveTheme } from '../liveTheme';
 import { sesionesAbiertas } from '../sesion';
 import { VERSION_CORTA } from '../version';
@@ -39,18 +38,13 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
       .then((d) => { if (!cancel) setHayGanador(!!d?.winner); })
       .catch(() => {});
 
-    // Las carreras historicas traen sus patrocinadores en el propio build
-    if (LEGACY_RACE_CODES.includes(raceCode)) {
-      setHayPatrocinadores(true);
-    } else {
-      getJson(`/api/sponsors/race/${raceCode}`)
-        .then((d) => {
-          if (cancel) return;
-          const lista = Array.isArray(d) ? d : (d?.sponsors || []);
-          setHayPatrocinadores(lista.length > 0);
-        })
-        .catch(() => {});
-    }
+    getJson(`/api/sponsors/race/${raceCode}`)
+      .then((d) => {
+        if (cancel) return;
+        const lista = Array.isArray(d) ? d : (d?.sponsors || []);
+        setHayPatrocinadores(lista.length > 0);
+      })
+      .catch(() => {});
 
     return () => { cancel = true; };
   }, [open, raceCode]);

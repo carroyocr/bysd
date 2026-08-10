@@ -2,9 +2,6 @@ import { useState, useEffect } from 'react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Estas carreras tienen los patrocinadores fijos en SponsorsSection, no en la base.
-const LEGACY_SPONSOR_RACES = ['BYSD-2026'];
-
 /**
  * Indica si una carrera tiene patrocinadores publicados.
  * Mientras `loading` sea true no se sabe todavía: no muestres nada.
@@ -21,12 +18,6 @@ export default function useHasSponsors(raceCode) {
     }
 
     const code = raceCode.toUpperCase();
-
-    if (LEGACY_SPONSOR_RACES.includes(code)) {
-      setHasSponsors(true);
-      setLoading(false);
-      return;
-    }
 
     let cancelled = false;
     setLoading(true);

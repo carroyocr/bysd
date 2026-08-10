@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LEGACY_SPONSORS, LEGACY_RACE_CODES } from '../content/legacySponsors';
 import { ExternalLink, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
-
-// Legacy sponsors for BYSD-2026 (hardcoded)
-
-
-// Legacy race codes that use hardcoded sponsors
 
 export default function SponsorsSection({ raceCode }) {
   const { raceName, config } = useRaceConfig();
@@ -42,15 +36,7 @@ export default function SponsorsSection({ raceCode }) {
   useEffect(() => {
     const fetchSponsors = async () => {
       setLoading(true);
-      
-      // Use legacy sponsors for BYSD-2026
-      if (displayRaceCode && LEGACY_RACE_CODES.includes(displayRaceCode)) {
-        setSponsors(LEGACY_SPONSORS);
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch from API for new races
+
       if (displayRaceCode) {
         try {
           const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/sponsors/race/${displayRaceCode}`);
