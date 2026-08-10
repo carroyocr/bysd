@@ -274,7 +274,7 @@ export default function StaffPerfilScreen() {
               <>
                 <p className={`text-[11px] mb-2 flex items-center gap-1.5 ${T.muted}`}>
                   <Bell className="w-3.5 h-3.5 text-[#E77622]" />
-                  Te avisamos 30 minutos antes de cada turno.
+                  Te avisamos 15 minutos antes de cada turno.
                 </p>
                 {turnos.map((t) => (
                   <div key={t.slot_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>

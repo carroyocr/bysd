@@ -396,6 +396,32 @@ async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
     )
 
 
+def _texto_turnos(slots: list) -> str:
+    """Una linea con lo asignado: un turno se describe, varios se cuentan."""
+    if len(slots) == 1:
+        s = slots[0]
+        hora = (s.get("hora_inicio") or "")[:5]
+        return f"{s.get('puesto', 'tu puesto')}, turno {s.get('turno', '')} ({hora})".replace(" ()", "")
+    return f"{len(slots)} turnos. Míralos en Mi perfil → Asignados."
+
+
+async def _avisar_turnos_asignados(database, email: str, slots: list) -> None:
+    """Un solo aviso aunque sean varios turnos: tres vibraciones seguidas por
+    la misma decision de la organizacion solo molestan."""
+    if not slots:
+        return
+    import asyncio
+    from routes.push import avisar_staff
+
+    asyncio.create_task(avisar_staff(
+        database,
+        email,
+        "Turno asignado" if len(slots) == 1 else "Turnos asignados",
+        f"Te asignaron {_texto_turnos(slots)}",
+        {"tipo": "turno_asignado"},
+    ))
+
+
 @router.post("/assign/{slot_id}")
 async def assign_volunteer(slot_id: int, request: AssignmentRequest):
     """Assign a volunteer to a slot"""
@@ -427,6 +453,8 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
         print(f"Assignment confirmation email sent to {email}")
     except Exception as e:
         print(f"Warning: Could not send confirmation email to {email}: {e}")
+
+    await _avisar_turnos_asignados(database, email, [slot])
 
     return {
         "message": f"¡Asignación exitosa! {volunteer_name} ha sido asignado/a al turno.",
@@ -467,6 +495,7 @@ async def assign_volunteer_multiple(request: MultipleAssignmentRequest):
             print(f"Assignment confirmation email sent to {email} ({len(asignados)} turnos)")
         except Exception as e:
             print(f"Warning: Could not send confirmation email to {email}: {e}")
+        await _avisar_turnos_asignados(database, email, asignados)
 
     return {
         "success": len(asignados) > 0,

@@ -1238,7 +1238,21 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
             )
     except Exception as e:
         print(f"Error sending confirmation email: {e}")
-    
+
+    # Aviso al telefono, aparte del correo. Con create_task porque un fallo de
+    # red hacia Firebase no puede tumbar una inscripcion ya guardada.
+    import asyncio as _asyncio
+    from routes.push import avisar_atleta
+    _asyncio.create_task(avisar_atleta(
+        database,
+        athlete["email"],
+        "Ya estás en lista de espera" if is_waitlist else "Inscripción confirmada",
+        (f"Te apuntamos a {(race or {}).get('name') or data.race_code}. Te avisamos en cuanto se libere un cupo."
+         if is_waitlist else
+         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Tu dorsal es el #{registration_doc['bib']}."),
+        {"tipo": "inscripcion"},
+    ))
+
     return {
         "success": True,
         "message": "Inscripción en lista de espera" if is_waitlist else "Inscripción realizada",

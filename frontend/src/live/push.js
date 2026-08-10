@@ -73,7 +73,7 @@ export async function registrarAtleta(email) {
 
 /**
  * Liga este teléfono al voluntario que acaba de entrar como staff, para que le
- * llegue el aviso 30 minutos antes de su turno. Pide permiso si hace falta.
+ * llegue el aviso 15 minutos antes de su turno. Pide permiso si hace falta.
  */
 export async function registrarStaff(email) {
   if (!pushDisponible() || !email) return;

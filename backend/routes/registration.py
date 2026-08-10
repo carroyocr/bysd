@@ -894,6 +894,17 @@ async def promote_waitlist(
         {"$set": {"status": "registered", "updated_at": datetime.now(timezone.utc)}}
     )
 
+    # Aviso al telefono, aparte del correo: esta es la noticia que quien esta
+    # en lista de espera lleva meses esperando.
+    import asyncio as _asyncio
+    from routes.push import avisar_atleta
+    _asyncio.create_task(avisar_atleta(
+        db, email.lower(),
+        "¡Se liberó tu cupo!",
+        f"Ya estás inscrito en la carrera. Tu dorsal es el #{registration.get('bib', '')}.".replace(" el #.", "."),
+        {"tipo": "cupo_liberado"},
+    ))
+
     # Send confirmation email using the standard registration confirmation template
     try:
         from services.template_email_service import send_email_with_template, build_race_data, build_athlete_data
@@ -1533,6 +1544,16 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
     
     new_status = "approved" if approved else "rejected"
     payment_status = "paid" if approved else "pending"
+
+    if approved:
+        import asyncio as _asyncio
+        from routes.push import avisar_atleta
+        _asyncio.create_task(avisar_atleta(
+            db, email.lower(),
+            "Pago confirmado",
+            "Tu inscripción queda confirmada. Nos vemos en la salida.",
+            {"tipo": "pago_confirmado"},
+        ))
     
     await registrations_collection.update_one(
         {"email": email.lower(), "race_code": race_code},

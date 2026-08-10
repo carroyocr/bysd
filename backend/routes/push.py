@@ -452,3 +452,45 @@ async def historial_envios(limit: int = 30, _=Depends(_puede_enviar)):
 
     envios = await database.push_history.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 100))
     return {"envios": envios}
+
+
+async def avisar_a_cuenta(
+    database,
+    campo: str,
+    correo: Optional[str],
+    titulo: str,
+    cuerpo: str,
+    data: Optional[dict] = None,
+) -> None:
+    """Aviso a los telefonos donde esa persona inicio sesion.
+
+    `campo` es "athlete_email" para el corredor o "staff_email" para el equipo.
+    Un telefono queda ligado a la cuenta al entrar en la app; el que nunca
+    inicio sesion no recibe estos avisos y no hay nada que hacer al respecto.
+
+    Pensada para llamarse con `asyncio.create_task`: ninguno de estos avisos
+    puede tumbar ni retrasar la operacion que los dispara —confirmar un pago,
+    asignar un turno—, asi que se traga sus errores y los deja en el log.
+    """
+    try:
+        if not push_service.esta_configurado() or not correo:
+            return
+
+        tokens = [
+            d["token"]
+            async for d in database.push_devices.find({campo: correo.strip().lower()}, {"token": 1})
+        ]
+        if not tokens:
+            return
+
+        await _enviar_y_limpiar(database, tokens, titulo, cuerpo, data)
+    except Exception as e:
+        logger.warning(f"No se pudo enviar el aviso push a {correo}: {e}")
+
+
+async def avisar_atleta(database, correo, titulo, cuerpo, data=None) -> None:
+    await avisar_a_cuenta(database, "athlete_email", correo, titulo, cuerpo, data)
+
+
+async def avisar_staff(database, correo, titulo, cuerpo, data=None) -> None:
+    await avisar_a_cuenta(database, "staff_email", correo, titulo, cuerpo, data)
