@@ -8,7 +8,7 @@ export const THEMES = {
   dark: {
     name: 'dark',
     page: 'bg-[#0C0C0C] text-white',
-    bar: 'bg-[#111111] text-white border-b border-[#262626]',
+    bar: 'bg-[#111111] text-white',
     barAccent: 'text-[#E77622]',
     drawer: 'bg-[#141414] text-white border-r border-[#262626]',
     drawerItem: 'border-b border-[#222222] text-[#dddddd]',
@@ -28,6 +28,10 @@ export const THEMES = {
     tableHead: 'text-[#777777] border-b border-[#2a2a2a]',
     tableRow: 'border-b border-[#1e1e1e]',
     actionChip: 'bg-[#1d1d1d] text-[#cccccc]',
+    // Sobre fondo negro una sombra no se ve: el relieve se hace con una linea
+    // clara en el canto de la barra, que es lo que separa un plano de otro.
+    barShadow: 'shadow-[0_2px_10px_rgba(0,0,0,0.6)] border-b border-[#2e2e2e]',
+    footerShadow: 'shadow-[0_-2px_10px_rgba(0,0,0,0.6)] border-t border-[#2e2e2e]',
   },
   light: {
     name: 'light',
@@ -52,6 +56,10 @@ export const THEMES = {
     tableHead: 'text-[#b08944] border-b border-[#eadfba]',
     tableRow: 'border-b border-[#f4edd8]',
     actionChip: 'bg-[#F4EDD8] text-[#6b5c2e]',
+    // En claro si funciona la sombra proyectada, y sin linea: la raya sobre
+    // color plano se ve como un borde dibujado, no como relieve.
+    barShadow: 'shadow-[0_3px_10px_rgba(0,0,0,0.18)]',
+    footerShadow: 'shadow-[0_-3px_10px_rgba(0,0,0,0.12)]',
   },
 };
 
