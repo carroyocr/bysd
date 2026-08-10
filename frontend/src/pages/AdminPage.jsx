@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Button } from '../components/ui/button';
-import { 
-  LogOut, Settings, ClipboardList, Users, ChevronLeft, Flag, UserPlus, Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock, Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone, Bell
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
+import {
+  LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
+  Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
+  Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone,
+  Bell, Radio
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
@@ -59,8 +64,112 @@ const TAB_PERMISSIONS = {
 const canOpenTab = (permissions, tabId) =>
   (TAB_PERMISSIONS[tabId] || []).some((p) => permissions.includes(p));
 
-// Special permissions that are not tabs (used for menu buttons like scanner)
-const SPECIAL_PERMISSIONS = ['scanner'];
+// Categorías de la barra superior. Cada una agrupa los accesos de un área de
+// trabajo; el orden aquí es el que se ve y también el que decide a qué sección
+// cae un usuario que no tiene permiso para la que pidió.
+// El escáner QR no está: se escanea desde la app, no desde el panel web.
+const ADMIN_SECTIONS = [
+  {
+    id: 'en-vivo',
+    label: 'En Vivo',
+    icon: Radio,
+    items: [
+      { id: 'control', label: 'Control', icon: Users },
+      { id: 'lap-registry', label: 'Vueltas', icon: Clock },
+    ],
+  },
+  {
+    id: 'atletas',
+    label: 'Atletas',
+    icon: UserPlus,
+    items: [
+      { id: 'registrations', label: 'Inscripciones', icon: UserPlus },
+      { id: 'athlete-profiles', label: 'Perfiles', icon: Users },
+      { id: 'results-2026', label: 'Resultados 2026', icon: Trophy },
+      { id: 'seleccionados', label: 'Seleccionados', icon: Medal },
+      { id: 'tshirt', label: 'Camisetas', icon: Shirt },
+      { id: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
+    ],
+  },
+  {
+    id: 'voluntarios',
+    label: 'Voluntarios',
+    icon: ClipboardCheck,
+    items: [
+      { id: 'assignments', label: 'Voluntarios', icon: ClipboardCheck },
+      { id: 'volunteers', label: 'Turnos', icon: CalendarClock },
+    ],
+  },
+  {
+    id: 'comercial',
+    label: 'Comercial',
+    icon: Building2,
+    items: [
+      { id: 'sponsors', label: 'Patrocinadores', icon: Building2 },
+      { id: 'ads', label: 'Publicidad', icon: Megaphone },
+      { id: 'finances', label: 'Finanzas', icon: Wallet },
+    ],
+  },
+  {
+    id: 'comunicacion',
+    label: 'Comunicación',
+    icon: Send,
+    items: [
+      { id: 'email-composer', label: 'Enviar Correos', icon: Send },
+      { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
+      { id: 'prensa', label: 'Prensa', icon: Newspaper },
+    ],
+  },
+  {
+    id: 'configuracion',
+    label: 'Configuración',
+    icon: Settings,
+    items: [
+      { id: 'config', label: 'Carrera', icon: Flag },
+      { id: 'users', label: 'Usuarios', icon: Shield },
+      { id: 'emails', label: 'Plantillas de Correo', icon: Mail },
+      { id: 'surveys', label: 'Encuesta', icon: ClipboardList },
+    ],
+  },
+];
+
+// Accesos en el orden de la barra.
+const TAB_ORDER = ADMIN_SECTIONS.flatMap((s) => s.items.map((i) => i.id));
+
+const findItem = (tabId) => {
+  for (const section of ADMIN_SECTIONS) {
+    const item = section.items.find((i) => i.id === tabId);
+    if (item) return { section, item };
+  }
+  return null;
+};
+
+// Vista de cada acceso. Son funciones a nivel de módulo (no componentes
+// definidos dentro del render) para que el contenido no se remonte solo.
+const TAB_VIEWS = {
+  'control': () => <RaceControlPanel embedded={true} />,
+  'lap-registry': () => <LapRegistrationsPanel />,
+  'app-avisos': () => <PushComposer />,
+  'registrations': () => <PreRegistrationManagement />,
+  'athlete-profiles': () => <AthleteProfilesManagement />,
+  'results-2026': () => <ClaimedResultsManagement />,
+  'seleccionados': () => <SeleccionadosManagement />,
+  'tshirt': () => <TshirtManagement />,
+  'assignments': () => <VolunteerAssignmentsManagement />,
+  'volunteers': () => <VolunteerConfigManagement />,
+  'capacitaciones': () => <CapacitacionesManagement />,
+  'sponsors': () => <SponsorsManagement />,
+  'ads': () => <AdsManagement />,
+  'finances': () => <FinancesManagement />,
+  'email-composer': () => <EmailComposer />,
+  'whatsapp': () => <WhatsAppComposer />,
+  'emails': () => <EmailTemplatesManagement />,
+  'prensa': () => <PrensaManagement />,
+  'config': () => <RaceConfigPanel />,
+  'users': () => <UserManagement />,
+  'surveys': () => <SurveyResultsSection />,
+};
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -76,31 +185,31 @@ export default function AdminPage() {
       navigate('/admin/login');
     } else {
       setIsAuthenticated(true);
-      
+
       // Load permissions from localStorage
       const isAdminUser = localStorage.getItem('admin_is_admin') === 'true';
       setIsAdmin(isAdminUser);
-      
+
       try {
         const permissions = JSON.parse(localStorage.getItem('admin_permissions') || '[]');
         setUserPermissions(permissions);
-        
-        // Check if user ONLY has scanner permission - redirect directly to /scan
+
+        // Quien solo escanea no tiene nada que abrir en el panel: va derecho a
+        // /scan. El escáner ya no está en la barra, pero este atajo se queda
+        // porque si no estas cuentas entran a un panel vacío.
         const hasOnlyScanner = permissions.length === 1 && permissions[0] === 'scanner';
         if (hasOnlyScanner && !isAdminUser) {
           navigate('/scan');
           return;
         }
-        
+
         // Set initial tab based on permissions
         const requestedTab = searchParams.get('tab') || 'control';
         if (isAdminUser || permissions.includes('all') || canOpenTab(permissions, requestedTab)) {
           setActiveTab(requestedTab);
         } else {
-          // Find first allowed tab
-          const firstAllowedTab = Object.keys(TAB_PERMISSIONS).find(tab =>
-            canOpenTab(permissions, tab)
-          );
+          // Primer acceso permitido, siguiendo el orden de la barra
+          const firstAllowedTab = TAB_ORDER.find((tab) => canOpenTab(permissions, tab));
           if (firstAllowedTab) {
             setActiveTab(firstAllowedTab);
           } else if (permissions.includes('scanner')) {
@@ -124,15 +233,10 @@ export default function AdminPage() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Check if user has access to a specific tab or special permission
+  // Check if user has access to a specific tab
   const hasAccess = (tabId) => {
     if (isAdmin) return true;
     if (userPermissions.includes('all')) return true;
-
-    // Check for special permissions (like 'scanner')
-    if (SPECIAL_PERMISSIONS.includes(tabId)) {
-      return userPermissions.includes(tabId);
-    }
 
     return canOpenTab(userPermissions, tabId);
   };
@@ -149,14 +253,21 @@ export default function AdminPage() {
     return null;
   }
 
+  // Una categoría solo se muestra si el usuario puede entrar a algo dentro
+  const visibleSections = ADMIN_SECTIONS
+    .map((section) => ({ ...section, items: section.items.filter((i) => hasAccess(i.id)) }))
+    .filter((section) => section.items.length > 0);
+
+  const actual = findItem(activeTab);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background pt-20 pb-12">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => navigate('/')}
               className="text-muted-foreground"
             >
@@ -174,315 +285,58 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tabs Navigation - Sidebar layout */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex flex-col lg:flex-row gap-6 items-start">
-          <TabsList className="flex flex-col w-full lg:w-60 shrink-0 h-auto gap-1 bg-muted/40 p-2 rounded-xl [&>*]:w-full [&>*]:justify-start">
-            {/* 1. Control */}
-            {hasAccess('control') && (
-              <TabsTrigger value="control" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Control</span>
-                <span className="sm:hidden">Control</span>
-              </TabsTrigger>
-            )}
-            {/* 2. Vueltas */}
-            {hasAccess('lap-registry') && (
-              <TabsTrigger value="lap-registry" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span className="hidden sm:inline">Vueltas</span>
-                <span className="sm:hidden">Vueltas</span>
-              </TabsTrigger>
-            )}
-            {/* 2b. Avisos a la app móvil */}
-            {hasAccess('app-avisos') && (
-              <TabsTrigger value="app-avisos" className="flex items-center gap-2" data-testid="tab-app-avisos">
-                <Bell className="w-4 h-4" />
-                <span className="hidden sm:inline">Mensajes App</span>
-                <span className="sm:hidden">Mensajes</span>
-              </TabsTrigger>
-            )}
-            {/* 3. Escáner QR */}
-            {hasAccess('scanner') && (
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/scan')}
-                className="flex items-center gap-2 px-3 py-1.5 h-auto text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground"
-              >
-                <QrCode className="w-4 h-4" />
-                <span className="hidden sm:inline">Escáner QR</span>
-                <span className="sm:hidden">QR</span>
-              </Button>
-            )}
-            {/* 4. Atletas */}
-            {hasAccess('registrations') && (
-              <TabsTrigger value="registrations" className="flex items-center gap-2">
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Atletas</span>
-                <span className="sm:hidden">Atletas</span>
-              </TabsTrigger>
-            )}
-            {/* 4b. Finanzas */}
-            {hasAccess('finances') && (
-              <TabsTrigger value="finances" className="flex items-center gap-2" data-testid="tab-finances">
-                <Wallet className="w-4 h-4" />
-                <span>Finanzas</span>
-              </TabsTrigger>
-            )}
-            {/* 5. Voluntarios (antes Asignaciones) */}
-            {hasAccess('assignments') && (
-              <TabsTrigger value="assignments" className="flex items-center gap-2">
-                <ClipboardCheck className="w-4 h-4" />
-                <span className="hidden sm:inline">Voluntarios</span>
-                <span className="sm:hidden">Volunt.</span>
-              </TabsTrigger>
-            )}
-            {/* 6. Turnos */}
-            {hasAccess('volunteers') && (
-              <TabsTrigger value="volunteers" className="flex items-center gap-2">
-                <CalendarClock className="w-4 h-4" />
-                <span className="hidden sm:inline">Turnos</span>
-                <span className="sm:hidden">Turnos</span>
-              </TabsTrigger>
-            )}
-            {/* 7. Patrocinadores */}
-            {hasAccess('sponsors') && (
-              <TabsTrigger value="sponsors" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Patrocinadores</span>
-                <span className="sm:hidden">Sponsors</span>
-              </TabsTrigger>
-            )}
-            {/* 7b. Publicidad (banners de BYSD Live) */}
-            {hasAccess('ads') && (
-              <TabsTrigger value="ads" className="flex items-center gap-2">
-                <Megaphone className="w-4 h-4" />
-                <span className="hidden sm:inline">Publicidad</span>
-                <span className="sm:hidden">Ads</span>
-              </TabsTrigger>
-            )}
-            {/* 8. Encuesta */}
-            {hasAccess('surveys') && (
-              <TabsTrigger value="surveys" className="flex items-center gap-2">
-                <ClipboardList className="w-4 h-4" />
-                <span className="hidden sm:inline">Encuesta</span>
-                <span className="sm:hidden">Encuesta</span>
-              </TabsTrigger>
-            )}
-            {/* 9. Correos */}
-            {hasAccess('emails') && (
-              <TabsTrigger value="emails" className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                <span className="hidden sm:inline">Correos</span>
-                <span className="sm:hidden">Correos</span>
-              </TabsTrigger>
-            )}
-            {/* 10. Resultados 2026 */}
-            {hasAccess('results-2026') && (
-              <TabsTrigger value="results-2026" className="flex items-center gap-2" data-testid="tab-results-2026">
-                <Trophy className="w-4 h-4" />
-                <span className="hidden sm:inline">Resultados 2026</span>
-                <span className="sm:hidden">2026</span>
-              </TabsTrigger>
-            )}
-            {/* 10b. Seleccionados (Campeonato Mundial) */}
-            {hasAccess('seleccionados') && (
-              <TabsTrigger value="seleccionados" className="flex items-center gap-2" data-testid="tab-seleccionados">
-                <Medal className="w-4 h-4" />
-                <span className="hidden sm:inline">Seleccionados</span>
-                <span className="sm:hidden">Selecc.</span>
-              </TabsTrigger>
-            )}
-            {/* 11. Perfiles de Atletas */}
-            {hasAccess('athlete-profiles') && (
-              <TabsTrigger value="athlete-profiles" className="flex items-center gap-2" data-testid="tab-athlete-profiles">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Perfiles</span>
-                <span className="sm:hidden">Perfiles</span>
-              </TabsTrigger>
-            )}
-            {/* 12. Enviar Correos */}
-            {hasAccess('email-composer') && (
-              <TabsTrigger value="email-composer" className="flex items-center gap-2" data-testid="tab-email-composer">
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Enviar Correos</span>
-                <span className="sm:hidden">Enviar</span>
-              </TabsTrigger>
-            )}
-            {/* 12b. WhatsApp */}
-            {hasAccess('whatsapp') && (
-              <TabsTrigger value="whatsapp" className="flex items-center gap-2" data-testid="tab-whatsapp">
-                <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp</span>
-              </TabsTrigger>
-            )}
-            {/* 13. Camisetas */}
-            {hasAccess('tshirt') && (
-              <TabsTrigger value="tshirt" className="flex items-center gap-2" data-testid="tab-tshirt">
-                <Shirt className="w-4 h-4" />
-                <span className="hidden sm:inline">Camisetas</span>
-                <span className="sm:hidden">Camisetas</span>
-              </TabsTrigger>
-            )}
-            {/* 13b. Prensa */}
-            {hasAccess('prensa') && (
-              <TabsTrigger value="prensa" className="flex items-center gap-2" data-testid="tab-prensa">
-                <Newspaper className="w-4 h-4" />
-                <span>Prensa</span>
-              </TabsTrigger>
-            )}
-            {/* 14. Capacitaciones */}
-            {hasAccess('capacitaciones') && (
-              <TabsTrigger value="capacitaciones" className="flex items-center gap-2" data-testid="tab-capacitaciones">
-                <GraduationCap className="w-4 h-4" />
-                <span>Capacitaciones</span>
-              </TabsTrigger>
-            )}
-            {/* 10. Usuarios */}
-            {hasAccess('users') && (
-              <TabsTrigger value="users" className="flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                <span className="hidden sm:inline">Usuarios</span>
-                <span className="sm:hidden">Usuarios</span>
-              </TabsTrigger>
-            )}
-            {/* 11. Carrera */}
-            {hasAccess('config') && (
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Flag className="w-4 h-4" />
-                <span className="hidden sm:inline">Carrera</span>
-                <span className="sm:hidden">Carrera</span>
-              </TabsTrigger>
-            )}
-          </TabsList>
+        {/* Barra de categorías */}
+        <div className="flex flex-wrap items-center gap-1 bg-muted/40 p-1.5 rounded-xl mb-4">
+          {visibleSections.map((section) => {
+            const SectionIcon = section.icon;
+            const isCurrent = section.items.some((i) => i.id === activeTab);
+            return (
+              <DropdownMenu key={section.id}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={isCurrent ? 'default' : 'ghost'}
+                    size="sm"
+                    className="gap-2"
+                    data-testid={`categoria-${section.id}`}
+                  >
+                    <SectionIcon className="w-4 h-4" />
+                    {section.label}
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {section.items.map((item) => {
+                    const ItemIcon = item.icon;
+                    return (
+                      <DropdownMenuItem
+                        key={item.id}
+                        onSelect={() => setActiveTab(item.id)}
+                        className={`gap-2 cursor-pointer ${item.id === activeTab ? 'bg-accent font-medium' : ''}`}
+                        data-testid={`acceso-${item.id}`}
+                      >
+                        <ItemIcon className="w-4 h-4" />
+                        {item.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })}
+        </div>
 
-          <div className="flex-1 min-w-0 w-full">
-          {hasAccess('control') && (
-            <TabsContent value="control">
-              <RaceControlPanel embedded={true} />
-            </TabsContent>
-          )}
-
-          {hasAccess('lap-registry') && (
-            <TabsContent value="lap-registry">
-              <LapRegistrationsPanel />
-            </TabsContent>
-          )}
-
-          {hasAccess('app-avisos') && (
-            <TabsContent value="app-avisos">
-              <PushComposer />
-            </TabsContent>
-          )}
-
-          {hasAccess('registrations') && (
-            <TabsContent value="registrations">
-              <PreRegistrationManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('finances') && (
-            <TabsContent value="finances">
-              <FinancesManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('volunteers') && (
-            <TabsContent value="volunteers">
-              <VolunteerConfigManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('assignments') && (
-            <TabsContent value="assignments">
-              <VolunteerAssignmentsManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('sponsors') && (
-            <TabsContent value="sponsors">
-              <SponsorsManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('ads') && (
-            <TabsContent value="ads">
-              <AdsManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('surveys') && (
-            <TabsContent value="surveys">
-              <SurveyResultsSection />
-            </TabsContent>
-          )}
-
-          {hasAccess('config') && (
-            <TabsContent value="config">
-              <RaceConfigPanel />
-            </TabsContent>
-          )}
-
-          {hasAccess('users') && (
-            <TabsContent value="users">
-              <UserManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('emails') && (
-            <TabsContent value="emails">
-              <EmailTemplatesManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('results-2026') && (
-            <TabsContent value="results-2026">
-              <ClaimedResultsManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('athlete-profiles') && (
-            <TabsContent value="athlete-profiles">
-              <AthleteProfilesManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('email-composer') && (
-            <TabsContent value="email-composer">
-              <EmailComposer />
-            </TabsContent>
-          )}
-
-          {hasAccess('whatsapp') && (
-            <TabsContent value="whatsapp">
-              <WhatsAppComposer />
-            </TabsContent>
-          )}
-
-          {hasAccess('tshirt') && (
-            <TabsContent value="tshirt">
-              <TshirtManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('capacitaciones') && (
-            <TabsContent value="capacitaciones">
-              <CapacitacionesManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('seleccionados') && (
-            <TabsContent value="seleccionados">
-              <SeleccionadosManagement />
-            </TabsContent>
-          )}
-
-          {hasAccess('prensa') && (
-            <TabsContent value="prensa">
-              <PrensaManagement />
-            </TabsContent>
-          )}
+        {/* Dónde estoy: la barra ya no muestra el acceso abierto */}
+        {actual && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
+            <span>{actual.section.label}</span>
+            <ChevronLeft className="w-3.5 h-3.5 rotate-180" />
+            <span className="font-medium text-foreground">{actual.item.label}</span>
           </div>
-        </Tabs>
+        )}
+
+        <div className="min-w-0 w-full">
+          {hasAccess(activeTab) && TAB_VIEWS[activeTab]?.()}
+        </div>
       </div>
     </div>
   );
