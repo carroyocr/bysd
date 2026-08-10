@@ -138,11 +138,12 @@ export default function FichaAtleta() {
               </div>
             </div>
 
-            {/* Secciones: rejilla fija, sin scroll horizontal */}
-            <div
-              className="grid px-4 pb-4 gap-2"
-              style={{ gridTemplateColumns: `repeat(${secciones.length}, minmax(0, 1fr))` }}
-            >
+            {/* Secciones en pastillas de icono y texto, cada una del ancho de
+                lo que dice. Con el círculo y el rótulo debajo, cada una ocupaba
+                un cuarto de la pantalla y dos líneas de alto; así la fila es
+                más baja y deja sitio a lo que viene debajo. Se desplaza en
+                horizontal por si los nombres no caben de una vez. */}
+            <div className="flex gap-2 px-4 pb-4 overflow-x-auto no-scrollbar">
               {secciones.map(({ label, Icon, to }) => {
                 const puesta = activa(to);
                 return (
@@ -150,12 +151,10 @@ export default function FichaAtleta() {
                     key={label}
                     onClick={() => navigate(to, { replace: true })}
                     aria-current={puesta}
-                    className="flex flex-col items-center gap-1.5 min-w-0"
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl ${puesta ? T.chipOn : T.actionChip}`}
                   >
-                    <span className={`w-11 h-11 rounded-full flex items-center justify-center ${puesta ? T.chipOn : T.actionChip}`}>
-                      <Icon className={`w-[18px] h-[18px] ${puesta ? '' : 'text-[#E77622]'}`} />
-                    </span>
-                    <span className={`text-[9.5px] text-center leading-tight ${puesta ? 'font-bold' : T.muted}`}>{label}</span>
+                    <Icon className={`w-4 h-4 shrink-0 ${puesta ? '' : 'text-[#E77622]'}`} />
+                    <span className={`text-[11px] leading-none whitespace-nowrap ${puesta ? 'font-bold' : ''}`}>{label}</span>
                   </button>
                 );
               })}
