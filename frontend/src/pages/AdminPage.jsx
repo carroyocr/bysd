@@ -80,7 +80,6 @@ const ADMIN_SECTIONS = [
       { id: 'control', label: 'Control', icon: Users },
       { id: 'lap-registry', label: 'Vueltas', icon: Clock },
       { id: 'scanner', label: 'Escáner QR', icon: QrCode, to: '/scan' },
-      { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
     ],
   },
   {
@@ -93,6 +92,7 @@ const ADMIN_SECTIONS = [
       { id: 'results-2026', label: 'Resultados 2026', icon: Trophy },
       { id: 'seleccionados', label: 'Seleccionados', icon: Medal },
       { id: 'tshirt', label: 'Camisetas', icon: Shirt },
+      { id: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
     ],
   },
   {
@@ -102,7 +102,6 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'assignments', label: 'Voluntarios', icon: ClipboardCheck },
       { id: 'volunteers', label: 'Turnos', icon: CalendarClock },
-      { id: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
     ],
   },
   {
@@ -122,6 +121,7 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'email-composer', label: 'Enviar Correos', icon: Send },
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
       { id: 'emails', label: 'Plantillas de Correo', icon: Mail },
       { id: 'prensa', label: 'Prensa', icon: Newspaper },
     ],
