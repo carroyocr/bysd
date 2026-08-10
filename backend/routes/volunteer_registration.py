@@ -378,6 +378,40 @@ async def get_available_slots(evento: Optional[str] = None, email: Optional[str]
     }
 
 
+async def validar_sin_choques(db, slots: Optional[List[int]]):
+    """Corta con 400 si el voluntario se pide a si mismo dos puestos a la vez.
+
+    El formulario ya cuidaba que el turno no estuviera tomado por otro, pero
+    nadie miraba los turnos entre si: se podia pedir Corral de Salida e
+    Hidratacion el mismo dia a la misma hora, y el choque solo se veia despues,
+    al ir a confirmar. Dos puestos comparten hora cuando coinciden en dia y
+    turno, que es la franja con la que se arma la programacion.
+    """
+    if not slots or len(slots) < 2:
+        return
+
+    docs = await db.volunteer_assignments.find(
+        {"id": {"$in": slots}},
+        {"_id": 0, "id": 1, "puesto": 1, "turno": 1, "dia_tipo": 1}
+    ).to_list(100)
+
+    por_franja: dict = {}
+    for doc in docs:
+        por_franja.setdefault((doc.get("dia_tipo"), doc.get("turno")), []).append(doc)
+
+    choques = [grupo for grupo in por_franja.values() if len(grupo) > 1]
+    if not choques:
+        return
+
+    detalle = "; ".join(
+        " y ".join(d.get("puesto", "") for d in grupo) for grupo in choques
+    )
+    raise HTTPException(
+        status_code=400,
+        detail=f"No puedes estar en dos puestos a la misma hora: {detalle}. Deja solo uno."
+    )
+
+
 async def validar_slots_libres(db, slots: Optional[List[int]], email: str):
     """Corta con 400 si alguno de los turnos elegidos ya fue tomado.
 
@@ -580,8 +614,9 @@ async def register_volunteer(
     if existing:
         raise HTTPException(status_code=400, detail="Ya estás registrado como voluntario para este evento")
 
-    # Los turnos elegidos deben seguir libres
+    # Los turnos elegidos deben seguir libres y no pisarse entre si
     await validar_slots_libres(db, data.slots_interes, email)
+    await validar_sin_choques(db, data.slots_interes)
 
     # Generate edit token
     edit_token = generate_edit_token()
@@ -717,6 +752,7 @@ async def update_volunteer_registration(token: str, data: VolunteerRegistrationD
 
     # Los turnos elegidos deben seguir libres (los propios no cuentan)
     await validar_slots_libres(db, data.slots_interes, existing.get("email", ""))
+    await validar_sin_choques(db, data.slots_interes)
 
     # Update registration
     update_data = {
@@ -894,22 +930,180 @@ async def delete_volunteer_registration(email: str, race_code: Optional[str] = N
     if not existing:
         raise HTTPException(status_code=404, detail="Voluntario no encontrado")
 
-    # Remove assignments for this volunteer within the registration's event
+    await _borrar_registro(db, existing)
+
+    return {"message": "Voluntario eliminado correctamente"}
+
+
+async def _borrar_registro(db, registro: dict) -> None:
+    """Borra la postulacion y libera lo que tenia tomado.
+
+    Lo comparte el borrado en silencio con el rechazo: la diferencia entre los
+    dos es el correo, no lo que queda en la base.
+    """
+    email = registro.get("email", "")
+
+    # Los turnos que ya tenia asignados vuelven a quedar libres
     await db.volunteer_assignments.update_many(
-        {"email_asignado": email, **evento_query(existing.get("evento") or "carrera")},
+        {"email_asignado": email, **evento_query(registro.get("evento") or "carrera")},
         {"$set": {"email_asignado": None, "nombre_asignado": None}}
     )
 
-    # Delete the registration
-    await db.volunteer_registrations.delete_one({"_id": existing["_id"]})
+    await db.volunteer_registrations.delete_one({"_id": registro["_id"]})
 
-    # Clean up related data (only if no other registration remains)
+    # El resto solo se limpia si no le queda ninguna otra postulacion
     remaining = await db.volunteer_registrations.count_documents({"email": email})
     if remaining == 0:
         await db.volunteer_verification_tokens.delete_many({"email": email})
         await db.volunteer_sessions.delete_many({"email": email})
 
-    return {"message": "Voluntario eliminado correctamente"}
+
+class RechazoRequest(BaseModel):
+    motivo: str
+
+
+async def _buscar_registro(db, email: str, race_code: Optional[str], evento: Optional[str]) -> dict:
+    """La postulacion de un correo en una carrera (y evento, si se indica)."""
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+
+    query = {"email": email.lower(), "race_code": race_code}
+    if evento in VALID_EVENTOS:
+        query.update(evento_query(evento))
+
+    registro = await db.volunteer_registrations.find_one(query)
+    if not registro:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+    return registro
+
+
+async def _enviar_rechazo(db, registro: dict, motivo: str, slot: Optional[dict] = None) -> bool:
+    """Correo de rechazo. Devuelve si salio, para poder avisarlo en el panel."""
+    from services.template_email_service import (
+        send_email_with_template, build_race_data, build_volunteer_data
+    )
+
+    race_config = await db.race_configurations.find_one({"is_active": True})
+    datos_turno = None
+    if slot:
+        from services.volunteer_dates import con_fecha_varios
+        con_fecha = await con_fecha_varios(db, [slot])
+        datos_turno = con_fecha[0] if con_fecha else slot
+
+    data = {
+        **build_race_data(race_config),
+        **build_volunteer_data(registro, assignment=datos_turno),
+        "rechazo_motivo": (motivo or "").strip(),
+    }
+    try:
+        return bool(await send_email_with_template(
+            db=db,
+            template_id="volunteer_shift_rejected" if slot else "volunteer_application_rejected",
+            to_email=registro.get("email", ""),
+            data=data,
+        ))
+    except Exception as e:
+        print(f"Error enviando correo de rechazo: {e}")
+        return False
+
+
+@admin_router.delete("/registrations/{email}/slots/{slot_id}")
+async def quitar_turno_solicitado(
+    email: str,
+    slot_id: int,
+    race_code: Optional[str] = None,
+    evento: Optional[str] = None,
+):
+    """Quita un turno pedido, sin avisarle al voluntario.
+
+    Para el descarte de todos los dias: el turno se cubrio de otra forma o el
+    voluntario pidio dos puestos a la vez y solo se le deja uno. Sin correo,
+    porque no todo movimiento interno merece una notificacion.
+    """
+    from server import db
+
+    registro = await _buscar_registro(db, email, race_code, evento)
+    if slot_id not in (registro.get("slots_interes") or []):
+        raise HTTPException(status_code=404, detail="Ese turno no está entre los solicitados")
+
+    await db.volunteer_registrations.update_one(
+        {"_id": registro["_id"]},
+        {"$pull": {"slots_interes": slot_id}, "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"message": "Turno retirado de la solicitud"}
+
+
+@admin_router.post("/registrations/{email}/slots/{slot_id}/reject")
+async def rechazar_turno_solicitado(
+    email: str,
+    slot_id: int,
+    request: RechazoRequest,
+    race_code: Optional[str] = None,
+    evento: Optional[str] = None,
+):
+    """Rechaza un turno pedido y le explica al voluntario por que.
+
+    Se queda registrado: pierde ese turno, no la postulacion.
+    """
+    from server import db
+
+    motivo = (request.motivo or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Escribe el motivo del rechazo")
+
+    registro = await _buscar_registro(db, email, race_code, evento)
+    if slot_id not in (registro.get("slots_interes") or []):
+        raise HTTPException(status_code=404, detail="Ese turno no está entre los solicitados")
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+
+    # El correo primero: si no sale, el turno se queda donde estaba. Rechazar
+    # sin avisar es lo que hace el otro boton, no este.
+    if not await _enviar_rechazo(db, registro, motivo, slot=slot):
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo enviar el correo de rechazo. El turno sigue solicitado; "
+                   "revisa el correo del voluntario o quítalo en silencio."
+        )
+
+    await db.volunteer_registrations.update_one(
+        {"_id": registro["_id"]},
+        {"$pull": {"slots_interes": slot_id}, "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"message": "Turno rechazado y voluntario notificado"}
+
+
+@admin_router.post("/registrations/{email}/reject")
+async def rechazar_solicitud(
+    email: str,
+    request: RechazoRequest,
+    race_code: Optional[str] = None,
+    evento: Optional[str] = None,
+):
+    """Rechaza la postulacion completa: avisa por correo y la borra.
+
+    El correo se manda ANTES de borrar, que es de donde salen los datos del
+    voluntario. Si el correo falla se corta y no se borra nada: rechazar sin
+    avisar es justo lo que este boton no debe hacer (para eso esta el otro).
+    """
+    from server import db
+
+    motivo = (request.motivo or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Escribe el motivo del rechazo")
+
+    registro = await _buscar_registro(db, email, race_code, evento)
+
+    if not await _enviar_rechazo(db, registro, motivo):
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo enviar el correo de rechazo. La solicitud sigue ahí; "
+                   "revisa el correo del voluntario o elimínala en silencio."
+        )
+
+    await _borrar_registro(db, registro)
+    return {"message": "Solicitud rechazada y voluntario notificado"}
 
 
 @router.get("/check/{email}")
