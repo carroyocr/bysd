@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
+  MessageCircle, Send, Trash2,
 } from 'lucide-react';
-import { API, authJson, flagOf, initialsOf, statusLabel } from '../liveApi';
+import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
@@ -19,8 +20,16 @@ import DateField from '../components/DateField';
 
 const TOKEN_KEY = 'athlete_token';
 
-/** "https://www.instagram.com/pepe" -> "pepe". Para enseñarlo sin la URL entera. */
-const usuarioDeEnlace = (url) => (url ? url.replace(/\/+$/, '').split('/').pop() : '');
+/** "2027-01-23T14:05:00Z" -> "23 ene 2027, 10:05 a. m." (hora de RD). */
+function fechaHora(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : `${iso}Z`);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('es-DO', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
+}
 
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -28,9 +37,10 @@ const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const TABS = [
   { key: 'datos', label: 'Datos', icon: User },
   { key: 'carreras', label: 'Mis carreras', icon: Medal },
-  { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
+  { key: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
   { key: 'experiencia', label: 'Experiencia', icon: Mountain },
   { key: 'social', label: 'Social', icon: AtSign },
+  { key: 'mensajes', label: 'Mensajes de apoyo', icon: MessageCircle },
   { key: 'historial', label: 'Historial', icon: Trophy },
 ];
 
@@ -39,7 +49,7 @@ const VUELTAS_OPCIONES = [
   'De 21 a 24', 'Hasta que sea el ganador', 'No estoy seguro',
 ];
 
-// Fecha y hora de una capacitación, en formato corto y legible.
+// Fecha y hora de una actividad, en formato corto y legible.
 function formatCapDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -216,7 +226,7 @@ export default function PerfilScreen() {
   const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
   const [submittingReceipt, setSubmittingReceipt] = useState(false);
 
-  // Capacitaciones (mismos endpoints que la pestaña de /mi-perfil en la web)
+  // Actividades (mismos endpoints que la pestaña de /mi-perfil en la web)
   const [caps, setCaps] = useState([]);
   const [capBusy, setCapBusy] = useState(null);
   // Acordeón: los programas son largos, así que arrancan cerrados y solo se
@@ -259,6 +269,14 @@ export default function PerfilScreen() {
 
   // Experiencia ITRA. ITRA no tiene API pública y bloquea la lectura desde
   // servidores, así que el atleta copia sus datos a mano desde itra.run.
+  // Mensajes de apoyo recibidos. Se piden al abrir la pestaña y no al cargar
+  // el perfil: son cientos en una carrera y casi nadie entra ahí.
+  const [mensajes, setMensajes] = useState(null);
+  const [carrerasMsg, setCarrerasMsg] = useState([]);
+  const [carreraMsg, setCarreraMsg] = useState('');
+  const [respuestas, setRespuestas] = useState({});
+  const [respondiendo, setRespondiendo] = useState(null);
+
   const [socialData, setSocialData] = useState({ instagram_url: '', strava_url: '' });
   const [savingSocial, setSavingSocial] = useState(false);
   const [itraEdit, setItraEdit] = useState(false);
@@ -315,6 +333,52 @@ export default function PerfilScreen() {
    * Datos: son opcionales, cambian por su cuenta y son lo unico del perfil que
    * se publica hacia fuera, en su ficha.
    */
+  const cargarMensajes = useCallback(async (codigo) => {
+    setMensajes(null);
+    const filtro = codigo ? `?race_code=${encodeURIComponent(codigo)}` : '';
+    const { ok, data } = await authJson('GET', `/api/athletes/my-messages${filtro}`, { token: token() });
+    if (!ok) {
+      setMensajes([]);
+      return;
+    }
+    setMensajes(data.messages || []);
+    // La lista de carreras solo llega completa cuando no se filtra
+    if (!codigo) setCarrerasMsg(data.races || []);
+    setRespuestas(Object.fromEntries((data.messages || []).map((m) => [m.id, m.reply || ''])));
+  }, []);
+
+  const responder = async (mensaje) => {
+    setRespondiendo(mensaje.id);
+    setMsg(null);
+    const { ok, data } = await authJson('POST', `/api/athletes/my-messages/${mensaje.id}/reply`, {
+      token: token(),
+      body: { reply: respuestas[mensaje.id] || '' },
+    });
+    setRespondiendo(null);
+    if (ok) {
+      setMensajes((prev) => (prev || []).map((m) => (
+        m.id === mensaje.id ? { ...m, reply: data.reply, replied_at: new Date().toISOString() } : m
+      )));
+      setMsg({ type: 'ok', text: data.reply ? 'Respuesta enviada.' : 'Respuesta borrada.' });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo enviar la respuesta' });
+    }
+  };
+
+  const borrarMensaje = async (mensaje) => {
+    if (!window.confirm('¿Quitar este mensaje? Dejará de verse en tu perfil y en el muro público.')) return;
+    setRespondiendo(mensaje.id);
+    setMsg(null);
+    const { ok, data } = await authJson('DELETE', `/api/athletes/my-messages/${mensaje.id}`, { token: token() });
+    setRespondiendo(null);
+    if (ok) {
+      setMensajes((prev) => (prev || []).filter((m) => m.id !== mensaje.id));
+      setMsg({ type: 'ok', text: 'Mensaje quitado.' });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo quitar el mensaje' });
+    }
+  };
+
   const saveSocial = async () => {
     setSavingSocial(true);
     setMsg(null);
@@ -418,7 +482,7 @@ export default function PerfilScreen() {
     authJson('GET', '/api/capacitaciones/list', { token: token() })
       .then((r) => { if (r.ok) setCaps(r.data.capacitaciones || []); });
 
-  /** Inscribirse o darse de baja de una capacitación (el mismo endpoint, según el verbo). */
+  /** Inscribirse o darse de baja de una actividad (el mismo endpoint, según el verbo). */
   const toggleCap = async (cap) => {
     if (capBusy) return;
     if (cap.my_registered &&
@@ -565,6 +629,10 @@ export default function PerfilScreen() {
     }
     setBioBusy(false);
   };
+
+  useEffect(() => {
+    if (tab === 'mensajes') cargarMensajes(carreraMsg);
+  }, [tab, carreraMsg, cargarMensajes]);
 
   const startRegistro = () => {
     setRegData({
@@ -1514,11 +1582,11 @@ export default function PerfilScreen() {
         {tab === 'capacitaciones' && (
           <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
             <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
-              <GraduationCap className="w-4 h-4 text-[#E77622]" /> Capacitaciones
+              <GraduationCap className="w-4 h-4 text-[#E77622]" /> Actividades
             </h3>
             {caps.length === 0 && (
               <p className={`text-xs py-3 ${T.muted}`}>
-                No hay capacitaciones publicadas por ahora.
+                No hay actividades publicadas por ahora.
               </p>
             )}
             {caps.map((cap) => {
@@ -1535,6 +1603,13 @@ export default function PerfilScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold truncate">{cap.name}</p>
+                        {/* El tipo distingue un entrenamiento de una charla o
+                            de la entrega de kits, que ya no son lo mismo. */}
+                        {cap.tipo_label && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-[#E77622]/15 text-[#E77622]">
+                            {cap.tipo_label}
+                          </span>
+                        )}
                         {cap.my_registered && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-green-500/15 text-green-500">
                             Inscrito
@@ -1792,7 +1867,7 @@ export default function PerfilScreen() {
                 className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
               >
                 <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
-                {usuarioDeEnlace(athlete.instagram_url)}
+                {usuarioDeEnlace(athlete.instagram_url) || 'Abrir'}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
             )}
@@ -1812,7 +1887,7 @@ export default function PerfilScreen() {
                 className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mb-3 w-fit ${T.actionChip}`}
               >
                 <Activity className="w-3.5 h-3.5 text-[#E77622]" />
-                {usuarioDeEnlace(athlete.strava_url)}
+                {usuarioDeEnlace(athlete.strava_url) || 'Abrir'}
                 <ExternalLink className="w-3 h-3 opacity-60" />
               </button>
             )}
@@ -1827,6 +1902,107 @@ export default function PerfilScreen() {
             <PrimaryButton onClick={saveSocial} disabled={savingSocial}>
               {savingSocial ? 'Guardando…' : 'Guardar redes'}
             </PrimaryButton>
+          </div>
+        )}
+
+        {tab === 'mensajes' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+              <MessageCircle className="w-4 h-4 text-[#E77622]" /> Mensajes de apoyo
+            </h3>
+            <p className={`text-[11px] leading-relaxed mb-3 ${T.muted}`}>
+              Lo que te escribieron desde la app. Si respondes, tu respuesta sale
+              junto al mensaje para que quien lo mandó la vea.
+            </p>
+
+            {/* Filtro por carrera: quien lleva varios años tiene mensajes de
+                todas y mezclados no se leen. */}
+            {carrerasMsg.length > 1 && (
+              <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+                <button
+                  onClick={() => setCarreraMsg('')}
+                  className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-bold ${carreraMsg === '' ? T.chipOn : T.chip}`}
+                >
+                  Todas
+                </button>
+                {carrerasMsg.map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => setCarreraMsg(c.code)}
+                    className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-bold ${carreraMsg === c.code ? T.chipOn : T.chip}`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mensajes === null && (
+              <div className={`flex justify-center py-10 ${T.muted}`}>
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            )}
+
+            {mensajes && mensajes.length === 0 && (
+              <p className={`text-xs py-3 ${T.muted}`}>
+                Todavía no tienes mensajes de apoyo.
+              </p>
+            )}
+
+            {(mensajes || []).map((m) => (
+              <div key={m.id} className={`rounded-xl px-3 py-3 mb-2.5 ${T.input}`}>
+                <p className="text-sm leading-snug">{m.message}</p>
+                <div className="flex items-start justify-between gap-2 mt-1.5">
+                  <p className={`text-[11px] flex-1 min-w-0 ${T.muted}`}>
+                    — {m.fan_name} · {fechaHora(m.created_at)}
+                    {carreraMsg === '' && m.race_name ? ` · ${m.race_name}` : ''}
+                  </p>
+                  <button
+                    aria-label="Quitar mensaje"
+                    onClick={() => borrarMensaje(m)}
+                    disabled={respondiendo === m.id}
+                    className={`shrink-0 disabled:opacity-40 ${T.subtle}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Burbuja a la derecha, como en una conversación: se lee de
+                    un vistazo quién dijo qué. */}
+                {m.reply && (
+                  <div className="flex justify-end mt-2">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#E77622]/15 px-3 py-2">
+                      <p className="text-[11px] font-bold text-[#E77622]">Tu respuesta</p>
+                      <p className="text-sm leading-snug">{m.reply}</p>
+                      {m.replied_at && (
+                        <p className={`text-[10px] mt-0.5 text-right ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-end gap-2 mt-2">
+                  <textarea
+                    value={respuestas[m.id] ?? ''}
+                    onChange={(e) => setRespuestas((p) => ({ ...p, [m.id]: e.target.value }))}
+                    maxLength={280}
+                    rows={2}
+                    placeholder={m.reply ? 'Cambia tu respuesta…' : 'Responder…'}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm resize-none ${T.card}`}
+                  />
+                  <button
+                    onClick={() => responder(m)}
+                    disabled={respondiendo === m.id}
+                    aria-label="Enviar respuesta"
+                    className="w-10 h-10 rounded-lg bg-[#E77622] text-white flex items-center justify-center shrink-0 disabled:opacity-50"
+                  >
+                    {respondiendo === m.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

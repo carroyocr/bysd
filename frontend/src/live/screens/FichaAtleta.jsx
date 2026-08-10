@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  Contact, MessageCircle, Trophy, Star, Mountain, Radio, Loader2, Instagram, Activity,
+  Contact, MessageCircle, Trophy, Star, Mountain, Radio, Loader2, Instagram, Activity, AtSign,
 } from 'lucide-react';
 import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -46,9 +46,11 @@ export default function FichaAtleta() {
   // En carreras pasadas el dorsal ya no sirve para presentarse ni para
   // animar en vivo: solo quedan la experiencia y los resultados.
   const esPasada = raceIsPast(race);
+  const tieneRedes = !!(profile?.instagram_url || profile?.strava_url);
   const secciones = [
     { label: 'Seguimiento', Icon: Radio, to: base },
     { label: 'Experiencia', Icon: Mountain, to: `${base}/experiencia` },
+    tieneRedes && { label: 'Social', Icon: AtSign, to: `${base}/social` },
     !esPasada && { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
     !esPasada && { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
     { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
@@ -137,7 +139,10 @@ export default function FichaAtleta() {
             </div>
 
             {/* Secciones: rejilla fija, sin scroll horizontal */}
-            <div className={`grid px-4 pb-4 gap-2 ${secciones.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}>
+            <div
+              className="grid px-4 pb-4 gap-2"
+              style={{ gridTemplateColumns: `repeat(${secciones.length}, minmax(0, 1fr))` }}
+            >
               {secciones.map(({ label, Icon, to }) => {
                 const puesta = activa(to);
                 return (

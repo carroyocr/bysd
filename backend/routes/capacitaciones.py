@@ -1,6 +1,12 @@
 """
-Capacitaciones (trainings): admin CRUD + athlete self-registration.
-Includes an attendance-sheet PDF export (Nombre Completo + signature column).
+Actividades de la carrera: alta desde el panel e inscripcion del corredor.
+Incluye la hoja de asistencia en PDF (Nombre Completo + columna de firma).
+
+Empezo siendo solo capacitaciones y de ahi vienen los nombres de la coleccion
+y de las rutas, que no se tocan para no romper lo que ya hay publicado. Lo que
+cambia es que ahora una actividad tiene tipo: junto a las capacitaciones caben
+los entrenamientos, la entrega de kits y cualquier otro acto no competitivo de
+la carrera. El funcionamiento es el mismo para todos.
 """
 from fastapi import APIRouter, HTTPException, Header
 from fastapi.responses import Response
@@ -31,6 +37,18 @@ def _athlete_payload(authorization: Optional[str]):
         raise HTTPException(status_code=401, detail="Sesión inválida")
 
 
+# Tipos de actividad. Los documentos antiguos no lo traen y son capacitaciones,
+# que es lo unico que existia.
+TIPOS_ACTIVIDAD = {
+    "capacitacion": "Capacitación",
+    "entrenamiento": "Entrenamiento",
+    "entrega_kits": "Entrega de kits",
+    "social": "Actividad social",
+    "otro": "Otra actividad",
+}
+TIPO_POR_DEFECTO = "capacitacion"
+
+
 class CapacitacionCreate(BaseModel):
     name: str
     datetime: str            # ISO string (fecha y hora)
@@ -38,6 +56,11 @@ class CapacitacionCreate(BaseModel):
     program: str             # agenda / descripción
     cost: float = 0.0
     is_free: bool = False
+    tipo: str = TIPO_POR_DEFECTO
+
+
+def _tipo_valido(tipo: Optional[str]) -> str:
+    return tipo if tipo in TIPOS_ACTIVIDAD else TIPO_POR_DEFECTO
 
 
 def _serialize(doc, count=0, my_registered=False):
@@ -49,6 +72,8 @@ def _serialize(doc, count=0, my_registered=False):
         "program": doc.get("program", ""),
         "cost": doc.get("cost", 0.0),
         "is_free": doc.get("is_free", False),
+        "tipo": _tipo_valido(doc.get("tipo")),
+        "tipo_label": TIPOS_ACTIVIDAD[_tipo_valido(doc.get("tipo"))],
         "registered_count": count,
         "my_registered": my_registered,
     }
@@ -67,6 +92,7 @@ async def create_capacitacion(data: CapacitacionCreate, authorization: Optional[
         "program": data.program.strip(),
         "cost": 0.0 if data.is_free else float(data.cost or 0),
         "is_free": data.is_free,
+        "tipo": _tipo_valido(data.tipo),
         "created_at": datetime.now(timezone.utc),
     }
     res = await database.capacitaciones.insert_one(doc)
@@ -89,6 +115,7 @@ async def update_capacitacion(cap_id: str, data: CapacitacionCreate, authorizati
         "program": data.program.strip(),
         "cost": 0.0 if data.is_free else float(data.cost or 0),
         "is_free": data.is_free,
+        "tipo": _tipo_valido(data.tipo),
     }
     r = await database.capacitaciones.update_one({"_id": oid}, {"$set": upd})
     if r.matched_count == 0:
@@ -213,6 +240,12 @@ async def attendance_pdf(cap_id: str, authorization: Optional[str] = Header(None
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="asistencia-{safe_name}.pdf"'},
     )
+
+
+@router.get("/tipos")
+async def tipos_de_actividad():
+    """Tipos disponibles. El panel los pinta desde aqui y no de una copia."""
+    return {"tipos": [{"value": v, "label": l} for v, l in TIPOS_ACTIVIDAD.items()]}
 
 
 # ---------------- Athlete ----------------

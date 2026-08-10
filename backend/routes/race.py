@@ -1786,6 +1786,12 @@ async def submit_cheer_message(
     return response
 
 
+# Un mensaje borrado por el corredor no se enseña en ninguna parte, pero el
+# documento se conserva: lo normal es que se borre por ofensivo, y ahi la
+# organizacion necesita poder verlo.
+SIN_BORRADOS = {"deleted_by_athlete": {"$ne": True}}
+
+
 @router.get("/cheers")
 async def get_cheer_messages(
     limit: int = 50,
@@ -1837,6 +1843,8 @@ async def get_cheer_messages(
             query = {"$and": [{"$or": query["$or"]}, {"athlete_bib": athlete_bib}]}
         else:
             query["athlete_bib"] = athlete_bib
+
+    query = {"$and": [query, SIN_BORRADOS]} if query else dict(SIN_BORRADOS)
     
     # Calculate skip for pagination
     skip = (page - 1) * limit
@@ -1855,6 +1863,14 @@ async def get_cheer_messages(
     for msg in messages:
         msg["id"] = str(msg.pop("_id"))
         msg["likes"] = msg.get("likes", 0)
+        # La respuesta del corredor sale en el muro: quien escribio merece ver
+        # que le contestaron, y es aqui donde lo busca.
+        msg["reply"] = msg.get("athlete_reply")
+        msg["replied_at"] = (
+            msg["athlete_reply_at"].isoformat() if msg.get("athlete_reply_at") else None
+        )
+        msg.pop("athlete_reply", None)
+        msg.pop("athlete_reply_at", None)
     
     # Enrich with athlete names - check registrations first for new races
     for msg in messages:
@@ -1960,10 +1976,11 @@ async def get_cheer_count(
                     {"race_code": {"$exists": False}},
                     {"race_code": None},
                     {"race_code": ""}
-                ]
+                ],
+                **SIN_BORRADOS,
             })
         else:
-            count = await collection.count_documents({"race_code": target_race_code})
+            count = await collection.count_documents({"race_code": target_race_code, **SIN_BORRADOS})
     else:
         count = 0
     
@@ -2012,7 +2029,9 @@ async def get_cheer_leaderboard(
             match_stage = {"race_code": target_race_code}
     else:
         match_stage = {}
-    
+
+    match_stage = {**match_stage, **SIN_BORRADOS}
+
     pipeline = [
         {"$match": match_stage},
         {"$group": {
