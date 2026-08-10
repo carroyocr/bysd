@@ -106,7 +106,10 @@ export default function AdFooter({ raceCode }) {
   const bannerCompleto = !!ad.banner_url;
 
   return (
-    <footer className="sticky bottom-0 z-40 px-4 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    // Fondo propio y no transparente: el pie va pegado abajo mientras se
+    // desplaza la pantalla, y sin fondo el texto de detrás se colaba por los
+    // márgenes de la tarjeta y parecía que la publicidad tapaba la lectura.
+    <footer className={`sticky bottom-0 z-40 px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${T.page}`}>
       {/* Proporción fija en vez de alto fijo: el ancho de la barra cambia con
           cada teléfono, así que con un alto fijo la pieza del patrocinador se
           deformaría o se recortaría en casi todos. Con 5:1 la imagen llena la
