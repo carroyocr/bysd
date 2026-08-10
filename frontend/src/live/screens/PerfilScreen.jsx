@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
@@ -120,6 +120,39 @@ function SelectInput({ T, options, placeholder, value, onChange }) {
       placeholder={placeholder}
       value={value}
       onSelect={(v) => onChange({ target: { value: v } })}
+    />
+  );
+}
+
+const ALTO_MAXIMO_RESPUESTA = 120;   // px: a partir de ahi se desplaza dentro
+
+/**
+ * Cuadro de respuesta de una línea que crece con el texto.
+ *
+ * Un textarea fijo de varias líneas ocupa sitio en una lista larga de mensajes
+ * aunque no se escriba nada; y uno de una sola línea sin crecer esconde lo que
+ * ya se lleva escrito.
+ */
+function CuadroRespuesta({ T, value, onChange, placeholder }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, ALTO_MAXIMO_RESPUESTA)}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      maxLength={280}
+      rows={1}
+      placeholder={placeholder}
+      className={`flex-1 rounded-lg px-3 py-2 text-sm resize-none ${T.card}`}
+      style={{ maxHeight: ALTO_MAXIMO_RESPUESTA }}
     />
   );
 }
@@ -344,21 +377,29 @@ export default function PerfilScreen() {
     setMensajes(data.messages || []);
     // La lista de carreras solo llega completa cuando no se filtra
     if (!codigo) setCarrerasMsg(data.races || []);
-    setRespuestas(Object.fromEntries((data.messages || []).map((m) => [m.id, m.reply || ''])));
+    setRespuestas({});
   }, []);
 
-  const responder = async (mensaje) => {
+  /**
+   * Envía la respuesta y vacía el cuadro, como en cualquier conversación: lo
+   * dicho queda arriba en su burbuja y abajo se empieza de cero. `texto` vacío
+   * es lo que usa el enlace de quitar para borrar la respuesta.
+   */
+  const responder = async (mensaje, texto = null) => {
+    const cuerpo = texto === null ? (respuestas[mensaje.id] || '').trim() : texto;
+    if (texto === null && !cuerpo) return;
     setRespondiendo(mensaje.id);
     setMsg(null);
     const { ok, data } = await authJson('POST', `/api/athletes/my-messages/${mensaje.id}/reply`, {
       token: token(),
-      body: { reply: respuestas[mensaje.id] || '' },
+      body: { reply: cuerpo },
     });
     setRespondiendo(null);
     if (ok) {
       setMensajes((prev) => (prev || []).map((m) => (
         m.id === mensaje.id ? { ...m, reply: data.reply, replied_at: new Date().toISOString() } : m
       )));
+      setRespuestas((p) => ({ ...p, [mensaje.id]: '' }));
       setMsg({ type: 'ok', text: data.reply ? 'Respuesta enviada.' : 'Respuesta borrada.' });
     } else {
       setMsg({ type: 'error', text: data.detail || 'No se pudo enviar la respuesta' });
@@ -1974,25 +2015,32 @@ export default function PerfilScreen() {
                     <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#E77622]/15 px-3 py-2">
                       <p className="text-[11px] font-bold text-[#E77622]">Tu respuesta</p>
                       <p className="text-sm leading-snug">{m.reply}</p>
-                      {m.replied_at && (
-                        <p className={`text-[10px] mt-0.5 text-right ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
-                      )}
+                      <div className="flex items-center justify-end gap-2 mt-0.5">
+                        {m.replied_at && (
+                          <p className={`text-[10px] ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
+                        )}
+                        <button
+                          onClick={() => responder(m, '')}
+                          disabled={respondiendo === m.id}
+                          className={`text-[10px] underline disabled:opacity-40 ${T.subtle}`}
+                        >
+                          Quitar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-end gap-2 mt-2">
-                  <textarea
+                  <CuadroRespuesta
+                    T={T}
                     value={respuestas[m.id] ?? ''}
                     onChange={(e) => setRespuestas((p) => ({ ...p, [m.id]: e.target.value }))}
-                    maxLength={280}
-                    rows={2}
                     placeholder={m.reply ? 'Cambia tu respuesta…' : 'Responder…'}
-                    className={`flex-1 rounded-lg px-3 py-2 text-sm resize-none ${T.card}`}
                   />
                   <button
                     onClick={() => responder(m)}
-                    disabled={respondiendo === m.id}
+                    disabled={respondiendo === m.id || !(respuestas[m.id] || '').trim()}
                     aria-label="Enviar respuesta"
                     className="w-10 h-10 rounded-lg bg-[#E77622] text-white flex items-center justify-center shrink-0 disabled:opacity-50"
                   >
