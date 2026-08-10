@@ -9,7 +9,17 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-const emptyForm = { name: '', datetime: '', duration: '', program: '', cost: '', is_free: false };
+// Los tipos vienen del backend para no tenerlos copiados en dos sitios; esta
+// lista es solo el respaldo si la peticion falla.
+const TIPOS_RESPALDO = [
+  { value: 'capacitacion', label: 'Capacitación' },
+  { value: 'entrenamiento', label: 'Entrenamiento' },
+  { value: 'entrega_kits', label: 'Entrega de kits' },
+  { value: 'social', label: 'Actividad social' },
+  { value: 'otro', label: 'Otra actividad' },
+];
+
+const emptyForm = { name: '', datetime: '', duration: '', program: '', cost: '', is_free: false, tipo: 'capacitacion' };
 
 export default function CapacitacionesManagement() {
   const [items, setItems] = useState([]);
@@ -17,6 +27,7 @@ export default function CapacitacionesManagement() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [tipos, setTipos] = useState(TIPOS_RESPALDO);
   const [participantsModal, setParticipantsModal] = useState(null); // capacitacion object
   const [participants, setParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
@@ -31,7 +42,7 @@ export default function CapacitacionesManagement() {
       const data = await res.json();
       setItems(data.capacitaciones || []);
     } catch {
-      toast.error('Error al cargar capacitaciones');
+      toast.error('Error al cargar las actividades');
     } finally {
       setLoading(false);
     }
@@ -39,6 +50,13 @@ export default function CapacitacionesManagement() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/capacitaciones/tipos`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.tipos?.length) setTipos(d.tipos); })
+      .catch(() => { /* se queda el respaldo */ });
+  }, []);
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Indica el nombre'); return; }
@@ -55,10 +73,11 @@ export default function CapacitacionesManagement() {
           program: form.program,
           cost: form.is_free ? 0 : parseFloat(form.cost || 0),
           is_free: form.is_free,
+          tipo: form.tipo,
         }),
       });
       if (res.ok) {
-        toast.success('Capacitación creada');
+        toast.success('Actividad creada');
         setForm(emptyForm); setShowForm(false); loadData();
       } else {
         toast.error('Error al crear');
@@ -114,8 +133,8 @@ export default function CapacitacionesManagement() {
       {/* Header + create toggle */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2"><GraduationCap className="w-5 h-5 text-[#E8772E]" />Capacitaciones</h2>
-          <p className="text-sm text-muted-foreground">Crea capacitaciones y controla las inscripciones</p>
+          <h2 className="text-xl font-bold flex items-center gap-2"><GraduationCap className="w-5 h-5 text-[#E8772E]" />Actividades</h2>
+          <p className="text-sm text-muted-foreground">Capacitaciones, entrenamientos, entrega de kits y demás actos de la carrera</p>
         </div>
         <Button onClick={() => setShowForm(!showForm)} className="bg-[#E8772E] hover:bg-[#d06a28]" data-testid="new-capacitacion-btn">
           <Plus className="w-4 h-4 mr-2" />Nueva
@@ -125,10 +144,21 @@ export default function CapacitacionesManagement() {
       {/* Create form */}
       {showForm && (
         <Card data-testid="capacitacion-form">
-          <CardHeader className="pb-3"><CardTitle className="text-base">Nueva capacitación</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">Nueva actividad</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Nombre de la capacitación *</Label>
+              <Label>Tipo de actividad</Label>
+              <select
+                value={form.tipo}
+                onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                data-testid="cap-tipo"
+              >
+                {tipos.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nombre de la actividad *</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej. Preparación mental para ultras" data-testid="cap-name" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -143,7 +173,7 @@ export default function CapacitacionesManagement() {
             </div>
             <div className="space-y-2">
               <Label>Programa</Label>
-              <Textarea value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} rows={4} placeholder="Describe el programa / agenda de la capacitación..." data-testid="cap-program" />
+              <Textarea value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} rows={4} placeholder="Describe el programa, la agenda o el lugar..." data-testid="cap-program" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4 items-end">
               <div className="space-y-2">
@@ -171,7 +201,7 @@ export default function CapacitacionesManagement() {
       ) : items.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">
           <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p>No hay capacitaciones aún. Crea la primera.</p>
+          <p>No hay actividades aún. Crea la primera.</p>
         </CardContent></Card>
       ) : (
         <div className="grid gap-4">
@@ -180,7 +210,12 @@ export default function CapacitacionesManagement() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-lg">{c.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-lg">{c.name}</h3>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#E8772E]/15 text-[#E8772E]">
+                        {c.tipo_label || 'Capacitación'}
+                      </span>
+                    </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                       <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{fmtDate(c.datetime)}</span>
                       {c.duration && <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{c.duration}</span>}

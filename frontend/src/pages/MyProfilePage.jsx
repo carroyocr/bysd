@@ -924,7 +924,7 @@ export default function MyProfilePage() {
               { key: 'profile', label: 'Mis Datos', short: 'Datos', icon: User },
               { key: 'races', label: 'Próximas Carreras', short: 'Carreras', icon: Calendar },
               { key: 'history', label: 'Historial', short: 'Historial', icon: Trophy },
-              { key: 'capacitaciones', label: 'Capacitaciones', short: 'Cursos', icon: GraduationCap },
+              { key: 'capacitaciones', label: 'Actividades', short: 'Activid.', icon: GraduationCap },
               ...(cheerMessages.length > 0 ? [{ key: 'messages', label: 'Mensajes', short: 'Mensajes', icon: MessageCircle }] : []),
             ];
             return (

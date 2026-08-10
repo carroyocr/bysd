@@ -53,7 +53,7 @@ export default function CapacitacionesTab() {
       const data = await res.json();
       setItems(data.capacitaciones || []);
     } catch {
-      toast.error('Error al cargar capacitaciones');
+      toast.error('Error al cargar las actividades');
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export default function CapacitacionesTab() {
       <Card data-testid="capacitaciones-empty">
         <CardContent className="py-12 text-center text-muted-foreground">
           <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p>No hay capacitaciones disponibles por ahora.</p>
+          <p>No hay actividades disponibles por ahora.</p>
         </CardContent>
       </Card>
     );
@@ -119,7 +119,7 @@ export default function CapacitacionesTab() {
   );
 }
 
-// Tarjeta de capacitacion: en celular los datos van en dos columnas,
+// Tarjeta de actividad: en celular los datos van en dos columnas,
 // el programa se despliega bajo demanda y el boton ocupa todo el ancho
 function CapacitacionCard({ cap: c, fmtDate, acting, onToggle }) {
   const [showProgram, setShowProgram] = useState(false);
@@ -132,7 +132,14 @@ function CapacitacionCard({ cap: c, fmtDate, acting, onToggle }) {
           <div className="flex-1 min-w-0 space-y-3">
             <div className="flex items-start gap-2">
               <GraduationCap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <h3 className="font-semibold text-base sm:text-lg text-foreground leading-snug">{c.name}</h3>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-base sm:text-lg text-foreground leading-snug">{c.name}</h3>
+                {c.tipo_label && (
+                  <span className="inline-block mt-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {c.tipo_label}
+                  </span>
+                )}
+              </div>
               {c.my_registered && (
                 <span className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 text-[11px] font-medium px-2 py-0.5">
                   <Check className="w-3 h-3" />Inscrito

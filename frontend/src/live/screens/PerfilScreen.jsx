@@ -37,7 +37,7 @@ const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const TABS = [
   { key: 'datos', label: 'Datos', icon: User },
   { key: 'carreras', label: 'Mis carreras', icon: Medal },
-  { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
+  { key: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
   { key: 'experiencia', label: 'Experiencia', icon: Mountain },
   { key: 'social', label: 'Social', icon: AtSign },
   { key: 'mensajes', label: 'Mensajes de apoyo', icon: MessageCircle },
@@ -49,7 +49,7 @@ const VUELTAS_OPCIONES = [
   'De 21 a 24', 'Hasta que sea el ganador', 'No estoy seguro',
 ];
 
-// Fecha y hora de una capacitación, en formato corto y legible.
+// Fecha y hora de una actividad, en formato corto y legible.
 function formatCapDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -226,7 +226,7 @@ export default function PerfilScreen() {
   const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
   const [submittingReceipt, setSubmittingReceipt] = useState(false);
 
-  // Capacitaciones (mismos endpoints que la pestaña de /mi-perfil en la web)
+  // Actividades (mismos endpoints que la pestaña de /mi-perfil en la web)
   const [caps, setCaps] = useState([]);
   const [capBusy, setCapBusy] = useState(null);
   // Acordeón: los programas son largos, así que arrancan cerrados y solo se
@@ -482,7 +482,7 @@ export default function PerfilScreen() {
     authJson('GET', '/api/capacitaciones/list', { token: token() })
       .then((r) => { if (r.ok) setCaps(r.data.capacitaciones || []); });
 
-  /** Inscribirse o darse de baja de una capacitación (el mismo endpoint, según el verbo). */
+  /** Inscribirse o darse de baja de una actividad (el mismo endpoint, según el verbo). */
   const toggleCap = async (cap) => {
     if (capBusy) return;
     if (cap.my_registered &&
@@ -1582,11 +1582,11 @@ export default function PerfilScreen() {
         {tab === 'capacitaciones' && (
           <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
             <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
-              <GraduationCap className="w-4 h-4 text-[#E77622]" /> Capacitaciones
+              <GraduationCap className="w-4 h-4 text-[#E77622]" /> Actividades
             </h3>
             {caps.length === 0 && (
               <p className={`text-xs py-3 ${T.muted}`}>
-                No hay capacitaciones publicadas por ahora.
+                No hay actividades publicadas por ahora.
               </p>
             )}
             {caps.map((cap) => {
@@ -1603,6 +1603,13 @@ export default function PerfilScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold truncate">{cap.name}</p>
+                        {/* El tipo distingue un entrenamiento de una charla o
+                            de la entrega de kits, que ya no son lo mismo. */}
+                        {cap.tipo_label && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-[#E77622]/15 text-[#E77622]">
+                            {cap.tipo_label}
+                          </span>
+                        )}
                         {cap.my_registered && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-green-500/15 text-green-500">
                             Inscrito
