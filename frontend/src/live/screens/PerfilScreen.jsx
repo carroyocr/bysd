@@ -5,7 +5,7 @@ import {
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
-  MessageCircle, Send, Trash2,
+  MessageCircle, Send, Trash2, Contact, Share2,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -1546,6 +1546,26 @@ export default function PerfilScreen() {
                     <p className={`text-xs mt-1.5 ${T.muted}`}>
                       Tu comprobante está siendo revisado por el equipo.
                     </p>
+                  )}
+
+                  {/* Compartir el BIB y los resultados son cosas de uno mismo:
+                      viven aquí, y no en la ficha pública de cualquiera. El
+                      dorsal hace falta para las dos. */}
+                  {race.bib && !enEspera && (
+                    <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                      <button
+                        onClick={() => navigate(`/live/${race.race_code}/atleta/${race.bib}/bib`)}
+                        className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                      >
+                        <Contact className="w-3.5 h-3.5 text-[#E77622]" /> Compartir mi BIB
+                      </button>
+                      <button
+                        onClick={() => navigate(`/live/${race.race_code}/atleta/${race.bib}/resultados`)}
+                        className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-[#E77622]" /> Compartir mis resultados
+                      </button>
+                    </div>
                   )}
 
                   {receiptRace !== race.registration_id && (puedeSubirComprobante || puedeCancelar) && (
