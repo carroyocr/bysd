@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck, LogIn,
   BadgeInfo,
 } from 'lucide-react';
+import { getJson } from '../liveApi';
+import { LEGACY_RACE_CODES } from '../../content/legacySponsors';
 import { useLiveTheme } from '../liveTheme';
 import { sesionesAbiertas } from '../sesion';
 import { VERSION_CORTA } from '../version';
@@ -22,6 +24,37 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
 
   const base = `/live/${raceCode}`;
 
+  // Ganadores y Patrocinadores no se ofrecen vacios: hasta que hay un ganador
+  // publicado, o al menos un patrocinador, esas pantallas no tienen nada que
+  // ensenar y solo defraudan a quien entra. Se consulta al abrir el menu y no
+  // al montarlo: durante la carrera el ganador aparece con la app abierta.
+  const [hayGanador, setHayGanador] = useState(false);
+  const [hayPatrocinadores, setHayPatrocinadores] = useState(false);
+
+  useEffect(() => {
+    if (!open || !raceCode) return;
+    let cancel = false;
+
+    getJson(`/api/race/stats?race_code=${raceCode}`)
+      .then((d) => { if (!cancel) setHayGanador(!!d?.winner); })
+      .catch(() => {});
+
+    // Las carreras historicas traen sus patrocinadores en el propio build
+    if (LEGACY_RACE_CODES.includes(raceCode)) {
+      setHayPatrocinadores(true);
+    } else {
+      getJson(`/api/sponsors/race/${raceCode}`)
+        .then((d) => {
+          if (cancel) return;
+          const lista = Array.isArray(d) ? d : (d?.sponsors || []);
+          setHayPatrocinadores(lista.length > 0);
+        })
+        .catch(() => {});
+    }
+
+    return () => { cancel = true; };
+  }, [open, raceCode]);
+
   // Cada acceso se muestra solo si su sesión está abierta: el corredor no ve
   // que exista un acceso de staff, y el del staff no ve el del corredor. Van
   // justo debajo de Inicio, que es lo primero que busca quien ya entró.
@@ -35,8 +68,8 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     ...accesos,
-    { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
-    { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
+    hayPatrocinadores && { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
+    hayGanador && { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     // Sin sesión, la única entrada es "Iniciar sesión" y ahí dentro se elige
@@ -45,7 +78,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
       ? [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]
       : []),
     { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
-  ];
+  ].filter(Boolean);
 
   return (
     <div
