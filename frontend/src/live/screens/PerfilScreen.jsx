@@ -42,8 +42,10 @@ const TABS = [
   { key: 'social', label: 'Social', icon: AtSign },
   { key: 'mensajes', label: 'Mensajes de apoyo', icon: MessageCircle },
   { key: 'historial', label: 'Historial', icon: Trophy },
-  { key: 'ajustes', label: 'Ajustes', icon: Settings },
 ];
+// Ajustes es una pestaña más, pero no va en la tira: se entra por el icono de
+// la cabecera. Con ocho iconos seguidos ya no se distinguía cuál era cuál, y
+// los ajustes no se visitan al mismo ritmo que las carreras o los mensajes.
 
 const VUELTAS_OPCIONES = [
   'Al menos 1', 'De 2 a 5', 'De 6 a 10', 'De 11 a 15', 'De 16 a 20',
@@ -1268,7 +1270,7 @@ export default function PerfilScreen() {
               entre el tipo de sangre y la talla de camiseta. */}
           <button
             aria-label="Ajustes de la cuenta"
-            onClick={() => { setTab('ajustes'); setMsg(null); }}
+            onClick={() => { setTab(tab === 'ajustes' ? 'datos' : 'ajustes'); setMsg(null); }}
             className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tab === 'ajustes' ? T.chipOn : T.actionChip}`}
           >
             <Settings className={`w-4 h-4 ${tab === 'ajustes' ? '' : 'text-[#E77622]'}`} />
