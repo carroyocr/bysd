@@ -162,7 +162,7 @@ export default function HomeScreen() {
         </div>
 
         <div className="relative z-10">
-          <AdFooter raceCode={raceCode} />
+          <AdFooter raceCode={raceCode} sobreFoto />
         </div>
       </div>
     </div>
