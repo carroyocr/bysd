@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -45,7 +45,11 @@ export default function VolunteerAssignmentsManagement() {
   const [selectedSlotToRemove, setSelectedSlotToRemove] = useState(null);
   const [selectedSlotToAdd, setSelectedSlotToAdd] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showRechazoModal, setShowRechazoModal] = useState(false);
+  const [rechazoSlotId, setRechazoSlotId] = useState(null); // null = la solicitud completa
+  const [rechazoMotivo, setRechazoMotivo] = useState('');
   const [eventoFilter, setEventoFilter] = useState('all');
+  const [estadoFilter, setEstadoFilter] = useState('all'); // all | asignados | pendientes
   const [raceName, setRaceName] = useState('');
   const [changingEventoEmail, setChangingEventoEmail] = useState(null);
 
@@ -111,6 +115,29 @@ export default function VolunteerAssignmentsManagement() {
     return availableSlots.find(s => s.id === slotId);
   };
 
+  // Dos turnos ocupan la misma hora cuando coinciden en día y turno: la franja
+  // es lo que hay que comparar, no el horario suelto (el mismo 3-7 AM del día 2
+  // y del día 3 no se pisa).
+  const franjaDeSlot = (slot) => (slot ? `${slot.dia_tipo || ''}|${slot.turno || ''}` : null);
+
+  // Franjas donde el voluntario quedó con más de un puesto, contando lo ya
+  // asignado y lo que pidió. Nadie puede estar en dos sitios a la vez.
+  const getFranjasEnConflicto = (volunteer) => {
+    const cuenta = {};
+    const sumar = (slot) => {
+      const franja = franjaDeSlot(slot);
+      if (franja) cuenta[franja] = (cuenta[franja] || 0) + 1;
+    };
+
+    availableSlots
+      .filter(s => s.email_asignado === volunteer.email &&
+                   (s.evento || 'carrera') === (volunteer.evento || 'carrera'))
+      .forEach(sumar);
+    (volunteer.slots_interes || []).forEach(id => sumar(getSlotInfo(id)));
+
+    return new Set(Object.keys(cuenta).filter(f => cuenta[f] > 1));
+  };
+
   // Get available slots for adding (not assigned, matching the volunteer's event)
   const getAvailableSlotsForVolunteer = () => {
     const ev = selectedVolunteer?.evento || 'carrera';
@@ -170,8 +197,25 @@ export default function VolunteerAssignmentsManagement() {
     eventoFilter === 'all' || (s.evento || 'carrera') === eventoFilter
   );
 
+  // Un voluntario puede estar en los dos grupos a la vez: con parte de sus
+  // turnos ya confirmados y el resto todavía esperando.
+  const tieneAsignados = (v) => availableSlots.some(s =>
+    s.email_asignado === v.email && (s.evento || 'carrera') === (v.evento || 'carrera')
+  );
+  const tienePendientes = (v) => (v.slots_interes || []).length > 0;
+
+  const cumpleEstado = (v) => {
+    if (estadoFilter === 'asignados') return tieneAsignados(v);
+    if (estadoFilter === 'pendientes') return tienePendientes(v);
+    return true;
+  };
+
+  const conAsignados = eventVolunteers.filter(tieneAsignados).length;
+  const conPendientes = eventVolunteers.filter(tienePendientes).length;
+
   // Filter volunteers
   const filteredVolunteers = eventVolunteers.filter(v => {
+    if (!cumpleEstado(v)) return false;
     const term = searchTerm.toLowerCase();
     return !searchTerm ||
       (v.nombre && v.nombre.toLowerCase().includes(term)) ||
@@ -256,6 +300,83 @@ export default function VolunteerAssignmentsManagement() {
       } else {
         const data = await response.json();
         toast.error(data.detail || 'Error al eliminar voluntario');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Quitar un turno pedido sin avisarle al voluntario
+  const handleQuitarSlotSolicitado = async (volunteer, slotId) => {
+    const slotInfo = getSlotInfo(slotId);
+    const nombre = slotInfo ? `${slotInfo.puesto} (turno ${slotInfo.turno})` : `el turno #${slotId}`;
+    if (!window.confirm(`¿Quitar ${nombre} de la solicitud de ${volunteer.nombre}? No se le avisa al voluntario.`)) return;
+
+    setActionLoading(true);
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(volunteer.email)}/slots/${slotId}?evento=${volunteer.evento || 'carrera'}`,
+        { method: 'DELETE' }
+      );
+      if (response.ok) {
+        toast.success('Turno retirado de la solicitud');
+        loadData();
+      } else {
+        const data = await response.json();
+        toast.error(data.detail || 'Error al quitar el turno');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Rechazar (turno suelto o solicitud completa) con justificación por correo
+  const openRechazoModal = (volunteer, slotId = null) => {
+    setSelectedVolunteer(volunteer);
+    setRechazoSlotId(slotId);
+    setRechazoMotivo('');
+    setShowRechazoModal(true);
+  };
+
+  const handleRechazar = async () => {
+    if (!selectedVolunteer) return;
+    if (!rechazoMotivo.trim()) {
+      toast.error('Escribe el motivo: es lo que recibe el voluntario');
+      return;
+    }
+
+    const evento = selectedVolunteer.evento || 'carrera';
+    const base = `${API_URL}/api/volunteer-registration/admin/registrations/${encodeURIComponent(selectedVolunteer.email)}`;
+    const url = rechazoSlotId
+      ? `${base}/slots/${rechazoSlotId}/reject?evento=${evento}`
+      : `${base}/reject?evento=${evento}`;
+
+    setActionLoading(true);
+    try {
+      const response = await adminFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo: rechazoMotivo.trim() })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        toast.success(data.message || 'Rechazado');
+        setShowRechazoModal(false);
+        setRechazoSlotId(null);
+        setRechazoMotivo('');
+        if (!rechazoSlotId) {
+          setSelectedVolunteer(null);
+          setExpandedVolunteer(null);
+        }
+        loadData();
+      } else {
+        toast.error(data.detail || 'Error al rechazar');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -444,7 +565,7 @@ export default function VolunteerAssignmentsManagement() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -454,6 +575,39 @@ export default function VolunteerAssignmentsManagement() {
               className="pl-10"
             />
           </div>
+
+          {/* Quién ya tiene turno y quién sigue esperando */}
+          <div className="flex flex-wrap gap-2" data-testid="assignments-estado-filter">
+            {[
+              { value: 'all', label: 'Todos', count: eventVolunteers.length },
+              { value: 'asignados', label: 'Asignados', count: conAsignados },
+              { value: 'pendientes', label: 'Pendientes de asignar', count: conPendientes },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                data-testid={`filter-estado-${opt.value}`}
+                onClick={() => setEstadoFilter(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  estadoFilter === opt.value
+                    ? 'bg-primary text-white shadow'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                }`}
+              >
+                {opt.label}
+                <span className={`ml-2 text-xs ${estadoFilter === opt.value ? 'text-white/80' : 'text-muted-foreground'}`}>
+                  {opt.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          {estadoFilter !== 'all' && (
+            <p className="text-xs text-muted-foreground">
+              {estadoFilter === 'asignados'
+                ? 'Voluntarios con al menos un turno confirmado. Los que tengan turnos sin confirmar también aparecen en “Pendientes”.'
+                : 'Voluntarios con turnos pedidos que todavía no has confirmado.'}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -464,7 +618,9 @@ export default function VolunteerAssignmentsManagement() {
             <div className="text-center py-8 text-muted-foreground">Cargando...</div>
           ) : filteredVolunteers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'No se encontraron voluntarios' : 'No hay voluntarios registrados'}
+              {searchTerm || estadoFilter !== 'all'
+                ? 'Ningún voluntario cumple con lo que estás filtrando'
+                : 'No hay voluntarios registrados'}
             </div>
           ) : (
             <div className="divide-y">
@@ -479,6 +635,7 @@ export default function VolunteerAssignmentsManagement() {
                 );
                 const interestSlots = volunteer.slots_interes || [];
                 const totalSlots = assignedSlots.length + interestSlots.length;
+                const franjasEnConflicto = getFranjasEnConflicto(volunteer);
 
                 return (
                   <div key={volunteerKey} className="hover:bg-muted/30">
@@ -664,30 +821,39 @@ export default function VolunteerAssignmentsManagement() {
                                 {volunteer.slots_interes.map((slotId) => {
                                   const slotInfo = getSlotInfo(slotId);
                                   const isAlreadyAssigned = slotInfo?.email_asignado;
-                                  
+                                  const diaTipoInfo = slotInfo ? getDiaTipoDisplay(slotInfo.dia_tipo) : null;
+                                  const chocaConOtro = !isAlreadyAssigned &&
+                                    franjasEnConflicto.has(franjaDeSlot(slotInfo));
+
                                   return (
-                                    <div 
+                                    <div
                                       key={slotId}
-                                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                                        isAlreadyAssigned 
-                                          ? 'bg-gray-50 border-gray-200' 
-                                          : 'bg-amber-50 border-amber-200'
+                                      className={`flex items-center justify-between gap-2 p-3 rounded-lg border ${
+                                        isAlreadyAssigned
+                                          ? 'bg-gray-50 border-gray-200'
+                                          : chocaConOtro
+                                            ? 'bg-red-50 border-red-300'
+                                            : 'bg-amber-50 border-amber-200'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded flex items-center justify-center ${
-                                          isAlreadyAssigned ? 'bg-gray-200' : 'bg-amber-200'
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${
+                                          isAlreadyAssigned ? 'bg-gray-200' : chocaConOtro ? 'bg-red-200' : 'bg-amber-200'
                                         }`}>
-                                          <Clock className={`w-4 h-4 ${isAlreadyAssigned ? 'text-gray-500' : 'text-amber-700'}`} />
+                                          <Clock className={`w-4 h-4 ${
+                                            isAlreadyAssigned ? 'text-gray-500' : chocaConOtro ? 'text-red-700' : 'text-amber-700'
+                                          }`} />
                                         </div>
-                                        <div>
+                                        <div className="min-w-0">
                                           <div className="font-medium text-sm">
                                             {slotInfo ? slotInfo.puesto : `Slot #${slotId}`}
                                           </div>
                                           {slotInfo && (
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                              <Badge variant="outline" className="text-xs">
-                                                Turno {slotInfo.turno}
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                                              {/* El día es lo que distingue dos turnos con el mismo
+                                                  horario: sin él parecen chocar y no chocan */}
+                                              <Badge variant="outline" className={`text-xs ${diaTipoInfo.bgClass}`}>
+                                                {diaTipoInfo.label} - Turno {slotInfo.turno}
                                               </Badge>
                                               <span>
                                                 {formatTime(slotInfo.hora_inicio)} - {formatTime(slotInfo.hora_fin)}
@@ -699,23 +865,60 @@ export default function VolunteerAssignmentsManagement() {
                                               (Ya asignado a otro voluntario)
                                             </span>
                                           )}
+                                          {chocaConOtro && (
+                                            <span className="flex items-center gap-1 text-xs text-red-600 font-medium mt-0.5">
+                                              <AlertTriangle className="w-3 h-3" />
+                                              Se pisa con otro de sus turnos en esta misma franja
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
-                                      {!isAlreadyAssigned && (
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {!isAlreadyAssigned && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-green-600 border-green-300 hover:bg-green-50"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleConfirmSingleSlot(volunteer, slotId);
+                                            }}
+                                            disabled={actionLoading}
+                                          >
+                                            <CheckCircle className="w-4 h-4 mr-1" />
+                                            Confirmar
+                                          </Button>
+                                        )}
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          className="text-green-600 border-green-300 hover:bg-green-50"
+                                          className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                                          title="Rechazar este turno y avisarle por correo"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleConfirmSingleSlot(volunteer, slotId);
+                                            openRechazoModal(volunteer, slotId);
                                           }}
                                           disabled={actionLoading}
+                                          data-testid={`reject-slot-${slotId}`}
                                         >
-                                          <CheckCircle className="w-4 h-4 mr-1" />
-                                          Confirmar
+                                          <MailX className="w-4 h-4 mr-1" />
+                                          Rechazar
                                         </Button>
-                                      )}
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                          title="Quitar este turno sin avisarle al voluntario"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleQuitarSlotSolicitado(volunteer, slotId);
+                                          }}
+                                          disabled={actionLoading}
+                                          data-testid={`remove-slot-${slotId}`}
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -723,8 +926,21 @@ export default function VolunteerAssignmentsManagement() {
                             </div>
                           )}
 
-                          {/* Delete Volunteer Button */}
-                          <div className="pt-4 border-t">
+                          {/* Cerrar la solicitud: con aviso o sin él */}
+                          <div className="pt-4 border-t flex flex-wrap items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openRechazoModal(volunteer, null);
+                              }}
+                              data-testid="reject-application-btn"
+                            >
+                              <MailX className="w-4 h-4 mr-2" />
+                              Rechazar Solicitud
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -737,6 +953,9 @@ export default function VolunteerAssignmentsManagement() {
                               <UserX className="w-4 h-4 mr-2" />
                               Eliminar Voluntario
                             </Button>
+                            <span className="text-xs text-muted-foreground">
+                              Rechazar le explica el motivo por correo; eliminar no le avisa nada.
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -943,6 +1162,74 @@ export default function VolunteerAssignmentsManagement() {
                   disabled={actionLoading}
                 >
                   {actionLoading ? 'Eliminando...' : 'Eliminar Voluntario'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Rechazo con justificación (un turno o la solicitud completa) */}
+      {showRechazoModal && selectedVolunteer && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MailX className="w-5 h-5 text-amber-600" />
+                {rechazoSlotId ? 'Rechazar Turno' : 'Rechazar Solicitud'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="font-medium">{selectedVolunteer.nombre} {selectedVolunteer.apellidos}</div>
+                <div className="text-sm text-muted-foreground">{selectedVolunteer.email}</div>
+                {rechazoSlotId && getSlotInfo(rechazoSlotId) && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    {getSlotInfo(rechazoSlotId).puesto} ·{' '}
+                    {getDiaTipoDisplay(getSlotInfo(rechazoSlotId).dia_tipo).label} - Turno {getSlotInfo(rechazoSlotId).turno} ·{' '}
+                    {formatTime(getSlotInfo(rechazoSlotId).hora_inicio)} - {formatTime(getSlotInfo(rechazoSlotId).hora_fin)}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="rechazo-motivo">
+                  Motivo (lo lee el voluntario)
+                </label>
+                <textarea
+                  id="rechazo-motivo"
+                  value={rechazoMotivo}
+                  onChange={(e) => setRechazoMotivo(e.target.value)}
+                  rows={4}
+                  placeholder={rechazoSlotId
+                    ? 'Ej: Ese puesto ya quedó cubierto, pero te esperamos en tus otros turnos.'
+                    : 'Ej: Recibimos más postulaciones de las que podemos acomodar en esta edición.'}
+                  className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
+                  data-testid="rechazo-motivo-input"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {rechazoSlotId
+                    ? 'Se le quita solo este turno; su postulación y los demás turnos siguen igual.'
+                    : 'Se elimina la postulación completa y se libera lo que tuviera asignado.'}
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowRechazoModal(false)}
+                  disabled={actionLoading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={handleRechazar}
+                  disabled={actionLoading || !rechazoMotivo.trim()}
+                  data-testid="rechazo-confirm-btn"
+                >
+                  {actionLoading ? 'Enviando...' : 'Rechazar y avisar'}
                 </Button>
               </div>
             </CardContent>

@@ -66,6 +66,7 @@ MERGE_FIELDS = {
             {"key": "{{volunteer_edit_link}}", "label": "Link de edición", "example": "https://.../voluntarios/editar/abc123"},
             {"key": "{{volunteer_turnos}}", "label": "Lista de turnos (solo en 'Asignación de Varios Turnos')", "example": "Puesto, turno, fecha y horario de cada turno"},
             {"key": "{{volunteer_turnos_total}}", "label": "Cantidad de turnos asignados", "example": "3"},
+            {"key": "{{rechazo_motivo}}", "label": "Motivo del rechazo (solo en las plantillas de rechazo)", "example": "Ese puesto ya quedó cubierto"},
         ]
     },
     "payment": {
@@ -593,6 +594,67 @@ DEFAULT_TEMPLATES = [
             <p style="margin: 0 0 8px 0; color: #4b5563;"><strong>Razón de cancelación:</strong></p>
             <p style="margin: 0; color: #4b5563;">{{cancellation_reason}}</p></div>
         <p style="font-size: 14px; color: #6b7280;">Si cambiaste de opinión, puedes postularte nuevamente en cualquier momento.</p></div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_shift_rejected",
+        "name": "Turno Rechazado - Voluntario",
+        "description": "Se envía cuando se rechaza uno de los turnos que pidió un voluntario (sigue postulado)",
+        "subject": "Sobre uno de tus turnos - {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Sobre uno de tus turnos</h1></div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Gracias por ofrecerte como voluntario en <strong>{{race_name}}</strong>. No podremos contar contigo en este turno:</p>
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #9ca3af;">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Puesto:</strong></td>
+                    <td style="text-align: right; color: #1f2937; font-weight: bold;">{{volunteer_puesto}}</td></tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Turno:</strong></td>
+                    <td style="text-align: right;">{{volunteer_turno}}</td></tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Día:</strong></td>
+                    <td style="text-align: right;">{{volunteer_dia}}</td></tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Horario:</strong></td>
+                    <td style="text-align: right;">{{volunteer_hora_inicio}} - {{volunteer_hora_fin}}</td></tr>
+            </table></div>
+        <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fcd34d;">
+            <p style="margin: 0 0 8px 0; color: #92400e;"><strong>Motivo:</strong></p>
+            <p style="margin: 0; color: #92400e;">{{rechazo_motivo}}</p></div>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu postulación sigue activa: los demás turnos que pediste no se ven afectados.</p></div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
+</div>
+"""
+    },
+    {
+        "id": "volunteer_application_rejected",
+        "name": "Solicitud Rechazada - Voluntario",
+        "description": "Se envía cuando se rechaza la postulación completa de un voluntario",
+        "subject": "Sobre tu postulación como voluntario - {{race_name}}",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Sobre tu postulación</h1></div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Gracias por ofrecerte como voluntario en <strong>{{race_name}}</strong>. En esta ocasión no podremos contar contigo.</p>
+        <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fcd34d;">
+            <p style="margin: 0 0 8px 0; color: #92400e;"><strong>Motivo:</strong></p>
+            <p style="margin: 0; color: #92400e;">{{rechazo_motivo}}</p></div>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Agradecemos de verdad tu disposición y esperamos verte en una próxima edición.</p></div>
     <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
         <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
 </div>

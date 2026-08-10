@@ -399,16 +399,11 @@ class TestEmailTemplatesAPI:
         assert "pagos" in categories, "Missing 'pagos' category"
         assert "sistema" in categories, "Missing 'sistema' category"
         
-        # Verify counts (based on DEFAULT_TEMPLATES)
-        # atletas: athlete_registration_confirmation, bib_assignment, runner_summary, athlete_cancellation, athlete_edit_code = 5
-        # voluntarios: volunteer_registration_confirmation, volunteer_shift_assignment, volunteer_shift_reminder, volunteer_cancellation, volunteer_verification_code, volunteer_edit_link = 6
-        # pagos: payment_reminder, payment_received, payment_confirmed, payment_rejected = 4
-        # sistema: email_verification, admin_credentials = 2
-        
-        assert categories["atletas"] == 5, f"Expected 5 atletas templates, got {categories['atletas']}"
-        assert categories["voluntarios"] == 6, f"Expected 6 voluntarios templates, got {categories['voluntarios']}"
-        assert categories["pagos"] == 4, f"Expected 4 pagos templates, got {categories['pagos']}"
-        assert categories["sistema"] == 2, f"Expected 2 sistema templates, got {categories['sistema']}"
+        # Counts follow DEFAULT_TEMPLATES: update them here when a template is added
+        assert categories["atletas"] == 6, f"Expected 6 atletas templates, got {categories['atletas']}"
+        assert categories["voluntarios"] == 9, f"Expected 9 voluntarios templates, got {categories['voluntarios']}"
+        assert categories["pagos"] == 6, f"Expected 6 pagos templates, got {categories['pagos']}"
+        assert categories["sistema"] == 3, f"Expected 3 sistema templates, got {categories['sistema']}"
         
         print(f"✓ Template categories verified: {categories}")
 
@@ -420,7 +415,9 @@ class TestEmailTemplatesAPI:
             "volunteer_verification_code": ["race", "general"],
             "volunteer_edit_link": ["race", "volunteer"],
             "payment_rejected": ["race", "athlete", "payment"],
-            "athlete_edit_code": ["race", "athlete", "general"]
+            "athlete_edit_code": ["race", "athlete", "general"],
+            "volunteer_shift_rejected": ["race", "volunteer"],
+            "volunteer_application_rejected": ["race", "volunteer"]
         }
         
         for template_id, expected_sources in new_templates.items():
