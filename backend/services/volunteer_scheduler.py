@@ -31,6 +31,10 @@ FRIDAY_EMAIL_DATE = "2026-01-23"
 FRIDAY_EMAIL_HOUR = 18  # 6:00 PM
 
 
+# Cuanto antes del turno llega el aviso al telefono.
+MINUTOS_AVISO_TURNO = 15
+
+
 async def send_shift_reminder(slot_id: int):
     """Send reminder email for a specific shift"""
     try:
@@ -78,7 +82,7 @@ async def send_shift_reminder(slot_id: int):
 
 
 async def send_shift_push(slot_id: int):
-    """Aviso push al voluntario, media hora antes de su turno.
+    """Aviso push al voluntario, un cuarto de hora antes de su turno.
 
     Se manda a los telefonos que ese voluntario tenga registrados en la app.
     Si no tiene ninguno, o el push no esta configurado, no pasa nada: el correo
@@ -109,7 +113,7 @@ async def send_shift_push(slot_id: int):
         puesto = slot.get("puesto") or "tu puesto"
         resultado = await push_service.enviar(
             tokens,
-            "Tu turno empieza en 30 minutos",
+            "Tu turno empieza en 15 minutos",
             f"{hora} · {puesto}",
             {"tipo": "turno", "slot_id": str(slot_id)},
         )
@@ -260,10 +264,10 @@ async def schedule_all_reminders():
             else:
                 skipped_count += 1
 
-            # Aviso push media hora antes, aparte del correo de la hora previa.
-            # El correo se lee cuando se lee; el push llega al bolsillo justo
-            # cuando toca salir hacia el puesto.
-            push_time = start_time - timedelta(minutes=30)
+            # Aviso push un cuarto de hora antes, aparte del correo de la hora
+            # previa. El correo se lee cuando se lee; el push llega al bolsillo
+            # justo cuando toca salir hacia el puesto.
+            push_time = start_time - timedelta(minutes=MINUTOS_AVISO_TURNO)
             if push_time > now:
                 push_job = f"push_slot_{slot_id}"
                 if scheduler.get_job(push_job):
