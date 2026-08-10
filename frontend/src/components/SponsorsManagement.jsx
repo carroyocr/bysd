@@ -7,7 +7,8 @@ import { Badge } from './ui/badge';
 import {
   Plus, Edit, Trash2, Save, X, Upload, Instagram,
   Building2, ExternalLink, Image, Phone, Mail, Globe, User,
-  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight
+  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight,
+  History, Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -93,9 +94,21 @@ const formatMonto = (monto) => {
 };
 
 export default function SponsorsManagement() {
-  const { raceCode, raceName } = useRaceConfig();
+  const { raceCode } = useRaceConfig();
+  // El panel abre en la carrera activa, pero se puede mirar cualquier edición:
+  // es lo que permite ver a los patrocinadores de años anteriores y traerlos.
+  const [races, setRaces] = useState([]);
+  const [selectedRace, setSelectedRace] = useState(raceCode);
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Traer de otra edición
+  const [showImport, setShowImport] = useState(false);
+  const [importFrom, setImportFrom] = useState('');
+  const [importCandidates, setImportCandidates] = useState([]);
+  const [importSelected, setImportSelected] = useState([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSponsor, setEditingSponsor] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -109,11 +122,11 @@ export default function SponsorsManagement() {
   const [formData, setFormData] = useState(EMPTY_FORM);
 
   const loadSponsors = useCallback(async () => {
-    if (!raceCode) return;
+    if (!selectedRace) return;
 
     setLoading(true);
     try {
-      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`);
+      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${selectedRace}`);
       if (response.ok) {
         const data = await response.json();
         setSponsors(data.sponsors || []);
@@ -124,11 +137,31 @@ export default function SponsorsManagement() {
     } finally {
       setLoading(false);
     }
-  }, [raceCode]);
+  }, [selectedRace]);
 
   useEffect(() => {
     loadSponsors();
   }, [loadSponsors]);
+
+  // La carrera activa llega después del primer render (la trae el contexto)
+  useEffect(() => {
+    if (raceCode) setSelectedRace(raceCode);
+  }, [raceCode]);
+
+  useEffect(() => {
+    const loadRaces = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/race-config/all`);
+        if (response.ok) {
+          const data = await response.json();
+          setRaces(data.races || []);
+        }
+      } catch (error) {
+        console.error('Error loading races:', error);
+      }
+    };
+    loadRaces();
+  }, []);
 
   const resetForm = () => {
     setFormData(EMPTY_FORM);
@@ -170,7 +203,7 @@ export default function SponsorsManagement() {
       if (editingSponsor) {
         // Update existing sponsor
         const response = await adminFetch(
-          `${API_URL}/api/sponsors/update/${encodeURIComponent(editingSponsor)}?race_code=${raceCode}`,
+          `${API_URL}/api/sponsors/update/${encodeURIComponent(editingSponsor)}?race_code=${selectedRace}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -191,7 +224,7 @@ export default function SponsorsManagement() {
         const response = await adminFetch(`${API_URL}/api/sponsors/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...buildPayload(), race_code: raceCode })
+          body: JSON.stringify({ ...buildPayload(), race_code: selectedRace })
         });
 
         if (response.ok) {
@@ -236,7 +269,7 @@ export default function SponsorsManagement() {
     if ((sponsor.status || 'prospecto') === status) return;
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${selectedRace}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -261,7 +294,7 @@ export default function SponsorsManagement() {
 
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
         { method: 'DELETE' }
       );
 
@@ -288,7 +321,7 @@ export default function SponsorsManagement() {
 
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/upload-logo/${encodeURIComponent(sponsorName)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/upload-logo/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
         {
           method: 'POST',
           body: formData
@@ -325,7 +358,7 @@ export default function SponsorsManagement() {
     setSavingNota(true);
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
+        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(sponsor.name)}?race_code=${selectedRace}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -353,6 +386,80 @@ export default function SponsorsManagement() {
     return entradas[entradas.length - 1];
   };
 
+  /* ---------------- Traer de otra edición ---------------- */
+
+  const abrirImport = () => {
+    const otras = races.filter((r) => r.code !== selectedRace);
+    setImportFrom(otras[0]?.code || '');
+    setImportCandidates([]);
+    setImportSelected([]);
+    setShowImport(true);
+  };
+
+  // Los que ya están en esta carrera se muestran, pero no se pueden marcar
+  const yaEstaEnEstaCarrera = (name) => sponsors.some((s) => s.name === name);
+
+  const loadCandidates = useCallback(async (fromRace) => {
+    if (!fromRace) return;
+    setLoadingCandidates(true);
+    setImportSelected([]);
+    try {
+      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${fromRace}`);
+      if (response.ok) {
+        const data = await response.json();
+        setImportCandidates(data.sponsors || []);
+      } else {
+        setImportCandidates([]);
+      }
+    } catch {
+      toast.error('Error al cargar los patrocinadores de esa edición');
+      setImportCandidates([]);
+    } finally {
+      setLoadingCandidates(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showImport && importFrom) loadCandidates(importFrom);
+  }, [showImport, importFrom, loadCandidates]);
+
+  const toggleImportSelected = (name) => {
+    setImportSelected((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+  };
+
+  const handleImport = async () => {
+    if (importSelected.length === 0) {
+      toast.error('Marca al menos un patrocinador');
+      return;
+    }
+    setImporting(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/sponsors/copy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_race_code: importFrom,
+          to_race_code: selectedRace,
+          names: importSelected,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast.success(data.message);
+        setShowImport(false);
+        loadSponsors();
+      } else {
+        toast.error(data.detail || 'Error al traer los patrocinadores');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -372,11 +479,133 @@ export default function SponsorsManagement() {
             {sponsors.filter(isPublished).length} publicados en el sitio
           </p>
         </div>
-        <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Patrocinador
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedRace || ''}
+            onChange={(e) => { resetForm(); setShowImport(false); setSelectedRace(e.target.value); }}
+            className="px-3 py-2 border rounded-md bg-background text-sm"
+            data-testid="sponsor-race-select"
+          >
+            {races.map((r) => (
+              <option key={r.code} value={r.code}>
+                {r.name}{r.code === raceCode ? ' (activa)' : ''}
+              </option>
+            ))}
+          </select>
+          <Button variant="outline" onClick={abrirImport} data-testid="import-sponsors-btn">
+            <History className="w-4 h-4 mr-2" />
+            Traer de otra edición
+          </Button>
+          <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Patrocinador
+          </Button>
+        </div>
       </div>
+
+      {/* Traer patrocinadores de otra edición */}
+      {showImport && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="w-4 h-4 text-[#E8772E]" />
+              Traer patrocinadores a {races.find((r) => r.code === selectedRace)?.name || selectedRace}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-from">Edición de origen</Label>
+              <select
+                id="import-from"
+                value={importFrom}
+                onChange={(e) => setImportFrom(e.target.value)}
+                className="w-full md:w-96 px-3 py-2 border rounded-md bg-background"
+                data-testid="import-from-select"
+              >
+                {races.filter((r) => r.code !== selectedRace).map((r) => (
+                  <option key={r.code} value={r.code}>{r.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Llegan con su descripción, logo y datos de contacto, pero el proceso vuelve a
+                empezar en "Prospecto": no se publican hasta que cierres el patrocinio.
+              </p>
+            </div>
+
+            {loadingCandidates ? (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : importCandidates.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-2">
+                Esa edición no tiene patrocinadores registrados
+              </p>
+            ) : (
+              <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
+                {importCandidates.map((c) => {
+                  const repetido = yaEstaEnEstaCarrera(c.name);
+                  const marcado = importSelected.includes(c.name);
+                  return (
+                    <label
+                      key={c.name}
+                      className={`flex items-center gap-3 px-3 py-2 ${repetido ? 'opacity-50' : 'cursor-pointer hover:bg-muted/50'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={marcado}
+                        disabled={repetido}
+                        onChange={() => toggleImportSelected(c.name)}
+                        className="w-4 h-4"
+                        data-testid={`import-check-${c.name}`}
+                      />
+                      {c.logo_url ? (
+                        <img
+                          src={`${API_URL}${c.logo_url}`}
+                          alt={c.name}
+                          className="w-9 h-9 object-contain bg-white rounded border"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded border border-dashed flex items-center justify-center">
+                          <Image className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="flex-1 min-w-0 text-sm truncate">{c.name}</span>
+                      {repetido && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          <Check className="w-3 h-3 mr-1" />Ya está
+                        </Badge>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 items-center">
+              <Button onClick={handleImport} disabled={importing || importSelected.length === 0}>
+                <Save className="w-4 h-4 mr-2" />
+                {importing ? 'Trayendo...' : `Traer ${importSelected.length || ''}`.trim()}
+              </Button>
+              <Button variant="outline" onClick={() => setShowImport(false)}>
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+              {importCandidates.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setImportSelected(
+                    importCandidates.filter((c) => !yaEstaEnEstaCarrera(c.name)).map((c) => c.name)
+                  )}
+                >
+                  Marcar todos
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Add/Edit Form */}
       {showAddForm && (
@@ -594,7 +823,7 @@ export default function SponsorsManagement() {
 
       {/* Sponsors List (oculta mientras el formulario está abierto, para
           concentrar la vista en el patrocinador que se edita) */}
-      {!showAddForm && (
+      {!showAddForm && !showImport && (
       <div className="grid gap-4">
         {sponsors.length === 0 ? (
           <Card>
@@ -857,18 +1086,6 @@ export default function SponsorsManagement() {
           })
         )}
       </div>
-      )}
-
-      {/* Info for legacy races */}
-      {raceCode === 'BYSD-2026' && (
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="py-4">
-            <p className="text-sm text-amber-800">
-              <strong>Nota:</strong> Los patrocinadores de BYSD-2026 están configurados de forma estática
-              y no se pueden modificar desde este panel. Esta funcionalidad está disponible para nuevas carreras.
-            </p>
-          </CardContent>
-        </Card>
       )}
 
     </div>
