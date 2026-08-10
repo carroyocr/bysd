@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  Contact, MessageCircle, Trophy, Star, Mountain, Radio, Loader2, Instagram, Activity, AtSign,
+  MessageCircle, Star, Mountain, Radio, Loader2, Instagram, Activity, AtSign,
 } from 'lucide-react';
 import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed, abreviaNacionalidad } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -47,13 +47,13 @@ export default function FichaAtleta() {
   // animar en vivo: solo quedan la experiencia y los resultados.
   const esPasada = raceIsPast(race);
   const tieneRedes = !!(profile?.instagram_url || profile?.strava_url);
+  // Compartir el BIB y los resultados son cosas de uno mismo, no de mirar a
+  // otro corredor: viven en el perfil, en Mis carreras.
   const secciones = [
     { label: 'Seguimiento', Icon: Radio, to: base },
     { label: 'Experiencia', Icon: Mountain, to: `${base}/experiencia` },
     tieneRedes && { label: 'Social', Icon: AtSign, to: `${base}/social` },
-    !esPasada && { label: 'Compartir BIB', Icon: Contact, to: `${base}/bib` },
     !esPasada && { label: 'Enviar ánimo', Icon: MessageCircle, to: `${base}/animo` },
-    { label: 'Resultados', Icon: Trophy, to: `${base}/resultados` },
   ].filter(Boolean);
 
   // Cambiar de sección sustituye la entrada del historial en vez de apilar
@@ -145,21 +145,17 @@ export default function FichaAtleta() {
             >
               {secciones.map(({ label, Icon, to }) => {
                 const puesta = activa(to);
-                // Solo el icono: con seis secciones los rótulos se partían en
-                // dos líneas y estiraban el encabezado. El nombre queda en
-                // aria-label para quien use lector de pantalla.
                 return (
                   <button
                     key={label}
                     onClick={() => navigate(to, { replace: true })}
                     aria-current={puesta}
-                    aria-label={label}
-                    title={label}
-                    className="flex items-center justify-center min-w-0"
+                    className="flex flex-col items-center gap-1.5 min-w-0"
                   >
                     <span className={`w-11 h-11 rounded-full flex items-center justify-center ${puesta ? T.chipOn : T.actionChip}`}>
                       <Icon className={`w-[18px] h-[18px] ${puesta ? '' : 'text-[#E77622]'}`} />
                     </span>
+                    <span className={`text-[9.5px] text-center leading-tight ${puesta ? 'font-bold' : T.muted}`}>{label}</span>
                   </button>
                 );
               })}

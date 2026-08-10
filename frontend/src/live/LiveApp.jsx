@@ -128,15 +128,16 @@ function RaceShell() {
             quien pone el encabezado y los botones para pasar de una a otra */}
         <Route path="atleta/:bib" element={<FichaAtleta />}>
           <Route index element={<AthleteScreen />} />
-          <Route path="bib" element={<ShareBibScreen />} />
           <Route path="experiencia" element={<ExperienciaScreen />} />
           <Route path="social" element={<SocialScreen />} />
-          <Route path="resultados" element={<ShareResultsScreen />} />
           <Route path="animo" element={<CheerScreen />} />
         </Route>
-        {/* Fotos sigue fuera de la ficha: no está entre sus secciones y
-            conserva su propia pantalla. */}
+        {/* Fuera de la ficha: no están entre sus secciones y conservan su
+            propia pantalla. Compartir el BIB y los resultados se abren desde
+            Mis carreras, en el perfil del propio corredor. */}
         <Route path="atleta/:bib/fotos" element={<FotosScreen />} />
+        <Route path="atleta/:bib/bib" element={<ShareBibScreen />} />
+        <Route path="atleta/:bib/resultados" element={<ShareResultsScreen />} />
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
