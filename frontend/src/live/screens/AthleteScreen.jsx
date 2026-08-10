@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
 import { getJson, formatDuration, formatPace, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 
@@ -74,7 +73,6 @@ const STATUS_STYLES = {
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
   const { profile, raceCode, bib } = useOutletContext();
-  const navigate = useNavigate();
 
   const [laps, setLaps] = useState([]);
   const [tab, setTab] = useState('grafico');
@@ -90,8 +88,6 @@ export default function AthleteScreen() {
 
   // El gráfico necesita las vueltas en orden; la tabla, al revés.
   const vueltasRecientesPrimero = [...laps].reverse();
-
-  const base = `/live/${raceCode}/atleta/${bib}`;
 
   const statusText = profile?.status === 'active'
     ? 'Aún en carrera'
@@ -176,16 +172,6 @@ export default function AthleteScreen() {
                 )
               )}
             </div>
-          </div>
-
-          {/* Enviar ánimo */}
-          <div className="mx-4 mt-4">
-            <button
-              onClick={() => navigate(`${base}/animo`, { replace: true })}
-              className="w-full rounded-xl py-3 text-sm font-bold bg-[#E77622] text-white flex items-center justify-center gap-2"
-            >
-              <MessageCircle className="w-4 h-4" /> Enviar mensaje de apoyo
-            </button>
           </div>
     </>
   );
