@@ -61,14 +61,26 @@ export default function HomeScreen() {
       .catch(() => {});
   }, [race, raceCode]);
 
+  const [hayGanador, setHayGanador] = useState(false);
+  useEffect(() => {
+    if (!raceCode) return undefined;
+    let cancel = false;
+    getJson(`/api/race/stats?race_code=${raceCode}`)
+      .then((d) => { if (!cancel) setHayGanador(!!d?.winner); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [raceCode]);
+
   const logo = race?.logo_home_url || race?.logo_url;
   const logoSrc = logo ? (logo.startsWith('/api') ? `${API}${logo}` : logo) : null;
 
+  // Mismo criterio que en el menú: Ganadores no se ofrece hasta que hay uno
+  // publicado, o lleva a una pantalla que no tiene nada que enseñar.
   const quickActions = [
     { label: 'Seguimiento', Icon: Radio, to: `/live/${raceCode}/seguimiento` },
-    { label: 'Ganadores', Icon: Trophy, to: `/live/${raceCode}/ganadores` },
+    hayGanador && { label: 'Ganadores', Icon: Trophy, to: `/live/${raceCode}/ganadores` },
     { label: 'Ánimo', Icon: MessageCircle, to: `/live/${raceCode}/animo` },
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="min-h-[100dvh] bg-[#0C0C0C] text-white flex flex-col">
