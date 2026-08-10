@@ -1960,13 +1960,17 @@ export default function PerfilScreen() {
                   </button>
                 </div>
 
+                {/* Burbuja a la derecha, como en una conversación: se lee de
+                    un vistazo quién dijo qué. */}
                 {m.reply && (
-                  <div className={`mt-2 pl-3 border-l-2 border-[#E77622]`}>
-                    <p className="text-[11px] font-bold text-[#E77622]">Tu respuesta</p>
-                    <p className="text-sm leading-snug">{m.reply}</p>
-                    {m.replied_at && (
-                      <p className={`text-[10px] mt-0.5 ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
-                    )}
+                  <div className="flex justify-end mt-2">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#E77622]/15 px-3 py-2">
+                      <p className="text-[11px] font-bold text-[#E77622]">Tu respuesta</p>
+                      <p className="text-sm leading-snug">{m.reply}</p>
+                      {m.replied_at && (
+                        <p className={`text-[10px] mt-0.5 text-right ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
+                      )}
+                    </div>
                   </div>
                 )}
 
