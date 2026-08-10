@@ -10,10 +10,16 @@ import { useLiveTheme } from '../liveTheme';
 function PaceChart({ laps, T }) {
   const points = laps.filter((l) => l.pace_seg_km != null);
   if (points.length < 2) {
-    return <p className={`text-xs text-center py-8 ${T.muted}`}>Aún no hay suficientes vueltas cronometradas para el gráfico.</p>;
+    return (
+      <p className={`text-xs text-center px-4 ${T.muted}`}>
+        Aún no hay suficientes vueltas cronometradas para el gráfico.
+      </p>
+    );
   }
+  // Proporción pensada para el alto del contenedor, que es fijo: con el lienzo
+  // apaisado de antes el gráfico se quedaba aplastado arriba y sobraba hueco.
   const W = 320;
-  const H = 150;
+  const H = 230;
   const PAD = { top: 10, right: 8, bottom: 22, left: 40 };
   const paces = points.map((p) => p.pace_seg_km);
   const min = Math.min(...paces);
@@ -27,7 +33,7 @@ function PaceChart({ laps, T }) {
   const fmtPaceShort = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
       {[min, min + span / 2, min + span].map((p) => (
         <g key={p}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(p)} y2={y(p)} stroke="currentColor" strokeOpacity="0.12" />
@@ -82,6 +88,9 @@ export default function AthleteScreen() {
     return () => { cancel = true; };
   }, [bib, raceCode]);
 
+  // El gráfico necesita las vueltas en orden; la tabla, al revés.
+  const vueltasRecientesPrimero = [...laps].reverse();
+
   const base = `/live/${raceCode}/atleta/${bib}`;
 
   const statusText = profile?.status === 'active'
@@ -126,39 +135,47 @@ export default function AthleteScreen() {
               ))}
             </div>
 
-            {tab === 'grafico' && (
-              <div className="pt-4">
-                <p className={`text-[10px] tracking-widest text-center mb-1 ${T.subtle}`}>RITMO PROMEDIO POR VUELTA</p>
-                <PaceChart laps={laps} T={T} />
-              </div>
-            )}
+            {/* Alto fijo para las dos pestañas: la tarjeta no debe dar un salto
+                al cambiar de una a otra, y con muchas vueltas la lista se
+                desplaza aquí dentro en vez de estirar la pantalla. */}
+            <div className="h-[300px] mt-3 overflow-y-auto">
+              {tab === 'grafico' && (
+                <div className="h-full flex flex-col justify-center">
+                  <p className={`text-[10px] tracking-widest text-center mb-1 ${T.subtle}`}>RITMO PROMEDIO POR VUELTA</p>
+                  <PaceChart laps={laps} T={T} />
+                </div>
+              )}
 
-            {tab === 'vueltas' && (
-              laps.length === 0 ? (
-                <p className={`text-xs text-center py-8 ${T.muted}`}>Aún no hay vueltas registradas.</p>
-              ) : (
-                <table className="w-full mt-3 text-sm">
-                  <thead>
-                    <tr className={`text-[10px] tracking-wider uppercase ${T.tableHead}`}>
-                      <th className="text-left py-2 font-semibold">Vuelta</th>
-                      <th className="text-left py-2 font-semibold">Hora</th>
-                      <th className="text-right py-2 font-semibold">Duración</th>
-                      <th className="text-right py-2 font-semibold">Pace</th>
-                    </tr>
-                  </thead>
-                  <tbody className="font-mono">
-                    {laps.map((l) => (
-                      <tr key={l.lap} className={T.tableRow}>
-                        <td className="py-2.5 font-bold text-[#E77622]">V{l.lap}</td>
-                        <td className={`py-2.5 ${T.muted}`}>{l.hora || '—'}</td>
-                        <td className="py-2.5 text-right">{formatDuration(l.duracion_seg)}</td>
-                        <td className={`py-2.5 text-right ${T.muted}`}>{formatPace(l.pace_seg_km)}</td>
+              {tab === 'vueltas' && (
+                laps.length === 0 ? (
+                  <p className={`text-xs text-center pt-10 ${T.muted}`}>Aún no hay vueltas registradas.</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    {/* La cabecera se queda arriba mientras se desplaza la lista */}
+                    <thead className={`sticky top-0 ${T.card}`}>
+                      <tr className={`text-[10px] tracking-wider uppercase ${T.tableHead}`}>
+                        <th className="text-left py-2 font-semibold">Vuelta</th>
+                        <th className="text-left py-2 font-semibold">Hora</th>
+                        <th className="text-right py-2 font-semibold">Duración</th>
+                        <th className="text-right py-2 font-semibold">Pace</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )
-            )}
+                    </thead>
+                    <tbody className="font-mono">
+                      {/* De la más reciente a la más antigua: lo que interesa
+                          durante la carrera es la última vuelta, no la primera. */}
+                      {vueltasRecientesPrimero.map((l) => (
+                        <tr key={l.lap} className={T.tableRow}>
+                          <td className="py-2.5 font-bold text-[#E77622]">V{l.lap}</td>
+                          <td className={`py-2.5 ${T.muted}`}>{l.hora || '—'}</td>
+                          <td className="py-2.5 text-right">{formatDuration(l.duracion_seg)}</td>
+                          <td className={`py-2.5 text-right ${T.muted}`}>{formatPace(l.pace_seg_km)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+            </div>
           </div>
 
           {/* Enviar ánimo */}
