@@ -116,13 +116,15 @@ export default function AdFooter({ raceCode, sobreFoto = false }) {
     >
       {/* Proporción fija en vez de alto fijo: el ancho de la barra cambia con
           cada teléfono, así que con un alto fijo la pieza del patrocinador se
-          deformaría o se recortaría en casi todos. Con 6:1 la imagen llena la
+          deformaría o se recortaría en casi todos. Con 5:1 la imagen llena la
           barra exacta en cualquier pantalla.
-          Más estrecho que el ancho completo y centrado: abajo el espacio es el
-          que se pelea con el contenido, y arriba la barra ya es fija. */}
+          Sin tarjeta detrás: el pie ya es una banda con su propio fondo, y una
+          tarjeta encima de otra solo añade un borde que no separa nada. Sobre
+          la portada del inicio sí hace falta, que ahí no hay banda y el logo
+          quedaría suelto sobre la foto. */}
       <button
         onClick={handleClick}
-        className={`w-[86%] max-w-[380px] mx-auto aspect-[6/1] flex items-center gap-3 relative text-left rounded-2xl shadow-lg overflow-hidden ${bannerCompleto ? '' : 'px-3.5'} ${T.card} ${cardText}`}
+        className={`w-full aspect-[5/1] flex items-center gap-3 relative text-left rounded-2xl overflow-hidden ${bannerCompleto ? '' : 'px-3.5'} ${sobreFoto ? `shadow-lg ${T.card}` : ''} ${cardText}`}
       >
         {bannerCompleto ? (
           <img
@@ -136,10 +138,10 @@ export default function AdFooter({ raceCode, sobreFoto = false }) {
               <img
                 src={`${API}${ad.logo_url}`}
                 alt={ad.name}
-                className="w-10 h-10 rounded-lg object-contain bg-white shrink-0"
+                className="w-12 h-12 rounded-xl object-contain bg-white shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-lg bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[9px] font-extrabold shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold shrink-0">
                 {ad.name?.slice(0, 6)}
               </div>
             )}

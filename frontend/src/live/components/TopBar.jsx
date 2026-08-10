@@ -11,7 +11,9 @@ export default function TopBar({ title, onMenu, back = false, raceCode }) {
   const navigate = useNavigate();
 
   return (
-    <header className={`sticky top-0 z-40 flex items-center gap-2 px-2 pt-[env(safe-area-inset-top)] min-h-[calc(3.5rem+env(safe-area-inset-top))] ${T.bar}`}>
+    // El relieve lo pone el tema: en claro una sombra, en oscuro un halo claro,
+    // porque una sombra negra sobre fondo negro no se ve.
+    <header className={`sticky top-0 z-40 flex items-center gap-2 px-2 pt-[env(safe-area-inset-top)] min-h-[calc(3.5rem+env(safe-area-inset-top))] ${T.bar} ${T.barShadow}`}>
       {back ? (
         <button
           aria-label="Volver"

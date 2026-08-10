@@ -28,10 +28,10 @@ export const THEMES = {
     tableHead: 'text-[#777777] border-b border-[#2a2a2a]',
     tableRow: 'border-b border-[#1e1e1e]',
     actionChip: 'bg-[#1d1d1d] text-[#cccccc]',
-    // Sobre fondo negro una sombra no se ve: el relieve se hace con una linea
-    // clara en el canto de la barra, que es lo que separa un plano de otro.
-    barShadow: 'shadow-[0_2px_10px_rgba(0,0,0,0.6)] border-b border-[#2e2e2e]',
-    footerShadow: 'shadow-[0_-2px_10px_rgba(0,0,0,0.6)] border-t border-[#2e2e2e]',
+    // Sobre fondo negro una sombra negra no se ve: el relieve se hace con un
+    // halo claro, que es lo unico que destaca contra el negro.
+    barShadow: 'shadow-[0_2px_12px_rgba(255,255,255,0.14)]',
+    footerShadow: 'shadow-[0_-2px_12px_rgba(255,255,255,0.14)]',
   },
   light: {
     name: 'light',
