@@ -122,7 +122,6 @@ const ADMIN_SECTIONS = [
       { id: 'email-composer', label: 'Enviar Correos', icon: Send },
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
       { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
-      { id: 'emails', label: 'Plantillas de Correo', icon: Mail },
       { id: 'prensa', label: 'Prensa', icon: Newspaper },
     ],
   },
@@ -133,6 +132,7 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'config', label: 'Carrera', icon: Flag },
       { id: 'users', label: 'Usuarios', icon: Shield },
+      { id: 'emails', label: 'Plantillas de Correo', icon: Mail },
       { id: 'surveys', label: 'Encuesta', icon: ClipboardList },
     ],
   },
