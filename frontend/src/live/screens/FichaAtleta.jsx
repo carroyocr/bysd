@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Contact, MessageCircle, Trophy, Star, Mountain, Radio, Loader2, Instagram, Activity, AtSign,
 } from 'lucide-react';
-import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed } from '../liveApi';
+import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed, abreviaNacionalidad } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
@@ -96,35 +96,35 @@ export default function FichaAtleta() {
                 <p className="text-[17px] font-extrabold leading-tight truncate">
                   {profile.nombre} {profile.apellidos}
                 </p>
-                <p className={`text-xs mt-0.5 ${T.muted}`}>
-                  {[profile.sexo ? profile.sexo.charAt(0).toUpperCase() : null,
-                    `${flagOf(profile.nacionalidad)} ${profile.nacionalidad || ''}`.trim(),
-                    profile.ciudad_residencia]
-                    .filter(Boolean).join(' | ')}
-                </p>
-                {/* Redes del corredor: solo aparecen si él las puso en su perfil */}
-                {(profile.instagram_url || profile.strava_url) && (
-                  <div className="flex items-center gap-2 mt-1.5">
-                    {profile.instagram_url && (
-                      <button
-                        aria-label="Instagram del corredor"
-                        onClick={() => openExternal(profile.instagram_url)}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
-                      >
-                        <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
-                      </button>
-                    )}
-                    {profile.strava_url && (
-                      <button
-                        aria-label="Strava del corredor"
-                        onClick={() => openExternal(profile.strava_url)}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center ${T.actionChip}`}
-                      >
-                        <Activity className="w-3.5 h-3.5 text-[#E77622]" />
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Sexo, país y redes en una sola línea de alto fijo: así el
+                    encabezado mide lo mismo tenga redes el corredor o no, y
+                    nada de lo que viene debajo se mueve de sitio. El país va
+                    abreviado y sin ciudad, que era lo que la desbordaba. */}
+                <div className="flex items-center gap-2 mt-1 h-6">
+                  <p className={`text-xs shrink-0 ${T.muted}`}>
+                    {[profile.sexo ? profile.sexo.charAt(0).toUpperCase() : null,
+                      `${flagOf(abreviaNacionalidad(profile.nacionalidad))} ${abreviaNacionalidad(profile.nacionalidad)}`.trim()]
+                      .filter(Boolean).join(' · ')}
+                  </p>
+                  {profile.instagram_url && (
+                    <button
+                      aria-label="Instagram del corredor"
+                      onClick={() => openExternal(profile.instagram_url)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${T.actionChip}`}
+                    >
+                      <Instagram className="w-3.5 h-3.5 text-[#E77622]" />
+                    </button>
+                  )}
+                  {profile.strava_url && (
+                    <button
+                      aria-label="Strava del corredor"
+                      onClick={() => openExternal(profile.strava_url)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${T.actionChip}`}
+                    >
+                      <Activity className="w-3.5 h-3.5 text-[#E77622]" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="text-right shrink-0">
                 <span className={`text-sm font-mono font-extrabold px-2.5 py-1 rounded-lg ${T.chipOn}`}>#{profile.bib}</span>

@@ -76,6 +76,33 @@ const ISO3_TO_ISO2 = {
   URU: 'UY', URY: 'UY', PAR: 'PY', PRY: 'PY', BOL: 'BO',
 };
 
+// Los datos traen el pais de dos formas: el nombre en espanol tal como lo
+// eligio el corredor al inscribirse, y el codigo de tres letras en los
+// resultados de anos anteriores.
+const NOMBRE_A_ISO3 = {
+  'republica dominicana': 'DOM', 'estados unidos': 'USA', 'reino unido': 'GBR',
+  'costa rica': 'CRC', 'puerto rico': 'PUR', 'el salvador': 'ESA',
+  argentina: 'ARG', brasil: 'BRA', canada: 'CAN', chile: 'CHI', colombia: 'COL',
+  ecuador: 'ECU', espana: 'ESP', francia: 'FRA', guatemala: 'GUA', haiti: 'HAI',
+  honduras: 'HON', italia: 'ITA', japon: 'JAP', mexico: 'MEX', nicaragua: 'NCA',
+  panama: 'PAN', paraguay: 'PAR', peru: 'PER', portugal: 'POR', uruguay: 'URU',
+  venezuela: 'VEN', alemania: 'GER', cuba: 'CUB', bolivia: 'BOL', jamaica: 'JAM',
+};
+
+/**
+ * Codigo corto del pais: "Republica Dominicana" -> "DOM".
+ * Lo que ya viene en codigo se deja igual, y lo que no esta en la tabla se
+ * recorta a tres letras antes que ensenar un nombre que no cabe.
+ */
+export function abreviaNacionalidad(nacionalidad) {
+  const bruto = (nacionalidad || '').trim();
+  if (!bruto) return '';
+  if (bruto.length <= 3) return bruto.toUpperCase();
+  const sinTildes = bruto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (sinTildes === 'otro') return '';
+  return NOMBRE_A_ISO3[sinTildes] || bruto.slice(0, 3).toUpperCase();
+}
+
 export function flagOf(nacionalidad) {
   if (!nacionalidad) return '';
   const iso2 = ISO3_TO_ISO2[String(nacionalidad).trim().toUpperCase()];
