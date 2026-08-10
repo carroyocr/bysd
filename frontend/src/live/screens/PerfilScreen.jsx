@@ -5,7 +5,7 @@ import {
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
-  MessageCircle, Send, Trash2, Contact, Share2,
+  MessageCircle, Send, Trash2, Contact, Share2, Settings, ArrowLeft,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -1262,6 +1262,16 @@ export default function PerfilScreen() {
               <p className={`text-xs mt-0.5 ${T.muted}`}>{flagOf(athlete.nacionalidad)} {athlete.nacionalidad}</p>
             )}
           </div>
+          {/* Los ajustes de la cuenta —quién te ve, cómo entras, tu contraseña—
+              no son datos del corredor: estaban mezclados en la pestaña Datos,
+              entre el tipo de sangre y la talla de camiseta. */}
+          <button
+            aria-label="Ajustes de la cuenta"
+            onClick={() => { setTab(tab === 'ajustes' ? 'datos' : 'ajustes'); setMsg(null); }}
+            className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tab === 'ajustes' ? T.chipOn : T.actionChip}`}
+          >
+            <Settings className={`w-4 h-4 ${tab === 'ajustes' ? '' : 'text-[#E77622]'}`} />
+          </button>
         </div>
 
         <Msg T={T} msg={msg} />
@@ -1270,7 +1280,7 @@ export default function PerfilScreen() {
             estrecho y alguna quedaba fuera de la pantalla. Repartidas a partes
             iguales entran siempre. El nombre de la sección lo dice el título de
             la tarjeta que se abre debajo. */}
-        <div className="flex gap-1.5">
+        <div className={`gap-1.5 ${tab === 'ajustes' ? 'hidden' : 'flex'}`}>
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -1381,38 +1391,6 @@ export default function PerfilScreen() {
 
         )}
 
-        {tab === 'datos' && (
-          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
-            <div className="flex items-center gap-3.5">
-              {perfilPublico
-                ? <Eye className="w-5 h-5 text-[#E77622] shrink-0" />
-                : <EyeOff className="w-5 h-5 text-[#E77622] shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold">Perfil público</p>
-                <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
-                  {perfilPublico
-                    ? 'Apareces en la lista de corredores y cualquiera puede ver tu ficha.'
-                    : 'No apareces en la lista de corredores ni en el seguimiento público.'}
-                </p>
-              </div>
-              <Toggle on={perfilPublico} disabled={savingPrivacidad} onChange={togglePerfilPublico} />
-            </div>
-
-            {bio.disponible && (
-              <div className={`flex items-center gap-3.5 pt-4 mt-4 border-t ${T.divider}`}>
-                <ScanFace className="w-5 h-5 text-[#E77622] shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold">Entrar con {bio.nombre}</p>
-                  <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
-                    Sin escribir la contraseña. Tu sesión queda guardada en el
-                    llavero del teléfono, no en la app.
-                  </p>
-                </div>
-                <Toggle on={bio.activada} disabled={bioBusy} onChange={toggleBiometria} />
-              </div>
-            )}
-          </div>
-        )}
 
         {tab === 'carreras' && (<>
         {/* Inscripción a la carrera activa */}
@@ -2132,33 +2110,71 @@ export default function PerfilScreen() {
 
         )}
 
-        {/* La contraseña es cosa de la cuenta: va con los datos personales */}
-        {tab === 'datos' && (
-        <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
-          <button onClick={() => setShowPwdForm(!showPwdForm)} className="w-full flex items-center justify-between">
-            <h3 className="text-sm font-bold flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-[#E77622]" /> Cambiar contraseña
-            </h3>
-            <ChevronDown className={`w-4 h-4 transition-transform ${showPwdForm ? 'rotate-180' : ''} ${T.muted}`} />
-          </button>
-          {showPwdForm && (
-            <div className="space-y-3 mt-3">
-              <Field T={T} label="Contraseña actual">
-                <TextInput T={T} type="password" value={pwdData.current_password} onChange={(e) => setPwdData((p) => ({ ...p, current_password: e.target.value }))} />
-              </Field>
-              <Field T={T} label="Nueva contraseña">
-                <TextInput T={T} type="password" value={pwdData.new_password} onChange={(e) => setPwdData((p) => ({ ...p, new_password: e.target.value }))} />
-              </Field>
-              <Field T={T} label="Confirmar nueva contraseña">
-                <TextInput T={T} type="password" value={pwdData.confirm_password} onChange={(e) => setPwdData((p) => ({ ...p, confirm_password: e.target.value }))} />
-              </Field>
-              <PrimaryButton onClick={changePassword} disabled={loading}>
-                {loading ? 'Guardando…' : 'Actualizar contraseña'}
-              </PrimaryButton>
-            </div>
-          )}
-        </div>
+        {tab === 'ajustes' && (
+          <>
+            <button
+              onClick={() => setTab('datos')}
+              className={`flex items-center gap-1.5 text-xs font-bold ${T.muted}`}
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a mi perfil
+            </button>
 
+            <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+              <div className="flex items-center gap-3.5">
+                {perfilPublico
+                  ? <Eye className="w-5 h-5 text-[#E77622] shrink-0" />
+                  : <EyeOff className="w-5 h-5 text-[#E77622] shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold">Perfil público</p>
+                  <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
+                    {perfilPublico
+                      ? 'Apareces en la lista de corredores y cualquiera puede ver tu ficha.'
+                      : 'No apareces en la lista de corredores ni en el seguimiento público.'}
+                  </p>
+                </div>
+                <Toggle on={perfilPublico} disabled={savingPrivacidad} onChange={togglePerfilPublico} />
+              </div>
+
+              {bio.disponible && (
+                <div className={`flex items-center gap-3.5 pt-4 mt-4 border-t ${T.divider}`}>
+                  <ScanFace className="w-5 h-5 text-[#E77622] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold">Entrar con {bio.nombre}</p>
+                    <p className={`text-[11px] mt-0.5 leading-relaxed ${T.muted}`}>
+                      Sin escribir la contraseña. Tu sesión queda guardada en el
+                      llavero del teléfono, no en la app.
+                    </p>
+                  </div>
+                  <Toggle on={bio.activada} disabled={bioBusy} onChange={toggleBiometria} />
+                </div>
+              )}
+            </div>
+
+            <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+              <button onClick={() => setShowPwdForm(!showPwdForm)} className="w-full flex items-center justify-between">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-[#E77622]" /> Cambiar contraseña
+                </h3>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showPwdForm ? 'rotate-180' : ''} ${T.muted}`} />
+              </button>
+              {showPwdForm && (
+                <div className="space-y-3 mt-3">
+                  <Field T={T} label="Contraseña actual">
+                    <TextInput T={T} type="password" value={pwdData.current_password} onChange={(e) => setPwdData((p) => ({ ...p, current_password: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Nueva contraseña">
+                    <TextInput T={T} type="password" value={pwdData.new_password} onChange={(e) => setPwdData((p) => ({ ...p, new_password: e.target.value }))} />
+                  </Field>
+                  <Field T={T} label="Confirmar nueva contraseña">
+                    <TextInput T={T} type="password" value={pwdData.confirm_password} onChange={(e) => setPwdData((p) => ({ ...p, confirm_password: e.target.value }))} />
+                  </Field>
+                  <PrimaryButton onClick={changePassword} disabled={loading}>
+                    {loading ? 'Guardando…' : 'Actualizar contraseña'}
+                  </PrimaryButton>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Cerrar sesión: fuera de las pestañas, para no tener que buscarlo */}
