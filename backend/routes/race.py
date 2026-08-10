@@ -1855,6 +1855,14 @@ async def get_cheer_messages(
     for msg in messages:
         msg["id"] = str(msg.pop("_id"))
         msg["likes"] = msg.get("likes", 0)
+        # La respuesta del corredor sale en el muro: quien escribio merece ver
+        # que le contestaron, y es aqui donde lo busca.
+        msg["reply"] = msg.get("athlete_reply")
+        msg["replied_at"] = (
+            msg["athlete_reply_at"].isoformat() if msg.get("athlete_reply_at") else None
+        )
+        msg.pop("athlete_reply", None)
+        msg.pop("athlete_reply_at", None)
     
     # Enrich with athlete names - check registrations first for new races
     for msg in messages:

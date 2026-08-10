@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
+  MessageCircle, Send,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -19,6 +20,17 @@ import DateField from '../components/DateField';
 
 const TOKEN_KEY = 'athlete_token';
 
+/** "2027-01-23T14:05:00Z" -> "23 ene 2027, 10:05 a. m." (hora de RD). */
+function fechaHora(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : `${iso}Z`);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('es-DO', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
+}
+
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -28,6 +40,7 @@ const TABS = [
   { key: 'capacitaciones', label: 'Capacitaciones', icon: GraduationCap },
   { key: 'experiencia', label: 'Experiencia', icon: Mountain },
   { key: 'social', label: 'Social', icon: AtSign },
+  { key: 'mensajes', label: 'Mensajes de apoyo', icon: MessageCircle },
   { key: 'historial', label: 'Historial', icon: Trophy },
 ];
 
@@ -256,6 +269,14 @@ export default function PerfilScreen() {
 
   // Experiencia ITRA. ITRA no tiene API pública y bloquea la lectura desde
   // servidores, así que el atleta copia sus datos a mano desde itra.run.
+  // Mensajes de apoyo recibidos. Se piden al abrir la pestaña y no al cargar
+  // el perfil: son cientos en una carrera y casi nadie entra ahí.
+  const [mensajes, setMensajes] = useState(null);
+  const [carrerasMsg, setCarrerasMsg] = useState([]);
+  const [carreraMsg, setCarreraMsg] = useState('');
+  const [respuestas, setRespuestas] = useState({});
+  const [respondiendo, setRespondiendo] = useState(null);
+
   const [socialData, setSocialData] = useState({ instagram_url: '', strava_url: '' });
   const [savingSocial, setSavingSocial] = useState(false);
   const [itraEdit, setItraEdit] = useState(false);
@@ -312,6 +333,38 @@ export default function PerfilScreen() {
    * Datos: son opcionales, cambian por su cuenta y son lo unico del perfil que
    * se publica hacia fuera, en su ficha.
    */
+  const cargarMensajes = useCallback(async (codigo) => {
+    setMensajes(null);
+    const filtro = codigo ? `?race_code=${encodeURIComponent(codigo)}` : '';
+    const { ok, data } = await authJson('GET', `/api/athletes/my-messages${filtro}`, { token: token() });
+    if (!ok) {
+      setMensajes([]);
+      return;
+    }
+    setMensajes(data.messages || []);
+    // La lista de carreras solo llega completa cuando no se filtra
+    if (!codigo) setCarrerasMsg(data.races || []);
+    setRespuestas(Object.fromEntries((data.messages || []).map((m) => [m.id, m.reply || ''])));
+  }, []);
+
+  const responder = async (mensaje) => {
+    setRespondiendo(mensaje.id);
+    setMsg(null);
+    const { ok, data } = await authJson('POST', `/api/athletes/my-messages/${mensaje.id}/reply`, {
+      token: token(),
+      body: { reply: respuestas[mensaje.id] || '' },
+    });
+    setRespondiendo(null);
+    if (ok) {
+      setMensajes((prev) => (prev || []).map((m) => (
+        m.id === mensaje.id ? { ...m, reply: data.reply, replied_at: new Date().toISOString() } : m
+      )));
+      setMsg({ type: 'ok', text: data.reply ? 'Respuesta enviada.' : 'Respuesta borrada.' });
+    } else {
+      setMsg({ type: 'error', text: data.detail || 'No se pudo enviar la respuesta' });
+    }
+  };
+
   const saveSocial = async () => {
     setSavingSocial(true);
     setMsg(null);
@@ -562,6 +615,10 @@ export default function PerfilScreen() {
     }
     setBioBusy(false);
   };
+
+  useEffect(() => {
+    if (tab === 'mensajes') cargarMensajes(carreraMsg);
+  }, [tab, carreraMsg, cargarMensajes]);
 
   const startRegistro = () => {
     setRegData({
@@ -1824,6 +1881,93 @@ export default function PerfilScreen() {
             <PrimaryButton onClick={saveSocial} disabled={savingSocial}>
               {savingSocial ? 'Guardando…' : 'Guardar redes'}
             </PrimaryButton>
+          </div>
+        )}
+
+        {tab === 'mensajes' && (
+          <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+              <MessageCircle className="w-4 h-4 text-[#E77622]" /> Mensajes de apoyo
+            </h3>
+            <p className={`text-[11px] leading-relaxed mb-3 ${T.muted}`}>
+              Lo que te escribieron desde la app. Si respondes, tu respuesta sale
+              junto al mensaje para que quien lo mandó la vea.
+            </p>
+
+            {/* Filtro por carrera: quien lleva varios años tiene mensajes de
+                todas y mezclados no se leen. */}
+            {carrerasMsg.length > 1 && (
+              <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+                <button
+                  onClick={() => setCarreraMsg('')}
+                  className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-bold ${carreraMsg === '' ? T.chipOn : T.chip}`}
+                >
+                  Todas
+                </button>
+                {carrerasMsg.map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => setCarreraMsg(c.code)}
+                    className={`shrink-0 px-3 py-2 rounded-xl text-[11px] font-bold ${carreraMsg === c.code ? T.chipOn : T.chip}`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {mensajes === null && (
+              <div className={`flex justify-center py-10 ${T.muted}`}>
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+            )}
+
+            {mensajes && mensajes.length === 0 && (
+              <p className={`text-xs py-3 ${T.muted}`}>
+                Todavía no tienes mensajes de apoyo.
+              </p>
+            )}
+
+            {(mensajes || []).map((m) => (
+              <div key={m.id} className={`rounded-xl px-3 py-3 mb-2.5 ${T.input}`}>
+                <p className="text-sm leading-snug">{m.message}</p>
+                <p className={`text-[11px] mt-1.5 ${T.muted}`}>
+                  — {m.fan_name} · {fechaHora(m.created_at)}
+                  {carreraMsg === '' && m.race_name ? ` · ${m.race_name}` : ''}
+                </p>
+
+                {m.reply && (
+                  <div className={`mt-2 pl-3 border-l-2 border-[#E77622]`}>
+                    <p className="text-[11px] font-bold text-[#E77622]">Tu respuesta</p>
+                    <p className="text-sm leading-snug">{m.reply}</p>
+                    {m.replied_at && (
+                      <p className={`text-[10px] mt-0.5 ${T.subtle}`}>{fechaHora(m.replied_at)}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-end gap-2 mt-2">
+                  <textarea
+                    value={respuestas[m.id] ?? ''}
+                    onChange={(e) => setRespuestas((p) => ({ ...p, [m.id]: e.target.value }))}
+                    maxLength={280}
+                    rows={2}
+                    placeholder={m.reply ? 'Cambia tu respuesta…' : 'Responder…'}
+                    className={`flex-1 rounded-lg px-3 py-2 text-sm resize-none ${T.card}`}
+                  />
+                  <button
+                    onClick={() => responder(m)}
+                    disabled={respondiendo === m.id}
+                    aria-label="Enviar respuesta"
+                    className="w-10 h-10 rounded-lg bg-[#E77622] text-white flex items-center justify-center shrink-0 disabled:opacity-50"
+                  >
+                    {respondiendo === m.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

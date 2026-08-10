@@ -238,6 +238,16 @@ export default function CheerScreen() {
             return (
               <div key={c.id || i} className={`rounded-2xl px-3.5 py-3 mb-2.5 ${T.card}`}>
                 <p className="text-sm leading-snug">{c.message}</p>
+                {/* Si el corredor contestó, se ve aquí: es donde lo busca quien
+                    se molestó en escribirle. */}
+                {c.reply && (
+                  <div className="mt-2 pl-3 border-l-2 border-[#E77622]">
+                    <p className="text-[11px] font-bold text-[#E77622]">
+                      Respuesta de {c.athlete_name || `#${c.athlete_bib}`}
+                    </p>
+                    <p className="text-sm leading-snug">{c.reply}</p>
+                  </div>
+                )}
                 <div className="flex items-end justify-between gap-3 mt-1.5">
                   <p className={`text-[11px] flex-1 min-w-0 ${T.muted}`}>
                     — {c.fan_name}{!bibParam && (c.athlete_name || c.athlete_bib) ? ` para ${c.athlete_name || `#${c.athlete_bib}`}` : ''}
