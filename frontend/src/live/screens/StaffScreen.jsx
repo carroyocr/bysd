@@ -37,6 +37,12 @@ export default function StaffScreen() {
       const estado = await estadoBiometria(STAFF);
       if (cancel) return;
       setBio(estado);
+      // Igual que en el perfil del corredor: si luego prefiere la contraseña,
+      // el usuario ya está puesto.
+      // El usuario de la última sesión sirve de respaldo para quien ya tenía
+      // la biometría puesta antes de que esto se guardara.
+      const recordado = estado.usuario || localStorage.getItem('admin_username') || '';
+      if (recordado) setUsername(recordado);
       // Marcada de entrada: activarla desde el propio login es lo que casi
       // todo el mundo quiere, y desmarcarla cuesta un toque.
       setClave((p) => ({ ...p, conBio: estado.disponible && !estado.activada }));

@@ -12,7 +12,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
-import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
+import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, recordarUsuarioBiometrico } from '../biometria';
 import { registrarAtleta } from '../push';
 import { marcarAccesoAtleta, accesoAtletaCaducado, cerrarSesionAtleta, HORAS_SESION } from '../sesion';
 import Picker from '../components/Picker';
@@ -496,6 +496,7 @@ export default function PerfilScreen() {
     // Liga el teléfono a su cuenta: es lo que permite que la organización le
     // mande un aviso "a los inscritos" y no solo el de sus favoritos.
     registrarAtleta(data.email);
+    recordarUsuarioBiometrico(data.email);
     authJson('GET', '/api/athletes/my-races', { token: token() })
       .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
     authJson('GET', '/api/athletes/race-history', { token: token() })
@@ -585,6 +586,10 @@ export default function PerfilScreen() {
       const estado = await estadoBiometria();
       if (cancelado) return;
       setBio(estado);
+      // Con la biometría activada ya sabemos de quién es la cuenta: se deja
+      // puesto el correo para que, si decide entrar con contraseña, solo tenga
+      // que escribir esa.
+      if (estado.usuario) setEmail(estado.usuario);
 
       if (estado.activada) {
         setView('bloqueado');
@@ -1040,7 +1045,15 @@ export default function PerfilScreen() {
             {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
           </button>
           <button
-            onClick={async () => { await desactivarBiometria(); setBio((p) => ({ ...p, activada: false })); cerrarSesionAtleta(); setView('login'); }}
+            onClick={async () => {
+              // El correo se lee antes de apagar la biometría, que se lo lleva
+              const correo = bio.usuario || email;
+              await desactivarBiometria();
+              setBio((p) => ({ ...p, activada: false }));
+              cerrarSesionAtleta();
+              setEmail(correo);
+              setView('login');
+            }}
             className={`block mx-auto text-xs underline mt-5 ${T.muted}`}
           >
             Entrar con mi contraseña

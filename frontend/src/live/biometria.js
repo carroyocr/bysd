@@ -20,6 +20,11 @@ export const STAFF = 'staff';
 
 const SERVIDOR = { [ATLETA]: 'bysd-live-atleta', [STAFF]: 'bysd-live-staff' };
 const ACTIVA_KEY = { [ATLETA]: 'bysd_live_biometria', [STAFF]: 'bysd_live_biometria_staff' };
+// Con quién está activada. El llavero ya guarda el usuario junto al token,
+// pero leerlo de ahí exige pasar por la cara o la huella, que es justo lo que
+// no se puede hacer cuando alguien decide entrar con su contraseña. El correo
+// no es un secreto, así que se queda aparte para poder rellenarlo.
+const USUARIO_KEY = { [ATLETA]: 'bysd_live_biometria_usuario', [STAFF]: 'bysd_live_biometria_usuario_staff' };
 
 function enApp() {
   return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('NativeBiometric');
@@ -42,16 +47,17 @@ function nombreDe(tipo) {
  * Devuelve { disponible, nombre, activada }.
  */
 export async function estadoBiometria(quien = ATLETA) {
-  if (!enApp()) return { disponible: false, nombre: '', activada: false };
+  if (!enApp()) return { disponible: false, nombre: '', activada: false, usuario: '' };
   try {
     const { isAvailable, biometryType } = await NativeBiometric.isAvailable();
     return {
       disponible: !!isAvailable,
       nombre: nombreDe(biometryType),
       activada: isAvailable && localStorage.getItem(ACTIVA_KEY[quien]) === 'on',
+      usuario: localStorage.getItem(USUARIO_KEY[quien]) || '',
     };
   } catch {
-    return { disponible: false, nombre: '', activada: false };
+    return { disponible: false, nombre: '', activada: false, usuario: '' };
   }
 }
 
@@ -80,6 +86,7 @@ export async function activarBiometria(usuario, token, quien = ATLETA) {
       username: usuario || quien, password: token, server: SERVIDOR[quien],
     });
     localStorage.setItem(ACTIVA_KEY[quien], 'on');
+    if (usuario) localStorage.setItem(USUARIO_KEY[quien], usuario);
     return { ok: true };
   } catch {
     // El usuario canceló o no reconoció: no es un error que reportar.
@@ -87,9 +94,24 @@ export async function activarBiometria(usuario, token, quien = ATLETA) {
   }
 }
 
+/**
+ * Anota con qué cuenta quedó activada la biometría, si no se sabía.
+ *
+ * Para quien ya la tenía puesta antes de que esto existiera: la próxima vez
+ * que entre con éxito se queda apuntado y a partir de ahí el correo aparece
+ * solo. No se pisa lo que ya hubiera.
+ */
+export function recordarUsuarioBiometrico(usuario, quien = ATLETA) {
+  if (!enApp() || !usuario) return;
+  if (localStorage.getItem(ACTIVA_KEY[quien]) !== 'on') return;
+  if (localStorage.getItem(USUARIO_KEY[quien])) return;
+  localStorage.setItem(USUARIO_KEY[quien], usuario);
+}
+
 /** Quita el acceso biométrico y borra el token del llavero. */
 export async function desactivarBiometria(quien = ATLETA) {
   localStorage.removeItem(ACTIVA_KEY[quien]);
+  localStorage.removeItem(USUARIO_KEY[quien]);
   if (!enApp()) return;
   try {
     await NativeBiometric.deleteCredentials({ server: SERVIDOR[quien] });
