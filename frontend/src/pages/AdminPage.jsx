@@ -6,7 +6,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
-  Building2, CalendarClock, ClipboardCheck, Wallet, QrCode, Shield, Mail, Clock,
+  Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone,
   Bell, Radio
 } from 'lucide-react';
@@ -64,13 +64,10 @@ const TAB_PERMISSIONS = {
 const canOpenTab = (permissions, tabId) =>
   (TAB_PERMISSIONS[tabId] || []).some((p) => permissions.includes(p));
 
-// Special permissions that are not tabs (used for menu buttons like scanner)
-const SPECIAL_PERMISSIONS = ['scanner'];
-
 // Categorías de la barra superior. Cada una agrupa los accesos de un área de
 // trabajo; el orden aquí es el que se ve y también el que decide a qué sección
 // cae un usuario que no tiene permiso para la que pidió.
-// `to` marca los accesos que salen del panel (el escáner es su propia página).
+// El escáner QR no está: se escanea desde la app, no desde el panel web.
 const ADMIN_SECTIONS = [
   {
     id: 'en-vivo',
@@ -79,7 +76,6 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'control', label: 'Control', icon: Users },
       { id: 'lap-registry', label: 'Vueltas', icon: Clock },
-      { id: 'scanner', label: 'Escáner QR', icon: QrCode, to: '/scan' },
     ],
   },
   {
@@ -138,8 +134,8 @@ const ADMIN_SECTIONS = [
   },
 ];
 
-// Accesos que abren contenido dentro del panel, en el orden de la barra.
-const TAB_ORDER = ADMIN_SECTIONS.flatMap((s) => s.items.filter((i) => !i.to).map((i) => i.id));
+// Accesos en el orden de la barra.
+const TAB_ORDER = ADMIN_SECTIONS.flatMap((s) => s.items.map((i) => i.id));
 
 const findItem = (tabId) => {
   for (const section of ADMIN_SECTIONS) {
@@ -198,7 +194,9 @@ export default function AdminPage() {
         const permissions = JSON.parse(localStorage.getItem('admin_permissions') || '[]');
         setUserPermissions(permissions);
 
-        // Check if user ONLY has scanner permission - redirect directly to /scan
+        // Quien solo escanea no tiene nada que abrir en el panel: va derecho a
+        // /scan. El escáner ya no está en la barra, pero este atajo se queda
+        // porque si no estas cuentas entran a un panel vacío.
         const hasOnlyScanner = permissions.length === 1 && permissions[0] === 'scanner';
         if (hasOnlyScanner && !isAdminUser) {
           navigate('/scan');
@@ -235,15 +233,10 @@ export default function AdminPage() {
     }
   }, [activeTab, setSearchParams]);
 
-  // Check if user has access to a specific tab or special permission
+  // Check if user has access to a specific tab
   const hasAccess = (tabId) => {
     if (isAdmin) return true;
     if (userPermissions.includes('all')) return true;
-
-    // Check for special permissions (like 'scanner')
-    if (SPECIAL_PERMISSIONS.includes(tabId)) {
-      return userPermissions.includes(tabId);
-    }
 
     return canOpenTab(userPermissions, tabId);
   };
@@ -317,7 +310,7 @@ export default function AdminPage() {
                     return (
                       <DropdownMenuItem
                         key={item.id}
-                        onSelect={() => (item.to ? navigate(item.to) : setActiveTab(item.id))}
+                        onSelect={() => setActiveTab(item.id)}
                         className={`gap-2 cursor-pointer ${item.id === activeTab ? 'bg-accent font-medium' : ''}`}
                         data-testid={`acceso-${item.id}`}
                       >
