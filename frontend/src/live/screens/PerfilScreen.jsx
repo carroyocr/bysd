@@ -5,7 +5,7 @@ import {
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
-  MessageCircle, Send, Trash2, Contact, Share2, Settings, ArrowLeft,
+  MessageCircle, Send, Trash2, Contact, Share2, Settings,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -42,6 +42,7 @@ const TABS = [
   { key: 'social', label: 'Social', icon: AtSign },
   { key: 'mensajes', label: 'Mensajes de apoyo', icon: MessageCircle },
   { key: 'historial', label: 'Historial', icon: Trophy },
+  { key: 'ajustes', label: 'Ajustes', icon: Settings },
 ];
 
 const VUELTAS_OPCIONES = [
@@ -1267,7 +1268,7 @@ export default function PerfilScreen() {
               entre el tipo de sangre y la talla de camiseta. */}
           <button
             aria-label="Ajustes de la cuenta"
-            onClick={() => { setTab(tab === 'ajustes' ? 'datos' : 'ajustes'); setMsg(null); }}
+            onClick={() => { setTab('ajustes'); setMsg(null); }}
             className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tab === 'ajustes' ? T.chipOn : T.actionChip}`}
           >
             <Settings className={`w-4 h-4 ${tab === 'ajustes' ? '' : 'text-[#E77622]'}`} />
@@ -1280,7 +1281,7 @@ export default function PerfilScreen() {
             estrecho y alguna quedaba fuera de la pantalla. Repartidas a partes
             iguales entran siempre. El nombre de la sección lo dice el título de
             la tarjeta que se abre debajo. */}
-        <div className={`gap-1.5 ${tab === 'ajustes' ? 'hidden' : 'flex'}`}>
+        <div className="flex gap-1.5">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -2112,13 +2113,6 @@ export default function PerfilScreen() {
 
         {tab === 'ajustes' && (
           <>
-            <button
-              onClick={() => setTab('datos')}
-              className={`flex items-center gap-1.5 text-xs font-bold ${T.muted}`}
-            >
-              <ArrowLeft className="w-4 h-4" /> Volver a mi perfil
-            </button>
-
             <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
               <div className="flex items-center gap-3.5">
                 {perfilPublico
