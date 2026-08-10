@@ -131,10 +131,22 @@ export default function AthleteScreen() {
               ))}
             </div>
 
-            {/* Alto fijo para las dos pestañas: la tarjeta no debe dar un salto
-                al cambiar de una a otra, y con muchas vueltas la lista se
-                desplaza aquí dentro en vez de estirar la pantalla. */}
-            <div className="h-[300px] mt-3 overflow-y-auto">
+            {/* El alto sale de lo que queda libre, para que la tarjeta entre
+                entre los botones de sección y la banda de publicidad sin que la
+                pantalla tenga que desplazarse. Lo restado es lo que ocupan la
+                barra superior, el encabezado del corredor, el pie y la propia
+                cabecera de la tarjeta (estado, cifras y pestañas).
+                Sigue siendo el mismo alto en las dos pestañas: la tarjeta no
+                debe dar un salto al cambiar de una a otra, y con muchas vueltas
+                la lista se desplaza aquí dentro. */}
+            <div
+              className="mt-3 overflow-y-auto"
+              style={{
+                height: 'calc(100dvh - 30rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+                minHeight: '170px',
+                maxHeight: '360px',
+              }}
+            >
               {tab === 'grafico' && (
                 <div className="h-full flex flex-col justify-center">
                   <p className={`text-[10px] tracking-widest text-center mb-1 ${T.subtle}`}>RITMO PROMEDIO POR VUELTA</p>
