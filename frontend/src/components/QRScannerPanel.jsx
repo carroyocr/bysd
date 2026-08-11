@@ -76,7 +76,12 @@ export default function QRScannerPanel() {
   
   const loadRaceStatus = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/qr-scan/race-status`);
+      // La carrera del reloj sale de la URL (?race=CODIGO). Sin ella se
+      // usa la publicada, que es lo que se hacia siempre.
+      const carrera = new URLSearchParams(window.location.search).get('race');
+      const response = await fetch(
+        `${API_URL}/api/qr-scan/race-status${carrera ? `?race_code=${carrera}` : ''}`
+      );
       const data = await response.json();
       setRaceStatus(data);
       if (data.seconds_remaining) {
