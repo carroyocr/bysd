@@ -150,12 +150,12 @@ export default function VolunteersSection() {
           </div>
 
           {/* Volunteer Registration CTA */}
-          <Card className="bg-gradient-to-br from-pink-500/10 to-purple-500/10 border-pink-300/30 shadow-medium">
+          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                  <Heart className="w-7 h-7 text-pink-600" />
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-7 h-7 text-primary" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="font-display text-2xl text-foreground">¡Únete al Equipo!</h3>
@@ -163,7 +163,7 @@ export default function VolunteersSection() {
                     ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
                   </p>
                   {config?.show_volunteer_carrera !== true && (
-                    <p className="text-sm font-medium text-pink-700">
+                    <p className="text-sm font-medium text-primary">
                       Por ahora solo recibimos postulaciones para el Campeonato Mundial por Equipos.
                     </p>
                   )}
@@ -171,7 +171,7 @@ export default function VolunteersSection() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
                 <Link to="/voluntarios/registro">
-                  <Button size="lg" className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
+                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
                     <UserPlus className="w-5 h-5 mr-2" />
                     Postular como Voluntario
                   </Button>
@@ -180,7 +180,7 @@ export default function VolunteersSection() {
                   size="lg" 
                   variant="outline"
                   onClick={() => setShowEditLinkModal(true)}
-                  className="border-pink-300 text-pink-700 hover:bg-pink-50 w-full sm:w-auto"
+                  className="border-primary/30 text-primary hover:bg-primary/10 w-full sm:w-auto"
                   data-testid="edit-volunteer-btn"
                 >
                   <Edit2 className="w-5 h-5 mr-2" />
@@ -381,7 +381,7 @@ export default function VolunteersSection() {
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-pink-600" />
+                <Edit2 className="w-5 h-5 text-primary" />
                 Editar mi Postulación
               </CardTitle>
             </CardHeader>
@@ -419,7 +419,7 @@ export default function VolunteersSection() {
                   Cancelar
                 </Button>
                 <Button
-                  className="flex-1 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white"
+                  className="flex-1 bg-primary hover:bg-accent text-primary-foreground"
                   onClick={handleRequestEditLink}
                   disabled={!editLinkEmail.trim() || sendingEditLink}
                   data-testid="send-edit-link-btn"
