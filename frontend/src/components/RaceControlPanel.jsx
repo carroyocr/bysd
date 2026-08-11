@@ -7,10 +7,18 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { useAdminRace } from '../contexts/AdminRaceContext';
 import RaceSelector from './RaceSelector';
+import LapRegistrationsPanel from './LapRegistrationsPanel';
 import { adminFetch } from '../lib/adminApi';
 
-export default function RaceControlPanel({ embedded = false }) {
+export default function RaceControlPanel({
+  embedded = false,
+  puedeControlar = true,
+  puedeVerVueltas = true,
+}) {
   const { raceName, raceCode, conCarrera } = useAdminRace();
+  // Que parte se esta mirando. Quien solo tenga permiso para una de las dos
+  // entra directo en ella, sin pestanas que no puede abrir.
+  const [seccion, setSeccion] = useState(puedeControlar ? 'corredores' : 'registro');
   // El estado de vuelta lo calcula el backend a partir de la hora real de
   // salida. Antes esta pantalla lo calculaba por su cuenta y el escáner por la
   // suya, así que podían decir cosas distintas sobre la misma carrera.
@@ -895,14 +903,40 @@ export default function RaceControlPanel({ embedded = false }) {
                 <p className="text-sm text-gray-600">
                   Lo normal es que las vueltas entren por el escáner QR. Esto es el
                   repuesto para cuando el escaneo no se pudo hacer; queda anotado
-                  en el mismo registro, en la pestaña Vueltas.
+                  en el mismo registro, que puedes ver aquí abajo.
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Participants Control */}
+        {/* Las dos caras del mismo dato: cuantas vueltas lleva cada uno, y de
+            donde sale ese numero. El registro no se carga hasta que se abre,
+            para que el dia de la carrera esta pantalla siga siendo ligera. */}
+        {puedeControlar && puedeVerVueltas && (
+          <div className="flex gap-1 bg-muted/40 p-1 rounded-xl mb-4 w-fit">
+            {[
+              { id: 'corredores', label: 'Corredores', icon: Users },
+              { id: 'registro', label: 'Registro de vueltas', icon: Clock },
+            ].map(({ id, label, icon: Icono }) => (
+              <Button
+                key={id}
+                variant={seccion === id ? 'default' : 'ghost'}
+                size="sm"
+                className="gap-2"
+                onClick={() => setSeccion(id)}
+                data-testid={`seccion-${id}`}
+              >
+                <Icono className="w-4 h-4" />
+                {label}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {seccion === 'registro' && puedeVerVueltas && <LapRegistrationsPanel />}
+
+        {seccion === 'corredores' && puedeControlar && (
         <Card>
           <CardHeader>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1156,6 +1190,7 @@ export default function RaceControlPanel({ embedded = false }) {
             </div>
           </CardContent>
         </Card>
+        )}
 
       {/* Reset Database Modal */}
       {showResetModal && (

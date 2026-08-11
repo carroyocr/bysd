@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
-import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -247,14 +246,12 @@ export default function LapRegistrationsPanel() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Registro de Vueltas</h2>
           <p className="text-muted-foreground">
-            Todo lo anotado, venga del escaneo QR o del panel
+            Todo lo anotado en esta carrera, venga del escaneo QR o del panel.
+            Nada se borra: corregir es anular, y queda con quién y por qué.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* La misma carrera que se lleva en Control */}
-          <RaceSelector />
           <Button variant="outline" onClick={loadData} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar

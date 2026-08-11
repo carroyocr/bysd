@@ -11,7 +11,6 @@ import {
   Bell, Radio
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
-import LapRegistrationsPanel from '../components/LapRegistrationsPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
@@ -44,7 +43,9 @@ import { AdminRaceProvider } from '../contexts/AdminRaceContext';
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
 // segundo el permiso "sombrilla" histórico de su grupo (sigue valiendo).
 const TAB_PERMISSIONS = {
-  'control': ['race-control', 'control'],
+  // Control y registro de vueltas son una sola pantalla: abre quien pueda
+  // entrar a cualquiera de las dos partes, y dentro se le ensena la suya.
+  'control': ['race-control', 'laps', 'control'],
   'lap-registry': ['laps', 'control'],
   // Tambien lo abre quien lleva las comunicaciones: es el mismo trabajo
   // que el envio de correos, con otro canal.
@@ -82,8 +83,7 @@ const ADMIN_SECTIONS = [
     label: 'En Vivo',
     icon: Radio,
     items: [
-      { id: 'control', label: 'Control', icon: Users },
-      { id: 'lap-registry', label: 'Vueltas', icon: Clock },
+      { id: 'control', label: 'Control de Carrera', icon: Radio },
     ],
   },
   {
@@ -156,8 +156,13 @@ const findItem = (tabId) => {
 // Vista de cada acceso. Son funciones a nivel de módulo (no componentes
 // definidos dentro del render) para que el contenido no se remonte solo.
 const TAB_VIEWS = {
-  'control': () => <RaceControlPanel embedded={true} />,
-  'lap-registry': () => <LapRegistrationsPanel />,
+  'control': (permisos) => (
+    <RaceControlPanel
+      embedded={true}
+      puedeControlar={permisos.control}
+      puedeVerVueltas={permisos.vueltas}
+    />
+  ),
   'app-avisos': () => <PushComposer />,
   'registrations': () => <PreRegistrationManagement />,
   'athlete-profiles': () => <AthleteProfilesManagement />,
@@ -212,7 +217,10 @@ export default function AdminPage() {
         }
 
         // Set initial tab based on permissions
-        const requestedTab = searchParams.get('tab') || 'control';
+        // El registro de vueltas dejo de ser un acceso propio y vive dentro de
+        // Control; los enlaces guardados siguen llevando alli.
+        const pedido = searchParams.get('tab') || 'control';
+        const requestedTab = pedido === 'lap-registry' ? 'control' : pedido;
         if (isAdminUser || permissions.includes('all') || canOpenTab(permissions, requestedTab)) {
           setActiveTab(requestedTab);
         } else {
@@ -246,6 +254,10 @@ export default function AdminPage() {
       return siguiente;
     }, { replace: true });
   }, [activeTab, setSearchParams]);
+
+  // Si el usuario tiene alguno de estos permisos
+  const puedeVer = (permisos) =>
+    isAdmin || userPermissions.includes('all') || permisos.some((p) => userPermissions.includes(p));
 
   // Check if user has access to a specific tab
   const hasAccess = (tabId) => {
@@ -350,7 +362,12 @@ export default function AdminPage() {
         )}
 
         <div className="min-w-0 w-full">
-          {hasAccess(activeTab) && TAB_VIEWS[activeTab]?.()}
+          {hasAccess(activeTab) && TAB_VIEWS[activeTab]?.({
+            // Control de Carrera junta dos partes que antes eran accesos
+            // distintos; cada usuario ve la que su permiso le abre.
+            control: puedeVer(['race-control', 'control']),
+            vueltas: puedeVer(['laps', 'control']),
+          })}
         </div>
       </div>
     </div>
