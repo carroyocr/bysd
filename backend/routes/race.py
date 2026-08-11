@@ -1046,22 +1046,19 @@ async def update_subscription_silent(
 @router.post("/reset-cheers")
 async def reset_cheers(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Reset cheer messages for the active race only (admin only)"""
+    """Borra los mensajes de animo de una carrera (solo administracion)."""
     from server import db as database
-    
+
     # Verify confirmation
     confirmation = request.get("confirmation", "")
     if confirmation != "MENSAJES":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir MENSAJES")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    if not active_race_code:
-        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
+
+    carrera = await races.obtener_carrera(database, race_code)
+    active_race_code = carrera["code"]
     
     # IMPORTANT: Only delete messages that explicitly belong to the active race
     # Do NOT delete legacy messages without race_code as they may belong to archived races
@@ -1208,22 +1205,19 @@ async def get_followers_count(
 @router.post("/reset-subscriptions")
 async def reset_subscriptions(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Reset email subscriptions for the active race only (admin only)"""
+    """Borra las suscripciones de correo de una carrera (solo administracion)."""
     from server import db as database
-    
+
     # Verify confirmation
     confirmation = request.get("confirmation", "")
     if confirmation != "SUSCRIPCIONES":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir SUSCRIPCIONES")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    if not active_race_code:
-        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
+
+    carrera = await races.obtener_carrera(database, race_code)
+    active_race_code = carrera["code"]
     
     # Count before deletion for active race
     subs_count = await database.email_subscriptions.count_documents({"race_code": active_race_code})
@@ -1800,19 +1794,20 @@ async def get_twitter_status():
 
 @router.post("/send-runner-emails")
 async def send_runner_completion_emails(
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Send completion emails to all runners of the active race when there is a winner (excludes DNS)"""
+    """Correo de cierre a los corredores de una carrera, cuando ya hay ganador.
+
+    Pide la carrera a proposito: mandar el correo de cierre a los corredores
+    equivocados no tiene vuelta atras.
+    """
     from server import db as database
     from services.runner_email_service import send_runner_completion_email
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    if not active_race_code:
-        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
-    
+
+    carrera = await races.obtener_carrera(database, race_code)
+    active_race_code = carrera["code"]
+
     # Get participants from registrations collection
     active_participants = await database.registrations.find(
         {"race_code": active_race_code, "status": "active", "bib": {"$ne": None}},

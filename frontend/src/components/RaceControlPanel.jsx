@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, ShieldCheck, ShieldOff, Mail, MessageCircle, Edit3, UserCog, Trophy, Star } from 'lucide-react';
+import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, Mail, MessageCircle, Edit3, UserCog, Trophy, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { useAdminRace } from '../contexts/AdminRaceContext';
+import { adminFetch } from '../lib/adminApi';
 
 export default function RaceControlPanel({ embedded = false }) {
-  const { raceName, raceCode, getRaceStartDate } = useRaceConfig();
+  const { raceName, raceCode, conCarrera, loading: carreraCargando } = useAdminRace();
+  // El estado de vuelta lo calcula el backend a partir de la hora real de
+  // salida. Antes esta pantalla lo calculaba por su cuenta y el escáner por la
+  // suya, así que podían decir cosas distintas sobre la misma carrera.
+  const [estadoVuelta, setEstadoVuelta] = useState(null);
+  const [iniciando, setIniciando] = useState(false);
   const [currentLap, setCurrentLap] = useState(1);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,75 +45,34 @@ export default function RaceControlPanel({ embedded = false }) {
   const [sendingRunnerEmails, setSendingRunnerEmails] = useState(false);
   const [showSendRunnerEmailsModal, setShowSendRunnerEmailsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
-    const saved = localStorage.getItem('race_time_validation');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
   const navigate = useNavigate();
 
-  // Get race start hour from config
-  const getRaceStartHour = () => {
-    const raceStart = getRaceStartDate();
-    return raceStart.getHours();
+  // El horario de cada vuelta sale del reloj del backend, que cuenta desde la
+  // hora real de salida. Esta pantalla lo calculaba antes por su cuenta a
+  // partir de la hora prevista de la ficha, así que si la salida se retrasaba
+  // -- que es lo normal -- mostraba horarios que no eran.
+  const horaCorta = (iso) => {
+    if (!iso) return '--:--';
+    return new Date(iso).toLocaleTimeString('es-DO', {
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
   };
 
-  // Calculate the time range for a given lap using actual race start time
-  const getLapTimeRange = (lap) => {
-    const raceStartHour = getRaceStartHour();
-    const startHour = raceStartHour + (lap - 1);
-    
-    // Format hours
-    const formatHour = (hour) => {
-      const h = hour % 24;
-      const period = h >= 12 ? 'PM' : 'AM';
-      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-      return `${displayHour}:00 ${period}`;
-    };
-
-    const formatEndHour = (hour) => {
-      const h = hour % 24;
-      const period = h >= 12 ? 'PM' : 'AM';
-      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-      return `${displayHour}:59 ${period}`;
-    };
-    
-    return {
-      start: formatHour(startHour),
-      end: formatEndHour(startHour)
-    };
+  const cuentaAtras = (segundos) => {
+    if (segundos == null || segundos <= 0) return null;
+    const dias = Math.floor(segundos / 86400);
+    const horas = Math.floor((segundos % 86400) / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const resto = segundos % 60;
+    if (dias > 0) return `${dias}d ${horas}h ${minutos}m`;
+    if (horas > 0) return `${horas}h ${minutos}m ${resto}s`;
+    return `${minutos}m ${resto}s`;
   };
 
-  // Check if lap can be completed based on time
-  const canCompleteLap = (lap) => {
-    if (!timeValidationEnabled) return true;
-    
-    // Calculate when lap N ends: race start + N hours
-    const raceStart = getRaceStartDate();
-    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
-    return currentTime >= lapEndTime;
-  };
-
-  // Get time remaining until lap can be completed
-  const getTimeUntilLapComplete = (lap) => {
-    const raceStart = getRaceStartDate();
-    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
-    const diff = lapEndTime - currentTime;
-    
-    if (diff <= 0) return null;
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else {
-      return `${minutes}m ${seconds}s`;
-    }
-  };
+  const carreraEmpezada = !!estadoVuelta?.race_started;
+  const carreraTerminada = estadoVuelta?.estado === 'cerrada';
+  // La vuelta que se cerraría: la última terminada según el reloj.
+  const vueltaACerrar = Math.max(1, (estadoVuelta?.current_lap || 1) - 1);
 
   // Update current time every second
   useEffect(() => {
@@ -117,45 +82,105 @@ export default function RaceControlPanel({ embedded = false }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Save time validation preference
-  useEffect(() => {
-    localStorage.setItem('race_time_validation', JSON.stringify(timeValidationEnabled));
-  }, [timeValidationEnabled]);
-
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
       navigate('/admin/login');
       return;
     }
-    loadData();
-  }, [navigate]);
+    // Al cambiar de carrera en la cabecera se recarga todo: si no, quedarían
+    // en pantalla los corredores de la carrera anterior.
+    if (raceCode) loadData();
+  }, [navigate, raceCode]);
 
   const loadData = async () => {
-    const token = localStorage.getItem('admin_token');
+    if (!raceCode) return;
+    const API = process.env.REACT_APP_BACKEND_URL;
     try {
-      const [statsRes, participantsRes, followersRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats?race_code=${raceCode}`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants?race_code=${raceCode}`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/followers-count`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [statsRes, participantsRes, lapRes, followersRes] = await Promise.all([
+        fetch(`${API}/api/race/stats?race_code=${raceCode}`),
+        fetch(`${API}/api/race/participants?race_code=${raceCode}`),
+        fetch(`${API}/api/race/lap-status?race_code=${raceCode}`),
+        adminFetch(`${API}/api/race/followers-count`),
       ]);
 
       const stats = await statsRes.json();
       const participantsData = await participantsRes.json();
-      
+
+      if (lapRes.ok) {
+        const lap = await lapRes.json();
+        setEstadoVuelta(lap);
+        setCurrentLap(lap.current_lap || stats.current_lap || 1);
+      } else {
+        setCurrentLap(stats.current_lap);
+      }
+
       if (followersRes.ok) {
         const followersData = await followersRes.json();
         setFollowersCount(followersData);
       }
 
-      setCurrentLap(stats.current_lap);
-      setParticipants(participantsData);
+      setParticipants(Array.isArray(participantsData) ? participantsData : []);
       setLoading(false);
     } catch (err) {
       console.error('Error loading data:', err);
       setLoading(false);
+    }
+  };
+
+  // Sella la hora real de salida. Es lo que hace que el reloj de la carrera
+  // empiece a contar, para el panel y para el escáner por igual.
+  const iniciarCarrera = async () => {
+    if (!window.confirm(
+      `¿Dar la salida de ${raceName} ahora?\n\n` +
+      'A partir de este momento se cuenta una vuelta por hora. Si la salida ya ' +
+      'fue antes, luego puedes corregir la hora.'
+    )) return;
+
+    setIniciando(true);
+    try {
+      const res = await adminFetch(
+        conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/start`),
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo iniciar la carrera');
+      showMessage(data.message, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setIniciando(false);
+    }
+  };
+
+  const corregirHoraDeSalida = async () => {
+    const actual = estadoVuelta?.started_at ? new Date(estadoVuelta.started_at) : new Date();
+    const sugerido = new Date(actual.getTime() - actual.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+
+    const valor = window.prompt(
+      'Hora real de salida (formato AAAA-MM-DDTHH:MM):',
+      sugerido
+    );
+    if (!valor) return;
+
+    try {
+      const res = await adminFetch(
+        conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/start-time`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ started_at: valor.trim() }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo corregir la hora');
+      showMessage(data.message, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
     }
   };
 
@@ -165,33 +190,33 @@ export default function RaceControlPanel({ embedded = false }) {
     navigate('/admin/login');
   };
 
+  // Cierra una vuelta para todos los que siguen en carrera. Por defecto la
+  // última terminada según el reloj, pero se puede elegir otra: la corrección
+  // del día después casi nunca coincide con la vuelta en curso.
   const handleSaveCurrentLap = async () => {
-    const token = localStorage.getItem('admin_token');
-    setSaving(true);
-    
-    try {
-      // First, complete the lap for all active participants
-      const completeLapRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap-all-active`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+    const vuelta = window.prompt(
+      'Cerrar vuelta para todos los atletas activos.\n\n' +
+      '¿Qué vuelta se cierra? (a quien ya la tenga registrada no se le repite)',
+      String(vueltaACerrar)
+    );
+    if (vuelta === null) return;
 
-      if (!completeLapRes.ok) throw new Error('Error al completar vuelta');
-      
-      const completeLapData = await completeLapRes.json();
-      
-      // Update current lap to the new value
-      setCurrentLap(completeLapData.new_lap);
-      
-      showMessage(
-        `Vuelta ${completeLapData.previous_lap} completada. ${completeLapData.updated_count} atletas activos registrados. Vuelta en curso: ${completeLapData.new_lap}`,
-        'success'
+    const numero = Number(vuelta);
+    if (!Number.isInteger(numero) || numero < 1) {
+      showMessage('Número de vuelta inválido', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const url = conCarrera(
+        `${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap-all-active`
       );
-      
-      // Reload data to show updated stats
+      const res = await adminFetch(`${url}&lap_number=${numero}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error al completar vuelta');
+
+      showMessage(data.message, 'success');
       await loadData();
     } catch (err) {
       showMessage(err.message, 'error');
@@ -200,39 +225,31 @@ export default function RaceControlPanel({ embedded = false }) {
     }
   };
 
+  // Deshacer una vuelta cerrada por error. No borra nada: anula lo anotado en
+  // esa vuelta y devuelve a la carrera a quien se hubiera retirado en ella.
   const handleRevertLap = async () => {
-    if (currentLap <= 1) {
-      showMessage('No se puede retroceder más. Ya está en la vuelta 1.', 'error');
+    const vuelta = window.prompt(
+      'Deshacer una vuelta.\n\n' +
+      'Se anulará todo lo anotado en ella -- vueltas y retiros -- y quienes se ' +
+      'retiraron en esa vuelta vuelven a la carrera. Nada se borra: las ' +
+      'anotaciones quedan marcadas como anuladas.\n\n¿Qué vuelta se deshace?',
+      String(vueltaACerrar)
+    );
+    if (vuelta === null) return;
+
+    const numero = Number(vuelta);
+    if (!Number.isInteger(numero) || numero < 1) {
+      showMessage('Número de vuelta inválido', 'error');
       return;
     }
 
-    const confirmRevert = window.confirm(
-      `⚠️ ADVERTENCIA: ¿Está seguro de retroceder a la vuelta ${currentLap - 1}?\n\n` +
-      `Esto reducirá en 1 las vueltas completadas de todos los atletas activos.\n\n` +
-      `Use esto SOLO para corregir errores si avanzó la vuelta por equivocación.`
-    );
-
-    if (!confirmRevert) return;
-
-    const token = localStorage.getItem('admin_token');
     setReverting(true);
-
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/revert-lap`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/revert-lap`);
+      const res = await adminFetch(`${url}&lap_number=${numero}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error al deshacer la vuelta');
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al retroceder vuelta');
-      }
-
-      const data = await response.json();
-      setCurrentLap(data.new_lap);
       showMessage(data.message, 'success');
       await loadData();
     } catch (err) {
@@ -249,11 +266,10 @@ export default function RaceControlPanel({ embedded = false }) {
     try {
       if (participant.status === 'active') {
         // Marking as retired
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-retired`, {
+        const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-retired`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ 
             bib: participant.bib,
@@ -277,11 +293,10 @@ export default function RaceControlPanel({ embedded = false }) {
           return;
         }
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reactivate`, {
+        const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reactivate`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ bib: participant.bib })
         });
@@ -312,11 +327,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-dns`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-dns`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -341,11 +355,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: participant.bib,
@@ -382,11 +395,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setResetting(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-database`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-database`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ confirmation: resetConfirmation })
       });
@@ -420,11 +432,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setResettingSubs(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-subscriptions`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-subscriptions`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ confirmation: resetSubsConfirmation })
       });
@@ -458,11 +469,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setResettingCheers(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-cheers`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-cheers`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ confirmation: resetCheersConfirmation })
       });
@@ -488,10 +498,9 @@ export default function RaceControlPanel({ embedded = false }) {
     setSendingRunnerEmails(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/send-runner-emails`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/send-runner-emails`), {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -533,11 +542,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setEditingParticipant(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/edit-participant`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/edit-participant`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: editParticipant.bib,
@@ -575,11 +583,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setMarkingWinner(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-winner`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-winner`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -609,11 +616,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-honor`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-honor`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -641,11 +647,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setAdjustingLaps(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/adjust-laps`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/adjust-laps`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: adjustLapsParticipant.bib,
@@ -756,90 +761,78 @@ export default function RaceControlPanel({ embedded = false }) {
           </div>
         )}
 
-        {/* Current Lap Control */}
+        {/* Control de vuelta: el reloj de la carrera */}
         <Card className="mb-8">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <CardTitle>Control de Vuelta</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Al guardar, se registrará la vuelta actual para todos los atletas activos y se incrementará a la siguiente vuelta
+                  Las vueltas se cuentan desde la hora real de salida. El escáner
+                  QR usa este mismo reloj, así que panel y escáner no pueden
+                  discrepar.
                 </p>
               </div>
-              {/* Time Validation Toggle */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTimeValidationEnabled(!timeValidationEnabled)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                    timeValidationEnabled
-                      ? 'bg-green-50 border-green-300 text-green-700'
-                      : 'bg-gray-50 border-gray-300 text-gray-600'
-                  }`}
-                >
-                  {timeValidationEnabled ? (
-                    <ShieldCheck className="w-4 h-4" />
-                  ) : (
-                    <ShieldOff className="w-4 h-4" />
-                  )}
-                  <span className="text-sm font-medium">
-                    {timeValidationEnabled ? 'Validación Activa' : 'Validación Inactiva'}
-                  </span>
-                </button>
-              </div>
+              {carreraEmpezada && !carreraTerminada && (
+                <Button variant="outline" size="sm" onClick={corregirHoraDeSalida}>
+                  <Clock className="w-4 h-4 mr-2" />
+                  Corregir hora de salida
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-6">
-              {/* Time Validation Warning/Info */}
-              {timeValidationEnabled && !canCompleteLap(currentLap) && (
-                <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+              {/* Antes de la salida */}
+              {!carreraEmpezada && (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold text-amber-800">Vuelta aún en curso</p>
+                      <p className="font-semibold text-amber-800">La carrera no ha empezado</p>
                       <p className="text-sm text-amber-700 mt-1">
-                        No puedes registrar la vuelta {currentLap} hasta que finalice.
+                        Salida prevista: {horaCorta(estadoVuelta?.started_at)}
+                        {cuentaAtras(estadoVuelta?.seconds_remaining)
+                          ? ` · faltan ${cuentaAtras(estadoVuelta.seconds_remaining)}`
+                          : ''}
                       </p>
-                      <p className="text-lg font-bold text-amber-800 mt-2">
-                        Tiempo restante: {getTimeUntilLapComplete(currentLap)}
+                      <p className="text-xs text-amber-700/80 mt-1">
+                        Hasta que se dé la salida, el escáner no acepta vueltas.
                       </p>
                     </div>
                   </div>
+                  <Button onClick={iniciarCarrera} disabled={iniciando} className="shrink-0">
+                    <Save className="w-4 h-4 mr-2" />
+                    {iniciando ? 'Dando la salida...' : 'Iniciar carrera ahora'}
+                  </Button>
                 </div>
               )}
 
-              {timeValidationEnabled && canCompleteLap(currentLap) && (
-                <div className="bg-green-50 border border-green-300 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-green-800">Vuelta {currentLap} finalizada</p>
-                      <p className="text-sm text-green-700">Puedes registrar la vuelta completada.</p>
-                    </div>
+              {carreraTerminada && (
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="font-semibold text-gray-700">Carrera cerrada</p>
+                    <p className="text-sm text-gray-600">
+                      Los resultados están congelados. El reloj ya no cuenta vueltas.
+                    </p>
                   </div>
                 </div>
               )}
 
-              {!timeValidationEnabled && (
-                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <ShieldOff className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-semibold text-gray-700">Validación de tiempo desactivada</p>
-                      <p className="text-sm text-gray-600">Puedes registrar vueltas sin restricción de horario.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Lap Number and Time Display */}
+              {/* Vuelta en curso y su horario */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Vuelta en Curso
                   </label>
-                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20 flex-1 flex items-center justify-center">
+                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20 flex-1 flex flex-col items-center justify-center">
                     <p className="text-5xl font-bold text-primary">{currentLap}</p>
+                    {carreraEmpezada && !carreraTerminada && cuentaAtras(estadoVuelta?.seconds_remaining) && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        termina en {cuentaAtras(estadoVuelta.seconds_remaining)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col">
@@ -851,16 +844,20 @@ export default function RaceControlPanel({ embedded = false }) {
                     <div className="flex items-center justify-center gap-3">
                       <div className="text-center">
                         <p className="text-xs text-blue-600 font-medium">INICIO</p>
-                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).start}</p>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {horaCorta(estadoVuelta?.lap_start_time)}
+                        </p>
                       </div>
-                      <div className="text-2xl text-blue-400">→</div>
+                      <div className="text-2xl text-blue-400">-</div>
                       <div className="text-center">
                         <p className="text-xs text-blue-600 font-medium">FIN</p>
-                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).end}</p>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {horaCorta(estadoVuelta?.lap_end_time)}
+                        </p>
                       </div>
                     </div>
                     <p className="text-xs text-blue-500 mt-2">
-                      La carrera inicia a las {getRaceStartDate().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true })} • Cada vuelta dura 1 hora
+                      Salida: {horaCorta(estadoVuelta?.started_at)} · Cada vuelta dura 1 hora
                     </p>
                     <p className="text-xs text-blue-600 mt-1 font-medium">
                       Hora actual: {currentTime.toLocaleTimeString('es-DO')}
@@ -869,40 +866,34 @@ export default function RaceControlPanel({ embedded = false }) {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Acciones */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={handleRevertLap}
-                  disabled={reverting || currentLap <= 1}
+                  disabled={reverting || !carreraEmpezada}
                   variant="outline"
                   className="border-amber-400 text-amber-700 hover:bg-amber-50 flex-1 sm:flex-none"
                 >
                   <ChevronLeft className="w-5 h-5 mr-2" />
-                  {reverting ? 'Retrocediendo...' : 'Retroceder Vuelta'}
+                  {reverting ? 'Deshaciendo...' : 'Deshacer una vuelta'}
                 </Button>
                 <Button
                   onClick={handleSaveCurrentLap}
-                  disabled={saving || (timeValidationEnabled && !canCompleteLap(currentLap))}
-                  className={`h-12 px-8 flex-1 ${
-                    timeValidationEnabled && !canCompleteLap(currentLap)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-accent'
-                  } text-primary-foreground`}
+                  disabled={saving || !carreraEmpezada}
+                  className="h-12 px-8 flex-1 bg-primary hover:bg-accent text-primary-foreground"
                 >
                   <Save className="w-5 h-5 mr-2" />
-                  {saving ? 'Guardando...' : 'Registrar Vuelta Completada para Atletas Activos'}
+                  {saving ? 'Guardando...' : 'Cerrar vuelta para los atletas activos'}
                 </Button>
               </div>
 
-              {/* Next Lap Preview */}
-              {currentLap < 24 && (
-                <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Próxima vuelta ({currentLap + 1}):</span>{' '}
-                    {getLapTimeRange(currentLap + 1).start} - {getLapTimeRange(currentLap + 1).end}
-                  </p>
-                </div>
-              )}
+              <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Lo normal es que las vueltas entren por el escáner QR. Esto es el
+                  repuesto para cuando el escaneo no se pudo hacer; queda anotado
+                  en el mismo registro, en la pestaña Vueltas.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

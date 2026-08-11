@@ -32,6 +32,8 @@ import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import PushComposer from '../components/PushComposer';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
+import RaceSelector from '../components/RaceSelector';
+import { AdminRaceProvider } from '../contexts/AdminRaceContext';
 
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
 // segundo el permiso "sombrilla" histórico de su grupo (sigue valiendo).
@@ -228,9 +230,15 @@ export default function AdminPage() {
   }, [navigate, searchParams]);
 
   useEffect(() => {
-    if (activeTab) {
-      setSearchParams({ tab: activeTab });
-    }
+    if (!activeTab) return;
+    // Conservando lo que ya hubiera en la URL: si se reemplaza entera, cambiar
+    // de sección borraría la carrera elegida y el panel saltaría a otra.
+    setSearchParams((previos) => {
+      if (previos.get('tab') === activeTab) return previos;
+      const siguiente = new URLSearchParams(previos);
+      siguiente.set('tab', activeTab);
+      return siguiente;
+    }, { replace: true });
   }, [activeTab, setSearchParams]);
 
   // Check if user has access to a specific tab
@@ -261,6 +269,7 @@ export default function AdminPage() {
   const actual = findItem(activeTab);
 
   return (
+    <AdminRaceProvider>
     <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background pt-20 pb-12">
       <div className="container mx-auto px-4">
         {/* Header */}
@@ -277,6 +286,8 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* Sobre qué carrera se trabaja: vale para todas las secciones */}
+            <RaceSelector />
             <ChangePasswordDialog />
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
@@ -339,5 +350,6 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+    </AdminRaceProvider>
   );
 }
