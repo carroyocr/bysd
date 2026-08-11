@@ -22,6 +22,101 @@ solo_atletas = Depends(require_permission("athletes"))
 
 CATEGORIAS = ("titular", "reserva")
 
+# La nomina es la lista de quien va al campeonato; la carrera se corre sobre
+# `registrations`, como cualquier otra. Se mantienen a la par: entrar en la
+# nomina inscribe, y salir de ella desinscribe. Antes el campeonato tenia su
+# propia rama en el control de carrera y por eso no podia correrse -- ni el QR
+# ni el control de vueltas miraban en esta coleccion.
+MUNDIAL = "MUNDIAL-2026"
+
+
+async def _siguiente_dorsal(db) -> str:
+    inscritos = await db.registrations.find(
+        {"race_code": MUNDIAL}, {"bib": 1}
+    ).to_list(500)
+
+    numeros = []
+    for i in inscritos:
+        try:
+            numeros.append(int(str(i.get("bib") or "").lstrip("0") or 0))
+        except ValueError:
+            continue
+
+    return f"{(max(numeros) if numeros else 0) + 1:03d}"
+
+
+async def _correo_conocido(db, seleccionado: dict) -> Optional[str]:
+    """Correo del atleta, si se puede averiguar por su paso por 2026."""
+    from bson import ObjectId
+    from migrations.bib_email_2026 import BIB_EMAIL_MAP
+
+    bib_previo = str(seleccionado.get("bib") or "").zfill(3)
+    if bib_previo in BIB_EMAIL_MAP:
+        return BIB_EMAIL_MAP[bib_previo]
+
+    if seleccionado.get("result_id"):
+        try:
+            corredor = await db.participants.find_one({"_id": ObjectId(seleccionado["result_id"])})
+        except Exception:
+            corredor = None
+        if corredor and corredor.get("claimed_by"):
+            try:
+                atleta = await db.athletes.find_one({"_id": ObjectId(corredor["claimed_by"])})
+            except Exception:
+                atleta = None
+            if atleta and atleta.get("email"):
+                return atleta["email"]
+
+    return None
+
+
+async def inscribir_en_el_mundial(db, seleccionado: dict) -> Optional[dict]:
+    """Da de alta al seleccionado como corredor del campeonato."""
+    carrera = await db.race_configurations.find_one({"code": MUNDIAL})
+    if not carrera:
+        return None
+
+    ya_esta = await db.registrations.find_one(
+        {"race_code": MUNDIAL, "seleccionado_id": seleccionado["id"]}
+    )
+    if ya_esta:
+        return None
+
+    dorsal = await _siguiente_dorsal(db)
+    correo = await _correo_conocido(db, seleccionado)
+    pendiente = correo is None
+    if pendiente:
+        # Direccion imposible de entregar, para que no salga un correo a ciegas.
+        # La organizacion la corrige desde el panel.
+        correo = f"pendiente-{dorsal}@mundial-2026.invalid"
+
+    ahora = datetime.now(timezone.utc)
+    inscripcion = {
+        "race_code": MUNDIAL,
+        "bib": dorsal,
+        "nombre": seleccionado.get("nombre"),
+        "apellidos": seleccionado.get("apellidos") or "",
+        "email": correo.lower(),
+        "sexo": seleccionado.get("sexo") or "",
+        "nacionalidad": seleccionado.get("nacionalidad") or "DOM",
+        # En el campeonato no hay inscripcion que pagar: estar en la nomina es
+        # lo que da la plaza.
+        "status": "registered",
+        "payment_status": "paid",
+        "laps_completed": 0,
+        "total_km": 0.0,
+        "categoria": seleccionado.get("categoria"),
+        "seleccionado_id": seleccionado["id"],
+        "correo_pendiente": pendiente,
+        "edit_token": uuid.uuid4().hex,
+        "created_at": ahora,
+        "updated_at": ahora,
+    }
+    await db.registrations.insert_one(inscripcion)
+    inscripcion.pop("_id", None)
+    inscripcion.pop("edit_token", None)
+    return inscripcion
+
 
 def get_db():
     from server import db
@@ -102,7 +197,8 @@ async def add_seleccionado(data: SeleccionadoCreate, db=Depends(get_db)):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.campeonato_seleccionados.insert_one({**doc})
-    return {"success": True, "seleccionado": doc}
+    inscripcion = await inscribir_en_el_mundial(db, doc)
+    return {"success": True, "seleccionado": doc, "inscripcion": inscripcion}
 
 
 @router.post("/admin/manual", dependencies=[solo_atletas])
@@ -150,7 +246,8 @@ async def add_seleccionado_manual(data: SeleccionadoManualCreate, db=Depends(get
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.campeonato_seleccionados.insert_one({**doc})
-    return {"success": True, "seleccionado": doc}
+    inscripcion = await inscribir_en_el_mundial(db, doc)
+    return {"success": True, "seleccionado": doc, "inscripcion": inscripcion}
 
 
 @router.put("/admin/{seleccionado_id}", dependencies=[solo_atletas])
@@ -163,12 +260,35 @@ async def update_seleccionado(seleccionado_id: str, data: SeleccionadoUpdate, db
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Seleccionado no encontrado")
+
+    await db.registrations.update_one(
+        {"race_code": MUNDIAL, "seleccionado_id": seleccionado_id},
+        {"$set": {"categoria": data.categoria}},
+    )
     return {"success": True}
 
 
 @router.delete("/admin/{seleccionado_id}", dependencies=[solo_atletas])
 async def delete_seleccionado(seleccionado_id: str, db=Depends(get_db)):
+    # Si ya corrio, no se le saca de la carrera desde aqui: eso borraria un
+    # resultado. Primero hay que resolverlo en el control de carrera.
+    inscripcion = await db.registrations.find_one(
+        {"race_code": MUNDIAL, "seleccionado_id": seleccionado_id}
+    )
+    if inscripcion and inscripcion.get("laps_completed", 0) > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{inscripcion.get('nombre')} ya tiene {inscripcion['laps_completed']} "
+                "vuelta(s) corridas en el campeonato. Quítalo desde el control de carrera."
+            ),
+        )
+
     result = await db.campeonato_seleccionados.delete_one({"id": seleccionado_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Seleccionado no encontrado")
+
+    if inscripcion:
+        await db.registrations.delete_one({"_id": inscripcion["_id"]})
+
     return {"success": True}

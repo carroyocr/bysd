@@ -123,7 +123,7 @@ async def get_race_stats(
             # Only get athletes who are active, paid, and have BIB
             registrations = await database.registrations.find(
                 {
-                    "race_code": active_race_code, 
+                    "race_code": active_race_code,
                     "status": {"$in": ["active", "retired", "dns", "winner", "honor"]},
                     "payment_status": "paid",
                     "bib": {"$exists": True, "$ne": None}
@@ -252,40 +252,11 @@ async def get_participants(
     
     participants = []
 
-    # Campeonato Mundial por Equipos: el "roster" no son inscripciones sino la
-    # nomina de seleccionados (titulares y reservas).
-    config_doc = None
-    if active_race_code:
-        config_doc = await database.race_configurations.find_one(
-            {"code": active_race_code}, {"es_campeonato": 1}
-        )
-    if config_doc and config_doc.get("es_campeonato"):
-        docs = await database.campeonato_seleccionados.find({}, {"_id": 0}).to_list(500)
-        # Titulares primero, luego reservas; dentro de cada grupo por nombre
-        docs.sort(key=lambda d: (0 if d.get("categoria") == "titular" else 1, d.get("nombre", "")))
-        seleccionados = [{
-            "bib": str(d.get("bib")).zfill(3) if d.get("bib") else None,
-            "nombre": d.get("nombre"),
-            "apellidos": d.get("apellidos"),
-            "nacionalidad": d.get("nacionalidad") or "DOM",
-            "sexo": d.get("sexo"),
-            "status": d.get("status") or "registered",
-            "laps_completed": 0,
-            "total_km": 0.0,
-            "categoria": d.get("categoria"),
-            # En el Campeonato no hay inscripcion que pagar: estar en la nomina
-            # es lo que confirma la plaza.
-            "confirmado": True,
-        } for d in docs]
-        if search:
-            s = search.lower()
-            seleccionados = [
-                p for p in seleccionados
-                if (p.get("bib") and s in p["bib"].lower())
-                or s in (p.get("nombre") or "").lower()
-                or s in (p.get("apellidos") or "").lower()
-            ]
-        return seleccionados
+    # El campeonato ya no tiene rama aparte. Su nomina se devolvia desde
+    # `campeonato_seleccionados` con las vueltas fijadas a cero, asi que el
+    # campeonato no podia correrse: ni el control de vueltas ni el escaner QR
+    # (que busca en `registrations`) encontraban a nadie. Ahora los
+    # seleccionados son inscripciones de su carrera, como los de cualquier otra.
 
     if active_race_code in LEGACY_RACE_CODES:
         # Use legacy participants collection for historical races
@@ -421,10 +392,29 @@ async def iniciar_carrera(
         },
     )
 
+    # Dar la salida es lo que convierte a un inscrito en corredor. Nadie hacia
+    # ese paso: los inscritos se quedaban en "registered" para siempre, que en
+    # el contexto de la carrera no cuenta como en carrera. El dia de la carrera
+    # el panel habria ensenado cero atletas activos con la linea de salida
+    # llena, y "retirar" a alguien no habria tenido a quien retirar.
+    en_la_salida = await database.registrations.update_many(
+        {
+            "race_code": carrera["code"],
+            "status": "registered",
+            "payment_status": "paid",
+            "bib": {"$exists": True, "$ne": None},
+        },
+        {"$set": {"status": "active", "updated_at": ahora}},
+    )
+
     carrera["started_at"] = ahora
     return {
-        "message": f"Carrera {carrera['code']} iniciada a las {ahora.strftime('%H:%M:%S')}",
+        "message": (
+            f"Carrera {carrera['code']} iniciada a las {ahora.strftime('%H:%M:%S')} "
+            f"con {en_la_salida.modified_count} corredores en la salida"
+        ),
         "started_at": ahora.isoformat(),
+        "en_carrera": en_la_salida.modified_count,
         **races.vuelta_actual(carrera),
     }
 
@@ -887,7 +877,9 @@ async def reset_database(
                 "laps_completed": 0,
                 "total_km": 0.0,
                 "retired_at_lap": None,
-                "status": "active",  # Reset to active
+                # Vuelven a ser inscritos: es "Iniciar carrera" quien los pone
+                # en carrera, y asi el ensayo se repite desde el principio.
+                "status": "registered",
                 "updated_at": datetime.now(timezone.utc)
             },
             "$unset": {"retired_at": "", "retired_reason": "", "laps_log": ""},
