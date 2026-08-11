@@ -158,7 +158,6 @@ const findItem = (tabId) => {
 const TAB_VIEWS = {
   'control': (permisos) => (
     <RaceControlPanel
-      embedded={true}
       puedeControlar={permisos.control}
       puedeVerVueltas={permisos.vueltas}
     />

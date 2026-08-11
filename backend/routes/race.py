@@ -455,6 +455,137 @@ async def corregir_hora_de_salida(
     }
 
 
+@router.get("/live")
+async def panel_en_vivo(
+    race_code: str = Depends(races.carrera_del_panel),
+    movimientos: int = 40,
+    user=Depends(verify_token),
+):
+    """Todo lo que hace falta para llevar la carrera, en una sola llamada.
+
+    Durante la carrera la pregunta no es cuantas vueltas lleva cada uno, sino
+    quien ha vuelto ya de la vuelta en curso y quien no. Eso solo se responde
+    cruzando al corredor con el libro de vueltas, y eso es lo que se devuelve
+    aqui ya cruzado: la pantalla no tiene que juntar dos listas ni pedir el
+    libro entero para saber quien falta.
+    """
+    from server import db as database
+
+    carrera = await races.obtener_carrera(database, race_code)
+    codigo = carrera["code"]
+    info = races.vuelta_actual(carrera)
+    vuelta = info["current_lap"]
+
+    corredores = await database.registrations.find(
+        {
+            "race_code": codigo,
+            "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
+            "bib": {"$exists": True, "$ne": None},
+        },
+        {"_id": 0, "edit_token": 0},
+    ).to_list(1000)
+
+    # Quien ya cerro la vuelta en curso
+    hechas = set()
+    if vuelta:
+        for anotacion in await database.lap_registrations.find(
+            {
+                "race_code": codigo,
+                "lap_number": vuelta,
+                "action": laps.VUELTA_COMPLETADA,
+                "anulada": {"$ne": True},
+            },
+            {"bib": 1},
+        ).to_list(2000):
+            hechas.add(str(anotacion.get("bib")))
+
+    # La ultima marca de cada uno, para ver de un vistazo por donde va
+    ultimas = {}
+    async for anotacion in database.lap_registrations.aggregate([
+        {"$match": {"race_code": codigo, "anulada": {"$ne": True}}},
+        {"$sort": {"scan_time": 1}},
+        {"$group": {"_id": "$bib", "ultima": {"$last": "$$ROOT"}}},
+    ]):
+        u = anotacion["ultima"]
+        ultimas[str(anotacion["_id"])] = {
+            "lap": u.get("lap_number"),
+            "action": u.get("action"),
+            "source": u.get("source") or laps.ORIGEN_QR,
+            "hora": u.get("scan_time_local"),
+        }
+
+    fuera = {"retired", "dns"}
+    lista = []
+    for reg in corredores:
+        bib = str(reg.get("bib")).zfill(3) if reg.get("bib") else None
+        lista.append({
+            "bib": bib,
+            "nombre": reg.get("nombre"),
+            "apellidos": reg.get("apellidos"),
+            "nacionalidad": reg.get("nacionalidad", "DOM"),
+            "email": reg.get("email"),
+            "status": reg.get("status", "active"),
+            "laps_completed": reg.get("laps_completed", 0),
+            "total_km": reg.get("total_km", 0.0),
+            "retired_at_lap": reg.get("retired_at_lap"),
+            "categoria": reg.get("categoria"),
+            "confirmado": reg.get("payment_status") == "paid",
+            # Lo que de verdad se mira durante la carrera
+            "vuelta_en_curso_hecha": bib in hechas or str(reg.get("bib")) in hechas,
+            "ultima_marca": ultimas.get(bib) or ultimas.get(str(reg.get("bib"))),
+        })
+
+    # Orden de carrera: primero quien sigue dentro, y dentro de eso quien mas
+    # vueltas lleva. Los que ya salieron, al final.
+    lista.sort(key=lambda p: (
+        p["status"] in fuera,
+        -p["laps_completed"],
+        p["bib"] or "999",
+    ))
+
+    ultimos = await database.lap_registrations.find(
+        {"race_code": codigo}
+    ).sort("scan_time", -1).to_list(max(1, min(movimientos, 200)))
+    for m in ultimos:
+        m["id"] = str(m.pop("_id"))
+        m.setdefault("source", laps.ORIGEN_QR)
+        m.setdefault("anulada", False)
+
+    en_carrera = sum(1 for p in lista if p["status"] not in fuera)
+
+    return {
+        "race": {
+            "code": codigo,
+            "name": carrera.get("name"),
+            "estado": races.estado(carrera),
+            "km_por_vuelta": races.km_por_vuelta(carrera),
+        },
+        "lap": {
+            "current_lap": vuelta,
+            "race_started": info["race_started"],
+            "race_finished": info["race_finished"],
+            "minutes_into_lap": info["minutes_into_lap"],
+            "seconds_remaining": info["seconds_remaining"],
+            "started_at": info["started_at"].isoformat() if info["started_at"] else None,
+            "lap_start_time": info["lap_start_time"].isoformat() if info["lap_start_time"] else None,
+            "lap_end_time": info["lap_end_time"].isoformat() if info["lap_end_time"] else None,
+        },
+        "totales": {
+            "en_carrera": en_carrera,
+            "fuera": len(lista) - en_carrera,
+            "inscritos": len(lista),
+            "vuelta_en_curso_hecha": sum(1 for p in lista if p["vuelta_en_curso_hecha"]),
+            # Antes de la salida no falta nadie por volver: no ha salido nadie.
+            "faltan_por_volver": sum(
+                1 for p in lista
+                if p["status"] not in fuera and not p["vuelta_en_curso_hecha"]
+            ) if info["race_started"] else 0,
+        },
+        "corredores": lista,
+        "movimientos": ultimos,
+    }
+
+
 @router.get("/lap-status")
 async def estado_de_vuelta(race_code: Optional[str] = None):
     """En que vuelta va la carrera, segun el reloj. Publico: lo usa la app."""
