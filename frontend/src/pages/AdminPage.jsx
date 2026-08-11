@@ -32,7 +32,13 @@ import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import PushComposer from '../components/PushComposer';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
-import RaceSelector from '../components/RaceSelector';
+// El selector de carrera no va aquí arriba, sino dentro de En Vivo: es lo único
+// que se trabaja sobre una carrera concreta. El resto del panel (inscripciones,
+// patrocinadores, finanzas, voluntarios) es de la carrera publicada, y un
+// selector global obligaría a cambiarlo dos veces: la semana del campeonato se
+// lleva el control de vueltas del campeonato mientras las inscripciones siguen
+// siendo las de enero. El proveedor sí envuelve todo el panel, para que Control
+// y Vueltas compartan la carrera elegida.
 import { AdminRaceProvider } from '../contexts/AdminRaceContext';
 
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
@@ -286,8 +292,6 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold">Panel de Administración</h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Sobre qué carrera se trabaja: vale para todas las secciones */}
-            <RaceSelector />
             <ChangePasswordDialog />
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />

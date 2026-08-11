@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
+import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -31,7 +32,7 @@ const ORIGEN_CONFIG = {
 };
 
 export default function LapRegistrationsPanel() {
-  const { raceCode, raceName, loading: configLoading } = useAdminRace();
+  const { raceCode, loading: configLoading } = useAdminRace();
   const [registrations, setRegistrations] = useState([]);
   const [summary, setSummary] = useState({ total: 0, by_lap: [], by_action: {} });
   const [loading, setLoading] = useState(true);
@@ -248,11 +249,12 @@ export default function LapRegistrationsPanel() {
         <div>
           <h2 className="text-2xl font-bold">Registro de Vueltas</h2>
           <p className="text-muted-foreground">
-            Todo lo anotado en <span className="font-medium text-foreground">{raceName || raceCode}</span>,
-            venga del escaneo QR o del panel
+            Todo lo anotado, venga del escaneo QR o del panel
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* La misma carrera que se lleva en Control */}
+          <RaceSelector />
           <Button variant="outline" onClick={loadData} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualizar

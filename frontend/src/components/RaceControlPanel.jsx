@@ -6,10 +6,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { useAdminRace } from '../contexts/AdminRaceContext';
+import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
 
 export default function RaceControlPanel({ embedded = false }) {
-  const { raceName, raceCode, conCarrera, loading: carreraCargando } = useAdminRace();
+  const { raceName, raceCode, conCarrera } = useAdminRace();
   // El estado de vuelta lo calcula el backend a partir de la hora real de
   // salida. Antes esta pantalla lo calculaba por su cuenta y el escáner por la
   // suya, así que podían decir cosas distintas sobre la misma carrera.
@@ -705,9 +706,12 @@ export default function RaceControlPanel({ embedded = false }) {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold">Control de Carrera</h2>
-            <p className="text-muted-foreground">Gestión de vueltas y participantes • {raceName}</p>
+            <p className="text-muted-foreground">Gestión de vueltas y participantes</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {/* Sobre qué carrera se lleva el control. Vale también para la
+                pestaña Vueltas, pero no toca el resto del panel. */}
+            <RaceSelector />
             <Button
               onClick={() => setShowSendRunnerEmailsModal(true)}
               variant="outline"
