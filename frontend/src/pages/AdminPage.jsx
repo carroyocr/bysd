@@ -145,8 +145,8 @@ const ADMIN_SECTIONS = [
 // Accesos en el orden de la barra.
 const TAB_ORDER = ADMIN_SECTIONS.flatMap((s) => s.items.map((i) => i.id));
 
-const findItem = (tabId) => {
-  for (const section of ADMIN_SECTIONS) {
+const findItem = (tabId, secciones = ADMIN_SECTIONS) => {
+  for (const section of secciones) {
     const item = section.items.find((i) => i.id === tabId);
     if (item) return { section, item };
   }
@@ -283,7 +283,7 @@ export default function AdminPage() {
     .map((section) => ({ ...section, items: section.items.filter((i) => hasAccess(i.id)) }))
     .filter((section) => section.items.length > 0);
 
-  const actual = findItem(activeTab);
+  const actual = findItem(activeTab, visibleSections);
 
   return (
     <AdminRaceProvider>
@@ -316,6 +316,28 @@ export default function AdminPage() {
           {visibleSections.map((section) => {
             const SectionIcon = section.icon;
             const isCurrent = section.items.some((i) => i.id === activeTab);
+
+            // Una categoría con un solo acceso no necesita desplegarse: sería
+            // un clic de más para llegar siempre al mismo sitio. Pasa con En
+            // Vivo, y también con cualquier otra a la que los permisos del
+            // usuario le dejen un único acceso visible.
+            if (section.items.length === 1) {
+              const unico = section.items[0];
+              return (
+                <Button
+                  key={section.id}
+                  variant={isCurrent ? 'default' : 'ghost'}
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setActiveTab(unico.id)}
+                  data-testid={`categoria-${section.id}`}
+                >
+                  <SectionIcon className="w-4 h-4" />
+                  {section.label}
+                </Button>
+              );
+            }
+
             return (
               <DropdownMenu key={section.id}>
                 <DropdownMenuTrigger asChild>
@@ -352,7 +374,7 @@ export default function AdminPage() {
         </div>
 
         {/* Dónde estoy: la barra ya no muestra el acceso abierto */}
-        {actual && (
+        {actual && actual.section.items.length > 1 && (
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
             <span>{actual.section.label}</span>
             <ChevronLeft className="w-3.5 h-3.5 rotate-180" />
