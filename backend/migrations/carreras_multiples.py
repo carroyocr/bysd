@@ -78,8 +78,9 @@ FICHA_MUNDIAL = {
 class Registro:
     """Va anotando lo que se hace (o lo que se haria) para poder revisarlo."""
 
-    def __init__(self, aplicar: bool):
+    def __init__(self, aplicar: bool, retirar_contador: bool = False):
         self.aplicar = aplicar
+        self.retirar_contador = retirar_contador
         self.lineas = []
 
     def paso(self, texto: str):
@@ -158,21 +159,26 @@ async def retirar_contador_huerfano(db, reg: Registro):
     #
     # La coleccion `race_config` guardaba la vuelta en curso en un unico
     # documento que no decia de que carrera era. Quedo congelado en la vuelta 31
-    # de enero de 2026 y ya nadie lo lee: ahora la vuelta la da el reloj de cada
-    # carrera. Se guarda una copia por si acaso antes de retirarlo.
+    # de enero de 2026; ahora la vuelta la da el reloj de cada carrera.
+    #
+    # Eliminarla es un paso APARTE, con --retirar-contador, y va DESPUES de
+    # desplegar: mientras el codigo viejo siga en produccion, es el quien la
+    # lee, y quitarsela de debajo le deja las estadisticas en cero.
     if "race_config" not in await db.list_collection_names():
         reg.nada("race_config: ya no existe")
         return
 
     documentos = await db.race_config.find({}).to_list(100)
-    if not documentos:
-        reg.nada("race_config: vacia")
-    else:
-        for doc in documentos:
-            reg.nada(f"  contenido: {dict(doc)}")
+    for doc in documentos:
+        reg.nada(f"race_config contiene: {dict(doc)}")
+
+    if not reg.retirar_contador:
+        reg.nada("race_config: se conserva (usa --retirar-contador DESPUES de desplegar)")
+        return
 
     if reg.aplicar:
         if documentos:
+            await db.race_config_retirada.delete_many({})
             await db.race_config_retirada.insert_many(documentos)
         await db.race_config.drop()
     reg.paso(f"race_config: {len(documentos)} documento(s) copiados a race_config_retirada y coleccion eliminada")
@@ -212,13 +218,18 @@ async def main():
     parser.add_argument("--aplicar", action="store_true", help="escribir de verdad")
     parser.add_argument("--uri", help="URI de Mongo (por defecto, la del .env)")
     parser.add_argument("--db", help="nombre de la base (por defecto, la del .env)")
+    parser.add_argument(
+        "--retirar-contador", action="store_true",
+        help="elimina la coleccion race_config. Solo DESPUES de desplegar: el "
+             "codigo viejo todavia la lee y sin ella deja las estadisticas en cero",
+    )
     args = parser.parse_args()
 
     uri = args.uri or os.environ["MONGO_URL"]
     nombre = args.db or os.environ["DB_NAME"]
 
     db = AsyncIOMotorClient(uri)[nombre]
-    reg = Registro(args.aplicar)
+    reg = Registro(args.aplicar, args.retirar_contador)
 
     destino = uri.split("@")[-1].split("/")[0] if "@" in uri else uri
     print(f"Base: {nombre} en {destino}")
