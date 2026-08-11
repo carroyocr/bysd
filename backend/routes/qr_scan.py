@@ -192,55 +192,145 @@ get_race_time_str = races.hora_local_str
 calculate_current_race_lap = races.vuelta_actual
 
 
-def generate_qr_code(bib: str, race_code: str, frontend_url: str) -> str:
+# El QR se imprime, se pega en el dorsal o en una tarjeta y alguien lo busca
+# entre un montón a las tres de la mañana. Sin el nombre y el número encima, un
+# QR es indistinguible del de al lado.
+MARGEN = 24
+ALTO_DORSAL = 78
+ALTO_NOMBRE = 34
+
+
+def _ruta_de_la_fuente() -> Optional[str]:
+    """Una tipografia que sepa escribir en espanol.
+
+    La que Pillow trae dentro (Aileron) no tiene ni un solo glifo acentuado:
+    "Peña" sale como "Pe▯a" y "León" como "Le▯n", que en un dorsal impreso es
+    inaceptable. Bitstream Vera si cubre el latino completo y viene dentro de
+    reportlab, que ya es dependencia del proyecto, asi que esta tambien en el
+    contenedor de Render sin instalar nada.
+    """
+    try:
+        import reportlab
+
+        ruta = os.path.join(os.path.dirname(reportlab.__file__), "fonts", "VeraBd.ttf")
+        if os.path.exists(ruta):
+            return ruta
+    except ImportError:
+        pass
+
+    for ruta in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    ):
+        if os.path.exists(ruta):
+            return ruta
+
+    return None
+
+
+def _fuente(tamano: int):
+    from PIL import ImageFont
+
+    ruta = _ruta_de_la_fuente()
+    if ruta:
+        try:
+            return ImageFont.truetype(ruta, tamano)
+        except OSError:
+            pass
+
+    try:
+        return ImageFont.load_default(size=tamano)
+    except TypeError:
+        # Pillow antiguo: la de por defecto no escala, pero se lee.
+        return ImageFont.load_default()
+
+
+def _sin_acentos(texto: str) -> str:
+    """Ultimo recurso si no hay ninguna fuente capaz.
+
+    Mejor "PENA" que "PE▯A": se pierde la tilde, no el nombre.
+    """
+    import unicodedata
+
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    )
+
+
+def _centrar(dibujo, texto, fuente, ancho, y):
+    izquierda, arriba, derecha, abajo = dibujo.textbbox((0, 0), texto, font=fuente)
+    dibujo.text(((ancho - (derecha - izquierda)) / 2 - izquierda, y - arriba), texto, font=fuente, fill="black")
+    return abajo - arriba
+
+
+def _recortar(dibujo, texto, fuente, ancho_maximo):
+    """Nombres largos: se recortan antes de salirse de la tarjeta."""
+    if dibujo.textlength(texto, font=fuente) <= ancho_maximo:
+        return texto
+    while texto and dibujo.textlength(texto + "…", font=fuente) > ancho_maximo:
+        texto = texto[:-1]
+    return (texto.rstrip() + "…") if texto else ""
+
+
+def _imagen_qr(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None):
+    """El QR con el dorsal y el nombre encima."""
+    from PIL import Image, ImageDraw
+
+    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(scan_url)
+    qr.make(fit=True)
+
+    codigo = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    nombre = (nombre or "").strip()
+    if nombre and not _ruta_de_la_fuente():
+        nombre = _sin_acentos(nombre)
+    alto_cabecera = MARGEN + ALTO_DORSAL + (ALTO_NOMBRE if nombre else 0) + MARGEN // 2
+
+    tarjeta = Image.new("RGB", (codigo.width, codigo.height + alto_cabecera), "white")
+    dibujo = ImageDraw.Draw(tarjeta)
+
+    y = MARGEN
+    y += _centrar(dibujo, f"#{bib}", _fuente(ALTO_DORSAL), tarjeta.width, y) + 10
+
+    if nombre:
+        fuente = _fuente(ALTO_NOMBRE)
+        y += _centrar(
+            dibujo,
+            _recortar(dibujo, nombre.upper(), fuente, tarjeta.width - 2 * MARGEN),
+            fuente,
+            tarjeta.width,
+            y,
+        )
+
+    tarjeta.paste(codigo, (0, alto_cabecera))
+    return tarjeta
+
+
+def generate_qr_code(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None) -> str:
     """
     Generate QR code for an athlete and save it.
     Returns the URL path to the QR code image.
     """
-    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
-    
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(scan_url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Save to file
     filename = f"qr_{race_code}_{bib}.png"
-    filepath = QR_CODES_DIR / filename
-    img.save(filepath)
-    
+    _imagen_qr(bib, race_code, frontend_url, nombre).save(QR_CODES_DIR / filename)
     return f"/api/qr-scan/image/{filename}"
 
 
-def generate_qr_code_base64(bib: str, race_code: str, frontend_url: str) -> str:
+def generate_qr_code_base64(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None) -> str:
     """
     Generate QR code and return as base64 string for embedding.
     """
-    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
-    
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(scan_url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Convert to base64
     buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-    
-    return f"data:image/png;base64,{img_str}"
+    _imagen_qr(bib, race_code, frontend_url, nombre).save(buffer, format="PNG")
+    return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
 
 
 @router.get("/image/{filename}", dependencies=[solo_control])
@@ -927,8 +1017,9 @@ async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
     if "/api" in frontend_url:
         frontend_url = frontend_url.replace("/api", "")
     
-    qr_url = generate_qr_code(bib, race_code, frontend_url)
-    qr_base64 = generate_qr_code_base64(bib, race_code, frontend_url)
+    quien = laps.nombre_completo(athlete)
+    qr_url = generate_qr_code(bib, race_code, frontend_url, quien)
+    qr_base64 = generate_qr_code_base64(bib, race_code, frontend_url, quien)
     
     return {
         "bib": bib,
@@ -962,7 +1053,7 @@ async def generate_all_qr_codes(race_code: Optional[str] = None):
     results = []
     for athlete in athletes:
         bib = str(athlete.get("bib"))
-        qr_url = generate_qr_code(bib, race_code, frontend_url)
+        qr_url = generate_qr_code(bib, race_code, frontend_url, laps.nombre_completo(athlete))
         results.append({
             "bib": bib,
             "nombre": athlete.get("nombre"),
@@ -999,7 +1090,7 @@ async def download_all_qr_codes(race_code: Optional[str] = None):
     # Generate QR codes
     for athlete in athletes:
         bib = str(athlete.get("bib"))
-        generate_qr_code(bib, race_code, frontend_url)
+        generate_qr_code(bib, race_code, frontend_url, laps.nombre_completo(athlete))
     
     # Create ZIP file
     zip_buffer = BytesIO()

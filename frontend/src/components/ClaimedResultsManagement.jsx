@@ -8,10 +8,17 @@ import {
   Download, ArrowUpDown, Trophy, Flag
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAdminRace } from '../contexts/AdminRaceContext';
+import RaceSelector from './RaceSelector';
+import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function ClaimedResultsManagement() {
+  const { raceCode, raceName, loading: cargandoCarrera } = useAdminRace();
+  // Vincular un resultado con el perfil de su atleta solo tiene sentido en las
+  // ediciones historicas: en las modernas el corredor se inscribio el mismo.
+  const [reclamable, setReclamable] = useState(true);
   const [results, setResults] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,21 +31,23 @@ export default function ClaimedResultsManagement() {
   const token = localStorage.getItem('admin_token');
 
   const loadData = useCallback(async () => {
+    if (!raceCode || cargandoCarrera) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/athletes/admin/2026-results`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await adminFetch(
+        `${API_URL}/api/athletes/admin/2026-results?race_code=${raceCode}`
+      );
       if (!res.ok) throw new Error('Error al cargar datos');
       const data = await res.json();
       setResults(data.results || []);
       setStats(data.stats || {});
+      setReclamable(data.reclamable !== false);
     } catch (err) {
-      toast.error('Error al cargar resultados 2026');
+      toast.error('Error al cargar los resultados');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [raceCode, cargandoCarrera]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -142,6 +151,18 @@ export default function ClaimedResultsManagement() {
 
   return (
     <div className="space-y-6" data-testid="claimed-results-management">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+          <h2 className="text-2xl font-bold">Resultados</h2>
+          <p className="text-muted-foreground text-sm">
+            {reclamable
+              ? `Resultados de ${raceName} y a qué perfil está vinculado cada uno`
+              : `Resultados de ${raceName}`}
+          </p>
+        </div>
+        <RaceSelector />
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -153,7 +174,9 @@ export default function ClaimedResultsManagement() {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-green-600" data-testid="stat-claimed">{stats?.claimed || 0}</div>
-            <div className="text-sm text-gray-500">Vinculados</div>
+            <div className="text-sm text-gray-500">
+              {reclamable ? 'Vinculados' : 'Con perfil'}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -177,7 +200,7 @@ export default function ClaimedResultsManagement() {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Trophy className="w-5 h-5 text-[#E8772E]" />
-            Resultados BYSD-2026
+            {raceName}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -276,7 +299,7 @@ export default function ClaimedResultsManagement() {
                       )}
                     </td>
                     <td className="px-3 py-2.5">
-                      {r.claimed_by_id && (
+                      {reclamable && r.claimed_by_id && (
                         <Button
                           variant="ghost"
                           size="sm"
