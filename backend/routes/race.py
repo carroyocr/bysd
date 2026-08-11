@@ -479,9 +479,11 @@ async def estado_de_vuelta(race_code: Optional[str] = None):
         "estado": races.estado(carrera),
         "current_lap": info["current_lap"],
         "race_started": info["race_started"],
+        "race_finished": info["race_finished"],
         "minutes_into_lap": info["minutes_into_lap"],
         "seconds_remaining": info["seconds_remaining"],
         "started_at": info["started_at"].isoformat() if info["started_at"] else None,
+        "finished_at": info["finished_at"].isoformat() if info.get("finished_at") else None,
         "lap_start_time": info["lap_start_time"].isoformat() if info["lap_start_time"] else None,
         "lap_end_time": info["lap_end_time"].isoformat() if info["lap_end_time"] else None,
     }

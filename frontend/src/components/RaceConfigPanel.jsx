@@ -24,7 +24,6 @@ export default function RaceConfigPanel() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingManual, setUploadingManual] = useState(null); // 'runners' or 'volunteers'
-  const [archiveOnCreate, setArchiveOnCreate] = useState(true);
   const [sendingNotification, setSendingNotification] = useState(null); // 'runners' or 'volunteers'
   const [notificationCounts, setNotificationCounts] = useState({ runners: 0, volunteers: 0 });
   
@@ -37,7 +36,12 @@ export default function RaceConfigPanel() {
     location: '',
     timezone_gmt: 'GMT-4',
     registration_cost: 3500,
-    edition_number: 1
+    edition_number: 1,
+    // De qué edición heredar logos, datos de pago y puestos de voluntario
+    copiar_de: '',
+    // Publicarla en el sitio es una decisión aparte de crearla
+    is_active: false,
+    es_campeonato: false,
   });
   
   // Form state for editing active race
@@ -252,49 +256,41 @@ export default function RaceConfigPanel() {
 
   const handleCreateRace = async (e) => {
     e.preventDefault();
-    
+
     if (!newRace.code || !newRace.name || !newRace.date || !newRace.location) {
       toast.error('Por favor completa todos los campos obligatorios');
       return;
     }
-    
+
     setSaving(true);
     try {
-      // Archive current race data if option is selected and there's an active race
-      if (archiveOnCreate && activeRace && !activeRace.is_default && !activeRace.data_archived) {
-        toast.info('Archivando datos de la carrera anterior...');
-        const archiveResponse = await adminFetch(`${API_URL}/api/race-config/archive-data/${activeRace.code}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (archiveResponse.ok) {
-          const archiveData = await archiveResponse.json();
-          toast.success(`Datos archivados: ${archiveData.archived.participants} participantes, ${archiveData.archived.cheer_messages} mensajes`);
-        }
-      }
-      
-      // Create new race
+      // Crear ya no archiva ni vacia nada de la carrera anterior: cada dato
+      // lleva su carrera y varias pueden convivir.
       const response = await adminFetch(`${API_URL}/api/race-config/create`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...newRace, is_active: true })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newRace, copiar_de: newRace.copiar_de || null }),
       });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al crear la carrera');
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Error al crear la carrera');
+
+      const copiado = data.copiado || {};
+      let mensaje = `Carrera "${newRace.name}" creada`;
+      if (copiado.origen) {
+        const partes = [];
+        if (copiado.campos?.length) partes.push(`${copiado.campos.length} ajuste(s)`);
+        if (copiado.turnos) partes.push(`${copiado.turnos} puesto(s) de voluntario`);
+        if (partes.length) mensaje += `, heredando de ${copiado.origen}: ${partes.join(' y ')}`;
       }
-      
-      toast.success('Nueva carrera creada y activada exitosamente');
+      toast.success(mensaje);
+
       setShowCreateForm(false);
-      setNewRace({ code: '', name: '', date: '', start_time: '09:00', location: '' });
-      setArchiveOnCreate(true);
+      setNewRace({
+        code: '', name: '', date: '', start_time: '09:00', location: '',
+        registration_cost: 4000, edition_number: 1,
+        copiar_de: '', is_active: false, es_campeonato: false,
+      });
       await loadData();
     } catch (error) {
       toast.error(error.message);
@@ -506,57 +502,56 @@ export default function RaceConfigPanel() {
     }
   };
 
-  const handleArchiveData = async (code) => {
+  // Cerrar una carrera ya no mueve datos de sitio: cada dato lleva su carrera y
+  // se queda donde esta. Lo que hace es congelar los resultados y parar el
+  // reloj, que si no seguiria contando una vuelta por hora para siempre.
+  const handleCloseRace = async (code) => {
     setSaving(true);
-    
     try {
-      // First, get data summary
       const summaryResponse = await adminFetch(`${API_URL}/api/race-config/data-summary/${code}`);
-      if (!summaryResponse.ok) {
-        throw new Error('Error al obtener resumen de datos');
-      }
-      const summary = await summaryResponse.json();
-      
-      // Build confirmation message
-      const collections = summary.collections || {};
-      let message = `📊 RESUMEN DE DATOS DE ${code}\n\n`;
-      message += `DATOS QUE SE PRESERVARÁN (tienen race_code):\n`;
-      message += `  • Registros de atletas: ${collections.registrations || 0}\n`;
-      message += `  • Voluntarios registrados: ${collections.volunteer_registrations || 0}\n`;
-      message += `  • Asignaciones de voluntarios: ${collections.volunteer_assignments || 0}\n`;
-      message += `  • Patrocinadores: ${collections.sponsors || 0}\n`;
-      message += `  • Encuestas: ${collections.surveys || 0}\n\n`;
-      
-      const legacyParticipants = collections.participants_legacy || 0;
-      const legacyCheers = collections.cheer_messages_legacy || 0;
-      
-      if (legacyParticipants > 0 || legacyCheers > 0) {
-        message += `DATOS LEGACY A ARCHIVAR:\n`;
-        message += `  • Participantes (carrera en vivo): ${legacyParticipants}\n`;
-        message += `  • Mensajes de ánimo: ${legacyCheers}\n\n`;
-      }
-      
-      message += `¿Deseas continuar con el archivado?`;
-      
-      if (!window.confirm(message)) {
+      const summary = summaryResponse.ok ? await summaryResponse.json() : { collections: {} };
+      const c = summary.collections || {};
+
+      const mensaje =
+        `Cerrar la carrera ${code}.\n\n` +
+        `Sus resultados quedan congelados y consultables:\n` +
+        `  - Corredores inscritos: ${c.registrations || 0}\n` +
+        `  - Voluntarios: ${c.volunteer_registrations || 0}\n` +
+        `  - Patrocinadores: ${c.sponsors || 0}\n` +
+        `  - Encuestas: ${c.surveys || 0}\n\n` +
+        `No se borra ni se mueve nada. Si se cierra antes de tiempo, se puede reabrir.\n\n` +
+        `¿Cerrar la carrera?`;
+
+      if (!window.confirm(mensaje)) {
         setSaving(false);
         return;
       }
-      
-      const response = await adminFetch(`${API_URL}/api/race-config/archive-data/${code}`, {
+
+      const response = await adminFetch(`${API_URL}/api/race-config/close/${code}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al archivar');
-      }
-      
       const data = await response.json();
-      toast.success(`✅ Datos archivados correctamente. ${data.note || ''}`);
+      if (!response.ok) throw new Error(data.detail || 'Error al cerrar la carrera');
+
+      toast.success(`${data.message} ${data.vueltas_registradas} vueltas registradas.`);
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReopenRace = async (code) => {
+    if (!window.confirm(`¿Reabrir la carrera ${code}? El reloj vuelve a contar.`)) return;
+    setSaving(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/race-config/reopen/${code}`, {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Error al reabrir');
+      toast.success(data.message);
       await loadData();
     } catch (error) {
       toast.error(error.message);
@@ -1366,52 +1361,64 @@ export default function RaceConfigPanel() {
         </CardContent>
       </Card>
 
-      {/* Archive and Create New Race Section */}
+      {/* Cerrar la edicion en curso y montar la siguiente */}
       {activeRace && !activeRace.is_default && !showCreateForm && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-800">
               <Archive className="w-5 h-5" />
-              Finalizar Edición y Crear Nueva
+              Cerrar edición y montar la siguiente
             </CardTitle>
             <CardDescription>
-              Archiva los datos de la carrera actual y prepara una nueva edición
+              Congela los resultados de una edición y crea la próxima heredando lo que se reutiliza
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-white p-4 rounded-lg border border-amber-200">
-              <h4 className="font-medium text-amber-900 mb-2">¿Qué sucede al crear una nueva carrera?</h4>
+              <h4 className="font-medium text-amber-900 mb-2">Al cerrar una carrera</h4>
               <ul className="text-sm text-amber-800 space-y-1">
-                <li>✓ <strong>Se CONSERVAN</strong> todos los registros de atletas (tienen race_code)</li>
-                <li>✓ <strong>Se CONSERVAN</strong> los registros de voluntarios</li>
-                <li>✓ <strong>Se CONSERVAN</strong> los patrocinadores</li>
-                <li>✓ <strong>Se CONSERVAN</strong> las encuestas</li>
-                <li>• Los datos de carrera en vivo (participantes, mensajes) se archivan con el código de la carrera</li>
-                <li>• Puedes consultar los datos históricos en /resultados/{'{código}'}</li>
+                <li>No se borra ni se mueve nada: cada dato lleva su carrera y se queda donde está.</li>
+                <li>Los resultados quedan congelados y consultables en /resultados/{'{código}'}.</li>
+                <li>El reloj deja de contar vueltas.</li>
+                <li>Deja de ofrecerse como carrera de trabajo en el panel.</li>
+                <li>Si se cierra antes de tiempo, se puede reabrir.</li>
               </ul>
             </div>
-            
+
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
                 <Info className="w-4 h-4" />
-                Antes de crear una nueva carrera
+                Al crear la siguiente
               </h4>
               <p className="text-sm text-blue-800">
-                Haz clic en "Ver Resumen de Datos" para verificar qué información se preservará y qué se archivará.
+                Puedes heredar de otra edición los logos, los datos de pago y el
+                cuadro de puestos de voluntario, que es casi todo el trabajo de
+                montarla. Publicarla en el sitio es una decisión aparte: crear el
+                campeonato no tumba la página de inscripción de la carrera.
               </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
+              <Button
                 variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                onClick={() => handleArchiveData(activeRace.code)}
-                disabled={saving}
+                className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                onClick={() => handleCloseRace(activeRace.code)}
+                disabled={saving || activeRace.estado === 'cerrada'}
               >
-                <FileText className="w-4 h-4 mr-2" />
-                Ver Resumen de Datos
+                <Archive className="w-4 h-4 mr-2" />
+                {activeRace.estado === 'cerrada' ? 'Carrera cerrada' : 'Cerrar esta carrera'}
               </Button>
-              <Button 
+              {activeRace.estado === 'cerrada' && (
+                <Button
+                  variant="outline"
+                  onClick={() => handleReopenRace(activeRace.code)}
+                  disabled={saving}
+                >
+                  <RotateCw className="w-4 h-4 mr-2" />
+                  Reabrir
+                </Button>
+              )}
+              <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={() => setShowCreateForm(true)}
               >
@@ -1514,43 +1521,68 @@ export default function RaceConfigPanel() {
                 </div>
               </div>
 
-              {/* Archive Option */}
-              {activeRace && !activeRace.is_default && !activeRace.data_archived && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={archiveOnCreate}
-                      onChange={(e) => setArchiveOnCreate(e.target.checked)}
-                      className="mt-1 w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                    />
-                    <div>
-                      <span className="font-medium text-amber-900">Archivar datos de "{activeRace.code}" antes de crear</span>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Se guardarán {activeRace.code ? 'los participantes, mensajes de ánimo y patrocinadores' : ''} en el historial.
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              )}
-
-              {activeRace?.data_archived && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-700">
-                    <CheckCircle className="w-4 h-4 inline mr-2" />
-                    Los datos de "{activeRace.code}" ya fueron archivados.
+              {/* De donde heredar lo que se reutiliza */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="space-y-2">
+                  <Label>Heredar de una edición anterior</Label>
+                  <select
+                    value={newRace.copiar_de}
+                    onChange={(e) => setNewRace({ ...newRace, copiar_de: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                  >
+                    <option value="">Empezar en blanco</option>
+                    {allRaces.filter((r) => !r.is_legacy).map((r) => (
+                      <option key={r.code} value={r.code}>{r.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-blue-800">
+                    Copia los logos, los datos de pago y el cuadro de puestos de
+                    voluntario. Los resultados, inscritos y fechas no se copian:
+                    son propios de cada edición.
                   </p>
                 </div>
-              )}
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newRace.is_active}
+                    onChange={(e) => setNewRace({ ...newRace, is_active: e.target.checked })}
+                    className="mt-1 w-4 h-4 rounded border-blue-300"
+                  />
+                  <div>
+                    <span className="font-medium text-blue-900">Publicarla en el sitio</span>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Es la carrera que verán los visitantes: portada, inscripción
+                      y logos. Solo puede haber una publicada, así que esto
+                      despublica la actual{activeRace?.name ? ` (${activeRace.name})` : ''}.
+                      Déjalo apagado si estás montando una carrera que todavía no
+                      se anuncia.
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newRace.es_campeonato}
+                    onChange={(e) => setNewRace({ ...newRace, es_campeonato: e.target.checked })}
+                    className="mt-1 w-4 h-4 rounded border-blue-300"
+                  />
+                  <div>
+                    <span className="font-medium text-blue-900">Es un campeonato por equipos</span>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Para el Campeonato Mundial y similares, que no tienen
+                      inscripción abierta al público.
+                    </p>
+                  </div>
+                </label>
+              </div>
 
               <div className="flex justify-end gap-3 pt-4">
                 <Button 
                   type="button" 
                   variant="outline"
-                  onClick={() => {
-                    setShowCreateForm(false);
-                    setArchiveOnCreate(true);
-                  }}
+                  onClick={() => setShowCreateForm(false)}
                 >
                   Cancelar
                 </Button>
