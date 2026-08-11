@@ -93,7 +93,7 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'registrations', label: 'Inscripciones', icon: UserPlus },
       { id: 'athlete-profiles', label: 'Perfiles', icon: Users },
-      { id: 'results-2026', label: 'Resultados 2026', icon: Trophy },
+      { id: 'results-2026', label: 'Resultados', icon: Trophy },
       { id: 'seleccionados', label: 'Seleccionados', icon: Medal },
       { id: 'tshirt', label: 'Camisetas', icon: Shirt },
       { id: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
@@ -359,7 +359,11 @@ export default function AdminPage() {
                       <DropdownMenuItem
                         key={item.id}
                         onSelect={() => setActiveTab(item.id)}
-                        className={`gap-2 cursor-pointer ${item.id === activeTab ? 'bg-accent font-medium' : ''}`}
+                        className={`gap-2 cursor-pointer ${
+                          item.id === activeTab
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : ''
+                        }`}
                         data-testid={`acceso-${item.id}`}
                       >
                         <ItemIcon className="w-4 h-4" />
