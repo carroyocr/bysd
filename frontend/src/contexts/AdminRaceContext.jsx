@@ -65,6 +65,18 @@ export function AdminRaceProvider({ children }) {
     if (!existe) setRaceCodeState(carreras[0].code);
   }, [loading, carreras, raceCode]);
 
+  // Un enlace dentro del panel puede pedir otra carrera (por ejemplo, el que
+  // lleva de Seleccionados a las inscripciones del campeonato). Como el panel
+  // no se vuelve a montar al navegar, hay que hacerle caso a la URL cuando
+  // cambia; si no, el enlace llevaría a la pantalla correcta con la carrera
+  // equivocada.
+  const enLaUrl = searchParams.get('race');
+  useEffect(() => {
+    if (!enLaUrl || enLaUrl === raceCode) return;
+    if (carreras.length && !carreras.some((c) => c.code === enLaUrl)) return;
+    setRaceCodeState(enLaUrl);
+  }, [enLaUrl, raceCode, carreras]);
+
   useEffect(() => {
     if (!raceCode) return;
     localStorage.setItem(RECUERDO, raceCode);

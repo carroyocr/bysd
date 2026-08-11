@@ -12,7 +12,8 @@ import {
   QrCode, ArrowUpCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { useAdminRace } from '../contexts/AdminRaceContext';
+import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -33,7 +34,7 @@ const calculateExperienceScore = (registration) => {
 };
 
 export default function PreRegistrationManagement() {
-  const { raceCode, loading: configLoading } = useRaceConfig();
+  const { raceCode, raceName, loading: configLoading } = useAdminRace();
   const [registrations, setRegistrations] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,7 @@ export default function PreRegistrationManagement() {
   const [editingEmail, setEditingEmail] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [descargandoQRs, setDescargandoQRs] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
   const [nextBib, setNextBib] = useState(1);
   const [sendingReminder, setSendingReminder] = useState(false);
@@ -495,6 +497,40 @@ export default function PreRegistrationManagement() {
     return digits;
   };
 
+  // Los QR de todos los dorsales, en un zip.
+  //
+  // Este boton no funcionaba: pedia /download-all-qr/<codigo> cuando el
+  // endpoint espera ?race_code=, y ademas window.open abre una pestana sin la
+  // cabecera del token, asi que el endpoint la rechazaba. 404 primero, 401
+  // despues. Ahora se pide con el token y se descarga el zip que devuelve.
+  const descargarQRs = async () => {
+    setDescargandoQRs(true);
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/qr-scan/download-all-qr?race_code=${raceCode}`
+      );
+      if (!res.ok) {
+        const detalle = await res.json().catch(() => ({}));
+        throw new Error(detalle.detail || 'No se pudieron generar los QR');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `qr_${raceCode}.zip`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      window.URL.revokeObjectURL(url);
+      enlace.remove();
+      toast.success(`QR de ${athletesWithBibCount} corredores descargados`);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setDescargandoQRs(false);
+    }
+  };
+
   const exportToCSV = () => {
     if (filteredRegistrations.length === 0) {
       toast.error('No hay registros para exportar');
@@ -571,8 +607,14 @@ export default function PreRegistrationManagement() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Gestión de Atletas</h2>
-          <p className="text-muted-foreground">Administra pre-registros, pagos y asignación de BIBs</p>
+          <p className="text-muted-foreground">
+            Inscripciones, pagos, dorsales y camisetas de {raceName}
+          </p>
         </div>
+        {/* Vale para cualquier carrera: los seleccionados del campeonato son
+            inscripciones como las demás, así que esta pantalla los gestiona
+            igual (dorsales, tallas, QR) sin duplicar nada. */}
+        <RaceSelector />
       </div>
 
       {/* Stats Cards */}
@@ -880,13 +922,13 @@ export default function PreRegistrationManagement() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => window.open(`${API_URL}/api/qr-scan/download-all-qr/${raceCode}`, '_blank')}
-                disabled={athletesWithBibCount === 0}
+                onClick={descargarQRs}
+                disabled={descargandoQRs || athletesWithBibCount === 0}
                 className="border-blue-400 text-blue-700 hover:bg-blue-50"
                 data-testid="download-qr-codes-btn"
               >
                 <QrCode className="w-4 h-4 mr-2" />
-                Descargar QRs ({athletesWithBibCount})
+                {descargandoQRs ? 'Preparando...' : `Descargar QRs (${athletesWithBibCount})`}
               </Button>
             </div>
           </CardTitle>

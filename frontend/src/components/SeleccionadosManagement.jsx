@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
   Search, Medal, Shield, RefreshCw, Loader2, Trash2, ArrowLeftRight, UserPlus,
-  Pencil, X, Save
+  Pencil, X, Save, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -29,6 +30,7 @@ const CATEGORIA_CONFIG = {
 };
 
 export default function SeleccionadosManagement() {
+  const navigate = useNavigate();
   const [seleccionados, setSeleccionados] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -275,8 +277,33 @@ export default function SeleccionadosManagement() {
       <div>
         <h2 className="text-2xl font-bold">Seleccionados — Campeonato Mundial por Equipos</h2>
         <p className="text-muted-foreground">
-          Gestiona los titulares y reservas del campeonato a partir de los atletas del evento previo (BYSD-2026)
+          Quién va al campeonato: titulares y reservas, a partir de los atletas
+          del evento previo (BYSD-2026)
         </p>
+      </div>
+
+      {/* Esta pantalla decide quién va; lo demás del campeonato se lleva desde
+          Inscripciones, porque desde que los seleccionados son inscripciones de
+          MUNDIAL-2026 esa pantalla los gestiona igual que a cualquier corredor.
+          Duplicar aquí dorsales, tallas y QR sería mantener dos veces lo mismo. */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+          <p className="text-sm text-blue-900">
+            Los <strong>dorsales, tallas de camiseta y códigos QR</strong> del
+            campeonato se gestionan en Inscripciones, eligiendo ahí el Campeonato
+            Mundial. Entrar en esta lista ya inscribe al atleta en la carrera.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 border-blue-300 text-blue-800 hover:bg-blue-100"
+          onClick={() => navigate('/admin?tab=registrations&race=MUNDIAL-2026')}
+        >
+          <UserPlus className="w-4 h-4 mr-2" />
+          Ir a Inscripciones del campeonato
+        </Button>
       </div>
 
       {/* Stats */}
