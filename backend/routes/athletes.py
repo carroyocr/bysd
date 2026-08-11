@@ -2073,20 +2073,75 @@ async def get_race_history(authorization: str = Header(None)):
 # ==================== ADMIN: 2026 RESULTS MANAGEMENT ====================
 
 @router.get("/admin/2026-results")
-async def admin_get_2026_results(authorization: str = Header(None)):
-    """Admin: Get all 2026 race results with claim status"""
+async def admin_get_2026_results(
+    race_code: str = "BYSD-2026",
+    authorization: str = Header(None),
+):
+    """Admin: resultados de una carrera, con quien los ha reclamado.
+
+    Nacio para la primera edicion, cuando solo habia una: por eso el nombre y
+    por eso leia las colecciones legadas sin filtrar. Ahora dice de que carrera
+    los quiere. Las ediciones modernas tienen sus resultados en `registrations`,
+    donde el atleta ya viene identificado por su correo y no hay nada que
+    reclamar.
+    """
     from server import db as database
     from bson import ObjectId
 
     # Verify admin token
     payload = _verify_admin_token(authorization)
 
+    race_code = (race_code or "BYSD-2026").upper()
     results = []
+
+    if race_code not in ("BYSD-2026",):
+        registros = await database.registrations.find(
+            {"race_code": race_code, "bib": {"$exists": True, "$ne": None}},
+            {"nombre": 1, "apellidos": 1, "bib": 1, "laps_completed": 1, "total_km": 1,
+             "status": 1, "sexo": 1, "nacionalidad": 1, "email": 1, "athlete_id": 1},
+        ).sort("bib", 1).to_list(500)
+
+        modernos = [{
+            "id": str(d["_id"]),
+            "collection": "registrations",
+            "bib": str(d.get("bib")).zfill(3) if d.get("bib") else None,
+            "nombre": d.get("nombre", ""),
+            "apellidos": d.get("apellidos", ""),
+            "laps_completed": d.get("laps_completed", 0),
+            "status": d.get("status", ""),
+            "sexo": d.get("sexo", ""),
+            "nacionalidad": d.get("nacionalidad", ""),
+            # En una carrera moderna el corredor se inscribio el mismo: su
+            # resultado ya es suyo, no hay que vincularlo a nadie.
+            "claimed_by_id": d.get("athlete_id"),
+            "athlete": {"email": d.get("email"), "nombre": d.get("nombre", ""),
+                        "apellidos": d.get("apellidos", "")} if d.get("email") else None,
+            "claim_type": "inscripcion",
+        } for d in registros]
+
+        con_perfil = sum(1 for r in modernos if r["claimed_by_id"])
+        return {
+            "race_code": race_code,
+            "reclamable": False,
+            "results": modernos,
+            "stats": {
+                "total": len(modernos),
+                "claimed": con_perfil,
+                "unclaimed": len(modernos) - con_perfil,
+            },
+        }
+
+    # Ediciones historicas: los resultados viven en las colecciones antiguas y
+    # cada uno se vincula a mano con el perfil de su atleta.
+    de_esta_carrera = {
+        "$or": [{"race_code": race_code}, {"race_code": {"$exists": False}}]
+    }
 
     for coll_name in ["archived_participants", "participants"]:
         docs = await database[coll_name].find(
-            {}, {"nombre": 1, "apellidos": 1, "bib": 1, "laps_completed": 1,
-                 "status": 1, "claimed_by": 1, "sexo": 1, "nacionalidad": 1}
+            de_esta_carrera,
+            {"nombre": 1, "apellidos": 1, "bib": 1, "laps_completed": 1,
+             "status": 1, "claimed_by": 1, "sexo": 1, "nacionalidad": 1}
         ).sort("bib", 1).to_list(200)
 
         for doc in docs:
@@ -2142,6 +2197,8 @@ async def admin_get_2026_results(authorization: str = Header(None)):
 
     claimed_count = sum(1 for r in unique if r["claimed_by_id"])
     return {
+        "race_code": race_code,
+        "reclamable": True,
         "results": unique,
         "stats": {
             "total": len(unique),

@@ -15,6 +15,7 @@ MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
 from services.auth import require_permission, verify_admin_token
+from services import races as carreras
 
 # Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
 solo_config = Depends(require_permission("config"))
@@ -40,10 +41,19 @@ class RaceConfigCreate(BaseModel):
     start_time: str  # e.g., "09:00"
     location: str  # e.g., "Parque del Este, Santo Domingo"
     timezone_gmt: str = "GMT-4"  # e.g., "GMT-4" for Dominican Republic
-    is_active: bool = True
+    # Publicar la carrera en el sitio es una decision aparte de crearla: crear
+    # el campeonato mundial no debe tumbar la pagina de inscripcion de la
+    # carrera abierta.
+    is_active: bool = False
     registration_cost: float = 3500.0  # Cost in local currency (RD$)
     edition_number: int = 1  # Edition number (1 = Primera, 2 = Segunda, etc.)
     max_participants: int = 120  # Maximum number of participants before waitlist
+    es_campeonato: bool = False
+    km_por_vuelta: Optional[float] = None  # el anillo no mide igual en toda sede
+    # Codigo de otra carrera de la que copiar lo que se reutiliza: logos, datos
+    # de pago y el cuadro de turnos de voluntario. Es casi todo el trabajo de
+    # montar una edicion nueva.
+    copiar_de: Optional[str] = None
 
 
 class RaceConfigUpdate(BaseModel):
@@ -59,6 +69,8 @@ class RaceConfigUpdate(BaseModel):
     edition_number: Optional[int] = None
     max_participants: Optional[int] = None
     timezone_gmt: Optional[str] = None  # e.g., "GMT-4"
+    estado: Optional[str] = None  # borrador | inscripcion | en_carrera | cerrada
+    km_por_vuelta: Optional[float] = None
     # Payment info
     payment_account_name: Optional[str] = None
     payment_account_id: Optional[str] = None
@@ -197,25 +209,10 @@ async def get_all_races(db=Depends(lambda: None)):
     ).sort("created_at", -1).to_list(100)
     
     # Ensure legacy race BYSD-2026 is always included for historical results
-    LEGACY_RACES = [
-        {
-            "code": "BYSD-2026",
-            "name": "Backyard Ultra Santo Domingo 2026",
-            "date": "2026-01-24",
-            "start_time": "09:00",
-            "location": "Parque del Este, Santo Domingo, República Dominicana",
-            "logo_url": "/icon-bu.png",
-            "is_active": False,
-            "is_legacy": True,  # Flag to indicate this uses legacy data
-            "archived_at": "2026-01-25T00:00:00"
-        }
-    ]
-    
-    # Add legacy races if not already in the list
     existing_codes = {r.get("code") for r in races}
-    for legacy_race in LEGACY_RACES:
-        if legacy_race["code"] not in existing_codes:
-            races.append(legacy_race)
+    for codigo, legacy_race in carreras.CARRERAS_HISTORICAS.items():
+        if codigo not in existing_codes:
+            races.append(dict(legacy_race))
     
     # Sort by date descending
     races.sort(key=lambda x: x.get("date", ""), reverse=True)
@@ -235,23 +232,10 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
     
     # If not found in DB, check if it's a legacy race
     if not config:
-        LEGACY_RACES = {
-            "BYSD-2026": {
-                "code": "BYSD-2026",
-                "name": "Backyard Ultra Santo Domingo 2026",
-                "date": "2026-01-24",
-                "start_time": "09:00",
-                "location": "Parque del Este, Santo Domingo, República Dominicana",
-                "logo_url": "/icon-bu.png",
-                "is_active": False,
-                "is_legacy": True,
-                "archived_at": "2026-01-25T00:00:00"
-            }
-        }
-        
-        if code in LEGACY_RACES:
-            return LEGACY_RACES[code]
-        
+        historica = carreras.CARRERAS_HISTORICAS.get(code.upper())
+        if historica:
+            return dict(historica)
+
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     return config
@@ -263,38 +247,101 @@ async def create_race(
     user=Depends(verify_token),
     db=Depends(lambda: None)
 ):
-    """Create a new race configuration. If is_active=True, archives the previous active race."""
+    """Crea una carrera. Con `copiar_de`, hereda lo que se reutiliza de otra."""
     from server import db as database
-    
+
+    codigo = config.code.strip().upper()
+
     # Check if code already exists
-    existing = await database.race_configurations.find_one({"code": config.code})
+    existing = await database.race_configurations.find_one({"code": codigo})
     if existing:
-        raise HTTPException(status_code=400, detail=f"Ya existe una carrera con el código {config.code}")
-    
-    # If this race is active, archive all other active races
+        raise HTTPException(status_code=400, detail=f"Ya existe una carrera con el código {codigo}")
+
+    # Solo una carrera se publica en el sitio a la vez.
     if config.is_active:
         await database.race_configurations.update_many(
             {"is_active": True},
             {"$set": {"is_active": False, "archived_at": datetime.utcnow()}}
         )
-    
-    # Create the new race
+
+    datos = config.dict(exclude={"copiar_de"})
+    datos["code"] = codigo
+
     race_data = {
-        **config.dict(),
+        **datos,
         "logo_url": "/icon-bu.png",  # Default logo
+        "estado": carreras.ESTADO_POR_DEFECTO,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    
+
+    copiado = {}
+    if config.copiar_de:
+        copiado = await _copiar_de_otra_carrera(database, config.copiar_de.upper(), race_data)
+
     await database.race_configurations.insert_one(race_data)
-    
+
+    if config.copiar_de:
+        copiado["turnos"] = await _copiar_turnos(database, config.copiar_de.upper(), codigo)
+
     # Remove _id from response
     race_data.pop("_id", None)
-    
+
     return {
         "message": f"Carrera '{config.name}' creada exitosamente",
-        "race": race_data
+        "race": race_data,
+        "copiado": copiado,
     }
+
+
+# Lo que vale la pena heredar de una edicion a la siguiente. El resto (fechas,
+# cupo, estado, resultados) es propio de cada una.
+CAMPOS_HEREDABLES = [
+    "logo_url", "logo_home_url", "logo_menu_url", "favicon_url", "portada_url",
+    "payment_account_name", "payment_account_id", "payment_bank_name",
+    "payment_account_type", "payment_account_number",
+    "km_por_vuelta", "timezone_gmt",
+]
+
+
+async def _copiar_de_otra_carrera(database, origen_code: str, race_data: dict) -> dict:
+    """Hereda logos y datos de pago. Lo que ya venga puesto no se pisa."""
+    origen = await database.race_configurations.find_one({"code": origen_code})
+    if not origen:
+        raise HTTPException(status_code=404, detail=f"No existe la carrera {origen_code} para copiar")
+
+    heredados = []
+    for campo in CAMPOS_HEREDABLES:
+        valor = origen.get(campo)
+        if valor in (None, "") or race_data.get(campo) not in (None, "", "/icon-bu.png"):
+            continue
+        race_data[campo] = valor
+        heredados.append(campo)
+
+    return {"campos": heredados, "origen": origen_code}
+
+
+async def _copiar_turnos(database, origen_code: str, destino_code: str) -> int:
+    """Copia el cuadro de puestos y turnos de voluntario.
+
+    Montarlo a mano cada edicion son horas de trabajo y siempre es casi el
+    mismo: los puestos del recorrido no cambian de un anio para otro.
+    """
+    import uuid as uuid_module
+
+    puestos = await database.volunteer_positions.find(
+        {"$or": [{"race_code": origen_code}, {"race_code": {"$exists": False}}]}
+    ).to_list(500)
+
+    copiados = 0
+    for puesto in puestos:
+        puesto.pop("_id", None)
+        puesto["race_code"] = destino_code
+        puesto["id"] = str(uuid_module.uuid4())
+        await database.volunteer_positions.insert_one(puesto)
+        copiados += 1
+
+    return copiados
 
 
 @router.put("/update/{code}")
@@ -356,6 +403,63 @@ async def activate_race(
     )
     
     return {"message": f"Carrera '{code}' activada"}
+
+
+@router.post("/close/{code}", dependencies=[solo_config])
+async def cerrar_carrera(code: str):
+    """Da la carrera por terminada y congela sus resultados.
+
+    No mueve ni borra nada: todo lo de esta carrera ya lleva su `race_code` y se
+    queda donde esta, consultable. Lo que cambia es que el reloj deja de contar
+    -- una carrera terminada seguia sumando una vuelta por hora para siempre --
+    y que deja de aparecer como carrera de trabajo en el panel.
+    """
+    from server import db as database
+
+    carrera = await carreras.obtener_carrera(database, code)
+    codigo = carrera["code"]
+
+    if carreras.estado(carrera) == "cerrada":
+        raise HTTPException(status_code=400, detail="Esa carrera ya está cerrada")
+
+    ahora = carreras.ahora_en_carrera(carrera)
+    await database.race_configurations.update_one(
+        {"code": codigo},
+        {"$set": {"estado": "cerrada", "finished_at": ahora, "updated_at": ahora}},
+    )
+
+    vueltas = await database.lap_registrations.count_documents(
+        {"race_code": codigo, "action": "lap_completed", "anulada": {"$ne": True}}
+    )
+    corredores = await database.registrations.count_documents({"race_code": codigo})
+
+    return {
+        "message": f"Carrera '{codigo}' cerrada. Sus resultados quedan congelados.",
+        "race_code": codigo,
+        "finished_at": ahora.isoformat(),
+        "vueltas_registradas": vueltas,
+        "corredores": corredores,
+    }
+
+
+@router.post("/reopen/{code}", dependencies=[solo_config])
+async def reabrir_carrera(code: str):
+    """Deshace el cierre, por si se cerro antes de tiempo."""
+    from server import db as database
+
+    carrera = await carreras.obtener_carrera(database, code)
+    codigo = carrera["code"]
+
+    if carreras.estado(carrera) != "cerrada":
+        raise HTTPException(status_code=400, detail="Esa carrera no está cerrada")
+
+    await database.race_configurations.update_one(
+        {"code": codigo},
+        {"$unset": {"finished_at": ""},
+         "$set": {"estado": "en_carrera", "updated_at": datetime.utcnow()}},
+    )
+
+    return {"message": f"Carrera '{codigo}' reabierta", "race_code": codigo}
 
 
 @router.post("/upload-logo/{code}")
@@ -490,175 +594,12 @@ async def get_logo(filename: str):
     return await file_storage.serve(filename, disk_dir=LOGOS_DIR, max_age=300)
 
 
-@router.post("/archive-data/{code}")
-async def archive_race_data(
-    code: str,
-    user=Depends(verify_token),
-    db=Depends(lambda: None)
-):
-    """Archive all data (participants, cheers, sponsors) for a race - LEGACY DATA ONLY.
-    Modern data (registrations, volunteers) already have race_code and don't need archiving."""
-    from server import db as database
-    
-    existing = await database.race_configurations.find_one({"code": code})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Carrera no encontrada")
-    
-    archived_counts = {
-        "participants": 0,
-        "cheer_messages": 0,
-        "sponsors": 0
-    }
-    
-    # Archive participants (legacy - no race_code)
-    participants = await database.participants.find({}).to_list(1000)
-    if participants:
-        for p in participants:
-            p["race_code"] = code
-            p.pop("_id", None)
-        await database.archived_participants.insert_many(participants)
-        archived_counts["participants"] = len(participants)
-    
-    # Archive cheer messages (legacy - no race_code)
-    cheers = await database.cheer_messages.find({}).to_list(10000)
-    if cheers:
-        for c in cheers:
-            c["race_code"] = code
-            c.pop("_id", None)
-        await database.archived_cheer_messages.insert_many(cheers)
-        archived_counts["cheer_messages"] = len(cheers)
-    
-    # Archive sponsors (if exists and no race_code)
-    sponsors = await database.sponsors.find({}).to_list(100)
-    if sponsors:
-        for s in sponsors:
-            s["race_code"] = code
-            s.pop("_id", None)
-        await database.archived_sponsors.insert_many(sponsors)
-        archived_counts["sponsors"] = len(sponsors)
-    
-    # Mark race as archived
-    await database.race_configurations.update_one(
-        {"code": code},
-        {"$set": {"data_archived": True, "data_archived_at": datetime.utcnow()}}
-    )
-    
-    return {
-        "message": f"Datos legacy de la carrera '{code}' archivados",
-        "archived": archived_counts,
-        "note": "Los datos modernos (registrations, volunteers) ya tienen race_code y se conservan automáticamente"
-    }
-
-
-@router.post("/prepare-new-race/{old_code}")
-async def prepare_new_race(
-    old_code: str,
-    user=Depends(verify_token),
-    db=Depends(lambda: None)
-):
-    """
-    Prepare the system for a new race by:
-    1. Verifying all data from the old race has race_code
-    2. Clearing transient collections (participants, cheer_messages, fans, etc.)
-    3. NOT deleting registrations, volunteers, sponsors (they have race_code)
-    
-    This is a SAFE operation that preserves historical data.
-    """
-    from server import db as database
-    
-    existing = await database.race_configurations.find_one({"code": old_code})
-    if not existing:
-        raise HTTPException(status_code=404, detail="Carrera no encontrada")
-    
-    summary = {
-        "preserved": {},
-        "cleared": {},
-        "warnings": []
-    }
-    
-    # === PRESERVED DATA (has race_code) ===
-    # These collections already have race_code and will be preserved
-    
-    # Count registrations
-    reg_count = await database.registrations.count_documents({"race_code": old_code})
-    summary["preserved"]["registrations"] = reg_count
-    
-    # Count volunteer registrations
-    vol_count = await database.volunteer_registrations.count_documents({"race_code": old_code})
-    summary["preserved"]["volunteer_registrations"] = vol_count
-    
-    # Count volunteer assignments
-    vol_assign_count = await database.volunteer_assignments.count_documents({"race_code": old_code})
-    summary["preserved"]["volunteer_assignments"] = vol_assign_count
-    
-    # Count sponsors
-    sponsor_count = await database.sponsors.count_documents({"race_code": old_code})
-    summary["preserved"]["sponsors"] = sponsor_count
-    
-    # Count surveys
-    survey_count = await database.surveys.count_documents({"race_code": old_code})
-    summary["preserved"]["surveys"] = survey_count
-    
-    # === LEGACY DATA TO ARCHIVE ===
-    # Archive participants (live race data) if any exist
-    participants = await database.participants.find({}).to_list(1000)
-    if participants:
-        for p in participants:
-            p["race_code"] = old_code
-            p.pop("_id", None)
-        await database.archived_participants.insert_many(participants)
-        await database.participants.delete_many({})
-        summary["cleared"]["participants"] = len(participants)
-    
-    # Archive cheer messages if any exist
-    cheers = await database.cheer_messages.find({}).to_list(10000)
-    if cheers:
-        for c in cheers:
-            c["race_code"] = old_code
-            c.pop("_id", None)
-        await database.archived_cheer_messages.insert_many(cheers)
-        await database.cheer_messages.delete_many({})
-        summary["cleared"]["cheer_messages"] = len(cheers)
-    
-    # Clear fans (they can re-register for the new race)
-    fans_count = await database.fans.count_documents({})
-    if fans_count > 0:
-        await database.fans.delete_many({})
-        summary["cleared"]["fans"] = fans_count
-    
-    # Clear verification tokens (session data)
-    tokens_count = await database.verification_tokens.count_documents({})
-    if tokens_count > 0:
-        await database.verification_tokens.delete_many({})
-        summary["cleared"]["verification_tokens"] = tokens_count
-    
-    # Clear volunteer verification tokens
-    vol_tokens = await database.volunteer_verification_tokens.count_documents({})
-    if vol_tokens > 0:
-        await database.volunteer_verification_tokens.delete_many({})
-        summary["cleared"]["volunteer_verification_tokens"] = vol_tokens
-    
-    # Clear volunteer sessions
-    vol_sessions = await database.volunteer_sessions.count_documents({})
-    if vol_sessions > 0:
-        await database.volunteer_sessions.delete_many({})
-        summary["cleared"]["volunteer_sessions"] = vol_sessions
-    
-    # Mark old race as data archived
-    await database.race_configurations.update_one(
-        {"code": old_code},
-        {"$set": {"data_archived": True, "data_archived_at": datetime.utcnow()}}
-    )
-    
-    return {
-        "message": f"Sistema preparado para nueva carrera. Datos de '{old_code}' preservados.",
-        "summary": summary,
-        "next_steps": [
-            "1. Crear la nueva carrera desde el panel de administración",
-            "2. Al marcarla como activa, la carrera anterior se archivará automáticamente",
-            "3. Los datos históricos se pueden consultar en /resultados/{codigo_anterior}"
-        ]
-    }
+# `archive-data` y `prepare-new-race` vivian aqui. Copiaban `participants`,
+# `cheer_messages` y `sponsors` a colecciones "archived_" y luego vaciaban las
+# originales, porque nacieron cuando solo podia haber una carrera y "pasar a la
+# siguiente" significaba hacer sitio. Ahora cada dato lleva su `race_code` y
+# conviven varias carreras: vaciar colecciones globales se llevaria por delante
+# los datos de las otras. Cerrar una carrera (POST /close/{code}) no mueve nada.
 
 
 @router.get("/data-summary/{code}", dependencies=[solo_config])

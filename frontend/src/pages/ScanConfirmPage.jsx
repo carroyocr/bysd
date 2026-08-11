@@ -230,7 +230,11 @@ function ScanConfirmInner() {
           bib: athlete.bib,
           confirmed_lap: athlete.lap_to_complete,
           force_dnf: false,
-          scanned_by: scannedBy
+          scanned_by: scannedBy,
+          // De qué carrera es este QR. Sin esto, la vuelta se anotaba en la
+          // carrera publicada, que no tiene por qué ser la que se está
+          // corriendo.
+          race_code: raceCode || null
         })
       });
       
@@ -284,7 +288,8 @@ function ScanConfirmInner() {
           confirmed_lap: athlete.lap_to_complete,
           force_dnf: true,
           dnf_confirmation: 'DNF',
-          scanned_by: scannedBy
+          scanned_by: scannedBy,
+          race_code: raceCode || null
         })
       });
       

@@ -25,7 +25,7 @@ const PERMISSIONS = [
   { id: 'sponsors', label: 'Patrocinadores', description: 'Gestión y proceso de cierre' },
   { id: 'surveys', label: 'Encuesta', description: 'Ver resultados de encuestas' },
   { id: 'email-templates', label: 'Correos', description: 'Plantillas de correo' },
-  { id: 'results-2026', label: 'Resultados 2026', description: 'Vinculación de resultados 2026' },
+  { id: 'results-2026', label: 'Resultados', description: 'Resultados por carrera y su vinculación con los perfiles' },
   { id: 'seleccionados', label: 'Seleccionados', description: 'Roster del Campeonato Mundial' },
   { id: 'athlete-profiles', label: 'Perfiles', description: 'Perfiles de atletas' },
   { id: 'email-composer', label: 'Enviar Correos', description: 'Envío masivo de correos' },
@@ -41,7 +41,7 @@ const PERMISSIONS = [
 // muestran solo si el usuario ya los tiene, para poder quitarlos.
 const LEGACY_PERMISSIONS = [
   { id: 'control', label: 'Control + Vueltas (grupo)', description: 'Permiso histórico: abre Control y Vueltas' },
-  { id: 'athletes', label: 'Atletas completo (grupo)', description: 'Permiso histórico: abre Atletas, Resultados 2026, Perfiles y Seleccionados' },
+  { id: 'athletes', label: 'Atletas completo (grupo)', description: 'Permiso histórico: abre Atletas, Resultados, Perfiles y Seleccionados' },
   { id: 'volunteers', label: 'Voluntarios completo (grupo)', description: 'Permiso histórico: abre Voluntarios y Turnos' },
   { id: 'emails', label: 'Correos completo (grupo)', description: 'Permiso histórico: abre Correos, Enviar Correos, WhatsApp y Prensa' },
   { id: 'config', label: 'Configuración completa (grupo)', description: 'Permiso histórico: abre Carrera, Camisetas y Capacitaciones' },

@@ -1220,7 +1220,10 @@ async def auto_assign_bibs_by_experience(race_code: str, start_bib: int = 1):
         bib_number = start_bib + i
         
         # Generate QR code for this BIB
-        qr_url = generate_qr_code(str(bib_number), race_code, frontend_url)
+        qr_url = generate_qr_code(
+            str(bib_number), race_code, frontend_url,
+            f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip(),
+        )
         
         result = await registrations_collection.update_one(
             {"email": athlete["email"], "race_code": race_code},

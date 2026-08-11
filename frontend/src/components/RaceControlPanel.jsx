@@ -1,14 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2, Clock, ChevronLeft, Users, ShieldCheck, ShieldOff, Mail, MessageCircle, Edit3, UserCog, Trophy, Star } from 'lucide-react';
+import {
+  Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2,
+  Clock, ChevronLeft, Edit3, UserCog, Trophy, Star,
+  MoreHorizontal, Play, Plus, UserX, Ban, QrCode, ClipboardEdit, Download,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
-import { useRaceConfig } from '../contexts/RaceConfigContext';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { useAdminRace } from '../contexts/AdminRaceContext';
+import RaceSelector from './RaceSelector';
+import { adminFetch } from '../lib/adminApi';
 
-export default function RaceControlPanel({ embedded = false }) {
-  const { raceName, raceCode, getRaceStartDate } = useRaceConfig();
+export default function RaceControlPanel({
+  puedeControlar = true,
+  puedeVerVueltas = true,
+}) {
+  const { raceName, raceCode, conCarrera } = useAdminRace();
+  // Que parte se esta mirando. Quien solo tenga permiso para una de las dos
+  // entra directo en ella, sin pestanas que no puede abrir.
+  // Lo que se ve durante la carrera, en una sola llamada: corredores cruzados
+  // con el libro de vueltas y los ultimos movimientos.
+  const [totales, setTotales] = useState({});
+  const [movimientos, setMovimientos] = useState([]);
+  const [cuantosMovimientos, setCuantosMovimientos] = useState(40);
+  const [exportando, setExportando] = useState(false);
+  const [anotando, setAnotando] = useState(false);
+  const [nuevaVuelta, setNuevaVuelta] = useState({ bib: '', lap_number: '', motivo: '' });
+  const [guardandoVuelta, setGuardandoVuelta] = useState(false);
+  const [anulando, setAnulando] = useState(null);
+  // El estado de vuelta lo calcula el backend a partir de la hora real de
+  // salida. Antes esta pantalla lo calculaba por su cuenta y el escáner por la
+  // suya, así que podían decir cosas distintas sobre la misma carrera.
+  const [estadoVuelta, setEstadoVuelta] = useState(null);
+  const [iniciando, setIniciando] = useState(false);
   const [currentLap, setCurrentLap] = useState(1);
   const [participants, setParticipants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,12 +50,6 @@ export default function RaceControlPanel({ embedded = false }) {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
-  const [showResetSubsModal, setShowResetSubsModal] = useState(false);
-  const [resetSubsConfirmation, setResetSubsConfirmation] = useState('');
-  const [resettingSubs, setResettingSubs] = useState(false);
-  const [showResetCheersModal, setShowResetCheersModal] = useState(false);
-  const [resetCheersConfirmation, setResetCheersConfirmation] = useState('');
-  const [resettingCheers, setResettingCheers] = useState(false);
   const [showAdjustLapsModal, setShowAdjustLapsModal] = useState(false);
   const [adjustLapsParticipant, setAdjustLapsParticipant] = useState(null);
   const [newLapsValue, setNewLapsValue] = useState(0);
@@ -35,79 +59,35 @@ export default function RaceControlPanel({ embedded = false }) {
   const [editFormData, setEditFormData] = useState({ nombre: '', apellidos: '', nacionalidad: '' });
   const [editingParticipant, setEditingParticipant] = useState(false);
   const [markingWinner, setMarkingWinner] = useState(false);
-  const [followersCount, setFollowersCount] = useState({});
-  const [sendingRunnerEmails, setSendingRunnerEmails] = useState(false);
-  const [showSendRunnerEmailsModal, setShowSendRunnerEmailsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [timeValidationEnabled, setTimeValidationEnabled] = useState(() => {
-    const saved = localStorage.getItem('race_time_validation');
-    return saved !== null ? JSON.parse(saved) : true;
-  });
   const navigate = useNavigate();
 
-  // Get race start hour from config
-  const getRaceStartHour = () => {
-    const raceStart = getRaceStartDate();
-    return raceStart.getHours();
+  // El horario de cada vuelta sale del reloj del backend, que cuenta desde la
+  // hora real de salida. Esta pantalla lo calculaba antes por su cuenta a
+  // partir de la hora prevista de la ficha, así que si la salida se retrasaba
+  // -- que es lo normal -- mostraba horarios que no eran.
+  const horaCorta = (iso) => {
+    if (!iso) return '--:--';
+    return new Date(iso).toLocaleTimeString('es-DO', {
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
   };
 
-  // Calculate the time range for a given lap using actual race start time
-  const getLapTimeRange = (lap) => {
-    const raceStartHour = getRaceStartHour();
-    const startHour = raceStartHour + (lap - 1);
-    
-    // Format hours
-    const formatHour = (hour) => {
-      const h = hour % 24;
-      const period = h >= 12 ? 'PM' : 'AM';
-      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-      return `${displayHour}:00 ${period}`;
-    };
-
-    const formatEndHour = (hour) => {
-      const h = hour % 24;
-      const period = h >= 12 ? 'PM' : 'AM';
-      const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
-      return `${displayHour}:59 ${period}`;
-    };
-    
-    return {
-      start: formatHour(startHour),
-      end: formatEndHour(startHour)
-    };
+  const cuentaAtras = (segundos) => {
+    if (segundos == null || segundos <= 0) return null;
+    const dias = Math.floor(segundos / 86400);
+    const horas = Math.floor((segundos % 86400) / 3600);
+    const minutos = Math.floor((segundos % 3600) / 60);
+    const resto = segundos % 60;
+    if (dias > 0) return `${dias}d ${horas}h ${minutos}m`;
+    if (horas > 0) return `${horas}h ${minutos}m ${resto}s`;
+    return `${minutos}m ${resto}s`;
   };
 
-  // Check if lap can be completed based on time
-  const canCompleteLap = (lap) => {
-    if (!timeValidationEnabled) return true;
-    
-    // Calculate when lap N ends: race start + N hours
-    const raceStart = getRaceStartDate();
-    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
-    return currentTime >= lapEndTime;
-  };
-
-  // Get time remaining until lap can be completed
-  const getTimeUntilLapComplete = (lap) => {
-    const raceStart = getRaceStartDate();
-    const lapEndTime = new Date(raceStart.getTime() + lap * 60 * 60 * 1000);
-    const diff = lapEndTime - currentTime;
-    
-    if (diff <= 0) return null;
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else {
-      return `${minutes}m ${seconds}s`;
-    }
-  };
+  const carreraEmpezada = !!estadoVuelta?.race_started;
+  const carreraTerminada = estadoVuelta?.estado === 'cerrada';
+  // La vuelta que se cerraría: la última terminada según el reloj.
+  const vueltaACerrar = Math.max(1, (estadoVuelta?.current_lap || 1) - 1);
 
   // Update current time every second
   useEffect(() => {
@@ -117,41 +97,32 @@ export default function RaceControlPanel({ embedded = false }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Save time validation preference
-  useEffect(() => {
-    localStorage.setItem('race_time_validation', JSON.stringify(timeValidationEnabled));
-  }, [timeValidationEnabled]);
-
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) {
       navigate('/admin/login');
       return;
     }
-    loadData();
-  }, [navigate]);
+    // Al cambiar de carrera en la cabecera se recarga todo: si no, quedarían
+    // en pantalla los corredores de la carrera anterior.
+    if (raceCode) loadData();
+  }, [navigate, raceCode, cuantosMovimientos]);
 
   const loadData = async () => {
-    const token = localStorage.getItem('admin_token');
+    if (!raceCode) return;
     try {
-      const [statsRes, participantsRes, followersRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/stats?race_code=${raceCode}`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants?race_code=${raceCode}`),
-        fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/followers-count`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
+      const res = await adminFetch(
+        `${conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/live`)}` +
+        `&movimientos=${cuantosMovimientos}`
+      );
+      if (!res.ok) throw new Error('No se pudo cargar la carrera');
+      const datos = await res.json();
 
-      const stats = await statsRes.json();
-      const participantsData = await participantsRes.json();
-      
-      if (followersRes.ok) {
-        const followersData = await followersRes.json();
-        setFollowersCount(followersData);
-      }
-
-      setCurrentLap(stats.current_lap);
-      setParticipants(participantsData);
+      setEstadoVuelta(datos.lap);
+      setCurrentLap(datos.lap?.current_lap || 1);
+      setParticipants(datos.corredores || []);
+      setTotales(datos.totales || {});
+      setMovimientos(datos.movimientos || []);
       setLoading(false);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -159,39 +130,242 @@ export default function RaceControlPanel({ embedded = false }) {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_username');
-    navigate('/admin/login');
+  // Cómo se ve un corredor respecto a la vuelta que corre ahora mismo. Es la
+  // pregunta del día de la carrera: quién ha vuelto y quién no.
+  const estadoDeVuelta = (participante, marca) => {
+    if (participante.status === 'winner') {
+      return (
+        <span className="flex items-center gap-1.5 text-yellow-600 font-medium">
+          <Trophy className="w-4 h-4" /> Ganador
+        </span>
+      );
+    }
+    if (participante.status === 'honor') {
+      return (
+        <span className="flex items-center gap-1.5 text-purple-600 font-medium">
+          <Star className="w-4 h-4" /> Invitada de honor
+        </span>
+      );
+    }
+    if (participante.status === 'dns') {
+      return <span className="text-muted-foreground">No se presentó</span>;
+    }
+    if (participante.status === 'retired') {
+      return (
+        <span className="text-red-600">
+          DNF{participante.retired_at_lap ? ` en la vuelta ${participante.retired_at_lap}` : ''}
+        </span>
+      );
+    }
+    if (!carreraEmpezada) {
+      return <span className="text-muted-foreground">En la salida</span>;
+    }
+    if (participante.vuelta_en_curso_hecha) {
+      return (
+        <span className="flex items-center gap-1.5 text-green-600 font-medium">
+          <CheckCircle2 className="w-4 h-4" />
+          Volvió{marca?.hora ? ` a las ${marca.hora.slice(0, 5)}` : ''}
+        </span>
+      );
+    }
+    return <span className="text-amber-600 font-medium">Sin volver</span>;
   };
 
-  const handleSaveCurrentLap = async () => {
-    const token = localStorage.getItem('admin_token');
-    setSaving(true);
-    
-    try {
-      // First, complete the lap for all active participants
-      const completeLapRes = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap-all-active`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+  const etiquetaDeAccion = (accion, vuelta) => {
+    if (accion === 'lap_completed') {
+      return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Vuelta {vuelta}</Badge>;
+    }
+    if (accion === 'ajuste') {
+      return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">Ajuste a {vuelta}</Badge>;
+    }
+    const motivos = {
+      dnf: 'DNF',
+      dnf_early_return: 'DNF (volvió antes)',
+      dnf_timeout: 'DNF (sin tiempo)',
+    };
+    return (
+      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+        {motivos[accion] || accion}
+      </Badge>
+    );
+  };
 
-      if (!completeLapRes.ok) throw new Error('Error al completar vuelta');
-      
-      const completeLapData = await completeLapRes.json();
-      
-      // Update current lap to the new value
-      setCurrentLap(completeLapData.new_lap);
-      
-      showMessage(
-        `Vuelta ${completeLapData.previous_lap} completada. ${completeLapData.updated_count} atletas activos registrados. Vuelta en curso: ${completeLapData.new_lap}`,
-        'success'
+  // Anotar a mano lo que el escáner no pudo registrar.
+  const anotarVueltaAMano = async (e) => {
+    e.preventDefault();
+    if (!nuevaVuelta.bib.trim()) {
+      showMessage('Indica el dorsal', 'error');
+      return;
+    }
+
+    setGuardandoVuelta(true);
+    try {
+      const res = await adminFetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/qr-scan/lap-registrations/manual`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            race_code: raceCode,
+            bib: nuevaVuelta.bib.trim(),
+            lap_number: nuevaVuelta.lap_number ? Number(nuevaVuelta.lap_number) : null,
+            motivo: nuevaVuelta.motivo.trim() || null,
+          }),
+        }
       );
-      
-      // Reload data to show updated stats
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo anotar la vuelta');
+
+      showMessage(data.message, 'success');
+      setNuevaVuelta({ bib: '', lap_number: '', motivo: '' });
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setGuardandoVuelta(false);
+    }
+  };
+
+  // Para revisar el dia despues: el libro entero en una hoja de calculo, que
+  // es donde de verdad se cruzan y se ordenan miles de anotaciones.
+  const exportarCSV = async () => {
+    setExportando(true);
+    try {
+      const res = await adminFetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/qr-scan/lap-registrations/export?race_code=${raceCode}`
+      );
+      if (!res.ok) throw new Error('No se pudo exportar');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `registro_vueltas_${raceCode}.csv`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      window.URL.revokeObjectURL(url);
+      enlace.remove();
+      showMessage('Registro exportado', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  // Anular en vez de borrar: al día siguiente hay que poder explicar cada
+  // número, y un registro borrado no explica nada.
+  const anularMovimiento = async (movimiento) => {
+    const motivo = window.prompt(
+      `Anular la anotación de la vuelta ${movimiento.lap_number} de ${movimiento.athlete_name}.\n\n¿Por qué?`
+    );
+    if (motivo === null) return;
+
+    setAnulando(movimiento.id);
+    try {
+      const res = await adminFetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/qr-scan/lap-registrations/${movimiento.id}/anular`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ race_code: raceCode, motivo: motivo.trim() || null }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo anular');
+
+      showMessage(`${data.message}. ${movimiento.bib} queda con ${data.laps_completed} vueltas.`, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setAnulando(null);
+    }
+  };
+
+  // Sella la hora real de salida. Es lo que hace que el reloj de la carrera
+  // empiece a contar, para el panel y para el escáner por igual.
+  const iniciarCarrera = async () => {
+    if (!window.confirm(
+      `¿Dar la salida de ${raceName} ahora?\n\n` +
+      'A partir de este momento se cuenta una vuelta por hora. Si la salida ya ' +
+      'fue antes, luego puedes corregir la hora.'
+    )) return;
+
+    setIniciando(true);
+    try {
+      const res = await adminFetch(
+        conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/start`),
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo iniciar la carrera');
+      showMessage(data.message, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setIniciando(false);
+    }
+  };
+
+  const corregirHoraDeSalida = async () => {
+    const actual = estadoVuelta?.started_at ? new Date(estadoVuelta.started_at) : new Date();
+    const sugerido = new Date(actual.getTime() - actual.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+
+    const valor = window.prompt(
+      'Hora real de salida (formato AAAA-MM-DDTHH:MM):',
+      sugerido
+    );
+    if (!valor) return;
+
+    try {
+      const res = await adminFetch(
+        conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/start-time`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ started_at: valor.trim() }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo corregir la hora');
+      showMessage(data.message, 'success');
+      await loadData();
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  };
+
+  // Cierra una vuelta para todos los que siguen en carrera. Por defecto la
+  // última terminada según el reloj, pero se puede elegir otra: la corrección
+  // del día después casi nunca coincide con la vuelta en curso.
+  const handleSaveCurrentLap = async () => {
+    const vuelta = window.prompt(
+      'Cerrar vuelta para todos los atletas activos.\n\n' +
+      '¿Qué vuelta se cierra? (a quien ya la tenga registrada no se le repite)',
+      String(vueltaACerrar)
+    );
+    if (vuelta === null) return;
+
+    const numero = Number(vuelta);
+    if (!Number.isInteger(numero) || numero < 1) {
+      showMessage('Número de vuelta inválido', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const url = conCarrera(
+        `${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap-all-active`
+      );
+      const res = await adminFetch(`${url}&lap_number=${numero}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error al completar vuelta');
+
+      showMessage(data.message, 'success');
       await loadData();
     } catch (err) {
       showMessage(err.message, 'error');
@@ -200,39 +374,31 @@ export default function RaceControlPanel({ embedded = false }) {
     }
   };
 
+  // Deshacer una vuelta cerrada por error. No borra nada: anula lo anotado en
+  // esa vuelta y devuelve a la carrera a quien se hubiera retirado en ella.
   const handleRevertLap = async () => {
-    if (currentLap <= 1) {
-      showMessage('No se puede retroceder más. Ya está en la vuelta 1.', 'error');
+    const vuelta = window.prompt(
+      'Deshacer una vuelta.\n\n' +
+      'Se anulará todo lo anotado en ella -- vueltas y retiros -- y quienes se ' +
+      'retiraron en esa vuelta vuelven a la carrera. Nada se borra: las ' +
+      'anotaciones quedan marcadas como anuladas.\n\n¿Qué vuelta se deshace?',
+      String(vueltaACerrar)
+    );
+    if (vuelta === null) return;
+
+    const numero = Number(vuelta);
+    if (!Number.isInteger(numero) || numero < 1) {
+      showMessage('Número de vuelta inválido', 'error');
       return;
     }
 
-    const confirmRevert = window.confirm(
-      `⚠️ ADVERTENCIA: ¿Está seguro de retroceder a la vuelta ${currentLap - 1}?\n\n` +
-      `Esto reducirá en 1 las vueltas completadas de todos los atletas activos.\n\n` +
-      `Use esto SOLO para corregir errores si avanzó la vuelta por equivocación.`
-    );
-
-    if (!confirmRevert) return;
-
-    const token = localStorage.getItem('admin_token');
     setReverting(true);
-
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/revert-lap`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/revert-lap`);
+      const res = await adminFetch(`${url}&lap_number=${numero}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error al deshacer la vuelta');
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al retroceder vuelta');
-      }
-
-      const data = await response.json();
-      setCurrentLap(data.new_lap);
       showMessage(data.message, 'success');
       await loadData();
     } catch (err) {
@@ -249,11 +415,10 @@ export default function RaceControlPanel({ embedded = false }) {
     try {
       if (participant.status === 'active') {
         // Marking as retired
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-retired`, {
+        const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-retired`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ 
             bib: participant.bib,
@@ -277,11 +442,10 @@ export default function RaceControlPanel({ embedded = false }) {
           return;
         }
 
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reactivate`, {
+        const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reactivate`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ bib: participant.bib })
         });
@@ -312,11 +476,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-dns`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-dns`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -341,11 +504,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/complete-lap`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: participant.bib,
@@ -382,11 +544,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setResetting(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-database`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-database`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ confirmation: resetConfirmation })
       });
@@ -407,106 +568,6 @@ export default function RaceControlPanel({ embedded = false }) {
       showMessage(err.message, 'error');
     } finally {
       setResetting(false);
-    }
-  };
-
-  const handleResetSubscriptions = async () => {
-    if (resetSubsConfirmation !== 'SUSCRIPCIONES') {
-      showMessage('Debe escribir SUSCRIPCIONES para confirmar', 'error');
-      return;
-    }
-
-    const token = localStorage.getItem('admin_token');
-    setResettingSubs(true);
-
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-subscriptions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ confirmation: resetSubsConfirmation })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al reiniciar suscripciones');
-      }
-
-      const data = await response.json();
-      showMessage(data.message, 'success');
-      setShowResetSubsModal(false);
-      setResetSubsConfirmation('');
-      
-      // Reload data to update followers count
-      await loadData();
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setResettingSubs(false);
-    }
-  };
-
-  const handleResetCheers = async () => {
-    if (resetCheersConfirmation !== 'MENSAJES') {
-      showMessage('Debe escribir MENSAJES para confirmar', 'error');
-      return;
-    }
-
-    const token = localStorage.getItem('admin_token');
-    setResettingCheers(true);
-
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-cheers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ confirmation: resetCheersConfirmation })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al reiniciar mensajes');
-      }
-
-      const data = await response.json();
-      showMessage(data.message, 'success');
-      setShowResetCheersModal(false);
-      setResetCheersConfirmation('');
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setResettingCheers(false);
-    }
-  };
-
-  const handleSendRunnerEmails = async () => {
-    const token = localStorage.getItem('admin_token');
-    setSendingRunnerEmails(true);
-
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/send-runner-emails`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al enviar correos');
-      }
-
-      const data = await response.json();
-      showMessage(`Correos enviados: ${data.emails_sent} exitosos, ${data.emails_failed} fallidos, ${data.no_email} sin email`, 'success');
-      setShowSendRunnerEmailsModal(false);
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setSendingRunnerEmails(false);
     }
   };
 
@@ -533,11 +594,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setEditingParticipant(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/edit-participant`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/edit-participant`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: editParticipant.bib,
@@ -575,11 +635,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setMarkingWinner(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-winner`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-winner`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -609,11 +668,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setSaving(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-honor`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/mark-honor`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ bib: participant.bib })
       });
@@ -641,11 +699,10 @@ export default function RaceControlPanel({ embedded = false }) {
     setAdjustingLaps(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/adjust-laps`, {
+      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/adjust-laps`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
           bib: adjustLapsParticipant.bib,
@@ -679,7 +736,14 @@ export default function RaceControlPanel({ embedded = false }) {
       p.nombre.toLowerCase().includes(search) ||
       p.apellidos.toLowerCase().includes(search)
     );
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+    // "pendientes" no es un estado del corredor sino una pregunta sobre la
+    // vuelta en curso: quien sigue en carrera y todavia no ha vuelto.
+    const matchesStatus =
+      filterStatus === 'all'
+        ? true
+        : filterStatus === 'pendientes'
+        ? !['retired', 'dns', 'winner'].includes(p.status) && !p.vuelta_en_curso_hecha
+        : p.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -695,472 +759,483 @@ export default function RaceControlPanel({ embedded = false }) {
   }
 
   return (
-    <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-4">
+        {/* Cabecera: sobre qué carrera se trabaja y las acciones que casi nunca
+            se usan, apartadas para que no estorben el día de la carrera. */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
             <h2 className="text-2xl font-bold">Control de Carrera</h2>
-            <p className="text-muted-foreground">Gestión de vueltas y participantes • {raceName}</p>
+            <p className="text-muted-foreground text-sm">
+              Corredores y vueltas de {raceName}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => setShowSendRunnerEmailsModal(true)}
-              variant="outline"
-              className="border-green-300 text-green-600 hover:bg-green-50"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Enviar Correos Corredores
-            </Button>
-            <Button
-              onClick={() => setShowResetSubsModal(true)}
-              variant="outline"
-              className="border-pink-300 text-pink-600 hover:bg-pink-50"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Reiniciar Suscripciones
-            </Button>
-            <Button
-              onClick={() => setShowResetCheersModal(true)}
-              variant="outline"
-              className="border-purple-300 text-purple-600 hover:bg-purple-50"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Borrar Mensajes
-            </Button>
-            <Button
-              onClick={() => setShowResetModal(true)}
-              variant="outline"
-              className="border-orange-300 text-orange-600 hover:bg-orange-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Reiniciar BD
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <RaceSelector />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" title="Más acciones">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {/* Solo lo que es de la carrera en si. Los correos de cierre y
+                    la limpieza de mensajes y suscripciones viven en
+                    Configuración > Carrera, que es donde se cierra la edición. */}
+                <DropdownMenuItem
+                  onSelect={() => setShowResetModal(true)}
+                  className="gap-2 text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" /> Borrar las vueltas de esta carrera
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Message */}
         {message && (
           <div
-            className={`mb-6 flex items-center gap-2 p-4 rounded-lg ${
+            className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
               message.type === 'success'
                 ? 'bg-green-50 border border-green-200 text-green-700'
                 : 'bg-red-50 border border-red-200 text-red-700'
             }`}
           >
             {message.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
             ) : (
-              <AlertCircle className="w-5 h-5" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
             )}
-            <p className="text-sm font-medium">{message.text}</p>
+            <p className="font-medium">{message.text}</p>
           </div>
         )}
 
-        {/* Current Lap Control */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <div>
-                <CardTitle>Control de Vuelta</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Al guardar, se registrará la vuelta actual para todos los atletas activos y se incrementará a la siguiente vuelta
-                </p>
+        {/* El estado de la carrera: la vuelta, el reloj y cuánta gente queda.
+            Es lo único que se mira sin buscar nada. */}
+        <Card className={carreraEmpezada && !carreraTerminada ? 'border-primary/40' : ''}>
+          <CardContent className="pt-6">
+            {!carreraEmpezada ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold">La carrera no ha empezado</p>
+                    <p className="text-sm text-muted-foreground">
+                      Salida prevista {horaCorta(estadoVuelta?.started_at)}
+                      {cuentaAtras(estadoVuelta?.seconds_remaining)
+                        ? ` · faltan ${cuentaAtras(estadoVuelta.seconds_remaining)}`
+                        : ''}
+                      . Hasta entonces el escáner no acepta vueltas.
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={iniciarCarrera} disabled={iniciando} size="lg" className="shrink-0">
+                  <Play className="w-4 h-4 mr-2" />
+                  {iniciando ? 'Dando la salida...' : 'Iniciar carrera'}
+                </Button>
               </div>
-              {/* Time Validation Toggle */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setTimeValidationEnabled(!timeValidationEnabled)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                    timeValidationEnabled
-                      ? 'bg-green-50 border-green-300 text-green-700'
-                      : 'bg-gray-50 border-gray-300 text-gray-600'
-                  }`}
-                >
-                  {timeValidationEnabled ? (
-                    <ShieldCheck className="w-4 h-4" />
-                  ) : (
-                    <ShieldOff className="w-4 h-4" />
+            ) : (
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Vuelta y reloj */}
+                <div className="flex items-center gap-5 shrink-0">
+                  <div className="text-center">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Vuelta</p>
+                    <p className="text-5xl font-bold text-primary leading-none">{currentLap}</p>
+                  </div>
+                  <div className="border-l pl-5">
+                    {carreraTerminada ? (
+                      <p className="font-semibold text-muted-foreground">Carrera cerrada</p>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold tabular-nums">
+                          {cuentaAtras(estadoVuelta?.seconds_remaining) || '--'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          para cerrar · {horaCorta(estadoVuelta?.lap_start_time)} a {horaCorta(estadoVuelta?.lap_end_time)}
+                        </p>
+                      </>
+                    )}
+                    <button
+                      onClick={corregirHoraDeSalida}
+                      className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground mt-1"
+                    >
+                      Salida {horaCorta(estadoVuelta?.started_at)} · corregir
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cuánta gente queda y cuánta falta por volver */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 flex-1">
+                  <div>
+                    <p className="text-2xl font-bold text-green-600 leading-none">{totales.en_carrera ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">en carrera</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-muted-foreground leading-none">{totales.fuera ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">fuera</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold leading-none">
+                      {totales.vuelta_en_curso_hecha ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">volvieron de la {currentLap}</p>
+                  </div>
+                  {(totales.faltan_por_volver ?? 0) > 0 && (
+                    <div>
+                      <p className="text-2xl font-bold text-amber-600 leading-none">
+                        {totales.faltan_por_volver}
+                      </p>
+                      <p className="text-xs text-muted-foreground">sin volver</p>
+                    </div>
                   )}
-                  <span className="text-sm font-medium">
-                    {timeValidationEnabled ? 'Validación Activa' : 'Validación Inactiva'}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-6">
-              {/* Time Validation Warning/Info */}
-              {timeValidationEnabled && !canCompleteLap(currentLap) && (
-                <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-amber-800">Vuelta aún en curso</p>
-                      <p className="text-sm text-amber-700 mt-1">
-                        No puedes registrar la vuelta {currentLap} hasta que finalice.
-                      </p>
-                      <p className="text-lg font-bold text-amber-800 mt-2">
-                        Tiempo restante: {getTimeUntilLapComplete(currentLap)}
-                      </p>
-                    </div>
-                  </div>
                 </div>
-              )}
 
-              {timeValidationEnabled && canCompleteLap(currentLap) && (
-                <div className="bg-green-50 border border-green-300 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-green-800">Vuelta {currentLap} finalizada</p>
-                      <p className="text-sm text-green-700">Puedes registrar la vuelta completada.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!timeValidationEnabled && (
-                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <ShieldOff className="w-5 h-5 text-gray-500" />
-                    <div>
-                      <p className="font-semibold text-gray-700">Validación de tiempo desactivada</p>
-                      <p className="text-sm text-gray-600">Puedes registrar vueltas sin restricción de horario.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Lap Number and Time Display */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Vuelta en Curso
-                  </label>
-                  <div className="text-center p-6 bg-muted/30 rounded-lg border-2 border-primary/20 flex-1 flex items-center justify-center">
-                    <p className="text-5xl font-bold text-primary">{currentLap}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-foreground mb-2 block flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Horario de la Vuelta {currentLap}
-                  </label>
-                  <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200 flex-1 flex flex-col justify-center">
-                    <div className="flex items-center justify-center gap-3">
-                      <div className="text-center">
-                        <p className="text-xs text-blue-600 font-medium">INICIO</p>
-                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).start}</p>
-                      </div>
-                      <div className="text-2xl text-blue-400">→</div>
-                      <div className="text-center">
-                        <p className="text-xs text-blue-600 font-medium">FIN</p>
-                        <p className="text-2xl font-bold text-blue-700">{getLapTimeRange(currentLap).end}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-blue-500 mt-2">
-                      La carrera inicia a las {getRaceStartDate().toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit', hour12: true })} • Cada vuelta dura 1 hora
-                    </p>
-                    <p className="text-xs text-blue-600 mt-1 font-medium">
-                      Hora actual: {currentTime.toLocaleTimeString('es-DO')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button
-                  onClick={handleRevertLap}
-                  disabled={reverting || currentLap <= 1}
-                  variant="outline"
-                  className="border-amber-400 text-amber-700 hover:bg-amber-50 flex-1 sm:flex-none"
-                >
-                  <ChevronLeft className="w-5 h-5 mr-2" />
-                  {reverting ? 'Retrocediendo...' : 'Retroceder Vuelta'}
-                </Button>
-                <Button
-                  onClick={handleSaveCurrentLap}
-                  disabled={saving || (timeValidationEnabled && !canCompleteLap(currentLap))}
-                  className={`h-12 px-8 flex-1 ${
-                    timeValidationEnabled && !canCompleteLap(currentLap)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-primary hover:bg-accent'
-                  } text-primary-foreground`}
-                >
-                  <Save className="w-5 h-5 mr-2" />
-                  {saving ? 'Guardando...' : 'Registrar Vuelta Completada para Atletas Activos'}
-                </Button>
-              </div>
-
-              {/* Next Lap Preview */}
-              {currentLap < 24 && (
-                <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Próxima vuelta ({currentLap + 1}):</span>{' '}
-                    {getLapTimeRange(currentLap + 1).start} - {getLapTimeRange(currentLap + 1).end}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Participants Control */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <CardTitle>Control de Participantes</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {filteredParticipants.length} participantes
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="relative flex-1 md:w-80">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Buscar por BIB, nombre o apellidos..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-4 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="all">Todos ({participants.length})</option>
-                    <option value="active">Activos ({participants.filter(p => p.status === 'active').length})</option>
-                    <option value="winner">Ganador ({participants.filter(p => p.status === 'winner').length})</option>
-                    <option value="honor">Invitada de Honor ({participants.filter(p => p.status === 'honor').length})</option>
-                    <option value="retired">DNF ({participants.filter(p => p.status === 'retired').length})</option>
-                    <option value="dns">DNS ({participants.filter(p => p.status === 'dns').length})</option>
-                  </select>
+                {/* Cerrar la vuelta para todos, o deshacerla */}
+                <div className="flex flex-wrap gap-2 items-center shrink-0">
+                  <Button onClick={handleSaveCurrentLap} disabled={saving}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {saving ? 'Cerrando...' : `Cerrar vuelta ${vueltaACerrar} para todos`}
+                  </Button>
                   <Button
+                    onClick={handleRevertLap}
+                    disabled={reverting}
                     variant="outline"
-                    size="icon"
-                    onClick={loadData}
-                    title="Refrescar lista"
+                    className="border-amber-400 text-amber-700 hover:bg-amber-50"
                   >
-                    <RotateCw className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    {reverting ? 'Deshaciendo...' : 'Deshacer'}
                   </Button>
                 </div>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {puedeControlar && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+              <CardTitle className="text-lg">
+                Corredores
+                <span className="text-muted-foreground font-normal text-sm ml-2">
+                  {filteredParticipants.length} de {participants.length}
+                </span>
+              </CardTitle>
+              <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <div className="relative flex-1 sm:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Dorsal, nombre o apellidos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-3 py-2 border rounded-md bg-background text-sm"
+                >
+                  <option value="all">Todos</option>
+                  <option value="pendientes">Sin volver de la vuelta</option>
+                  <option value="active">En carrera</option>
+                  <option value="retired">DNF</option>
+                  <option value="dns">DNS</option>
+                  <option value="winner">Ganador</option>
+                  <option value="honor">Invitada de honor</option>
+                </select>
+                <Button
+                  variant={anotando ? 'default' : 'outline'}
+                  onClick={() => setAnotando((v) => !v)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Anotar vuelta
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Anotar a mano lo que el escáner no pudo. Va aquí, junto a los
+                corredores, porque es donde se descubre que falta. */}
+            {anotando && (
+              <form
+                onSubmit={anotarVueltaAMano}
+                className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end mb-4 p-4 bg-muted/40 rounded-lg"
+              >
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Dorsal</label>
+                  <Input
+                    value={nuevaVuelta.bib}
+                    onChange={(e) => setNuevaVuelta((p) => ({ ...p, bib: e.target.value }))}
+                    placeholder="042"
+                    className="font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">
+                    Vuelta <span className="text-muted-foreground font-normal">(opcional)</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={nuevaVuelta.lap_number}
+                    onChange={(e) => setNuevaVuelta((p) => ({ ...p, lap_number: e.target.value }))}
+                    placeholder="la siguiente que le toca"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">Motivo</label>
+                  <Input
+                    value={nuevaVuelta.motivo}
+                    onChange={(e) => setNuevaVuelta((p) => ({ ...p, motivo: e.target.value }))}
+                    placeholder="el teléfono se quedó sin batería"
+                  />
+                </div>
+                <Button type="submit" disabled={guardandoVuelta}>
+                  {guardandoVuelta ? (
+                    <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-2" />
+                  )}
+                  Anotar
+                </Button>
+              </form>
+            )}
+
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">BIB</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Nombre</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Vueltas</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Seguidores</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Estado</th>
-                    <th className="text-center py-3 px-4 font-semibold text-sm">Acciones</th>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left py-2 px-3 font-medium">Dorsal</th>
+                    <th className="text-left py-2 px-3 font-medium">Corredor</th>
+                    <th className="text-center py-2 px-3 font-medium">Vueltas</th>
+                    <th className="text-left py-2 px-3 font-medium">
+                      {carreraEmpezada ? `Vuelta ${currentLap}` : 'Estado'}
+                    </th>
+                    <th className="text-right py-2 px-3 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredParticipants.map((participant) => (
-                    <tr
-                      key={participant.bib}
-                      className="border-b border-border last:border-0 hover:bg-muted/30"
-                    >
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="font-mono">
-                          {participant.bib}
-                        </Badge>
+                  {filteredParticipants.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-muted-foreground">
+                        No hay corredores que coincidan
                       </td>
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium text-foreground">{participant.nombre}</p>
-                          <p className="text-sm text-muted-foreground">{participant.apellidos}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-lg">{participant.laps_completed}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {followersCount[participant.bib] ? (
-                          <Badge variant="secondary" className="bg-pink-100 text-pink-700 flex items-center gap-1 w-fit">
-                            <Users className="w-3 h-3" />
-                            {followersCount[participant.bib]}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">0</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge
-                          variant={participant.status === 'active' || participant.status === 'winner' || participant.status === 'honor' ? 'default' : 'secondary'}
-                          className={
-                            participant.status === 'winner'
-                              ? 'bg-yellow-500'
-                              : participant.status === 'honor'
-                              ? 'bg-purple-500'
-                              : participant.status === 'active' 
-                              ? 'bg-green-500' 
-                              : participant.status === 'dns'
-                              ? 'bg-gray-500'
-                              : 'bg-red-500'
-                          }
-                        >
-                          {participant.status === 'winner'
-                            ? '🏆 Ganador'
-                            : participant.status === 'honor'
-                            ? '⭐ Invitada'
-                            : participant.status === 'active' 
-                            ? 'Activo' 
-                            : participant.status === 'dns'
-                            ? 'DNS'
-                            : 'DNF'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex justify-center gap-2 flex-wrap">
-                          {participant.status === 'active' && (
-                            <>
+                    </tr>
+                  )}
+                  {filteredParticipants.map((participant) => {
+                    const fuera = participant.status === 'retired' || participant.status === 'dns';
+                    const marca = participant.ultima_marca;
+                    return (
+                      <tr key={participant.bib} className="border-b hover:bg-muted/30">
+                        <td className="py-2 px-3">
+                          <Badge variant="outline" className="font-mono">{participant.bib}</Badge>
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="font-medium">
+                            {participant.nombre} {participant.apellidos}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {participant.nacionalidad}
+                          </span>
+                          {participant.categoria && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              · {participant.categoria}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="font-bold">{participant.laps_completed}</span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            {participant.total_km} km
+                          </span>
+                        </td>
+                        <td className="py-2 px-3">{estadoDeVuelta(participant, marca)}</td>
+                        <td className="py-2 px-3">
+                          <div className="flex justify-end gap-1">
+                            {!fuera && participant.status !== 'winner' && (
                               <Button
                                 size="sm"
+                                variant="outline"
                                 onClick={() => handleCompleteLap(participant)}
                                 disabled={saving}
-                                className="bg-primary hover:bg-accent"
+                                title="Anotar la siguiente vuelta"
                               >
-                                Registrar Vuelta
+                                <Plus className="w-3.5 h-3.5" />
                               </Button>
+                            )}
+                            {!fuera && participant.status !== 'winner' && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleToggleRetired(participant)}
                                 disabled={saving}
-                                className="border-red-500 text-red-600"
+                                className="border-red-300 text-red-600 hover:bg-red-50"
                               >
-                                Marcar DNF
+                                DNF
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleMarkDNS(participant)}
-                                disabled={saving}
-                                className="border-gray-500 text-gray-600"
-                              >
-                                Marcar DNS
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleMarkWinner(participant)}
-                                disabled={saving || markingWinner}
-                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-                                title="Marcar como Ganador"
-                              >
-                                <Trophy className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleMarkHonor(participant)}
-                                disabled={saving}
-                                className="border-purple-400 text-purple-500 hover:bg-purple-50"
-                                title="Marcar como Invitada de Honor"
-                              >
-                                <Star className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openAdjustLapsModal(participant)}
-                                disabled={saving}
-                                className="border-blue-500 text-blue-600"
-                                title="Ajustar vueltas manualmente"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openEditParticipantModal(participant)}
-                                disabled={saving}
-                                className="border-purple-500 text-purple-600"
-                                title="Editar datos del corredor"
-                              >
-                                <UserCog className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                          {participant.status === 'winner' && (
-                            <Badge className="bg-yellow-500 text-white">
-                              <Trophy className="w-3 h-3 mr-1" />
-                              GANADOR
-                            </Badge>
-                          )}
-                          {participant.status === 'honor' && (
-                            <>
-                              <Badge className="bg-purple-500 text-white">
-                                ⭐ INVITADA DE HONOR
-                              </Badge>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openEditParticipantModal(participant)}
-                                disabled={saving}
-                                className="border-purple-500 text-purple-600"
-                                title="Editar datos"
-                              >
-                                <UserCog className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                          {(participant.status === 'retired' || participant.status === 'dns') && (
-                            <>
+                            )}
+                            {fuera && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleToggleRetired(participant)}
                                 disabled={saving}
-                                className="border-green-500 text-green-600"
+                                className="border-green-400 text-green-700 hover:bg-green-50"
                               >
                                 Reactivar
                               </Button>
-                              {participant.status === 'retired' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openAdjustLapsModal(participant)}
-                                  disabled={saving}
-                                  className="border-blue-500 text-blue-600"
-                                  title="Ajustar vueltas manualmente"
-                                >
-                                  <Edit3 className="w-4 h-4" />
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="ghost" title="Más">
+                                  <MoreHorizontal className="w-4 h-4" />
                                 </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openEditParticipantModal(participant)}
-                                disabled={saving}
-                                className="border-purple-500 text-purple-600"
-                                title="Editar datos del corredor"
-                              >
-                                <UserCog className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem
+                                  onSelect={() => openAdjustLapsModal(participant)}
+                                  className="gap-2"
+                                >
+                                  <Edit3 className="w-4 h-4" /> Ajustar vueltas
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => openEditParticipantModal(participant)}
+                                  className="gap-2"
+                                >
+                                  <UserCog className="w-4 h-4" /> Editar datos
+                                </DropdownMenuItem>
+                                {!fuera && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onSelect={() => handleMarkWinner(participant)}
+                                      className="gap-2"
+                                    >
+                                      <Trophy className="w-4 h-4" /> Marcar ganador
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onSelect={() => handleMarkHonor(participant)}
+                                      className="gap-2"
+                                    >
+                                      <Star className="w-4 h-4" /> Invitada de honor
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onSelect={() => handleMarkDNS(participant)}
+                                      className="gap-2"
+                                    >
+                                      <UserX className="w-4 h-4" /> No se presentó (DNS)
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
+        )}
+
+        {/* De dónde salen esos números. Los últimos movimientos siempre a la
+            vista, y el libro entero a un clic para cuando hay que investigar. */}
+        {puedeVerVueltas && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center gap-3">
+                <div>
+                  <CardTitle className="text-lg">Últimos movimientos</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Escaneos y anotaciones a mano, en el mismo libro. Corregir es
+                    anular: nada se borra.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportarCSV}
+                  disabled={exportando || movimientos.length === 0}
+                >
+                  {exportando ? (
+                    <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Exportar CSV
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {movimientos.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">
+                  Todavía no hay vueltas anotadas en esta carrera
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {movimientos.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`flex items-center gap-3 py-2 text-sm ${m.anulada ? 'opacity-50' : ''}`}
+                    >
+                      <span className="font-mono text-muted-foreground w-16 shrink-0">
+                        {m.scan_time_local || '--:--'}
+                      </span>
+                      <Badge variant="outline" className="font-mono shrink-0">{m.bib}</Badge>
+                      <span className={`flex-1 truncate ${m.anulada ? 'line-through' : ''}`}>
+                        {m.athlete_name}
+                      </span>
+                      <span className="shrink-0">{etiquetaDeAccion(m.action, m.lap_number)}</span>
+                      <span className="text-xs text-muted-foreground w-20 shrink-0 flex items-center gap-1">
+                        {m.source === 'panel' ? (
+                          <><ClipboardEdit className="w-3 h-3" /> panel</>
+                        ) : (
+                          <><QrCode className="w-3 h-3" /> escáner</>
+                        )}
+                      </span>
+                      {m.anulada ? (
+                        <Badge variant="outline" className="text-muted-foreground shrink-0">
+                          anulada
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => anularMovimiento(m)}
+                          disabled={anulando === m.id}
+                          className="text-destructive hover:text-destructive shrink-0"
+                        >
+                          {anulando === m.id ? (
+                            <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Ban className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {movimientos.length >= cuantosMovimientos && (
+                <div className="pt-3 text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCuantosMovimientos((n) => n + 60)}
+                  >
+                    Ver más movimientos
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
       {/* Reset Database Modal */}
       {showResetModal && (
@@ -1240,159 +1315,6 @@ export default function RaceControlPanel({ embedded = false }) {
       )}
 
       {/* Reset Subscriptions Modal */}
-      {showResetSubsModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-pink-300 shadow-strong">
-            <CardHeader className="border-b border-pink-200 bg-pink-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-pink-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-pink-900">Reiniciar Suscripciones</CardTitle>
-                  <p className="text-sm text-pink-700 mt-1">Esta acción es irreversible</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-pink-900 mb-2">⚠️ Advertencia</h3>
-                  <ul className="text-sm text-pink-800 space-y-1">
-                    <li>• Se eliminarán todas las suscripciones de correo</li>
-                    <li>• Los usuarios deberán volver a suscribirse</li>
-                    <li>• Se perderán los datos de seguidores de atletas</li>
-                    <li>• No se enviarán más notificaciones hasta nueva suscripción</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Para confirmar, escriba <span className="font-bold text-pink-600">SUSCRIPCIONES</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={resetSubsConfirmation}
-                    onChange={(e) => setResetSubsConfirmation(e.target.value)}
-                    placeholder="Escriba SUSCRIPCIONES"
-                    className="text-center font-mono text-lg"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => {
-                      setShowResetSubsModal(false);
-                      setResetSubsConfirmation('');
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={resettingSubs}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleResetSubscriptions}
-                    disabled={resetSubsConfirmation !== 'SUSCRIPCIONES' || resettingSubs}
-                    className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
-                  >
-                    {resettingSubs ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Reiniciando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Confirmar Reinicio
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Reset Cheers Modal */}
-      {showResetCheersModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-purple-300 shadow-strong">
-            <CardHeader className="border-b border-purple-200 bg-purple-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <MessageCircle className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-purple-900">Borrar Mensajes de Ánimo</CardTitle>
-                  <p className="text-sm text-purple-700 mt-1">Esta acción es irreversible</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-purple-900 mb-2">⚠️ Advertencia</h3>
-                  <ul className="text-sm text-purple-800 space-y-1">
-                    <li>• Se eliminarán todos los mensajes de ánimo enviados</li>
-                    <li>• Se reiniciará el ranking de fans</li>
-                    <li>• Se perderán los badges de los fans</li>
-                    <li>• El modo presentación no mostrará mensajes</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Para confirmar, escriba <span className="font-bold text-purple-600">MENSAJES</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={resetCheersConfirmation}
-                    onChange={(e) => setResetCheersConfirmation(e.target.value)}
-                    placeholder="Escriba MENSAJES"
-                    className="text-center font-mono text-lg"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => {
-                      setShowResetCheersModal(false);
-                      setResetCheersConfirmation('');
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={resettingCheers}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleResetCheers}
-                    disabled={resetCheersConfirmation !== 'MENSAJES' || resettingCheers}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {resettingCheers ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Borrando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Confirmar Borrado
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Adjust Laps Modal */}
       {showAdjustLapsModal && adjustLapsParticipant && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1562,73 +1484,6 @@ export default function RaceControlPanel({ embedded = false }) {
       )}
 
       {/* Send Runner Emails Modal */}
-      {showSendRunnerEmailsModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-green-300 shadow-strong">
-            <CardHeader className="border-b border-green-200 bg-green-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-green-900">Enviar Correos a Corredores</CardTitle>
-                  <p className="text-sm text-green-700 mt-1">Resumen de carrera y mensajes de ánimo</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-green-900 mb-2">📧 Se enviará a cada corredor:</h3>
-                  <ul className="text-sm text-green-800 space-y-1">
-                    <li>• Mensaje de felicitación personalizado</li>
-                    <li>• Resumen: KM recorridos, vueltas, seguidores</li>
-                    <li>• Todos los mensajes de ánimo recibidos</li>
-                    <li>• El ganador recibirá badge de campeón</li>
-                  </ul>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-amber-900 mb-2">⚠️ Nota importante:</h3>
-                  <ul className="text-sm text-amber-800 space-y-1">
-                    <li>• Solo se envía a corredores que participaron (no DNS)</li>
-                    <li>• Corredores sin email registrado serán omitidos</li>
-                    <li>• Este proceso puede tomar varios minutos</li>
-                  </ul>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => setShowSendRunnerEmailsModal(false)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={sendingRunnerEmails}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSendRunnerEmails}
-                    disabled={sendingRunnerEmails}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {sendingRunnerEmails ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Enviar Correos
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

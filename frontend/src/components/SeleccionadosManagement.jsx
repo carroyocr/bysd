@@ -275,7 +275,8 @@ export default function SeleccionadosManagement() {
       <div>
         <h2 className="text-2xl font-bold">Seleccionados — Campeonato Mundial por Equipos</h2>
         <p className="text-muted-foreground">
-          Gestiona los titulares y reservas del campeonato a partir de los atletas del evento previo (BYSD-2026)
+          Quién va al campeonato: titulares y reservas, a partir de los atletas
+          del evento previo (BYSD-2026)
         </p>
       </div>
 

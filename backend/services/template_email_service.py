@@ -14,6 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
+from services.email_service import EMAILS_ACTIVOS
 
 GMAIL_USER = get_env("GMAIL_USER")
 GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
@@ -40,6 +41,10 @@ def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False
     subtype = 'plain' if is_plain else 'html'
 
     def _connect():
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}")
+            return True
+
         s = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30)
         s.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         return s
@@ -200,6 +205,10 @@ async def send_templated_email_with_error(
 
         part = MIMEText(html_content, 'plain' if is_plain else 'html', 'utf-8')
         msg.attach(part)
+
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}")
+            return True
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)

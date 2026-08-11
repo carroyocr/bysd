@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from datetime import datetime
+from services.email_service import EMAILS_ACTIVOS
 
 GMAIL_USER = get_env("GMAIL_USER")
 GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
@@ -302,6 +303,10 @@ async def send_volunteer_reminder_email(
         part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(part)
         
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}")
+            return True
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
@@ -339,6 +344,10 @@ async def send_volunteer_assignments_email(
         part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(part)
         
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}")
+            return True
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())

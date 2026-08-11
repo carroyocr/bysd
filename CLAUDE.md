@@ -31,6 +31,18 @@ Este es un sitio **en producción en vivo** (`backyardultrasantodomingo.com`). L
 - **Endpoint nuevo del panel = endpoint protegido.** Usa `Depends(require_permission("<permiso>"))` de `services.auth` (permisos: `control`, `athletes`, `finances`, `volunteers`, `sponsors`, `surveys`, `config`, `scanner`, `users`, `emails`). Desde el frontend, llámalo con `adminFetch` de `src/lib/adminApi.js`, que adjunta el token.
 - **App móvil: compila siempre con `yarn build:mobile`**, nunca con `yarn build` + `npx cap copy`. La URL del backend se hornea en el build, y `yarn build` usa la de `frontend/.env` (`http://localhost:8001`): en el teléfono eso deja la app sin backend y sin ningún error visible más que pantallas vacías.
 - **Notificaciones push (app BYSD Live):** van por Firebase Cloud Messaging desde `backend/services/push_service.py`, con la cuenta de servicio en `FCM_SERVICE_ACCOUNT_JSON` (variable de entorno; si falta, el push queda inactivo pero el backend arranca igual). Los avisos automáticos salen del escaneo y no deben bloquearlo: se disparan con `asyncio.create_task`. Ver `frontend/NOTIFICACIONES_PUSH.md`.
-- El escaneo de vueltas (`/api/qr-scan/athlete`, `/confirm`) se autoriza con la **clave de escaneo** de la carrera (cabecera `X-Scan-Key`) o con token del panel. La clave está en `race_configurations.scan_key` y **no debe salir** en ninguna respuesta pública.
+- El escaneo de vueltas (`/api/qr-scan/athlete`, `/confirm`) se autoriza con la **clave de escaneo** de la carrera (cabecera `X-Scan-Key`) o con token del panel. La clave está en `race_configurations.scan_key` y **no debe salir** en ninguna respuesta pública. La clave es por carrera: `/confirm` comprueba que sea la de la carrera sobre la que se escribe.
+
+## Varias carreras a la vez
+
+Desde agosto de 2026 conviven varias carreras (el Campeonato Mundial de octubre y la carrera abierta de enero). Tres reglas que no se pueden saltar:
+
+- **`is_active` significa una sola cosa: la carrera que muestra el sitio público.** No es "la carrera sobre la que se trabaja". El panel manda su `race_code` en cada llamada (lo elige en el selector de la sección En Vivo, `contexts/AdminRaceContext.jsx`) y el escáner manda el que viaja dentro del QR. Un endpoint de administración que caiga en silencio sobre la carrera activa es un fallo: usa `Depends(races.carrera_del_panel)`, que lo exige. Para endpoints públicos y de la app, `races.resolver_carrera` acepta el que venga y si no cae en la pública.
+- **Las vueltas se anotan solo por `services/laps.py`**, que escribe en `lap_registrations` con `race_code`, origen (`qr` o `panel`) y autor. `registrations.laps_completed` y `total_km` no se tocan a mano: los recalcula `laps.recalcular()` desde ese libro. Corregir es **anular** (`laps.anular`), nunca borrar.
+- **La vuelta en curso la da el reloj**, en `services/races.py`: `vuelta_actual(carrera)` cuenta desde `started_at`, la hora real que se sella con "Iniciar carrera", y se detiene en `finished_at` al cerrar la carrera. No hay contadores manuales; la colección `race_config` quedó retirada.
+
+Dar la salida (`POST /api/race/start`) también pasa los inscritos de `registered` a `active`: es lo que los convierte en corredores en carrera.
+
+Cerrar una carrera (`POST /api/race-config/close/{code}`) no mueve ni borra datos, solo congela. Cada dato lleva su `race_code` y se queda donde está.
 
 Ver **WORKFLOW.md** para el detalle completo del flujo de desarrollo y despliegue.

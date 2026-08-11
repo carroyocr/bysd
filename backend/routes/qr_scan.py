@@ -21,6 +21,7 @@ import io
 
 from services.auth import has_permission, require_permission, verify_admin_token
 from services.file_storage import safe_filename
+from services import laps, races
 
 router = APIRouter(prefix="/api/qr-scan", tags=["qr-scan"])
 
@@ -67,8 +68,7 @@ def _avisar_push(database, race_code, athlete, titulo, cuerpo, data=None) -> Non
     tarea.add_done_callback(_tareas_push.discard)
 
 
-def nombre_completo(athlete: dict) -> str:
-    return f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip()
+nombre_completo = laps.nombre_completo
 
 
 def generar_scan_key() -> str:
@@ -80,9 +80,9 @@ def generar_scan_key() -> str:
 async def obtener_scan_key(database, race_code: Optional[str] = None) -> tuple:
     """Devuelve (carrera, clave), creandola la primera vez que hace falta."""
     if race_code:
-        carrera = await database.race_configurations.find_one({"code": race_code})
+        carrera = await database.race_configurations.find_one({"code": race_code.upper()})
     else:
-        carrera = await database.race_configurations.find_one({"is_active": True})
+        carrera = await races.carrera_publica(database)
 
     if not carrera:
         raise HTTPException(status_code=400, detail="No hay carrera activa")
@@ -117,11 +117,15 @@ async def require_scan_access(
             detail="Falta la clave de escaneo. Pidesela a la organizacion.",
         )
 
-    _, clave = await obtener_scan_key(database, race_code)
+    carrera, clave = await obtener_scan_key(database, race_code)
     if not secrets.compare_digest(x_scan_key.strip().upper(), clave):
         raise HTTPException(status_code=401, detail="Clave de escaneo incorrecta")
 
-    return {"scan_key": True}
+    # De que carrera es la clave que acaba de pasar. Ahora que se puede escanear
+    # sobre carreras distintas, el endpoint tiene que comprobar que sea la misma
+    # sobre la que va a escribir: si no, la clave del personal de una carrera
+    # valdria para anotar vueltas en la otra.
+    return {"scan_key": True, "race_code": carrera.get("code")}
 
 
 @router.get("/scan-key", dependencies=[solo_control])
@@ -145,10 +149,9 @@ async def regenerar_scan_key(race_code: Optional[str] = None):
     )
     return {"race_code": carrera.get("code"), "scan_key": clave}
 
-# Constants
-LAP_DURATION_MINUTES = 60  # Backyard Ultra: 1 hour per lap
-KM_PER_LAP = 6.7
-MIN_LAP_TIME_MINUTES = 35  # Minimum time to complete a valid lap
+# El reloj de la carrera vive en services/races.py: es el mismo que usa el panel,
+# para que escaner y panel no puedan discrepar sobre en que vuelta va la carrera.
+MIN_LAP_TIME_MINUTES = races.MINUTOS_MINIMOS_POR_VUELTA
 
 
 class LapConfirmRequest(BaseModel):
@@ -158,6 +161,10 @@ class LapConfirmRequest(BaseModel):
     force_dnf: bool = False  # Manual DNF
     dnf_confirmation: Optional[str] = None  # Must be "DNF" to confirm
     scanned_by: Optional[str] = None  # User who performed the scan
+    # De que carrera es este QR. Viaja dentro del propio codigo escaneado; sin
+    # el, confirmar una vuelta del mundial la habria anotado en la carrera de
+    # enero solo porque era la que estaba publicada.
+    race_code: Optional[str] = None
 
 
 class ScanResult(BaseModel):
@@ -178,153 +185,152 @@ class ScanResult(BaseModel):
     message: str
 
 
-def parse_timezone_offset(tz_string: str) -> int:
-    """Parse timezone string like 'GMT-4' to offset hours"""
-    if not tz_string:
-        return -4  # Default to Dominican Republic
-    
-    tz_string = tz_string.upper().replace("GMT", "").replace("UTC", "")
-    try:
-        return int(tz_string)
-    except ValueError:
-        return -4
+# Estos nombres se conservan porque el resto del fichero los usa en cada
+# endpoint; el calculo ya no vive aqui, sino en services/races.py.
+get_race_time = races.ahora_en_carrera
+get_race_time_str = races.hora_local_str
+calculate_current_race_lap = races.vuelta_actual
 
 
-def get_race_time(race_config: dict) -> datetime:
-    """Get current time adjusted for race timezone"""
-    tz_offset = parse_timezone_offset(race_config.get("timezone_gmt", "GMT-4"))
-    tz = timezone(timedelta(hours=tz_offset))
-    return datetime.now(tz)
+# El QR se imprime, se pega en el dorsal o en una tarjeta y alguien lo busca
+# entre un montón a las tres de la mañana. Sin el nombre y el número encima, un
+# QR es indistinguible del de al lado.
+MARGEN = 24
+ALTO_DORSAL = 78
+ALTO_NOMBRE = 34
 
 
-def get_race_time_str(race_config: dict) -> str:
-    """Get current time as string in race timezone format HH:MM:SS"""
-    local_time = get_race_time(race_config)
-    return local_time.strftime("%H:%M:%S")
+def _ruta_de_la_fuente() -> Optional[str]:
+    """Una tipografia que sepa escribir en espanol.
 
-
-def get_race_datetime_str(race_config: dict) -> str:
-    """Get current datetime as string in race timezone"""
-    local_time = get_race_time(race_config)
-    return local_time.strftime("%Y-%m-%d %H:%M:%S")
-
-
-def get_race_start_datetime(race_config: dict) -> datetime:
-    """Get race start datetime from config"""
-    tz_offset = parse_timezone_offset(race_config.get("timezone_gmt", "GMT-4"))
-    tz = timezone(timedelta(hours=tz_offset))
-    
-    date_str = race_config.get("date", "")
-    time_str = race_config.get("start_time", "09:00")
-    
-    if not date_str:
-        # If no date, return a far future date
-        return datetime(2099, 1, 1, 9, 0, 0, tzinfo=tz)
-    
-    try:
-        # Parse date and time
-        dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-        return dt.replace(tzinfo=tz)
-    except ValueError:
-        return datetime(2099, 1, 1, 9, 0, 0, tzinfo=tz)
-
-
-def calculate_current_race_lap(race_config: dict) -> dict:
+    La que Pillow trae dentro (Aileron) no tiene ni un solo glifo acentuado:
+    "Peña" sale como "Pe▯a" y "León" como "Le▯n", que en un dorsal impreso es
+    inaceptable. Bitstream Vera si cubre el latino completo y viene dentro de
+    reportlab, que ya es dependencia del proyecto, asi que esta tambien en el
+    contenedor de Render sin instalar nada.
     """
-    Calculate current race lap based on time elapsed since race start.
-    Returns dict with lap info and timing details.
+    try:
+        import reportlab
+
+        ruta = os.path.join(os.path.dirname(reportlab.__file__), "fonts", "VeraBd.ttf")
+        if os.path.exists(ruta):
+            return ruta
+    except ImportError:
+        pass
+
+    for ruta in (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    ):
+        if os.path.exists(ruta):
+            return ruta
+
+    return None
+
+
+def _fuente(tamano: int):
+    from PIL import ImageFont
+
+    ruta = _ruta_de_la_fuente()
+    if ruta:
+        try:
+            return ImageFont.truetype(ruta, tamano)
+        except OSError:
+            pass
+
+    try:
+        return ImageFont.load_default(size=tamano)
+    except TypeError:
+        # Pillow antiguo: la de por defecto no escala, pero se lee.
+        return ImageFont.load_default()
+
+
+def _sin_acentos(texto: str) -> str:
+    """Ultimo recurso si no hay ninguna fuente capaz.
+
+    Mejor "PENA" que "PE▯A": se pierde la tilde, no el nombre.
     """
-    race_start = get_race_start_datetime(race_config)
-    current_time = get_race_time(race_config)
-    
-    # If race hasn't started yet
-    if current_time < race_start:
-        return {
-            "current_lap": 0,
-            "race_started": False,
-            "time_elapsed_minutes": 0,
-            "minutes_into_lap": 0,
-            "lap_start_time": race_start,
-            "lap_end_time": race_start + timedelta(minutes=LAP_DURATION_MINUTES),
-            "seconds_remaining": int((race_start - current_time).total_seconds())
-        }
-    
-    # Calculate time elapsed since race start
-    time_elapsed = current_time - race_start
-    time_elapsed_minutes = time_elapsed.total_seconds() / 60
-    
-    # Current lap number (1-indexed)
-    # Lap 1: 0-60 minutes, Lap 2: 60-120 minutes, etc.
-    current_lap = int(time_elapsed_minutes // LAP_DURATION_MINUTES) + 1
-    
-    # Time into current lap
-    minutes_into_current_lap = time_elapsed_minutes % LAP_DURATION_MINUTES
-    seconds_remaining = int((LAP_DURATION_MINUTES - minutes_into_current_lap) * 60)
-    
-    # Start and end time of current lap
-    lap_start_time = race_start + timedelta(minutes=(current_lap - 1) * LAP_DURATION_MINUTES)
-    lap_end_time = race_start + timedelta(minutes=current_lap * LAP_DURATION_MINUTES)
-    
-    return {
-        "current_lap": current_lap,
-        "race_started": True,
-        "time_elapsed_minutes": time_elapsed_minutes,
-        "minutes_into_lap": int(minutes_into_current_lap),
-        "lap_start_time": lap_start_time,
-        "lap_end_time": lap_end_time,
-        "seconds_remaining": seconds_remaining
-    }
+    import unicodedata
+
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    )
 
 
-def generate_qr_code(bib: str, race_code: str, frontend_url: str) -> str:
+def _centrar(dibujo, texto, fuente, ancho, y):
+    izquierda, arriba, derecha, abajo = dibujo.textbbox((0, 0), texto, font=fuente)
+    dibujo.text(((ancho - (derecha - izquierda)) / 2 - izquierda, y - arriba), texto, font=fuente, fill="black")
+    return abajo - arriba
+
+
+def _recortar(dibujo, texto, fuente, ancho_maximo):
+    """Nombres largos: se recortan antes de salirse de la tarjeta."""
+    if dibujo.textlength(texto, font=fuente) <= ancho_maximo:
+        return texto
+    while texto and dibujo.textlength(texto + "…", font=fuente) > ancho_maximo:
+        texto = texto[:-1]
+    return (texto.rstrip() + "…") if texto else ""
+
+
+def _imagen_qr(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None):
+    """El QR con el dorsal y el nombre encima."""
+    from PIL import Image, ImageDraw
+
+    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(scan_url)
+    qr.make(fit=True)
+
+    codigo = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+    nombre = (nombre or "").strip()
+    if nombre and not _ruta_de_la_fuente():
+        nombre = _sin_acentos(nombre)
+    alto_cabecera = MARGEN + ALTO_DORSAL + (ALTO_NOMBRE if nombre else 0) + MARGEN // 2
+
+    tarjeta = Image.new("RGB", (codigo.width, codigo.height + alto_cabecera), "white")
+    dibujo = ImageDraw.Draw(tarjeta)
+
+    y = MARGEN
+    y += _centrar(dibujo, f"#{bib}", _fuente(ALTO_DORSAL), tarjeta.width, y) + 10
+
+    if nombre:
+        fuente = _fuente(ALTO_NOMBRE)
+        y += _centrar(
+            dibujo,
+            _recortar(dibujo, nombre.upper(), fuente, tarjeta.width - 2 * MARGEN),
+            fuente,
+            tarjeta.width,
+            y,
+        )
+
+    tarjeta.paste(codigo, (0, alto_cabecera))
+    return tarjeta
+
+
+def generate_qr_code(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None) -> str:
     """
     Generate QR code for an athlete and save it.
     Returns the URL path to the QR code image.
     """
-    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
-    
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(scan_url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Save to file
     filename = f"qr_{race_code}_{bib}.png"
-    filepath = QR_CODES_DIR / filename
-    img.save(filepath)
-    
+    _imagen_qr(bib, race_code, frontend_url, nombre).save(QR_CODES_DIR / filename)
     return f"/api/qr-scan/image/{filename}"
 
 
-def generate_qr_code_base64(bib: str, race_code: str, frontend_url: str) -> str:
+def generate_qr_code_base64(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None) -> str:
     """
     Generate QR code and return as base64 string for embedding.
     """
-    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
-    
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(scan_url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # Convert to base64
     buffer = BytesIO()
-    img.save(buffer, format="PNG")
-    img_str = base64.b64encode(buffer.getvalue()).decode()
-    
-    return f"data:image/png;base64,{img_str}"
+    _imagen_qr(bib, race_code, frontend_url, nombre).save(buffer, format="PNG")
+    return f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
 
 
 @router.get("/image/{filename}", dependencies=[solo_control])
@@ -349,40 +355,12 @@ async def get_athlete_for_scan(
     Calculates current lap and whether athlete can complete.
     """
     from server import db as database
-    
-    # Get active race if not specified
-    if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
-        if not active_race:
-            raise HTTPException(status_code=400, detail="No hay carrera activa")
-        race_code = active_race.get("code")
-    else:
-        active_race = await database.race_configurations.find_one({"code": race_code})
-    
-    if not active_race:
-        raise HTTPException(status_code=404, detail="Carrera no encontrada")
-    
-    # Find athlete by BIB
-    # Try to match BIB as integer or string
-    try:
-        bib_int = int(bib)
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "$or": [
-                {"bib": bib_int},
-                {"bib": str(bib_int)},
-                {"bib": str(bib_int).zfill(3)}
-            ]
-        })
-    except ValueError:
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "bib": bib
-        })
-    
-    if not athlete:
-        raise HTTPException(status_code=404, detail=f"Atleta con BIB {bib} no encontrado")
-    
+
+    active_race = await races.resolver_carrera(database, race_code)
+    race_code = active_race.get("code")
+
+    athlete = await laps.exigir_atleta(database, race_code, bib)
+
     # Check athlete status
     status = athlete.get("status", "active")
     if status in ["retired", "dns", "winner"]:
@@ -434,16 +412,13 @@ async def get_athlete_for_scan(
     lap_to_complete = athlete_laps + 1
     minutes_into_lap = lap_info["minutes_into_lap"]
     
-    # Check if lap was already registered for this lap
-    already_registered = False
-    existing_scan = await database.lap_registrations.find_one({
-        "bib": str(athlete.get("bib")),
-        "race_code": race_code,
-        "lap_number": lap_to_complete
-    })
-    if existing_scan:
-        already_registered = True
-    
+    # Solo cuenta como repetida otra vuelta completada, y solo si sigue en pie:
+    # antes bastaba con cualquier anotacion de esa vuelta, asi que un retiro
+    # anotado en la vuelta N hacia creer que la vuelta N ya estaba corrida.
+    already_registered = bool(
+        await laps.vuelta_ya_registrada(database, race_code, athlete.get("bib"), lap_to_complete)
+    )
+
     # Check if athlete returned too early (less than 35 minutes into the lap)
     early_return = minutes_into_lap < MIN_LAP_TIME_MINUTES and lap_to_complete == current_race_lap
     
@@ -499,320 +474,185 @@ async def confirm_lap(
     Confirm a lap completion or mark as DNF.
     """
     from server import db as database
-    
-    bib = request.bib
-    
-    # Get active race
-    active_race = await database.race_configurations.find_one({"is_active": True})
-    if not active_race:
-        raise HTTPException(status_code=400, detail="No hay carrera activa")
-    
-    race_code = active_race.get("code")
-    
-    # Find athlete
-    try:
-        bib_int = int(bib)
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "$or": [
-                {"bib": bib_int},
-                {"bib": str(bib_int)},
-                {"bib": str(bib_int).zfill(3)}
-            ]
-        })
-    except ValueError:
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "bib": bib
-        })
-    
-    if not athlete:
-        raise HTTPException(status_code=404, detail=f"Atleta con BIB {bib} no encontrado")
-    
-    email = athlete.get("email")
-    current_laps = athlete.get("laps_completed", 0)
-    lap_info = calculate_current_race_lap(active_race)
-    
-    # Check if should be DNF (manual request)
-    if request.force_dnf:
-        # Require DNF confirmation text
-        if request.dnf_confirmation != "DNF":
-            raise HTTPException(
-                status_code=400, 
-                detail="Debe escribir 'DNF' para confirmar el retiro del atleta"
-            )
-        
-        # Get local time for this race
-        local_time = get_race_time(active_race)
-        
-        # Manual DNF
-        await database.registrations.update_one(
-            {"email": email, "race_code": race_code},
-            {
-                "$set": {
-                    "status": "retired",
-                    "retired_at_lap": current_laps,
-                    "retired_at": local_time,
-                    "retired_reason": "DNF manual por QR scan",
-                    "updated_at": local_time
-                }
-            }
-        )
-        
-        # Register DNF in lap_registrations
-        await database.lap_registrations.insert_one({
-            "bib": str(athlete.get("bib")),
-            "race_code": race_code,
-            "athlete_name": f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip(),
-            "lap_number": current_laps,
-            "action": "dnf",
-            "lap_start_time": lap_info.get("lap_start_time"),
-            "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
-            "scan_time": local_time,
-            "scan_time_local": get_race_time_str(active_race),
-            "scanned_by": request.scanned_by or "unknown",
-            "reason": "DNF manual confirmado",
-            "created_at": local_time
-        })
 
+    # La carrera sale del propio QR. Antes se ignoraba y siempre se usaba la
+    # carrera publicada, asi que escanear un dorsal del mundial habria sumado
+    # la vuelta a la carrera de enero.
+    carrera = await races.resolver_carrera(database, request.race_code)
+    race_code = carrera.get("code")
+
+    # Quien entra con la clave de escaneo solo puede anotar en su carrera.
+    # Quien entra con token del panel ya paso por el permiso correspondiente.
+    if _acceso.get("scan_key") and _acceso.get("race_code") != race_code:
+        raise HTTPException(
+            status_code=403,
+            detail="Esa clave de escaneo no es de esta carrera",
+        )
+
+    bib = request.bib
+    athlete = await laps.exigir_atleta(database, race_code, bib)
+
+    current_laps = athlete.get("laps_completed", 0)
+    lap_info = races.vuelta_actual(carrera)
+    minutes_into_lap = lap_info.get("minutes_into_lap", 0)
+    current_race_lap = lap_info.get("current_lap", 0)
+    autor = request.scanned_by
+
+    def aviso_de_retiro():
         _avisar_push(
             database,
             race_code,
             athlete,
             f"{nombre_completo(athlete)} ya no sigue en carrera",
-            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
+            f"#{athlete.get('bib')} \u00b7 Termin\u00f3 con {current_laps} vueltas",
             {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
         )
+
+    # ----- Retiro pedido a mano por el personal -----
+    if request.force_dnf:
+        if request.dnf_confirmation != "DNF":
+            raise HTTPException(
+                status_code=400,
+                detail="Debe escribir 'DNF' para confirmar el retiro del atleta",
+            )
+
+        await laps.registrar_retiro(
+            database, carrera, athlete, laps.RETIRO_MANUAL, current_laps,
+            laps.ORIGEN_QR, autor, "DNF manual confirmado", lap_info,
+        )
+        aviso_de_retiro()
 
         return {
             "success": True,
             "action": "dnf",
             "message": f"Atleta {athlete.get('nombre')} {athlete.get('apellidos')} marcado como DNF en vuelta {current_laps}",
             "bib": bib,
-            "laps_completed": current_laps
+            "laps_completed": current_laps,
         }
-    
-    # Verify lap number matches expected
+
+    # ----- Vuelta normal -----
+    # Lo primero, si la vuelta que traen ya estaba anotada. Dos personas
+    # escaneando al mismo corredor a la vez es lo normal en la meta, y antes la
+    # segunda recibia "error de sincronizacion", que no dice nada util: parece
+    # una averia cuando en realidad todo esta bien y la vuelta ya conto.
     expected_lap = current_laps + 1
-    if request.confirmed_lap != expected_lap:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Error de sincronización. Vuelta esperada: {expected_lap}, vuelta recibida: {request.confirmed_lap}"
-        )
-    
-    # Check if this lap was already registered (duplicate scan)
-    existing_scan = await database.lap_registrations.find_one({
-        "bib": str(athlete.get("bib")),
-        "race_code": race_code,
-        "lap_number": expected_lap,
-        "action": "lap_completed"
-    })
-    
-    if existing_scan:
+    repetida = await laps.vuelta_ya_registrada(
+        database, race_code, athlete.get("bib"), request.confirmed_lap
+    )
+    if repetida:
+        hora = repetida.get("scan_time")
         return {
             "success": False,
             "action": "already_registered",
-            "message": f"La vuelta {expected_lap} ya fue registrada a las {existing_scan.get('scan_time', '').strftime('%H:%M:%S') if existing_scan.get('scan_time') else 'N/A'}",
+            "message": f"La vuelta {request.confirmed_lap} ya fue registrada a las {hora.strftime('%H:%M:%S') if hora else 'N/A'}",
             "bib": bib,
             "laps_completed": current_laps,
-            "registered_at": existing_scan.get("scan_time")
+            "registered_at": hora,
         }
-    
-    # Get local time for this race
-    local_time = get_race_time(active_race)
-    
-    # Check timing constraints
-    minutes_into_lap = lap_info.get("minutes_into_lap", 0)
-    current_race_lap = lap_info.get("current_lap", 0)
-    
-    # Rule: Cannot register a lap that hasn't started yet
+
+    if request.confirmed_lap != expected_lap:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error de sincronizaci\u00f3n. Vuelta esperada: {expected_lap}, vuelta recibida: {request.confirmed_lap}",
+        )
+
+    # No se puede fichar una vuelta que todavia no ha empezado.
     if expected_lap > current_race_lap:
         return {
             "success": False,
             "action": "lap_not_started",
-            "message": f"La vuelta {expected_lap} aún no ha iniciado. Vuelta actual: {current_race_lap}. Debe esperar a que inicie.",
+            "message": f"La vuelta {expected_lap} a\u00fan no ha iniciado. Vuelta actual: {current_race_lap}. Debe esperar a que inicie.",
             "bib": bib,
             "laps_completed": current_laps,
-            "current_race_lap": current_race_lap
+            "current_race_lap": current_race_lap,
         }
-    
-    # Rule 2: If scanned within 35 minutes, athlete returned too early - DNF
-    if minutes_into_lap < MIN_LAP_TIME_MINUTES and expected_lap == current_race_lap:
-        await database.registrations.update_one(
-            {"email": email, "race_code": race_code},
-            {
-                "$set": {
-                    "status": "retired",
-                    "retired_at_lap": current_laps,
-                    "retired_at": local_time,
-                    "retired_reason": f"Regresó antes de tiempo ({minutes_into_lap} min < {MIN_LAP_TIME_MINUTES} min)",
-                    "updated_at": local_time
-                }
-            }
-        )
-        
-        # Register early return DNF
-        await database.lap_registrations.insert_one({
-            "bib": str(athlete.get("bib")),
-            "race_code": race_code,
-            "athlete_name": f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip(),
-            "lap_number": expected_lap,
-            "action": "dnf_early_return",
-            "lap_start_time": lap_info.get("lap_start_time"),
-            "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
-            "scan_time": local_time,
-            "scan_time_local": get_race_time_str(active_race),
-            "minutes_into_lap": minutes_into_lap,
-            "scanned_by": request.scanned_by or "unknown",
-            "reason": f"Regresó a los {minutes_into_lap} minutos (mínimo {MIN_LAP_TIME_MINUTES})",
-            "created_at": local_time
-        })
 
-        _avisar_push(
-            database,
-            race_code,
-            athlete,
-            f"{nombre_completo(athlete)} ya no sigue en carrera",
-            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
-            {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
+    # Volver antes del minuto minimo significa que abandono el anillo.
+    if minutes_into_lap < MIN_LAP_TIME_MINUTES and expected_lap == current_race_lap:
+        motivo = f"Regres\u00f3 antes de tiempo ({minutes_into_lap} min < {MIN_LAP_TIME_MINUTES} min)"
+        await laps.registrar_retiro(
+            database, carrera, athlete, laps.RETIRO_TEMPRANO, expected_lap,
+            laps.ORIGEN_QR, autor, motivo, lap_info,
+            {"minutes_into_lap": minutes_into_lap},
         )
+        aviso_de_retiro()
 
         return {
             "success": True,
             "action": "dnf_early_return",
-            "message": f"⚠️ {athlete.get('nombre')} regresó muy temprano ({minutes_into_lap} min). Marcado como DNF. No se completó vuelta {expected_lap}.",
+            "message": f"\u26a0\ufe0f {athlete.get('nombre')} regres\u00f3 muy temprano ({minutes_into_lap} min). Marcado como DNF. No se complet\u00f3 vuelta {expected_lap}.",
             "bib": bib,
             "laps_completed": current_laps,
-            "minutes_into_lap": minutes_into_lap
+            "minutes_into_lap": minutes_into_lap,
         }
-    
-    # Rule 3: If lap time expired, auto-DNF
-    if lap_info["race_started"] and expected_lap < current_race_lap:
-        await database.registrations.update_one(
-            {"email": email, "race_code": race_code},
-            {
-                "$set": {
-                    "status": "retired",
-                    "retired_at_lap": current_laps,
-                    "retired_at": local_time,
-                    "retired_reason": "Tiempo agotado (auto-DNF por QR scan)",
-                    "updated_at": local_time
-                }
-            }
-        )
-        
-        # Register timeout DNF
-        await database.lap_registrations.insert_one({
-            "bib": str(athlete.get("bib")),
-            "race_code": race_code,
-            "athlete_name": f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip(),
-            "lap_number": expected_lap,
-            "action": "dnf_timeout",
-            "lap_start_time": lap_info.get("lap_start_time"),
-            "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
-            "scan_time": local_time,
-            "scan_time_local": get_race_time_str(active_race),
-            "scanned_by": request.scanned_by or "unknown",
-            "reason": f"Tiempo agotado. Vuelta {expected_lap} debió completarse antes.",
-            "created_at": local_time
-        })
 
-        _avisar_push(
-            database,
-            race_code,
-            athlete,
-            f"{nombre_completo(athlete)} ya no sigue en carrera",
-            f"#{athlete.get('bib')} · Terminó con {current_laps} vueltas",
-            {"tipo": "dnf", "bib": str(athlete.get("bib")), "race_code": race_code},
+    # Se le paso la hora de esa vuelta.
+    if lap_info["race_started"] and expected_lap < current_race_lap:
+        await laps.registrar_retiro(
+            database, carrera, athlete, laps.RETIRO_POR_TIEMPO, expected_lap,
+            laps.ORIGEN_QR, autor,
+            f"Tiempo agotado. Vuelta {expected_lap} debi\u00f3 completarse antes.",
+            lap_info,
         )
+        aviso_de_retiro()
 
         return {
             "success": True,
             "action": "auto_dnf",
-            "message": f"Tiempo agotado. {athlete.get('nombre')} {athlete.get('apellidos')} marcado como DNF automáticamente.",
+            "message": f"Tiempo agotado. {athlete.get('nombre')} {athlete.get('apellidos')} marcado como DNF autom\u00e1ticamente.",
             "bib": bib,
-            "laps_completed": current_laps
+            "laps_completed": current_laps,
         }
-    
-    # All checks passed - Complete the lap
-    new_laps = current_laps + 1
-    new_km = new_laps * KM_PER_LAP
-    
-    await database.registrations.update_one(
-        {"email": email, "race_code": race_code},
-        {
-            "$set": {
-                "laps_completed": new_laps,
-                "total_km": round(new_km, 1),
-                "last_lap_time": local_time,
-                "updated_at": local_time
-            },
-            "$push": {
-                "laps_log": {
-                    "lap": new_laps,
-                    "completed_at": local_time,
-                    "method": "qr_scan",
-                    "scanned_by": request.scanned_by
-                }
-            }
-        }
+
+    # Todo en orden: la vuelta cuenta.
+    estado = await laps.registrar_vuelta(
+        database, carrera, athlete, expected_lap, laps.ORIGEN_QR, autor, lap_info,
+        {"minutes_into_lap": minutes_into_lap},
     )
-    
-    # Register lap completion
-    await database.lap_registrations.insert_one({
-        "bib": str(athlete.get("bib")),
-        "race_code": race_code,
-        "athlete_name": f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip(),
-        "lap_number": new_laps,
-        "action": "lap_completed",
-        "lap_start_time": lap_info.get("lap_start_time"),
-        "lap_start_time_local": lap_info.get("lap_start_time").strftime("%H:%M") if lap_info.get("lap_start_time") else None,
-        "scan_time": local_time,
-        "scan_time_local": get_race_time_str(active_race),
-        "minutes_into_lap": minutes_into_lap,
-        "scanned_by": request.scanned_by or "unknown",
-        "created_at": local_time
-    })
 
     _avisar_push(
         database,
         race_code,
         athlete,
-        f"{nombre_completo(athlete)} completó la vuelta {new_laps}",
-        f"#{athlete.get('bib')} · {round(new_km, 1)} km acumulados",
+        f"{nombre_completo(athlete)} complet\u00f3 la vuelta {estado['laps_completed']}",
+        f"#{athlete.get('bib')} \u00b7 {estado['total_km']} km acumulados",
         {
             "tipo": "vuelta",
             "bib": str(athlete.get("bib")),
             "race_code": race_code,
-            "vuelta": new_laps,
+            "vuelta": estado["laps_completed"],
         },
     )
 
     return {
         "success": True,
         "action": "lap_completed",
-        "message": f"¡Vuelta {new_laps} completada! {athlete.get('nombre')} {athlete.get('apellidos')}",
+        "message": f"\u00a1Vuelta {estado['laps_completed']} completada! {athlete.get('nombre')} {athlete.get('apellidos')}",
         "bib": bib,
-        "laps_completed": new_laps,
-        "total_km": round(new_km, 1),
-        "scan_time": local_time.isoformat()
+        "laps_completed": estado["laps_completed"],
+        "total_km": estado["total_km"],
+        "scan_time": races.ahora_en_carrera(carrera).isoformat(),
     }
 
 
 @router.get("/race-status")
-async def get_race_status():
+async def get_race_status(race_code: Optional[str] = None):
     """Get current race timing status for the scanner UI"""
     from server import db as database
-    
-    active_race = await database.race_configurations.find_one({"is_active": True})
+
+    if race_code:
+        active_race = await database.race_configurations.find_one({"code": race_code.upper()})
+    else:
+        active_race = await races.carrera_publica(database)
+
     if not active_race:
         return {
             "race_active": False,
             "message": "No hay carrera activa"
         }
-    
-    lap_info = calculate_current_race_lap(active_race)
-    
+
+    lap_info = races.vuelta_actual(active_race)
+
     return {
         "race_active": True,
         "race_code": active_race.get("code"),
@@ -834,36 +674,53 @@ async def get_lap_registrations(
     race_code: Optional[str] = None,
     lap_number: Optional[int] = None,
     athlete_name: Optional[str] = None,
-    scanned_by: Optional[str] = None
+    scanned_by: Optional[str] = None,
+    source: Optional[str] = None,
+    incluir_anuladas: bool = True,
 ):
     """Get lap registration records with optional filters"""
     from server import db as database
-    
+
     # Get active race if not specified
     if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
+        active_race = await races.carrera_publica(database)
         if not active_race:
             return {"registrations": [], "total": 0}
         race_code = active_race.get("code")
-    
+
     # Build query
     query = {"race_code": race_code}
-    
+
     if lap_number:
         query["lap_number"] = lap_number
-    
+
     if athlete_name:
         query["athlete_name"] = {"$regex": athlete_name, "$options": "i"}
-    
+
     if scanned_by:
         query["scanned_by"] = {"$regex": scanned_by, "$options": "i"}
-    
+
+    # De donde salio la anotacion: del escaneo o puesta a mano en el panel.
+    if source:
+        query["source"] = source
+
+    if not incluir_anuladas:
+        query["anulada"] = {"$ne": True}
+
     # Get registrations
     registrations = await database.lap_registrations.find(
-        query,
-        {"_id": 0}
+        query
     ).sort([("lap_number", 1), ("scan_time", 1)]).to_list(5000)
-    
+
+    # El panel necesita el identificador para poder anular una anotacion
+    # concreta; el _id de Mongo no viaja como JSON, asi que va como texto.
+    for registro in registrations:
+        registro["id"] = str(registro.pop("_id"))
+        # Lo anotado antes de que existiera el campo vino del escaner: era el
+        # unico que escribia aqui.
+        registro.setdefault("source", laps.ORIGEN_QR)
+        registro.setdefault("anulada", False)
+
     # Get unique laps for filter
     unique_laps = await database.lap_registrations.distinct("lap_number", {"race_code": race_code})
     unique_laps.sort()
@@ -888,16 +745,10 @@ async def export_lap_registrations(
 ):
     """Export lap registrations to CSV"""
     from server import db as database
-    
-    # Get active race if not specified
-    if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
-        if not active_race:
-            raise HTTPException(status_code=400, detail="No hay carrera activa")
-        race_code = active_race.get("code")
-    else:
-        active_race = await database.race_configurations.find_one({"code": race_code})
-    
+
+    active_race = await races.resolver_carrera(database, race_code)
+    race_code = active_race.get("code")
+
     # Build query
     query = {"race_code": race_code}
     
@@ -922,14 +773,15 @@ async def export_lap_registrations(
     
     # Header - using local time fields
     writer.writerow([
-        "BIB", "Nombre", "Vuelta", "Acción", 
-        "Hora Inicio Vuelta", "Hora Registro", 
-        "Minutos en Vuelta", "Ritmo (min/km)", "Registrado Por", "Razón/Notas"
+        "BIB", "Nombre", "Vuelta", "Acción", "Origen",
+        "Hora Inicio Vuelta", "Hora Registro",
+        "Minutos en Vuelta", "Ritmo (min/km)", "Registrado Por", "Razón/Notas",
+        "Anulada", "Anulada por", "Motivo anulación",
     ])
-    
-    # Constants
-    KM_PER_LAP = 6.7
-    
+
+    # El anillo no mide lo mismo en todas las sedes.
+    KM_PER_LAP = races.km_por_vuelta(active_race)
+
     # Data rows
     for reg in registrations:
         # Use local time strings if available, otherwise format UTC
@@ -956,12 +808,16 @@ async def export_lap_registrations(
             reg.get("athlete_name", ""),
             reg.get("lap_number", ""),
             reg.get("action", ""),
+            reg.get("source", laps.ORIGEN_QR),
             lap_start_str,
             scan_time_str,
             minutes_into_lap if minutes_into_lap is not None else "",
             pace_str,
             reg.get("scanned_by", ""),
-            reg.get("reason", "")
+            reg.get("reason", ""),
+            "sí" if reg.get("anulada") else "",
+            reg.get("anulada_por", ""),
+            reg.get("motivo_anulacion", ""),
         ])
     
     output.seek(0)
@@ -982,14 +838,18 @@ async def get_lap_registrations_summary(race_code: Optional[str] = None):
     
     # Get active race if not specified
     if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
+        active_race = await races.carrera_publica(database)
         if not active_race:
             return {"total": 0, "by_lap": [], "by_action": {}}
         race_code = active_race.get("code")
-    
+
+    # Lo anulado no cuenta en los totales: si contara, una correccion inflaria
+    # las cifras del dia en vez de arreglarlas. Se informa aparte.
+    vigentes = {"race_code": race_code, "anulada": {"$ne": True}}
+
     # Count by lap
     pipeline = [
-        {"$match": {"race_code": race_code}},
+        {"$match": vigentes},
         {"$group": {
             "_id": "$lap_number",
             "count": {"$sum": 1},
@@ -1002,26 +862,144 @@ async def get_lap_registrations_summary(race_code: Optional[str] = None):
         }},
         {"$sort": {"_id": 1}}
     ]
-    
+
     by_lap = await database.lap_registrations.aggregate(pipeline).to_list(100)
-    
+
     # Count by action
     action_pipeline = [
-        {"$match": {"race_code": race_code}},
+        {"$match": vigentes},
         {"$group": {"_id": "$action", "count": {"$sum": 1}}}
     ]
-    
+
     by_action_list = await database.lap_registrations.aggregate(action_pipeline).to_list(10)
     by_action = {item["_id"]: item["count"] for item in by_action_list}
-    
-    # Total
-    total = await database.lap_registrations.count_documents({"race_code": race_code})
-    
+
+    # De donde salieron: escaneo o panel
+    origen_list = await database.lap_registrations.aggregate([
+        {"$match": vigentes},
+        {"$group": {"_id": "$source", "count": {"$sum": 1}}}
+    ]).to_list(10)
+    by_source = {(item["_id"] or laps.ORIGEN_QR): item["count"] for item in origen_list}
+
+    total = await database.lap_registrations.count_documents(vigentes)
+    anuladas = await database.lap_registrations.count_documents(
+        {"race_code": race_code, "anulada": True}
+    )
+
     return {
         "total": total,
+        "anuladas": anuladas,
         "by_lap": [{"lap": item["_id"], "count": item["count"], "completed": item["completed"], "dnf": item["dnf"]} for item in by_lap],
-        "by_action": by_action
+        "by_action": by_action,
+        "by_source": by_source,
     }
+
+
+# ============= VUELTAS A MANO DESDE EL PANEL =============
+#
+# El escaneo es la via normal, pero falla: un telefono sin bateria, un QR
+# mojado, una fila de corredores y alguien que pasa sin fichar. El panel es el
+# repuesto, y escribe en el mismo libro que el escaner para que al final del dia
+# haya una sola version de lo que paso.
+
+
+class VueltaManual(BaseModel):
+    race_code: str
+    bib: str
+    lap_number: Optional[int] = None  # por defecto, la siguiente que le toca
+    motivo: Optional[str] = None
+
+
+class AjusteVueltas(BaseModel):
+    race_code: str
+    bib: str
+    laps_completed: int
+    motivo: Optional[str] = None
+
+
+class Anulacion(BaseModel):
+    race_code: str
+    motivo: Optional[str] = None
+
+
+def _autor(user: dict) -> str:
+    return user.get("username") or "panel"
+
+
+@router.post("/lap-registrations/manual")
+async def registrar_vuelta_a_mano(
+    datos: VueltaManual,
+    user=Depends(require_permission("control")),
+):
+    """Anota una vuelta que el escaner no llego a registrar."""
+    from server import db as database
+
+    carrera = await races.obtener_carrera(database, datos.race_code)
+    atleta = await laps.exigir_atleta(database, carrera["code"], datos.bib)
+
+    vuelta = datos.lap_number or (atleta.get("laps_completed", 0) + 1)
+
+    repetida = await laps.vuelta_ya_registrada(database, carrera["code"], atleta.get("bib"), vuelta)
+    if repetida:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La vuelta {vuelta} de ese corredor ya estaba registrada",
+        )
+
+    estado = await laps.registrar_vuelta(
+        database, carrera, atleta, vuelta, laps.ORIGEN_PANEL, _autor(user),
+        races.vuelta_actual(carrera),
+        {"reason": datos.motivo},
+    )
+
+    return {
+        "message": f"Vuelta {vuelta} anotada a {laps.nombre_completo(atleta)}",
+        **estado,
+    }
+
+
+@router.post("/lap-registrations/ajuste")
+async def ajustar_vueltas_a_mano(
+    datos: AjusteVueltas,
+    user=Depends(require_permission("control")),
+):
+    """Fija las vueltas de un corredor, dejando dicho por que."""
+    from server import db as database
+
+    carrera = await races.obtener_carrera(database, datos.race_code)
+    atleta = await laps.exigir_atleta(database, carrera["code"], datos.bib)
+
+    estado = await laps.ajustar_vueltas(
+        database, carrera, atleta, datos.laps_completed, _autor(user), datos.motivo
+    )
+
+    return {
+        "message": f"{laps.nombre_completo(atleta)} queda con {estado['laps_completed']} vueltas",
+        **estado,
+    }
+
+
+@router.post("/lap-registrations/{registro_id}/anular")
+async def anular_registro_de_vuelta(
+    registro_id: str,
+    datos: Anulacion,
+    user=Depends(require_permission("control")),
+):
+    """Deja sin efecto una anotacion, sin borrarla del libro."""
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    carrera = await races.obtener_carrera(database, datos.race_code)
+
+    try:
+        identificador = ObjectId(registro_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Identificador de registro invalido")
+
+    estado = await laps.anular(database, carrera, identificador, _autor(user), datos.motivo)
+
+    return {"message": "Registro anulado", **estado}
 
 
 @router.post("/generate-qr/{bib}", dependencies=[solo_control])
@@ -1029,40 +1007,19 @@ async def generate_athlete_qr(bib: str, race_code: Optional[str] = None):
     """Generate QR code for an athlete"""
     from server import db as database
     
-    # Get active race if not specified
-    if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
-        if not active_race:
-            raise HTTPException(status_code=400, detail="No hay carrera activa")
-        race_code = active_race.get("code")
+    active_race = await races.resolver_carrera(database, race_code)
+    race_code = active_race.get("code")
     
-    # Find athlete
-    try:
-        bib_int = int(bib)
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "$or": [
-                {"bib": bib_int},
-                {"bib": str(bib_int)},
-                {"bib": str(bib_int).zfill(3)}
-            ]
-        })
-    except ValueError:
-        athlete = await database.registrations.find_one({
-            "race_code": race_code,
-            "bib": bib
-        })
-    
-    if not athlete:
-        raise HTTPException(status_code=404, detail=f"Atleta con BIB {bib} no encontrado")
+    athlete = await laps.exigir_atleta(database, race_code, bib)
     
     # Generate QR code
     frontend_url = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:3000")
     if "/api" in frontend_url:
         frontend_url = frontend_url.replace("/api", "")
     
-    qr_url = generate_qr_code(bib, race_code, frontend_url)
-    qr_base64 = generate_qr_code_base64(bib, race_code, frontend_url)
+    quien = laps.nombre_completo(athlete)
+    qr_url = generate_qr_code(bib, race_code, frontend_url, quien)
+    qr_base64 = generate_qr_code_base64(bib, race_code, frontend_url, quien)
     
     return {
         "bib": bib,
@@ -1079,12 +1036,8 @@ async def generate_all_qr_codes(race_code: Optional[str] = None):
     """Generate QR codes for all active athletes"""
     from server import db as database
     
-    # Get active race if not specified
-    if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
-        if not active_race:
-            raise HTTPException(status_code=400, detail="No hay carrera activa")
-        race_code = active_race.get("code")
+    active_race = await races.resolver_carrera(database, race_code)
+    race_code = active_race.get("code")
     
     # Find all active athletes with BIB
     athletes = await database.registrations.find({
@@ -1100,7 +1053,7 @@ async def generate_all_qr_codes(race_code: Optional[str] = None):
     results = []
     for athlete in athletes:
         bib = str(athlete.get("bib"))
-        qr_url = generate_qr_code(bib, race_code, frontend_url)
+        qr_url = generate_qr_code(bib, race_code, frontend_url, laps.nombre_completo(athlete))
         results.append({
             "bib": bib,
             "nombre": athlete.get("nombre"),
@@ -1120,12 +1073,8 @@ async def download_all_qr_codes(race_code: Optional[str] = None):
     """Download all QR codes as a ZIP file"""
     from server import db as database
     
-    # Get active race if not specified
-    if not race_code:
-        active_race = await database.race_configurations.find_one({"is_active": True})
-        if not active_race:
-            raise HTTPException(status_code=400, detail="No hay carrera activa")
-        race_code = active_race.get("code")
+    active_race = await races.resolver_carrera(database, race_code)
+    race_code = active_race.get("code")
     
     # Generate all QR codes first
     athletes = await database.registrations.find({
@@ -1141,7 +1090,7 @@ async def download_all_qr_codes(race_code: Optional[str] = None):
     # Generate QR codes
     for athlete in athletes:
         bib = str(athlete.get("bib"))
-        generate_qr_code(bib, race_code, frontend_url)
+        generate_qr_code(bib, race_code, frontend_url, laps.nombre_completo(athlete))
     
     # Create ZIP file
     zip_buffer = BytesIO()

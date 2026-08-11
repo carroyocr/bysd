@@ -10,6 +10,16 @@ from datetime import datetime
 GMAIL_USER = get_env("GMAIL_USER")
 GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
 
+# Interruptor para el entorno local. La copia local de la base trae los correos
+# reales de los seguidores, asi que probar el panel contra ella manda avisos de
+# verdad a gente de verdad: basta con marcar un DNF de prueba para que a alguien
+# le llegue "tu atleta abandono". Con EMAILS_ACTIVOS=false se registra en el log
+# lo que se habria enviado y no sale nada.
+#
+# Por defecto SI se envia: si esta variable faltara en Render, lo grave seria
+# que produccion dejara de avisar sin que nadie se diera cuenta.
+EMAILS_ACTIVOS = (get_env("EMAILS_ACTIVOS", "true") or "true").lower() not in ("false", "0", "no")
+
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
     """Generate HTML email template with race branding - Mobile optimized with cards"""
     
@@ -147,6 +157,10 @@ async def send_notification_email(
         part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(part)
         
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}: {subject}")
+            return True
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
@@ -159,26 +173,75 @@ async def send_notification_email(
         return False
 
 
-async def send_lap_notifications(db, current_lap: int):
+def _filtro_de_carrera(race_code: str) -> dict:
+    """Solo avisa a quien sigue esta carrera.
+
+    Un dorsal no identifica a nadie por si solo: el 002 del campeonato mundial
+    es otra persona que el 002 de la edicion de enero. Las suscripciones viejas
+    no guardaban de que carrera eran; se dan por de la primera edicion, que era
+    la unica que habia cuando se crearon.
+    """
+    if race_code in ("BYSD-2026",):
+        return {"$or": [{"race_code": race_code}, {"race_code": {"$exists": False}}]}
+    return {"race_code": race_code}
+
+
+async def _buscar_corredores(db, race_code: str, bibs: list) -> list:
+    """Corredores de una carrera por dorsal, sea cual sea la coleccion.
+
+    Los avisos buscaban por dorsal a secas en la coleccion `participants`, que
+    es la de la primera edicion. Con dos carreras vivas eso avisa a la gente
+    equivocada: el dorsal 002 del campeonato mundial es otra persona que el 002
+    de 2026, y a los seguidores de aquel les llegaba el aviso de este.
+    """
+    if not bibs:
+        return []
+
+    posibles = set()
+    for bib in bibs:
+        texto = str(bib).strip()
+        posibles.add(texto)
+        try:
+            numero = int(texto)
+            posibles |= {numero, str(numero), str(numero).zfill(3)}
+        except ValueError:
+            pass
+
+    corredores = await db.registrations.find(
+        {"race_code": race_code, "bib": {"$in": list(posibles)}},
+        {"_id": 0, "edit_token": 0},
+    ).to_list(100)
+
+    if corredores:
+        return corredores
+
+    # Ediciones historicas, cuyos resultados viven en la coleccion antigua.
+    return await db.participants.find(
+        {
+            "bib": {"$in": list(posibles)},
+            "$or": [{"race_code": race_code}, {"race_code": {"$exists": False}}],
+        },
+        {"_id": 0},
+    ).to_list(100)
+
+
+async def send_lap_notifications(db, race_code: str, current_lap: int):
     """Send notifications to all subscribers who want lap updates.
-    
+
     Only sends if at least one followed athlete:
     - Is still active, OR
     - Made DNF in the current lap (their last lap)
     """
-    
+
     # Get all subscriptions that want lap notifications
     subscriptions = await db.email_subscriptions.find(
-        {"notify_every_lap": True, "active": True}
+        {"notify_every_lap": True, "active": True, **_filtro_de_carrera(race_code)}
     ).to_list(1000)
-    
+
     for sub in subscriptions:
         # Get athlete data for followed athletes
-        athletes = await db.participants.find(
-            {"bib": {"$in": sub.get("athletes_bibs", [])}},
-            {"_id": 0}
-        ).to_list(100)
-        
+        athletes = await _buscar_corredores(db, race_code, sub.get("athletes_bibs", []))
+
         if not athletes:
             continue
         
@@ -204,27 +267,24 @@ async def send_lap_notifications(db, current_lap: int):
             print(f"Skipping lap notification for {sub.get('email')} - all followed athletes are DNF/DNS")
 
 
-async def send_finish_notifications(db, athlete_bib: str, is_winner: bool = False):
+async def send_finish_notifications(db, race_code: str, athlete_bib: str, is_winner: bool = False):
     """Send notifications when an athlete finishes (DNF or Winner)"""
-    
-    # Get athlete data
-    athlete = await db.participants.find_one(
-        {"bib": athlete_bib},
-        {"_id": 0}
-    )
-    
-    if not athlete:
+
+    corredores = await _buscar_corredores(db, race_code, [athlete_bib])
+    if not corredores:
         return
-    
+    athlete = corredores[0]
+
     # Get all subscriptions that follow this athlete and want finish notifications
     subscriptions = await db.email_subscriptions.find(
         {
             "athletes_bibs": athlete_bib,
             "notify_on_finish": True,
-            "active": True
+            "active": True,
+            **_filtro_de_carrera(race_code),
         }
     ).to_list(1000)
-    
+
     for sub in subscriptions:
         if is_winner:
             subject = f"🏆 ¡{athlete.get('nombre')} es el GANADOR!"
@@ -259,6 +319,10 @@ async def send_email(to_email: str, subject: str, html_content: str) -> bool:
         part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(part)
         
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}: {subject}")
+            return True
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
@@ -431,6 +495,10 @@ async def send_manual_notification_email(
         part = MIMEText(html_content, 'html', 'utf-8')
         msg.attach(part)
         
+        if not EMAILS_ACTIVOS:
+            print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}: {subject}")
+            return True
+
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
