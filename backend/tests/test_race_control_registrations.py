@@ -184,14 +184,16 @@ class TestFallbackToOldParticipants:
     """Test fallback behavior when no registrations exist"""
     
     def test_stats_with_nonexistent_race_code(self):
-        """Stats with non-existent race_code falls back to old participants"""
+        """Pedir una carrera que no existe es un 404, no unas cifras en blanco.
+
+        Antes caia en la carrera activa y devolvia 200: con una sola carrera
+        viva apenas se notaba, pero con el campeonato y la carrera abierta a la
+        vez un codigo mal escrito ensenaba las cifras de otra carrera como si
+        fueran las pedidas.
+        """
         response = requests.get(f"{BASE_URL}/api/race/stats?race_code=NONEXISTENT-RACE")
-        assert response.status_code == 200
-        data = response.json()
-        
-        # Should still return valid stats (from old participants or empty)
-        assert 'athletes_active' in data
-        print(f"✓ Stats with non-existent race_code returns valid response")
+        assert response.status_code == 404
+        print(f"✓ Stats with non-existent race_code returns 404")
     
     def test_participants_with_nonexistent_race_code(self):
         """Participants with non-existent race_code falls back to old participants"""

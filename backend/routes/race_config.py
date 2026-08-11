@@ -15,6 +15,7 @@ MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
 from services.auth import require_permission, verify_admin_token
+from services import races as carreras
 
 # Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
 solo_config = Depends(require_permission("config"))
@@ -197,25 +198,10 @@ async def get_all_races(db=Depends(lambda: None)):
     ).sort("created_at", -1).to_list(100)
     
     # Ensure legacy race BYSD-2026 is always included for historical results
-    LEGACY_RACES = [
-        {
-            "code": "BYSD-2026",
-            "name": "Backyard Ultra Santo Domingo 2026",
-            "date": "2026-01-24",
-            "start_time": "09:00",
-            "location": "Parque del Este, Santo Domingo, República Dominicana",
-            "logo_url": "/icon-bu.png",
-            "is_active": False,
-            "is_legacy": True,  # Flag to indicate this uses legacy data
-            "archived_at": "2026-01-25T00:00:00"
-        }
-    ]
-    
-    # Add legacy races if not already in the list
     existing_codes = {r.get("code") for r in races}
-    for legacy_race in LEGACY_RACES:
-        if legacy_race["code"] not in existing_codes:
-            races.append(legacy_race)
+    for codigo, legacy_race in carreras.CARRERAS_HISTORICAS.items():
+        if codigo not in existing_codes:
+            races.append(dict(legacy_race))
     
     # Sort by date descending
     races.sort(key=lambda x: x.get("date", ""), reverse=True)
@@ -235,23 +221,10 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
     
     # If not found in DB, check if it's a legacy race
     if not config:
-        LEGACY_RACES = {
-            "BYSD-2026": {
-                "code": "BYSD-2026",
-                "name": "Backyard Ultra Santo Domingo 2026",
-                "date": "2026-01-24",
-                "start_time": "09:00",
-                "location": "Parque del Este, Santo Domingo, República Dominicana",
-                "logo_url": "/icon-bu.png",
-                "is_active": False,
-                "is_legacy": True,
-                "archived_at": "2026-01-25T00:00:00"
-            }
-        }
-        
-        if code in LEGACY_RACES:
-            return LEGACY_RACES[code]
-        
+        historica = carreras.CARRERAS_HISTORICAS.get(code.upper())
+        if historica:
+            return dict(historica)
+
         raise HTTPException(status_code=404, detail="Carrera no encontrada")
     
     return config

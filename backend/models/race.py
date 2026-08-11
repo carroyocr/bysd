@@ -10,11 +10,6 @@ class AdminLogin(BaseModel):
     username: str
     password: str
 
-class RaceConfig(BaseModel):
-    current_lap: int = 1
-    race_status: Literal["active", "paused", "finished"] = "active"
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
 class Participant(BaseModel):
     bib: str
     nombre: str
@@ -26,15 +21,6 @@ class Participant(BaseModel):
     retired_at_lap: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-class LapLog(BaseModel):
-    participant_bib: str
-    lap_number: int
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
-    recorded_by: str = "admin"
-
-class SetCurrentLapRequest(BaseModel):
-    current_lap: int
 
 class MarkRetiredRequest(BaseModel):
     bib: str

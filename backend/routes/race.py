@@ -9,29 +9,30 @@ import logging
 from pathlib import Path
 from bson import ObjectId
 from models.race import (
-    AdminLogin, RaceConfig, Participant, LapLog,
-    SetCurrentLapRequest, MarkRetiredRequest, CompleteLapRequest,
-    RaceStats, ParticipantWithStats, EmailSubscription, SubscribeRequest,
-    CheerMessage, CheerMessageRequest, AdjustLapsRequest, EditParticipantRequest
+    AdminLogin, MarkRetiredRequest, CompleteLapRequest,
+    RaceStats, SubscribeRequest,
+    CheerMessageRequest, AdjustLapsRequest, EditParticipantRequest
 )
+from pydantic import BaseModel
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 from services.auth import encode_admin_token, require_permission, verify_admin_token
-from services import rate_limit
+from services import laps, races, rate_limit
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
 # Carreras historicas cuyos resultados viven en la coleccion legada
-# `participants` (previa al sistema de inscripciones `registrations`).
+# `participants` (previa al sistema de inscripciones `registrations`). Solo se
+# consultan: sobre ellas ya no se escribe nada.
 LEGACY_RACE_CODES = ["BYSD-2026"]
 
-KM_PER_LAP = 6.7
+KM_PER_LAP = races.KM_POR_VUELTA
 CERTIFICATES_DIR = Path(__file__).parent.parent / "static" / "certificates" / "individual"
 
 
 # Helper function to get active race code
 async def get_active_race_code(database) -> str:
-    """Get the code of the currently active race"""
-    active_race = await database.race_configurations.find_one({"is_active": True})
+    """Codigo de la carrera que muestra el sitio publico."""
+    active_race = await races.carrera_publica(database)
     if active_race:
         return active_race.get("code")
     return None
@@ -94,28 +95,28 @@ async def get_race_stats(
 ):
     from server import db as database
     
-    # Get race code - use parameter or get active race
-    active_race_code = race_code
-    if not active_race_code:
-        active_race_code = await get_active_race_code(database)
-    
-    # Get race config for this race (current lap tracking)
-    config = await database.race_config.find_one({"race_code": active_race_code} if active_race_code else {}, {"_id": 0})
-    if not config:
-        config = {"current_lap": 1}
-    
-    current_lap = config.get("current_lap", 1)
-    
+    carrera = await races.resolver_carrera(database, race_code)
+    active_race_code = carrera.get("code")
+
+    # La vuelta sale del reloj de la carrera, no de un contador aparte. El
+    # contador vivia en la coleccion `race_config` sin decir de que carrera era,
+    # asi que al haber mas de una se quedaba pegado en el de la anterior.
+    current_lap = races.vuelta_actual(carrera)["current_lap"]
+    carrera_cerrada = races.estado(carrera) == "cerrada" or carrera.get("is_legacy")
+
     # Determine data source based on race code
     # BYSD-2026 (and other legacy races) use the old participants collection
     # Newer races use the registrations collection
-    LEGACY_RACE_CODES = ["BYSD-2026"]  # Add more legacy race codes here if needed
-    
     participants = []
-    
+
     if active_race_code in LEGACY_RACE_CODES:
-        # Use legacy participants collection for historical races
-        participants = await database.participants.find({}, {"_id": 0}).to_list(1000)
+        # Use legacy participants collection for historical races.
+        # Se acepta que aun no tengan race_code: la coleccion nacio cuando solo
+        # existia una carrera y la migracion se lo pone despues.
+        participants = await database.participants.find(
+            {"$or": [{"race_code": active_race_code}, {"race_code": {"$exists": False}}]},
+            {"_id": 0},
+        ).to_list(1000)
     else:
         # Try registrations collection first for new races
         if active_race_code:
@@ -147,10 +148,19 @@ async def get_race_stats(
     
     # Filter out participants without BIB for stats calculation
     participants_with_bib = [p for p in participants if p.get("bib")]
-    
-    # Total laps completed is current_lap - 1 (not the sum of all athletes)
-    total_laps_completed = max(0, current_lap - 1)
-    
+
+    if carrera_cerrada:
+        # En una carrera terminada la cuenta la dan los corredores, no el reloj:
+        # el reloj no sabe cuando se paro y seguiria sumando una vuelta por hora
+        # para siempre.
+        total_laps_completed = max(
+            (p.get("laps_completed", 0) for p in participants_with_bib), default=0
+        )
+        current_lap = total_laps_completed + 1
+    else:
+        # Total laps completed is current_lap - 1 (not the sum of all athletes)
+        total_laps_completed = max(0, current_lap - 1)
+
     athletes_dnf = sum(1 for p in participants_with_bib if p.get("status") == "retired")
     athletes_dns = sum(1 for p in participants_with_bib if p.get("status") == "dns")
     athletes_winner = sum(1 for p in participants_with_bib if p.get("status") == "winner")
@@ -158,7 +168,7 @@ async def get_race_stats(
     athletes_active = len(participants_with_bib) - athletes_dnf - athletes_dns - athletes_winner - athletes_honor
     
     # Total km is based on completed laps (not current lap)
-    total_km = total_laps_completed * KM_PER_LAP
+    total_km = total_laps_completed * races.km_por_vuelta(carrera)
     
     # Total km of all athletes (sum of individual km)
     total_km_all_athletes = sum(p.get("total_km", 0) for p in participants_with_bib)
@@ -279,7 +289,7 @@ async def get_participants(
 
     if active_race_code in LEGACY_RACE_CODES:
         # Use legacy participants collection for historical races
-        query = {}
+        query = {"$or": [{"race_code": active_race_code}, {"race_code": {"$exists": False}}]}
         if status and status in ["active", "retired", "dns", "winner", "honor"]:
             query["status"] = status
 
@@ -362,956 +372,512 @@ async def get_participants(
     
     return participants
 
-@router.post("/set-current-lap")
-async def set_current_lap(
-    request: SetCurrentLapRequest,
+# ============= CONTROL DE CARRERA DESDE EL PANEL =============
+#
+# Todo lo de aqui abajo trabaja sobre la carrera que diga `race_code`. Antes
+# caia en silencio sobre la carrera publicada, lo que bastaba mientras solo
+# podia haber una viva; con el campeonato mundial y la carrera abierta a la vez
+# eso significaba escribir vueltas en la carrera equivocada sin enterarse.
+#
+# Las vueltas no se tocan a mano en la ficha del corredor: pasan por
+# `services/laps.py`, el mismo libro donde escribe el escaner QR.
+
+
+async def _carrera_y_atleta(database, race_code: str, bib):
+    carrera = await races.obtener_carrera(database, race_code)
+    atleta = await laps.exigir_atleta(database, carrera["code"], bib)
+    return carrera, atleta
+
+
+def _autor(user: dict) -> str:
+    return (user or {}).get("username") or "panel"
+
+
+@router.post("/start")
+async def iniciar_carrera(
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """Sella la hora real de salida: a partir de ahi se cuentan las vueltas.
+
+    La hora prevista de la ficha sirve para anunciar la carrera, pero la salida
+    se retrasa con facilidad y nadie corrige la ficha en ese momento. Lo que
+    manda es esta marca.
+    """
     from server import db as database
-    
-    if request.current_lap < 1:
-        raise HTTPException(status_code=400, detail="La vuelta debe ser mayor a 0")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    # Update or create race config (with race_code for multi-race support)
-    await database.race_config.update_one(
-        {"race_code": active_race_code} if active_race_code else {},
+
+    carrera = await races.obtener_carrera(database, race_code)
+    ahora = races.ahora_en_carrera(carrera)
+
+    await database.race_configurations.update_one(
+        {"code": carrera["code"]},
         {
             "$set": {
-                "current_lap": request.current_lap,
-                "race_code": active_race_code,
-                "updated_at": datetime.now(timezone.utc)
+                "started_at": ahora,
+                "estado": "en_carrera",
+                "started_by": _autor(user),
+                "updated_at": ahora,
             }
         },
-        upsert=True
     )
-    
-    return {"message": "Vuelta actual actualizada", "current_lap": request.current_lap}
+
+    carrera["started_at"] = ahora
+    return {
+        "message": f"Carrera {carrera['code']} iniciada a las {ahora.strftime('%H:%M:%S')}",
+        "started_at": ahora.isoformat(),
+        **races.vuelta_actual(carrera),
+    }
+
+
+class HoraDeSalida(BaseModel):
+    started_at: str  # "2026-10-17T08:12:00"
+
+
+@router.post("/start-time")
+async def corregir_hora_de_salida(
+    datos: HoraDeSalida,
+    race_code: str = Depends(races.carrera_del_panel),
+    user=Depends(verify_token),
+):
+    """Corrige la hora de salida cuando se sello tarde o se sello mal."""
+    from server import db as database
+
+    carrera = await races.obtener_carrera(database, race_code)
+
+    try:
+        salida = datetime.fromisoformat(datos.started_at)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Hora de salida invalida")
+
+    if salida.tzinfo is None:
+        salida = salida.replace(tzinfo=races.zona_horaria(carrera))
+
+    await database.race_configurations.update_one(
+        {"code": carrera["code"]},
+        {"$set": {"started_at": salida, "updated_at": races.ahora_en_carrera(carrera)}},
+    )
+
+    carrera["started_at"] = salida
+    return {
+        "message": f"Hora de salida corregida a {salida.strftime('%Y-%m-%d %H:%M')}",
+        "started_at": salida.isoformat(),
+        **races.vuelta_actual(carrera),
+    }
+
+
+@router.get("/lap-status")
+async def estado_de_vuelta(race_code: Optional[str] = None):
+    """En que vuelta va la carrera, segun el reloj. Publico: lo usa la app."""
+    from server import db as database
+
+    carrera = await races.resolver_carrera(database, race_code)
+    info = races.vuelta_actual(carrera)
+
+    return {
+        "race_code": carrera.get("code"),
+        "race_name": carrera.get("name"),
+        "estado": races.estado(carrera),
+        "current_lap": info["current_lap"],
+        "race_started": info["race_started"],
+        "minutes_into_lap": info["minutes_into_lap"],
+        "seconds_remaining": info["seconds_remaining"],
+        "started_at": info["started_at"].isoformat() if info["started_at"] else None,
+        "lap_start_time": info["lap_start_time"].isoformat() if info["lap_start_time"] else None,
+        "lap_end_time": info["lap_end_time"].isoformat() if info["lap_end_time"] else None,
+    }
+
 
 @router.post("/mark-retired")
 async def mark_retired(
     request: MarkRetiredRequest,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """DNF: el corredor abandona conservando las vueltas que ya completo."""
     from server import db as database
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    # Try registrations first
-    participant = None
-    use_registrations = False
-    
-    if active_race_code:
-        participant = await database.registrations.find_one(
-            {"race_code": active_race_code, "bib": int(request.bib.lstrip('0')) if request.bib.lstrip('0').isdigit() else None},
-            {"_id": 0, "edit_token": 0}
-        )
-        if participant:
-            use_registrations = True
-    
-    # Fallback to participants collection
-    if not participant:
-        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "retired":
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.bib)
+
+    if atleta.get("status") == "retired":
         raise HTTPException(status_code=400, detail="El participante ya está marcado como retirado")
-    
-    if participant.get("status") == "dns":
+    if atleta.get("status") == "dns":
         raise HTTPException(status_code=400, detail="El participante está marcado como DNS")
-    
-    # DNF: The athlete did NOT complete this lap, so we keep their current laps/km
-    current_laps = participant.get("laps_completed", 0)
-    current_km = participant.get("total_km", 0.0)
-    
-    # Update participant status only (no lap increment)
-    if use_registrations:
-        await database.registrations.update_one(
-            {"race_code": active_race_code, "email": participant.get("email")},
-            {
-                "$set": {
-                    "status": "retired",
-                    "retired_at_lap": request.retired_at_lap,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-    else:
-        await database.participants.update_one(
-            {"bib": request.bib},
-            {
-                "$set": {
-                    "status": "retired",
-                    "retired_at_lap": request.retired_at_lap,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-    
-    # Send DNF notifications in background
+
+    estado = await laps.registrar_retiro(
+        database, carrera, atleta, laps.RETIRO_MANUAL, request.retired_at_lap,
+        laps.ORIGEN_PANEL, _autor(user), "DNF marcado desde el panel",
+    )
+
     import asyncio
-    asyncio.create_task(send_finish_notifications(database, request.bib, is_winner=False))
-    
+    asyncio.create_task(
+        send_finish_notifications(database, carrera["code"], request.bib, is_winner=False)
+    )
+
     return {
-        "message": f"Participante {request.bib} marcado como DNF en vuelta {request.retired_at_lap}. Vueltas: {current_laps} ({current_km} km)",
-        "laps_completed": current_laps,
-        "total_km": current_km
+        "message": (
+            f"Participante {request.bib} marcado como DNF en vuelta {request.retired_at_lap}. "
+            f"Vueltas: {estado['laps_completed']} ({estado['total_km']} km)"
+        ),
+        **estado,
     }
+
 
 @router.post("/mark-dns")
 async def mark_dns(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """DNS: no se presento. Sus vueltas vuelven a cero."""
     from server import db as database
-    
-    bib = request.get("bib")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    participant = None
-    use_registrations = False
-    
-    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-        # Try registrations collection first for new races
-        try:
-            bib_int = int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ] if bib_int else [{"bib": bib}]
-            }, {"_id": 0, "edit_token": 0})
-            if participant:
-                use_registrations = True
-        except ValueError:
-            pass
-    
-    # Fallback to participants collection for legacy races
-    if not participant:
-        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "dns":
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.get("bib"))
+
+    if atleta.get("status") == "dns":
         raise HTTPException(status_code=400, detail="El participante ya está marcado como DNS")
-    
-    if participant.get("status") == "retired":
+    if atleta.get("status") == "retired":
         raise HTTPException(status_code=400, detail="El participante ya está retirado")
-    
-    # Update participant status - reset laps and km to 0
-    if use_registrations:
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "status": "dns",
-                    "laps_completed": 0,
-                    "total_km": 0.0,
-                    "retired_at_lap": None,
-                    "updated_at": datetime.now(timezone.utc)
-                }
+
+    # El ajuste a cero queda anotado en el libro: asi se ve que fue una decision
+    # y no que se perdieron los escaneos.
+    await laps.ajustar_vueltas(
+        database, carrera, atleta, 0, _autor(user), "No se presento (DNS)"
+    )
+    await database.registrations.update_one(
+        {"_id": atleta["_id"]},
+        {
+            "$set": {
+                "status": "dns",
+                "retired_at_lap": None,
+                "updated_at": races.ahora_en_carrera(carrera),
             }
-        )
-    else:
-        await database.participants.update_one(
-            {"bib": bib},
-            {
-                "$set": {
-                    "status": "dns",
-                    "laps_completed": 0,
-                    "total_km": 0.0,
-                    "retired_at_lap": None,
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
-    # Also delete any lap logs for this participant
-    await database.laps_log.delete_many({"participant_bib": bib})
-    
+        },
+    )
+
+    bib = atleta.get("bib")
     return {"message": f"Participante {bib} marcado como DNS (No se presentó). Vueltas reseteadas a 0."}
 
 
 @router.post("/adjust-laps")
 async def adjust_participant_laps(
     request: AdjustLapsRequest,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Manually adjust the number of laps for a participant"""
+    """Fija a mano las vueltas de un corredor."""
     from server import db as database
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    participant = None
-    use_registrations = False
-    
-    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-        # Try registrations collection first for new races
-        try:
-            bib_int = int(request.bib.lstrip('0')) if request.bib.lstrip('0').isdigit() else None
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ] if bib_int else [{"bib": request.bib}]
-            }, {"_id": 0, "edit_token": 0})
-            if participant:
-                use_registrations = True
-        except ValueError:
-            pass
-    
-    # Fallback to participants collection for legacy races
-    if not participant:
-        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "dns":
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.bib)
+
+    if atleta.get("status") == "dns":
         raise HTTPException(status_code=400, detail="No se pueden ajustar vueltas de un participante DNS")
-    
-    if request.new_laps < 0:
-        raise HTTPException(status_code=400, detail="Las vueltas no pueden ser negativas")
-    
-    old_laps = participant.get("laps_completed", 0)
-    new_km = round(request.new_laps * KM_PER_LAP, 1)
-    
-    # Update participant laps
-    if use_registrations:
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "laps_completed": request.new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-    else:
-        await database.participants.update_one(
-            {"bib": request.bib},
-            {
-                "$set": {
-                    "laps_completed": request.new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
+
+    anteriores = atleta.get("laps_completed", 0)
+    estado = await laps.ajustar_vueltas(
+        database, carrera, atleta, request.new_laps, _autor(user), "Ajuste desde el panel"
+    )
+
     return {
-        "message": f"Vueltas de {request.bib} ajustadas de {old_laps} a {request.new_laps}",
+        "message": f"Vueltas de {request.bib} ajustadas de {anteriores} a {estado['laps_completed']}",
         "bib": request.bib,
-        "old_laps": old_laps,
-        "new_laps": request.new_laps,
-        "total_km": new_km
+        "old_laps": anteriores,
+        "new_laps": estado["laps_completed"],
+        "total_km": estado["total_km"],
     }
 
 
 @router.post("/edit-participant")
 async def edit_participant(
     request: EditParticipantRequest,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Edit participant data (name, last name, nationality)"""
+    """Corrige el nombre o la nacionalidad de un corredor."""
     from server import db as database
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    participant = None
-    use_registrations = False
-    
-    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-        # Try registrations collection first for new races
-        try:
-            bib_int = int(request.bib.lstrip('0')) if request.bib.lstrip('0').isdigit() else None
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ] if bib_int else [{"bib": request.bib}]
-            }, {"_id": 0, "edit_token": 0})
-            if participant:
-                use_registrations = True
-        except ValueError:
-            pass
-    
-    # Fallback to participants collection for legacy races
-    if not participant:
-        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    # Update participant data
-    if use_registrations:
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "nombre": request.nombre,
-                    "apellidos": request.apellidos,
-                    "nacionalidad": request.nacionalidad.upper(),
-                    "updated_at": datetime.now(timezone.utc)
-                }
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.bib)
+
+    await database.registrations.update_one(
+        {"_id": atleta["_id"]},
+        {
+            "$set": {
+                "nombre": request.nombre,
+                "apellidos": request.apellidos,
+                "nacionalidad": request.nacionalidad.upper(),
+                "updated_at": races.ahora_en_carrera(carrera),
             }
-        )
-    else:
-        await database.participants.update_one(
-            {"bib": request.bib},
-            {
-                "$set": {
-                    "nombre": request.nombre,
-                    "apellidos": request.apellidos,
-                    "nacionalidad": request.nacionalidad.upper(),
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
+        },
+    )
+
     return {
         "message": f"Datos del participante {request.bib} actualizados",
         "bib": request.bib,
         "nombre": request.nombre,
         "apellidos": request.apellidos,
-        "nacionalidad": request.nacionalidad.upper()
+        "nacionalidad": request.nacionalidad.upper(),
     }
 
 
 @router.post("/mark-winner")
 async def mark_winner(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Mark a participant as the race winner"""
+    """Declara el ganador. Solo puede haber uno por carrera."""
     from server import db as database
-    
-    bib = request.get("bib")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    if active_race_code in LEGACY_RACE_CODES:
-        # Use legacy participants collection
-        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
-        
-        if not participant:
-            raise HTTPException(status_code=404, detail="Participante no encontrado")
-        
-        if participant.get("status") == "winner":
-            raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
-        
-        # Check if there's already a winner
-        existing_winner = await database.participants.find_one({"status": "winner"}, {"_id": 0})
-        if existing_winner:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
-            )
-        
-        # Mark as winner
-        await database.participants.update_one(
-            {"bib": bib},
-            {
-                "$set": {
-                    "status": "winner",
-                    "updated_at": datetime.utcnow()
-                }
-            }
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.get("bib"))
+
+    if atleta.get("status") == "winner":
+        raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
+
+    ya_hay = await database.registrations.find_one(
+        {"race_code": carrera["code"], "status": "winner"}, {"_id": 0}
+    )
+    if ya_hay:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Ya existe un ganador: {ya_hay.get('nombre')} {ya_hay.get('apellidos')} "
+                f"(BIB: {ya_hay.get('bib')})"
+            ),
         )
-    else:
-        # Use registrations collection for new races
-        try:
-            bib_int = int(bib)
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ]
-            }, {"_id": 0})
-        except (ValueError, TypeError):
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "bib": bib
-            }, {"_id": 0})
-        
-        if not participant:
-            raise HTTPException(status_code=404, detail="Participante no encontrado en la carrera activa")
-        
-        if participant.get("status") == "winner":
-            raise HTTPException(status_code=400, detail="Este participante ya es el ganador")
-        
-        # Check if there's already a winner in this race
-        existing_winner = await database.registrations.find_one({
-            "race_code": active_race_code,
-            "status": "winner"
-        }, {"_id": 0})
-        
-        if existing_winner:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Ya existe un ganador: {existing_winner.get('nombre')} {existing_winner.get('apellidos')} (BIB: {existing_winner.get('bib')})"
-            )
-        
-        # Mark as winner
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "status": "winner",
-                    "won_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
+
+    ahora = races.ahora_en_carrera(carrera)
+    await database.registrations.update_one(
+        {"_id": atleta["_id"]},
+        {"$set": {"status": "winner", "won_at": ahora, "updated_at": ahora}},
+    )
+
     return {
-        "message": f"¡{participant.get('nombre')} {participant.get('apellidos')} ha sido marcado como GANADOR!",
-        "bib": bib,
-        "nombre": participant.get("nombre"),
-        "apellidos": participant.get("apellidos")
+        "message": f"¡{atleta.get('nombre')} {atleta.get('apellidos')} ha sido marcado como GANADOR!",
+        "bib": atleta.get("bib"),
+        "nombre": atleta.get("nombre"),
+        "apellidos": atleta.get("apellidos"),
     }
 
 
 @router.post("/mark-honor")
 async def mark_honor(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Mark a participant as Guest of Honor (Invitada de Honor)"""
+    """Marca a un corredor como Invitada de Honor."""
     from server import db as database
-    
-    bib = request.get("bib")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    participant = None
-    use_registrations = False
-    
-    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-        # Try registrations collection first for new races
-        try:
-            bib_int = int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ] if bib_int else [{"bib": bib}]
-            }, {"_id": 0, "edit_token": 0})
-            if participant:
-                use_registrations = True
-        except ValueError:
-            pass
-    
-    # Fallback to participants collection for legacy races
-    if not participant:
-        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "honor":
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.get("bib"))
+
+    if atleta.get("status") == "honor":
         raise HTTPException(status_code=400, detail="Este participante ya es Invitada de Honor")
-    
-    # Mark as honor
-    if use_registrations:
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "status": "honor",
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
-        )
-    else:
-        await database.participants.update_one(
-            {"bib": bib},
-            {
-                "$set": {
-                    "status": "honor",
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
+
+    await database.registrations.update_one(
+        {"_id": atleta["_id"]},
+        {"$set": {"status": "honor", "updated_at": races.ahora_en_carrera(carrera)}},
+    )
+
     return {
-        "message": f"¡{participant.get('nombre')} {participant.get('apellidos')} ha sido marcado como Invitada de Honor!",
-        "bib": bib,
-        "nombre": participant.get("nombre"),
-        "apellidos": participant.get("apellidos")
+        "message": f"¡{atleta.get('nombre')} {atleta.get('apellidos')} ha sido marcado como Invitada de Honor!",
+        "bib": atleta.get("bib"),
+        "nombre": atleta.get("nombre"),
+        "apellidos": atleta.get("apellidos"),
     }
 
 
 @router.post("/reactivate")
 async def reactivate_participant(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """Devuelve a la carrera a alguien marcado por error.
+
+    Si el retiro estaba anotado en el libro, se anula: de lo contrario la ficha
+    diria que corre y el libro que se retiro.
+    """
     from server import db as database
-    
-    bib = request.get("bib")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    participant = None
-    use_registrations = False
-    
-    if active_race_code and active_race_code not in LEGACY_RACE_CODES:
-        # Try registrations collection first for new races
-        try:
-            bib_int = int(bib.lstrip('0')) if bib.lstrip('0').isdigit() else None
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ] if bib_int else [{"bib": bib}]
-            }, {"_id": 0, "edit_token": 0})
-            if participant:
-                use_registrations = True
-        except ValueError:
-            pass
-    
-    # Fallback to participants collection for legacy races
-    if not participant:
-        participant = await database.participants.find_one({"bib": bib}, {"_id": 0})
-    
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participante no encontrado")
-    
-    if participant.get("status") == "active":
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.get("bib"))
+
+    if atleta.get("status") == "active":
         raise HTTPException(status_code=400, detail="El participante ya está activo")
-    
-    # WARNING: Reactivating a participant during an active race
-    # This should only be used for correcting mistakes
-    
-    # Reactivate participant
-    if use_registrations:
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "status": "active",
-                    "retired_at_lap": None,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-            }
+
+    anotaciones = await laps.historial(database, carrera["code"], atleta.get("bib"))
+    retiros = [a for a in anotaciones if a.get("action") in laps.RETIROS]
+    if retiros:
+        await laps.anular(
+            database, carrera, retiros[-1]["_id"], _autor(user), "Reactivado desde el panel"
         )
     else:
-        await database.participants.update_one(
-            {"bib": bib},
+        await database.registrations.update_one(
+            {"_id": atleta["_id"]},
             {
-                "$set": {
-                    "status": "active",
-                    "retired_at_lap": None,
-                    "updated_at": datetime.utcnow()
-                }
-            }
+                "$set": {"status": "active", "updated_at": races.ahora_en_carrera(carrera)},
+                "$unset": {"retired_at_lap": "", "retired_at": "", "retired_reason": ""},
+            },
         )
-    
-    return {"message": f"Participante {bib} reactivado. ATENCIÓN: Puede que necesite ajustar sus vueltas manualmente."}
+
+    return {
+        "message": f"Participante {atleta.get('bib')} reactivado. ATENCIÓN: Puede que necesite ajustar sus vueltas manualmente."
+    }
+
 
 @router.post("/complete-lap")
 async def complete_lap(
     request: CompleteLapRequest,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """Anota una vuelta a mano, cuando el escaneo no llego a hacerse."""
     from server import db as database
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    LEGACY_RACE_CODES = ["BYSD-2026"]
-    
-    if active_race_code in LEGACY_RACE_CODES:
-        # Use legacy participants collection
-        participant = await database.participants.find_one({"bib": request.bib}, {"_id": 0})
-        
-        if not participant:
-            raise HTTPException(status_code=404, detail="Participante no encontrado")
-        
-        if participant.get("status") == "retired":
-            raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
-        
-        new_laps = participant.get("laps_completed", 0) + 1
-        new_km = round(new_laps * KM_PER_LAP, 1)
-        
-        await database.participants.update_one(
-            {"bib": request.bib},
-            {
-                "$set": {
-                    "laps_completed": new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    else:
-        # Use registrations collection for new races
-        # Find by BIB in active race
-        try:
-            bib_int = int(request.bib)
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "$or": [
-                    {"bib": bib_int},
-                    {"bib": str(bib_int)},
-                    {"bib": str(bib_int).zfill(3)}
-                ]
-            }, {"_id": 0})
-        except ValueError:
-            participant = await database.registrations.find_one({
-                "race_code": active_race_code,
-                "bib": request.bib
-            }, {"_id": 0})
-        
-        if not participant:
-            raise HTTPException(status_code=404, detail="Participante no encontrado en la carrera activa")
-        
-        if participant.get("status") == "retired":
-            raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
-        
-        new_laps = participant.get("laps_completed", 0) + 1
-        new_km = round(new_laps * KM_PER_LAP, 1)
-        
-        await database.registrations.update_one(
-            {"email": participant.get("email"), "race_code": active_race_code},
-            {
-                "$set": {
-                    "laps_completed": new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.utcnow()
-                },
-                "$push": {
-                    "laps_log": {
-                        "lap": new_laps,
-                        "completed_at": datetime.utcnow(),
-                        "method": "manual"
-                    }
-                }
-            }
-        )
-    
-    # Log the lap
-    lap_log = LapLog(
-        participant_bib=request.bib,
-        lap_number=request.lap_number,
-        recorded_by=user.get("username", "admin")
+
+    carrera, atleta = await _carrera_y_atleta(database, race_code, request.bib)
+
+    if atleta.get("status") == "retired":
+        raise HTTPException(status_code=400, detail="No se puede registrar vuelta de un participante retirado")
+
+    vuelta = request.lap_number or (atleta.get("laps_completed", 0) + 1)
+
+    if await laps.vuelta_ya_registrada(database, carrera["code"], atleta.get("bib"), vuelta):
+        raise HTTPException(status_code=400, detail=f"La vuelta {vuelta} ya estaba registrada")
+
+    estado = await laps.registrar_vuelta(
+        database, carrera, atleta, vuelta, laps.ORIGEN_PANEL, _autor(user),
+        races.vuelta_actual(carrera),
     )
-    await database.laps_log.insert_one(lap_log.dict())
-    
-    return {
-        "message": f"Vuelta {request.lap_number} registrada para {request.bib}",
-        "laps_completed": new_laps,
-        "total_km": new_km
-    }
+
+    return {"message": f"Vuelta {vuelta} registrada para {request.bib}", **estado}
+
 
 @router.post("/complete-lap-all-active")
 async def complete_lap_all_active(
+    race_code: str = Depends(races.carrera_del_panel),
+    lap_number: Optional[int] = None,
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
+    """Cierra una vuelta para todos los que siguen en carrera.
+
+    Por defecto cierra la ultima vuelta terminada segun el reloj. Se puede
+    indicar otra a proposito, porque la corrección del dia despues casi nunca
+    coincide con la vuelta en curso.
+    """
     from server import db as database
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    # Get current lap (filtered by race)
-    config = await database.race_config.find_one(
-        {"race_code": active_race_code} if active_race_code else {},
-        {"_id": 0}
-    )
-    if not config:
-        config = {"current_lap": 1}
-    
-    current_lap = config.get("current_lap", 1)
-    
-    # Get all active participants - try registrations first
-    active_participants = []
-    use_registrations = False
-    
-    if active_race_code:
-        registrations = await database.registrations.find(
-            {
-                "race_code": active_race_code,
-                "status": "active",
-                "bib": {"$ne": None}
-            },
-            {"_id": 0, "edit_token": 0}
-        ).to_list(1000)
-        
-        if registrations:
-            use_registrations = True
-            for reg in registrations:
-                active_participants.append({
-                    "bib": str(reg.get("bib")).zfill(3),
-                    "email": reg.get("email"),
-                    "laps_completed": reg.get("laps_completed", 0)
-                })
-    
-    # Fallback to participants collection
-    if not active_participants:
-        participants_docs = await database.participants.find(
-            {"status": "active"},
-            {"_id": 0}
-        ).to_list(1000)
-        active_participants = participants_docs
-    
-    if not active_participants:
-        return {
-            "message": "No hay participantes activos",
-            "updated_count": 0,
-            "skipped_count": 0,
-            "new_lap": current_lap + 1
-        }
-    
-    updated_count = 0
-    skipped_count = 0
-    
-    # Update all active participants
-    for participant in active_participants:
-        current_laps = participant.get("laps_completed", 0)
-        
-        # Skip if participant already has the current lap completed
-        if current_laps >= current_lap:
-            skipped_count += 1
+
+    carrera = await races.obtener_carrera(database, race_code)
+    info = races.vuelta_actual(carrera)
+
+    vuelta = lap_number or max(1, info["current_lap"] - 1)
+
+    activos = await database.registrations.find(
+        {"race_code": carrera["code"], "status": "active", "bib": {"$ne": None}}
+    ).to_list(1000)
+
+    registrados = 0
+    omitidos = 0
+    for atleta in activos:
+        if await laps.vuelta_ya_registrada(database, carrera["code"], atleta.get("bib"), vuelta):
+            omitidos += 1
             continue
-        
-        new_laps = current_laps + 1
-        new_km = round(new_laps * KM_PER_LAP, 1)
-        
-        # Update participant
-        if use_registrations:
-            await database.registrations.update_one(
-                {"race_code": active_race_code, "email": participant.get("email")},
-                {
-                    "$set": {
-                        "laps_completed": new_laps,
-                        "total_km": new_km,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
-            )
-        else:
-            await database.participants.update_one(
-                {"bib": participant["bib"]},
-                {
-                    "$set": {
-                        "laps_completed": new_laps,
-                        "total_km": new_km,
-                        "updated_at": datetime.now(timezone.utc)
-                    }
-                }
-            )
-        
-        # Log the lap
-        lap_log = LapLog(
-            participant_bib=participant.get("bib", ""),
-            lap_number=current_lap,
-            recorded_by=user.get("username", "admin")
+        await laps.registrar_vuelta(
+            database, carrera, atleta, vuelta, laps.ORIGEN_PANEL, _autor(user), info,
+            {"reason": "Cierre de vuelta para todos los activos"},
         )
-        await database.laps_log.insert_one(lap_log.dict())
-        
-        updated_count += 1
-    
-    # Increment current lap
-    new_lap = current_lap + 1
-    await database.race_config.update_one(
-        {"race_code": active_race_code} if active_race_code else {},
-        {
-            "$set": {
-                "current_lap": new_lap,
-                "race_code": active_race_code,
-                "updated_at": datetime.now(timezone.utc)
-            }
-        },
-        upsert=True
-    )
-    
-    # Send lap notifications in background (don't wait for completion)
+        registrados += 1
+
     import asyncio
-    asyncio.create_task(send_lap_notifications(database, current_lap))
-    
-    message = f"Vuelta {current_lap} completada para {updated_count} atletas"
-    if skipped_count > 0:
-        message += f" ({skipped_count} ya tenían la vuelta registrada)"
-    
+    asyncio.create_task(send_lap_notifications(database, carrera["code"], vuelta))
+
+    mensaje = f"Vuelta {vuelta} completada para {registrados} atletas"
+    if omitidos:
+        mensaje += f" ({omitidos} ya tenían la vuelta registrada)"
+
     return {
-        "message": message,
-        "updated_count": updated_count,
-        "skipped_count": skipped_count,
-        "new_lap": new_lap,
-        "previous_lap": current_lap
+        "message": mensaje,
+        "updated_count": registrados,
+        "skipped_count": omitidos,
+        "lap_number": vuelta,
+        "current_lap": info["current_lap"],
     }
+
 
 @router.post("/revert-lap")
 async def revert_lap(
+    race_code: str = Depends(races.carrera_del_panel),
+    lap_number: Optional[int] = None,
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """
-    Revierte la vuelta actual a la anterior.
-    Esto es útil cuando se avanzó la vuelta por error.
-    ADVERTENCIA: 
-    - Reduce las vueltas de todos los atletas activos en 1
-    - Reactiva los atletas DNF que tienen retired_at_lap >= new_lap (vueltas que "no ocurrieron")
+    """Deshace una vuelta que se cerro por error.
+
+    Anula lo anotado en esa vuelta -- vueltas y retiros -- y devuelve a la
+    carrera a quienes se hubieran retirado en ella. Nada se borra: las
+    anotaciones quedan marcadas como anuladas, con quien y cuando.
     """
     from server import db as database
-    
-    # Get current lap
-    config = await database.race_config.find_one({}, {"_id": 0})
-    if not config:
-        raise HTTPException(status_code=400, detail="Configuración de carrera no encontrada")
-    
-    current_lap = config.get("current_lap", 1)
-    
-    if current_lap <= 1:
-        raise HTTPException(status_code=400, detail="No se puede retroceder más. Ya está en la vuelta 1.")
-    
-    new_lap = current_lap - 1
-    
-    updated_count = 0
-    reactivated_count = 0
-    
-    # 1. Reduce laps for all active participants who have at least 1 lap completed
-    active_participants = await database.participants.find(
-        {"status": "active", "laps_completed": {"$gt": 0}},
-        {"_id": 0}
-    ).to_list(1000)
-    
-    for participant in active_participants:
-        new_laps = max(0, participant.get("laps_completed", 1) - 1)
-        new_km = round(new_laps * KM_PER_LAP, 1)
-        
-        await database.participants.update_one(
-            {"bib": participant["bib"]},
-            {
-                "$set": {
-                    "laps_completed": new_laps,
-                    "total_km": new_km,
-                    "updated_at": datetime.utcnow()
-                }
-            }
+
+    carrera = await races.obtener_carrera(database, race_code)
+    info = races.vuelta_actual(carrera)
+
+    vuelta = lap_number or max(1, info["current_lap"] - 1)
+
+    anotaciones = await database.lap_registrations.find(
+        {"race_code": carrera["code"], "lap_number": vuelta, "anulada": {"$ne": True}}
+    ).to_list(2000)
+
+    if not anotaciones:
+        raise HTTPException(status_code=400, detail=f"No hay nada anotado en la vuelta {vuelta}")
+
+    anuladas = 0
+    reactivados = 0
+    for anotacion in anotaciones:
+        if anotacion.get("action") == laps.AJUSTE:
+            # Un ajuste manual no es parte de la vuelta: se respeta.
+            continue
+        if anotacion.get("action") in laps.RETIROS:
+            reactivados += 1
+        await laps.anular(
+            database, carrera, anotacion["_id"], _autor(user),
+            f"Vuelta {vuelta} deshecha desde el panel",
         )
-        updated_count += 1
-    
-    # 2. Reactivate DNF athletes with retired_at_lap >= new_lap
-    # When we go back to lap 2, anyone who retired at lap 2 or later should be reactivated
-    # Because those retirements "didn't happen yet" in the reverted state
-    dnf_to_reactivate = await database.participants.find(
-        {"status": "retired", "retired_at_lap": {"$gte": new_lap}},
-        {"_id": 0}
-    ).to_list(1000)
-    
-    for participant in dnf_to_reactivate:
-        # DNF does NOT increment laps, so we keep current laps when reactivating
-        current_laps = participant.get("laps_completed", 0)
-        current_km = participant.get("total_km", 0.0)
-        
-        await database.participants.update_one(
-            {"bib": participant["bib"]},
-            {
-                "$set": {
-                    "status": "active",
-                    "retired_at_lap": None,
-                    "laps_completed": current_laps,
-                    "total_km": current_km,
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-        reactivated_count += 1
-    
-    # 3. Decrement current lap
-    await database.race_config.update_one(
-        {},
-        {
-            "$set": {
-                "current_lap": new_lap,
-                "updated_at": datetime.utcnow()
-            }
-        }
-    )
-    
-    # 4. Remove lap logs for the reverted lap
-    await database.laps_log.delete_many({"lap_number": current_lap - 1})
-    
-    message = f"Vuelta revertida. Ahora está en la vuelta {new_lap}."
-    if reactivated_count > 0:
-        message += f" {reactivated_count} atleta(s) DNF reactivado(s)."
-    
+        anuladas += 1
+
+    mensaje = f"Vuelta {vuelta} deshecha: {anuladas} anotacion(es) anuladas."
+    if reactivados:
+        mensaje += f" {reactivados} atleta(s) DNF reactivado(s)."
+
     return {
-        "message": message,
-        "updated_count": updated_count,
-        "reactivated_count": reactivated_count,
-        "new_lap": new_lap,
-        "previous_lap": current_lap
+        "message": mensaje,
+        "lap_number": vuelta,
+        "updated_count": anuladas,
+        "reactivated_count": reactivados,
     }
+
 
 @router.post("/reset-database")
 async def reset_database(
     request: dict,
+    race_code: str = Depends(races.carrera_del_panel),
     user=Depends(verify_token),
-    db=Depends(lambda: None)
 ):
-    """Reset race data for the active race only (participants tracking, not pre-registration data)"""
+    """Borra el seguimiento de una carrera y la deja lista para volver a correr.
+
+    Es para simulacros: deja las inscripciones intactas y se lleva las vueltas.
+    Pide el codigo de la carrera a proposito -- antes borraba lo de la carrera
+    publicada, que con varias vivas ya no tiene por que ser la que se ensaya.
+    """
     from server import db as database
-    
+
     # Verify confirmation
     confirmation = request.get("confirmation", "")
     if confirmation != "REINICIO":
         raise HTTPException(status_code=400, detail="Confirmación incorrecta. Debe escribir REINICIO")
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
-    
-    if not active_race_code:
-        raise HTTPException(status_code=400, detail="No hay carrera activa configurada")
-    
-    # Reset race tracking data for active race only (in registrations collection)
-    # This resets laps_completed, total_km, retired_at_lap for participants with status 'active', 'retired', etc.
+
+    carrera = await races.obtener_carrera(database, race_code)
+    codigo = carrera["code"]
+
     result = await database.registrations.update_many(
         {
-            "race_code": active_race_code,
+            "race_code": codigo,
             "status": {"$in": ["active", "retired", "winner", "honor"]}
         },
         {
@@ -1321,33 +887,26 @@ async def reset_database(
                 "retired_at_lap": None,
                 "status": "active",  # Reset to active
                 "updated_at": datetime.now(timezone.utc)
-            }
+            },
+            "$unset": {"retired_at": "", "retired_reason": "", "laps_log": ""},
         }
     )
-    
-    # Reset race config for this race
-    await database.race_config.update_one(
-        {"race_code": active_race_code},
-        {
-            "$set": {
-                "current_lap": 1,
-                "race_status": "active",
-                "updated_at": datetime.now(timezone.utc)
-            }
-        },
-        upsert=True
+
+    # La hora de salida tambien vuelve atras: si no, el reloj seguiria contando
+    # desde la salida del ensayo anterior.
+    await database.race_configurations.update_one(
+        {"code": codigo},
+        {"$unset": {"started_at": "", "started_by": ""},
+         "$set": {"estado": "inscripcion", "updated_at": datetime.now(timezone.utc)}},
     )
-    
-    # Delete lap logs for this race only
-    await database.laps_log.delete_many({"race_code": active_race_code})
-    
-    # Delete lap registrations for this race
-    await database.lap_registrations.delete_many({"race_code": active_race_code})
-    
+
+    borradas = await database.lap_registrations.delete_many({"race_code": codigo})
+
     return {
-        "message": f"Datos de carrera {active_race_code} reiniciados exitosamente",
-        "race_code": active_race_code,
-        "participants_reset": result.modified_count
+        "message": f"Datos de carrera {codigo} reiniciados exitosamente",
+        "race_code": codigo,
+        "participants_reset": result.modified_count,
+        "lap_registrations_deleted": borradas.deleted_count,
     }
 
 
@@ -2640,15 +2199,15 @@ async def check_certificate(bib: str, db=Depends(lambda: None)):
 async def get_athlete_laps(bib: str, race_code: Optional[str] = None, db=Depends(lambda: None)):
     """Vueltas de un atleta para BYSD Live: hora, duración y pace por vuelta.
 
-    Combina lap_registrations (escaneo QR, trae inicio y fin de vuelta) con el
-    laps_log manual de la inscripción (solo momento de registro). Público: no
-    expone quién escaneó ni datos del scanner.
+    Sale todo del libro mayor de vueltas, escaneadas o puestas a mano: antes
+    habia que juntar dos fuentes porque el panel y el escaner anotaban en sitios
+    distintos. Público: no expone quién escaneó ni datos del scanner.
     """
     from server import db as database
 
-    active_race_code = race_code or await get_active_race_code(database)
-    if not active_race_code:
-        return {"laps": [], "km_per_lap": KM_PER_LAP}
+    carrera = await races.resolver_carrera(database, race_code)
+    active_race_code = carrera.get("code")
+    km_vuelta = races.km_por_vuelta(carrera)
 
     bib_str = str(bib).zfill(3)
 
@@ -2657,6 +2216,7 @@ async def get_athlete_laps(bib: str, race_code: Optional[str] = None, db=Depends
             "race_code": active_race_code,
             "bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]},
             "action": "lap_completed",
+            "anulada": {"$ne": True},
         },
         {"_id": 0, "lap_number": 1, "lap_start_time": 1, "scan_time": 1, "scan_time_local": 1},
     ).sort("lap_number", 1).to_list(500)
@@ -2681,7 +2241,7 @@ async def get_athlete_laps(bib: str, race_code: Optional[str] = None, db=Depends
             except TypeError:
                 duracion_seg = None
 
-        pace_seg_km = int(duracion_seg / KM_PER_LAP) if duracion_seg else None
+        pace_seg_km = int(duracion_seg / km_vuelta) if duracion_seg else None
 
         laps.append({
             "lap": numero,
@@ -2690,23 +2250,5 @@ async def get_athlete_laps(bib: str, race_code: Optional[str] = None, db=Depends
             "pace_seg_km": pace_seg_km,
         })
 
-    # Complementar con vueltas manuales que no pasaron por el scanner
-    registration = await database.registrations.find_one(
-        {"race_code": active_race_code, "bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]}},
-        {"_id": 0, "laps_log": 1},
-    )
-    for entry in (registration or {}).get("laps_log", []):
-        numero = entry.get("lap")
-        if numero is None or numero in vistos:
-            continue
-        vistos.add(numero)
-        completado = entry.get("completed_at")
-        laps.append({
-            "lap": numero,
-            "hora": completado.strftime("%H:%M") if hasattr(completado, "strftime") else None,
-            "duracion_seg": None,
-            "pace_seg_km": None,
-        })
-
     laps.sort(key=lambda x: x["lap"])
-    return {"laps": laps, "km_per_lap": KM_PER_LAP}
+    return {"laps": laps, "km_per_lap": km_vuelta}
