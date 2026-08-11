@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2,
   Clock, ChevronLeft, Mail, MessageCircle, Edit3, UserCog, Trophy, Star,
-  MoreHorizontal, Play, Plus, UserX, Ban, QrCode, ClipboardEdit,
+  MoreHorizontal, Play, Plus, UserX, Ban, QrCode, ClipboardEdit, Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -15,7 +15,6 @@ import {
 } from './ui/dropdown-menu';
 import { useAdminRace } from '../contexts/AdminRaceContext';
 import RaceSelector from './RaceSelector';
-import LapRegistrationsPanel from './LapRegistrationsPanel';
 import { adminFetch } from '../lib/adminApi';
 
 export default function RaceControlPanel({
@@ -29,7 +28,8 @@ export default function RaceControlPanel({
   // con el libro de vueltas y los ultimos movimientos.
   const [totales, setTotales] = useState({});
   const [movimientos, setMovimientos] = useState([]);
-  const [verLibro, setVerLibro] = useState(false);
+  const [cuantosMovimientos, setCuantosMovimientos] = useState(40);
+  const [exportando, setExportando] = useState(false);
   const [anotando, setAnotando] = useState(false);
   const [nuevaVuelta, setNuevaVuelta] = useState({ bib: '', lap_number: '', motivo: '' });
   const [guardandoVuelta, setGuardandoVuelta] = useState(false);
@@ -114,13 +114,14 @@ export default function RaceControlPanel({
     // Al cambiar de carrera en la cabecera se recarga todo: si no, quedarían
     // en pantalla los corredores de la carrera anterior.
     if (raceCode) loadData();
-  }, [navigate, raceCode]);
+  }, [navigate, raceCode, cuantosMovimientos]);
 
   const loadData = async () => {
     if (!raceCode) return;
     try {
       const res = await adminFetch(
-        conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/live`)
+        `${conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/live`)}` +
+        `&movimientos=${cuantosMovimientos}`
       );
       if (!res.ok) throw new Error('No se pudo cargar la carrera');
       const datos = await res.json();
@@ -230,6 +231,33 @@ export default function RaceControlPanel({
       showMessage(err.message, 'error');
     } finally {
       setGuardandoVuelta(false);
+    }
+  };
+
+  // Para revisar el dia despues: el libro entero en una hoja de calculo, que
+  // es donde de verdad se cruzan y se ordenan miles de anotaciones.
+  const exportarCSV = async () => {
+    setExportando(true);
+    try {
+      const res = await adminFetch(
+        `${process.env.REACT_APP_BACKEND_URL}/api/qr-scan/lap-registrations/export?race_code=${raceCode}`
+      );
+      if (!res.ok) throw new Error('No se pudo exportar');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `registro_vueltas_${raceCode}.csv`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      window.URL.revokeObjectURL(url);
+      enlace.remove();
+      showMessage('Registro exportado', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -1241,9 +1269,18 @@ export default function RaceControlPanel({
                     anular: nada se borra.
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setVerLibro((v) => !v)}>
-                  <Clock className="w-4 h-4 mr-2" />
-                  {verLibro ? 'Ocultar registro completo' : 'Ver registro completo'}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={exportarCSV}
+                  disabled={exportando || movimientos.length === 0}
+                >
+                  {exportando ? (
+                    <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Exportar CSV
                 </Button>
               </div>
             </CardHeader>
@@ -1297,13 +1334,21 @@ export default function RaceControlPanel({
                   ))}
                 </div>
               )}
+
+              {movimientos.length >= cuantosMovimientos && (
+                <div className="pt-3 text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCuantosMovimientos((n) => n + 60)}
+                  >
+                    Ver más movimientos
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
-
-        {/* El libro entero, con filtros y exportación. Solo se carga si se pide:
-            son miles de filas y el día de la carrera no hacen falta. */}
-        {verLibro && puedeVerVueltas && <LapRegistrationsPanel />}
 
       {/* Reset Database Modal */}
       {showResetModal && (
