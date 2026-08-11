@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2,
-  Clock, ChevronLeft, Mail, MessageCircle, Edit3, UserCog, Trophy, Star,
+  Clock, ChevronLeft, Edit3, UserCog, Trophy, Star,
   MoreHorizontal, Play, Plus, UserX, Ban, QrCode, ClipboardEdit, Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -50,12 +50,6 @@ export default function RaceControlPanel({
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [resetting, setResetting] = useState(false);
-  const [showResetSubsModal, setShowResetSubsModal] = useState(false);
-  const [resetSubsConfirmation, setResetSubsConfirmation] = useState('');
-  const [resettingSubs, setResettingSubs] = useState(false);
-  const [showResetCheersModal, setShowResetCheersModal] = useState(false);
-  const [resetCheersConfirmation, setResetCheersConfirmation] = useState('');
-  const [resettingCheers, setResettingCheers] = useState(false);
   const [showAdjustLapsModal, setShowAdjustLapsModal] = useState(false);
   const [adjustLapsParticipant, setAdjustLapsParticipant] = useState(null);
   const [newLapsValue, setNewLapsValue] = useState(0);
@@ -65,8 +59,6 @@ export default function RaceControlPanel({
   const [editFormData, setEditFormData] = useState({ nombre: '', apellidos: '', nacionalidad: '' });
   const [editingParticipant, setEditingParticipant] = useState(false);
   const [markingWinner, setMarkingWinner] = useState(false);
-  const [sendingRunnerEmails, setSendingRunnerEmails] = useState(false);
-  const [showSendRunnerEmailsModal, setShowSendRunnerEmailsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
 
@@ -579,103 +571,6 @@ export default function RaceControlPanel({
     }
   };
 
-  const handleResetSubscriptions = async () => {
-    if (resetSubsConfirmation !== 'SUSCRIPCIONES') {
-      showMessage('Debe escribir SUSCRIPCIONES para confirmar', 'error');
-      return;
-    }
-
-    const token = localStorage.getItem('admin_token');
-    setResettingSubs(true);
-
-    try {
-      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-subscriptions`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ confirmation: resetSubsConfirmation })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al reiniciar suscripciones');
-      }
-
-      const data = await response.json();
-      showMessage(data.message, 'success');
-      setShowResetSubsModal(false);
-      setResetSubsConfirmation('');
-      
-      // Reload data to update followers count
-      await loadData();
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setResettingSubs(false);
-    }
-  };
-
-  const handleResetCheers = async () => {
-    if (resetCheersConfirmation !== 'MENSAJES') {
-      showMessage('Debe escribir MENSAJES para confirmar', 'error');
-      return;
-    }
-
-    const token = localStorage.getItem('admin_token');
-    setResettingCheers(true);
-
-    try {
-      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/reset-cheers`), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ confirmation: resetCheersConfirmation })
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al reiniciar mensajes');
-      }
-
-      const data = await response.json();
-      showMessage(data.message, 'success');
-      setShowResetCheersModal(false);
-      setResetCheersConfirmation('');
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setResettingCheers(false);
-    }
-  };
-
-  const handleSendRunnerEmails = async () => {
-    const token = localStorage.getItem('admin_token');
-    setSendingRunnerEmails(true);
-
-    try {
-      const response = await adminFetch(conCarrera(`${process.env.REACT_APP_BACKEND_URL}/api/race/send-runner-emails`), {
-        method: 'POST',
-        headers: {
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Error al enviar correos');
-      }
-
-      const data = await response.json();
-      showMessage(`Correos enviados: ${data.emails_sent} exitosos, ${data.emails_failed} fallidos, ${data.no_email} sin email`, 'success');
-      setShowSendRunnerEmailsModal(false);
-    } catch (err) {
-      showMessage(err.message, 'error');
-    } finally {
-      setSendingRunnerEmails(false);
-    }
-  };
-
   const openAdjustLapsModal = (participant) => {
     setAdjustLapsParticipant(participant);
     setNewLapsValue(participant.laps_completed || 0);
@@ -882,23 +777,15 @@ export default function RaceControlPanel({
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuItem onSelect={() => setShowSendRunnerEmailsModal(true)} className="gap-2">
-                  <Mail className="w-4 h-4" /> Enviar correos a corredores
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setShowResetCheersModal(true)} className="gap-2">
-                  <MessageCircle className="w-4 h-4" /> Borrar mensajes de ánimo
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setShowResetSubsModal(true)} className="gap-2">
-                  <Mail className="w-4 h-4" /> Reiniciar suscripciones
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="w-72">
+                {/* Solo lo que es de la carrera en si. Los correos de cierre y
+                    la limpieza de mensajes y suscripciones viven en
+                    Configuración > Carrera, que es donde se cierra la edición. */}
                 <DropdownMenuItem
                   onSelect={() => setShowResetModal(true)}
                   className="gap-2 text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="w-4 h-4" /> Reiniciar datos de la carrera
+                  <Trash2 className="w-4 h-4" /> Borrar las vueltas de esta carrera
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1428,159 +1315,6 @@ export default function RaceControlPanel({
       )}
 
       {/* Reset Subscriptions Modal */}
-      {showResetSubsModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-pink-300 shadow-strong">
-            <CardHeader className="border-b border-pink-200 bg-pink-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-pink-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-pink-900">Reiniciar Suscripciones</CardTitle>
-                  <p className="text-sm text-pink-700 mt-1">Esta acción es irreversible</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-pink-50 border border-pink-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-pink-900 mb-2">⚠️ Advertencia</h3>
-                  <ul className="text-sm text-pink-800 space-y-1">
-                    <li>• Se eliminarán todas las suscripciones de correo</li>
-                    <li>• Los usuarios deberán volver a suscribirse</li>
-                    <li>• Se perderán los datos de seguidores de atletas</li>
-                    <li>• No se enviarán más notificaciones hasta nueva suscripción</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Para confirmar, escriba <span className="font-bold text-pink-600">SUSCRIPCIONES</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={resetSubsConfirmation}
-                    onChange={(e) => setResetSubsConfirmation(e.target.value)}
-                    placeholder="Escriba SUSCRIPCIONES"
-                    className="text-center font-mono text-lg"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => {
-                      setShowResetSubsModal(false);
-                      setResetSubsConfirmation('');
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={resettingSubs}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleResetSubscriptions}
-                    disabled={resetSubsConfirmation !== 'SUSCRIPCIONES' || resettingSubs}
-                    className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
-                  >
-                    {resettingSubs ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Reiniciando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Confirmar Reinicio
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Reset Cheers Modal */}
-      {showResetCheersModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-purple-300 shadow-strong">
-            <CardHeader className="border-b border-purple-200 bg-purple-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                  <MessageCircle className="w-6 h-6 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-purple-900">Borrar Mensajes de Ánimo</CardTitle>
-                  <p className="text-sm text-purple-700 mt-1">Esta acción es irreversible</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-purple-900 mb-2">⚠️ Advertencia</h3>
-                  <ul className="text-sm text-purple-800 space-y-1">
-                    <li>• Se eliminarán todos los mensajes de ánimo enviados</li>
-                    <li>• Se reiniciará el ranking de fans</li>
-                    <li>• Se perderán los badges de los fans</li>
-                    <li>• El modo presentación no mostrará mensajes</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Para confirmar, escriba <span className="font-bold text-purple-600">MENSAJES</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={resetCheersConfirmation}
-                    onChange={(e) => setResetCheersConfirmation(e.target.value)}
-                    placeholder="Escriba MENSAJES"
-                    className="text-center font-mono text-lg"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => {
-                      setShowResetCheersModal(false);
-                      setResetCheersConfirmation('');
-                    }}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={resettingCheers}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleResetCheers}
-                    disabled={resetCheersConfirmation !== 'MENSAJES' || resettingCheers}
-                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {resettingCheers ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Borrando...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Confirmar Borrado
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Adjust Laps Modal */}
       {showAdjustLapsModal && adjustLapsParticipant && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1750,73 +1484,6 @@ export default function RaceControlPanel({
       )}
 
       {/* Send Runner Emails Modal */}
-      {showSendRunnerEmailsModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg border-green-300 shadow-strong">
-            <CardHeader className="border-b border-green-200 bg-green-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Mail className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl text-green-900">Enviar Correos a Corredores</CardTitle>
-                  <p className="text-sm text-green-700 mt-1">Resumen de carrera y mensajes de ánimo</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-green-900 mb-2">📧 Se enviará a cada corredor:</h3>
-                  <ul className="text-sm text-green-800 space-y-1">
-                    <li>• Mensaje de felicitación personalizado</li>
-                    <li>• Resumen: KM recorridos, vueltas, seguidores</li>
-                    <li>• Todos los mensajes de ánimo recibidos</li>
-                    <li>• El ganador recibirá badge de campeón</li>
-                  </ul>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-amber-900 mb-2">⚠️ Nota importante:</h3>
-                  <ul className="text-sm text-amber-800 space-y-1">
-                    <li>• Solo se envía a corredores que participaron (no DNS)</li>
-                    <li>• Corredores sin email registrado serán omitidos</li>
-                    <li>• Este proceso puede tomar varios minutos</li>
-                  </ul>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={() => setShowSendRunnerEmailsModal(false)}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={sendingRunnerEmails}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSendRunnerEmails}
-                    disabled={sendingRunnerEmails}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {sendingRunnerEmails ? (
-                      <>
-                        <RotateCw className="w-4 h-4 mr-2 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Enviar Correos
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
-  Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info
+  Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -505,6 +505,84 @@ export default function RaceConfigPanel() {
   // Cerrar una carrera ya no mueve datos de sitio: cada dato lleva su carrera y
   // se queda donde esta. Lo que hace es congelar los resultados y parar el
   // reloj, que si no seguiria contando una vuelta por hora para siempre.
+  // ---- Cierre de edición ----
+  //
+  // Estas tres estaban en el control de carrera, que no es su sitio: no tienen
+  // que ver con llevar las vueltas sino con cerrar una edición y dejar la casa
+  // lista para la siguiente. El correo final se manda cuando ya hay ganador; los
+  // mensajes de ánimo y las suscripciones se limpian antes de la próxima.
+  const [enviandoCorreos, setEnviandoCorreos] = useState(false);
+  const [limpiando, setLimpiando] = useState(null);
+
+  const enviarCorreosDeCierre = async (code) => {
+    if (!window.confirm(
+      `Enviar el correo de cierre a los corredores de ${code}.\n\n` +
+      'Lleva su resultado y solo tiene sentido cuando la carrera ya terminó y ' +
+      'hay un ganador declarado. No se puede deshacer.\n\n¿Enviar?'
+    )) return;
+
+    setEnviandoCorreos(true);
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/race/send-runner-emails?race_code=${code}`,
+        { method: 'POST' }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Error al enviar correos');
+      toast.success(
+        `Correos enviados: ${data.emails_sent} exitosos, ${data.emails_failed} fallidos, ${data.no_email} sin correo`
+      );
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setEnviandoCorreos(false);
+    }
+  };
+
+  const limpiarParaLaSiguiente = async (code, tipo) => {
+    const config = {
+      mensajes: {
+        ruta: 'reset-cheers',
+        palabra: 'MENSAJES',
+        texto: `Borrar todos los mensajes de ánimo de ${code}.`,
+      },
+      suscripciones: {
+        ruta: 'reset-subscriptions',
+        palabra: 'SUSCRIPCIONES',
+        texto: `Borrar las suscripciones de seguimiento de ${code}. Quienes seguían a un corredor dejarán de recibir avisos.`,
+      },
+    }[tipo];
+
+    const escrito = window.prompt(
+      `${config.texto}\n\nSolo afecta a esta carrera y no se puede deshacer.\n\n` +
+      `Escribe ${config.palabra} para confirmar:`
+    );
+    if (escrito === null) return;
+    if (escrito.trim().toUpperCase() !== config.palabra) {
+      toast.error(`Hay que escribir ${config.palabra}`);
+      return;
+    }
+
+    setLimpiando(tipo);
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/race/${config.ruta}?race_code=${code}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmation: config.palabra }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'No se pudo limpiar');
+      toast.success(data.message);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLimpiando(null);
+    }
+  };
+
   const handleCloseRace = async (code) => {
     setSaving(true);
     try {
@@ -1395,6 +1473,46 @@ export default function RaceConfigPanel() {
                 cuadro de puestos de voluntario, que es casi todo el trabajo de
                 montarla. Publicarla en el sitio es una decisión aparte: crear el
                 campeonato no tumba la página de inscripción de la carrera.
+              </p>
+            </div>
+
+            {/* Lo que se hace al terminar una edición: avisar a los
+                corredores y dejar limpio lo que no pasa a la siguiente. */}
+            <div className="bg-white p-4 rounded-lg border border-amber-200 space-y-3">
+              <h4 className="font-medium text-amber-900">Cierre de {activeRace.code}</h4>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => enviarCorreosDeCierre(activeRace.code)}
+                  disabled={enviandoCorreos}
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  {enviandoCorreos ? 'Enviando...' : 'Enviar correo de cierre a corredores'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => limpiarParaLaSiguiente(activeRace.code, 'mensajes')}
+                  disabled={limpiando === 'mensajes'}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Borrar mensajes de ánimo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => limpiarParaLaSiguiente(activeRace.code, 'suscripciones')}
+                  disabled={limpiando === 'suscripciones'}
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Borrar suscripciones de seguimiento
+                </Button>
+              </div>
+              <p className="text-xs text-amber-800">
+                El correo lleva el resultado de cada corredor y solo tiene sentido
+                con la carrera ya terminada. Las dos limpiezas solo afectan a esta
+                carrera.
               </p>
             </div>
 
