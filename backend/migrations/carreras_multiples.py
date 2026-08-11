@@ -58,8 +58,10 @@ FICHA_PRIMERA = {
     "estado": "cerrada",
     "edition_number": 1,
     "max_participants": 120,
-    # Termino en la vuelta 31, un dia despues de la salida.
-    "finished_at": datetime(2026, 1, 25, 16, 0, 0, tzinfo=timezone.utc),
+    # El ganador completo 30 vueltas: 30 horas desde las 09:00 del dia 24,
+    # o sea las 15:00 del 25 hora local (GMT-4). La hora de fin tiene que
+    # cuadrar con eso, porque de ella sale la vuelta que se muestra.
+    "finished_at": datetime(2026, 1, 25, 19, 0, 0, tzinfo=timezone.utc),
     "archived_at": datetime(2026, 1, 25, 4, 0, 0, tzinfo=timezone.utc),
 }
 
