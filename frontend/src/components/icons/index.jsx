@@ -43,7 +43,10 @@ import {
   Megaphone,
   MessageCircle,
   Monitor,
+  Pause,
+  Play,
   RefreshCw,
+  Settings,
   Repeat,
   Route,
   Search,
@@ -103,6 +106,9 @@ export const IconEmail = definir(Mail, 'IconEmail');
 export const IconEnviar = definir(Send, 'IconEnviar');
 export const IconFans = definir(Award, 'IconFans');
 export const IconPresentacion = definir(Monitor, 'IconPresentacion');
+export const IconReproducir = definir(Play, 'IconReproducir');
+export const IconPausar = definir(Pause, 'IconPausar');
+export const IconAjustes = definir(Settings, 'IconAjustes');
 
 /* --- Niveles del fan (los que el backend llama rookie, cheerleader, ...) --- */
 export const IconNivelNovato = definir(Sprout, 'IconNivelNovato');
