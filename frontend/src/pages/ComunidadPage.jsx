@@ -1,19 +1,100 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { MessageCircle, Trophy, Award, Send, X, Users, Heart, ArrowLeft, Monitor, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, Home } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import {
+  IconChip,
+  IconAnimo,
+  IconAnterior,
+  IconActualizar,
+  IconAvanzar,
+  IconAviso,
+  IconCargando,
+  IconCerrar,
+  IconEnviar,
+  IconFans,
+  IconGanador,
+  IconInicio,
+  IconNivelAnimador,
+  IconNivelLeyenda,
+  IconNivelNovato,
+  IconNivelSuperFan,
+  IconPresentacion,
+  IconSiguiente,
+  IconVolver,
+} from '../components/icons';
+
+// El backend manda el nivel del fan con un emoji dentro. Aqui se traduce a
+// icono y color: el emoji lo dibuja cada sistema operativo a su manera, no
+// hereda el color del texto y no hay forma de alinearlo. El color sube de tono
+// con el nivel, del gris apagado al naranja lleno.
+const NIVELES_FAN = {
+  rookie: { Icono: IconNivelNovato, clase: 'bg-muted text-muted-foreground' },
+  cheerleader: { Icono: IconNivelAnimador, clase: 'bg-secondary text-secondary-foreground' },
+  super_fan: { Icono: IconNivelSuperFan, clase: 'bg-primary/15 text-primary' },
+  legend: { Icono: IconNivelLeyenda, clase: 'bg-primary text-primary-foreground' },
+};
+
+// El siguiente nivel viene sin `level`, solo con el nombre.
+const NIVEL_POR_NOMBRE = {
+  'Novato': 'rookie',
+  'Animador': 'cheerleader',
+  'Súper Fan': 'super_fan',
+  'Leyenda': 'legend',
+};
+
+const nivelFan = (badge) =>
+  NIVELES_FAN[badge?.level] || NIVELES_FAN[NIVEL_POR_NOMBRE[badge?.name]] || NIVELES_FAN.rookie;
+
+// Los tres primeros del ranking se distinguen por color, no por medalla: oro,
+// plata y bronce en emoji se ven distintos en cada telefono.
+const claseRango = (indice) => {
+  if (indice === 0) return 'bg-primary text-primary-foreground';
+  if (indice === 1) return 'bg-primary/20 text-primary';
+  if (indice === 2) return 'bg-secondary text-secondary-foreground';
+  return 'bg-muted text-muted-foreground';
+};
+
+// Las tres cifras de arriba son ademas el selector de pestana.
+function PestanaCifra({ activa, onClick, Icono, valor, etiqueta, testId }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      className={`rounded-xl border p-3 sm:p-4 text-center transition-colors ${
+        activa
+          ? 'border-primary bg-primary/10 shadow-soft'
+          : 'border-border/60 bg-card hover:border-primary/40'
+      }`}
+    >
+      <Icono className={`w-5 h-5 mx-auto mb-1.5 ${activa ? 'text-primary' : 'text-muted-foreground'}`} />
+      <p className="font-display text-2xl leading-none text-foreground">{valor}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">{etiqueta}</p>
+    </button>
+  );
+}
+
+// Aviso vacio o cargando dentro de una lista.
+function ListaVacia({ Icono, texto, detalle, cargando = false }) {
+  return (
+    <div className="text-center py-14 px-4">
+      <Icono className={`w-10 h-10 mx-auto mb-4 text-muted-foreground/50 ${cargando ? 'animate-spin' : ''}`} />
+      <p className="text-muted-foreground">{texto}</p>
+      {detalle && <p className="text-sm text-muted-foreground/70 mt-1">{detalle}</p>}
+    </div>
+  );
+}
 
 export default function ComunidadPage() {
   const { raceCode } = useParams();
   const { raceName, config } = useRaceConfig();
-  
+
   // Page visibility check
   const [visibility, setVisibility] = useState({ loading: true, enabled: true, raceName: '', activeRaceCode: '' });
-  
+
   useEffect(() => {
     const checkVisibility = async () => {
       try {
@@ -39,17 +120,17 @@ export default function ComunidadPage() {
     };
     checkVisibility();
   }, [raceCode]);
-  
+
   // Determine which race to show - from URL param or active race
   const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
   const [raceInfo, setRaceInfo] = useState(null);
-  
+
   // Active tab: 'messages', 'athletes', 'fans'
   const [activeTab, setActiveTab] = useState('messages');
-  
+
   // Stats
   const [stats, setStats] = useState({ totalMessages: 0, totalFans: 0, totalAthletes: 0 });
-  
+
   // Messages with pagination
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(true);
@@ -62,16 +143,16 @@ export default function ComunidadPage() {
     has_next: false,
     has_prev: false
   });
-  
+
   // Auto-refresh control
   const [autoRefresh, setAutoRefresh] = useState(true);
-  
+
   // Leaderboards
   const [athleteLeaderboard, setAthleteLeaderboard] = useState([]);
   const [fanLeaderboard, setFanLeaderboard] = useState([]);
   const [loadingAthletes, setLoadingAthletes] = useState(false);
   const [loadingFans, setLoadingFans] = useState(false);
-  
+
   // Send message modal
   const [showSendModal, setShowSendModal] = useState(false);
   const [athletes, setAthletes] = useState([]);
@@ -82,7 +163,7 @@ export default function ComunidadPage() {
   const [sendResult, setSendResult] = useState(null);
   const [fanBadge, setFanBadge] = useState(null);
   const [searchAthlete, setSearchAthlete] = useState('');
-  
+
   // Filter for messages
   const [messageFilter, setMessageFilter] = useState('');
 
@@ -126,7 +207,7 @@ export default function ComunidadPage() {
           has_next: false,
           has_prev: false
         });
-        
+
         // Update stats with real total count
         const uniqueFans = new Set((data.messages || []).map(m => m.fan_name));
         const uniqueAthletes = new Set((data.messages || []).map(m => m.athlete_bib));
@@ -152,11 +233,11 @@ export default function ComunidadPage() {
   // Auto-refresh interval
   useEffect(() => {
     if (!autoRefresh) return;
-    
+
     const interval = setInterval(() => {
       loadMessages(currentPage);
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [autoRefresh, currentPage, loadMessages]);
 
@@ -190,11 +271,11 @@ export default function ComunidadPage() {
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/subscribers-count-public${raceCodeParam}`),
         fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/participants${raceCodeParam}`)
       ]);
-      
+
       if (subsResponse.ok && participantsResponse.ok) {
         const subsData = await subsResponse.json();
         const participants = await participantsResponse.json();
-        
+
         // Build leaderboard based on subscribers
         const leaderboard = participants
           .map(p => ({
@@ -206,7 +287,7 @@ export default function ComunidadPage() {
           .filter(a => a.subscriber_count > 0)
           .sort((a, b) => b.subscriber_count - a.subscriber_count)
           .slice(0, 20);
-        
+
         setAthleteLeaderboard(leaderboard);
       }
     } catch (error) {
@@ -311,43 +392,52 @@ export default function ComunidadPage() {
     }
   };
 
-  const filteredAthletes = athletes.filter(a => 
-    searchAthlete === '' || 
+  const filteredAthletes = athletes.filter(a =>
+    searchAthlete === '' ||
     `${a.nombre} ${a.apellidos}`.toLowerCase().includes(searchAthlete.toLowerCase()) ||
     a.bib.includes(searchAthlete)
+  );
+
+  const mensajesVisibles = messages.filter(msg =>
+    messageFilter === '' ||
+    msg.athlete_bib.includes(messageFilter) ||
+    msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
   );
 
   // Show loading state while checking visibility
   if (visibility.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center pt-16">
-        <div className="animate-pulse text-gray-500">Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background pt-16">
+        <div className="text-center space-y-4">
+          <IconCargando className="w-10 h-10 text-primary animate-spin mx-auto" />
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
       </div>
     );
   }
-  
+
   // Show disabled page message if community is not enabled
   if (!visibility.enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 pt-16 flex items-center justify-center px-4">
-        <Card className="max-w-md w-full shadow-lg border-purple-200">
+      <div className="min-h-screen bg-gradient-to-b from-muted/25 to-background pt-16 flex items-center justify-center px-4">
+        <Card className="max-w-md w-full border-border/60 shadow-medium">
           <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-purple-100 flex items-center justify-center">
-              <AlertTriangle className="w-8 h-8 text-purple-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-3">
-              Comunidad No Disponible
+            <IconChip size="lg" className="mx-auto mb-6">
+              <IconAviso className="w-7 h-7" />
+            </IconChip>
+            <h1 className="font-display text-3xl text-foreground mb-3">
+              Comunidad no disponible
             </h1>
-            <p className="text-gray-600 mb-6">
-              La página de comunidad para <strong>{visibility.raceName || 'esta carrera'}</strong> no está activa en este momento.
+            <p className="text-muted-foreground mb-4">
+              La página de comunidad para <strong className="text-foreground">{visibility.raceName || 'esta carrera'}</strong> no está activa en este momento.
             </p>
-            <p className="text-sm text-gray-500 mb-6">
-              Esta página estará disponible próximamente. Aquí podrás enviar mensajes de ánimo a los atletas y ver el ranking de fans.
+            <p className="text-sm text-muted-foreground mb-6">
+              Aquí podrás enviar mensajes de ánimo a los atletas y ver el ranking de fans.
             </p>
             <Link to="/">
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600" data-testid="go-home-btn">
-                <Home className="w-4 h-4 mr-2" />
-                Volver al Inicio
+              <Button className="w-full" data-testid="go-home-btn">
+                <IconInicio className="w-4 h-4" />
+                Volver al inicio
               </Button>
             </Link>
           </CardContent>
@@ -357,99 +447,84 @@ export default function ComunidadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-16">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
-            Comunidad
-          </h1>
-          <p className="text-center text-purple-100 mb-1">
-            {getDisplayRaceName()}
-          </p>
-          {displayRaceCode && (
-            <p className="text-center text-purple-200 text-sm mb-4">
-              <Badge variant="outline" className="bg-white/10 border-white/30 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-muted/25 to-background pt-16">
+      {/* Cabecera */}
+      <header className="relative overflow-hidden bg-[#0C0C0C] text-white pb-14">
+        <div
+          className="absolute inset-0"
+          aria-hidden="true"
+          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(22 88% 52% / 0.45), transparent 65%)' }}
+        />
+        <div className="relative container mx-auto px-4 py-12 sm:py-14">
+          <div className="max-w-6xl mx-auto flex flex-col items-center text-center gap-4">
+            {displayRaceCode && (
+              <span className="inline-flex items-center rounded-full border border-white/20 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.25em] text-white/70">
                 {displayRaceCode}
-              </Badge>
+              </span>
+            )}
+            <h1 className="font-display text-5xl sm:text-6xl leading-none">Comunidad</h1>
+            <p className="text-lg sm:text-xl text-white/70 max-w-2xl">
+              {getDisplayRaceName()}
             </p>
-          )}
-          <div className="flex justify-center gap-2 flex-wrap">
-            <Link to={displayRaceCode ? `/resultados/${displayRaceCode.toLowerCase()}` : "/en-vivo"}>
-              <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                <ArrowLeft className="w-4 h-4 mr-2" />
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
+              <Link
+                to={displayRaceCode ? `/resultados/${displayRaceCode.toLowerCase()}` : '/en-vivo'}
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1.5 text-sm text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <IconVolver className="w-4 h-4" />
                 Volver a Resultados
-              </Button>
-            </Link>
-            <Link to="/mensajes/presentacion">
-              <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                <Monitor className="w-4 h-4 mr-2" />
-                Modo Presentación
-              </Button>
-            </Link>
+              </Link>
+              <Link
+                to="/mensajes/presentacion"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-1.5 text-sm text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <IconPresentacion className="w-4 h-4" />
+                Modo presentación
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Stats Cards - Tab Selector */}
-      <div className="container mx-auto px-4 -mt-6">
+      {/* Cifras / selector de pestana */}
+      <div className="container mx-auto px-4 relative z-10 -mt-10">
         <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto">
-          <Card 
+          <PestanaCifra
+            activa={activeTab === 'messages'}
             onClick={() => setActiveTab('messages')}
-            className={`cursor-pointer transition-all hover:scale-105 ${
-              activeTab === 'messages' 
-                ? 'bg-gradient-to-br from-purple-100 to-purple-200 border-purple-400 ring-2 ring-purple-400' 
-                : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:border-purple-300'
-            }`}
-          >
-            <CardContent className="p-3 sm:p-4 text-center">
-              <MessageCircle className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'messages' ? 'text-purple-600' : 'text-purple-400'}`} />
-              <p className="text-xl sm:text-2xl font-bold text-purple-900">{stats.totalMessages}</p>
-              <p className="text-xs text-purple-700">Mensajes</p>
-            </CardContent>
-          </Card>
-
-          <Card 
+            Icono={IconAnimo}
+            valor={stats.totalMessages}
+            etiqueta="Mensajes"
+            testId="tab-messages"
+          />
+          <PestanaCifra
+            activa={activeTab === 'athletes'}
             onClick={() => setActiveTab('athletes')}
-            className={`cursor-pointer transition-all hover:scale-105 ${
-              activeTab === 'athletes' 
-                ? 'bg-gradient-to-br from-amber-100 to-amber-200 border-amber-400 ring-2 ring-amber-400' 
-                : 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:border-amber-300'
-            }`}
-          >
-            <CardContent className="p-3 sm:p-4 text-center">
-              <Trophy className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'athletes' ? 'text-amber-600' : 'text-amber-400'}`} />
-              <p className="text-xl sm:text-2xl font-bold text-amber-900">{stats.totalAthletes}</p>
-              <p className="text-xs text-amber-700">Top Atletas</p>
-            </CardContent>
-          </Card>
-
-          <Card 
+            Icono={IconGanador}
+            valor={stats.totalAthletes}
+            etiqueta="Top atletas"
+            testId="tab-athletes"
+          />
+          <PestanaCifra
+            activa={activeTab === 'fans'}
             onClick={() => setActiveTab('fans')}
-            className={`cursor-pointer transition-all hover:scale-105 ${
-              activeTab === 'fans' 
-                ? 'bg-gradient-to-br from-green-100 to-green-200 border-green-400 ring-2 ring-green-400' 
-                : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:border-green-300'
-            }`}
-          >
-            <CardContent className="p-3 sm:p-4 text-center">
-              <Award className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${activeTab === 'fans' ? 'text-green-600' : 'text-green-400'}`} />
-              <p className="text-xl sm:text-2xl font-bold text-green-900">{stats.totalFans}</p>
-              <p className="text-xs text-green-700">Top Fans</p>
-            </CardContent>
-          </Card>
+            Icono={IconFans}
+            valor={stats.totalFans}
+            etiqueta="Top fans"
+            testId="tab-fans"
+          />
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Contenido */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-3xl mx-auto">
-          
-          {/* Messages Tab */}
+
+          {/* Mensajes */}
           {activeTab === 'messages' && (
             <div className="space-y-4">
-              {/* Controls Row: Filter, Auto-refresh, Manual refresh */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Filtro y actualizacion */}
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   type="text"
                   placeholder="Filtrar por número o nombre de corredor..."
@@ -458,87 +533,69 @@ export default function ComunidadPage() {
                   className="flex-1"
                 />
                 <div className="flex items-center gap-2">
-                  {/* Auto-refresh toggle */}
-                  <label className="flex items-center gap-2 cursor-pointer bg-gray-100 px-3 py-2 rounded-md hover:bg-gray-200 transition-colors">
+                  <label className="flex items-center gap-2 h-9 px-3 rounded-md border border-border/60 bg-card cursor-pointer hover:bg-muted/40 transition-colors">
                     <input
                       type="checkbox"
                       checked={autoRefresh}
                       onChange={(e) => setAutoRefresh(e.target.checked)}
-                      className="w-4 h-4 accent-purple-600"
+                      className="w-4 h-4 rounded border-input accent-primary"
                     />
-                    <span className="text-sm text-gray-700 whitespace-nowrap">Auto</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Auto</span>
                   </label>
-                  {/* Manual refresh button */}
                   <Button
                     onClick={handleManualRefresh}
                     disabled={loadingMessages}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-1"
+                    className="h-9 border-border hover:bg-primary/10 hover:text-primary"
                   >
-                    <RefreshCw className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
+                    <IconActualizar className={`w-4 h-4 ${loadingMessages ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">Actualizar</span>
                   </Button>
                 </div>
               </div>
-              
-              {/* Messages List */}
-              <Card className="shadow-lg">
-                <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-pink-50 py-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <MessageCircle className="w-5 h-5 text-purple-600" />
-                      Mensajes de Ánimo
-                    </CardTitle>
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                      {pagination.total_count.toLocaleString()} total
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 max-h-[500px] overflow-y-auto">
+
+              {/* Lista de mensajes */}
+              <Card className="border-border/60 shadow-soft overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-border/60 bg-muted/30">
+                  <h2 className="font-display text-xl text-foreground leading-none flex items-center gap-2">
+                    <IconAnimo className="w-5 h-5 text-primary" />
+                    Mensajes de ánimo
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {pagination.total_count.toLocaleString()} en total
+                  </span>
+                </div>
+                <CardContent className="p-0 max-h-[520px] overflow-y-auto">
                   {loadingMessages ? (
-                    <div className="text-center py-12">
-                      <MessageCircle className="w-12 h-12 text-purple-300 animate-pulse mx-auto mb-4" />
-                      <p className="text-muted-foreground">Cargando mensajes...</p>
-                    </div>
-                  ) : messages.filter(msg => 
-                      messageFilter === '' ||
-                      msg.athlete_bib.includes(messageFilter) ||
-                      msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
-                    ).length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                      <p className="text-muted-foreground text-lg">
-                        {messageFilter ? 'No hay mensajes para este corredor' : 'Aún no hay mensajes'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {messageFilter ? 'Intenta con otro nombre o número' : '¡Sé el primero en animar a un atleta!'}
-                      </p>
-                    </div>
+                    <ListaVacia Icono={IconCargando} texto="Cargando mensajes..." cargando />
+                  ) : mensajesVisibles.length === 0 ? (
+                    <ListaVacia
+                      Icono={IconAnimo}
+                      texto={messageFilter ? 'No hay mensajes para este corredor' : 'Aún no hay mensajes'}
+                      detalle={messageFilter ? 'Intenta con otro nombre o número' : '¡Sé el primero en animar a un atleta!'}
+                    />
                   ) : (
-                    <div className="divide-y">
-                      {messages
-                        .filter(msg => 
-                          messageFilter === '' ||
-                          msg.athlete_bib.includes(messageFilter) ||
-                          msg.athlete_name?.toLowerCase().includes(messageFilter.toLowerCase())
-                        )
-                        .map((msg, index) => (
-                        <div key={index} className="p-4 hover:bg-purple-50/50 transition-colors">
+                    <div className="divide-y divide-border/60">
+                      {mensajesVisibles.map((msg, index) => (
+                        <div key={index} className="p-4 hover:bg-muted/30 transition-colors">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold shrink-0">
                               {msg.fan_name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <span className="font-semibold text-foreground">{msg.fan_name}</span>
-                                <span className="text-muted-foreground">→</span>
-                                <Badge variant="outline" className="text-xs">
-                                  #{msg.athlete_bib} {msg.athlete_name}
-                                </Badge>
-                                {msg.athlete_nacionalidad && (
-                                  <span className="text-sm">{getFlag(msg.athlete_nacionalidad)}</span>
-                                )}
+                                <IconAvanzar className="w-3.5 h-3.5 text-muted-foreground/60" />
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                                  <span className="font-mono text-foreground">#{msg.athlete_bib}</span>
+                                  {msg.athlete_name}
+                                  {msg.athlete_nacionalidad && (
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider">
+                                      {msg.athlete_nacionalidad}
+                                    </span>
+                                  )}
+                                </span>
                               </div>
                               <p className="text-foreground">{msg.message}</p>
                               <p className="text-xs text-muted-foreground mt-1">
@@ -553,15 +610,15 @@ export default function ComunidadPage() {
                 </CardContent>
               </Card>
 
-              {/* Pagination Controls */}
+              {/* Paginacion */}
               {pagination.total_pages > 1 && (
-                <div className="flex items-center justify-center gap-2 py-4">
+                <div className="flex items-center justify-center gap-2 py-2">
                   <Button
                     onClick={() => goToPage(1)}
                     disabled={!pagination.has_prev || loadingMessages}
                     variant="outline"
                     size="sm"
-                    className="hidden sm:flex"
+                    className="hidden sm:flex border-border hover:bg-primary/10 hover:text-primary"
                   >
                     Primera
                   </Button>
@@ -570,17 +627,18 @@ export default function ComunidadPage() {
                     disabled={!pagination.has_prev || loadingMessages}
                     variant="outline"
                     size="sm"
+                    className="border-border hover:bg-primary/10 hover:text-primary"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline ml-1">Anterior</span>
+                    <IconAnterior className="w-4 h-4" />
+                    <span className="hidden sm:inline">Anterior</span>
                   </Button>
-                  
-                  <div className="flex items-center gap-1 px-3">
+
+                  <div className="flex items-center gap-2 px-2">
                     <span className="text-sm text-muted-foreground">Página</span>
                     <select
                       value={currentPage}
                       onChange={(e) => goToPage(parseInt(e.target.value))}
-                      className="px-2 py-1 border rounded text-sm bg-white"
+                      className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       disabled={loadingMessages}
                     >
                       {Array.from({ length: pagination.total_pages }, (_, i) => i + 1).map(page => (
@@ -589,22 +647,23 @@ export default function ComunidadPage() {
                     </select>
                     <span className="text-sm text-muted-foreground">de {pagination.total_pages}</span>
                   </div>
-                  
+
                   <Button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={!pagination.has_next || loadingMessages}
                     variant="outline"
                     size="sm"
+                    className="border-border hover:bg-primary/10 hover:text-primary"
                   >
-                    <span className="hidden sm:inline mr-1">Siguiente</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <span className="hidden sm:inline">Siguiente</span>
+                    <IconSiguiente className="w-4 h-4" />
                   </Button>
                   <Button
                     onClick={() => goToPage(pagination.total_pages)}
                     disabled={!pagination.has_next || loadingMessages}
                     variant="outline"
                     size="sm"
-                    className="hidden sm:flex"
+                    className="hidden sm:flex border-border hover:bg-primary/10 hover:text-primary"
                   >
                     Última
                   </Button>
@@ -613,53 +672,39 @@ export default function ComunidadPage() {
             </div>
           )}
 
-          {/* Athletes Tab */}
+          {/* Top atletas */}
           {activeTab === 'athletes' && (
-            <Card className="shadow-lg">
-              <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-yellow-50">
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-6 h-6 text-amber-500" />
-                  Top Atletas Más Seguidos
-                </CardTitle>
-              </CardHeader>
+            <Card className="border-border/60 shadow-soft overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/60 bg-muted/30">
+                <h2 className="font-display text-xl text-foreground leading-none flex items-center gap-2">
+                  <IconGanador className="w-5 h-5 text-primary" />
+                  Atletas más seguidos
+                </h2>
+              </div>
               <CardContent className="p-0">
                 {loadingAthletes ? (
-                  <div className="text-center py-12">
-                    <Trophy className="w-12 h-12 text-amber-300 animate-pulse mx-auto mb-4" />
-                    <p className="text-muted-foreground">Cargando ranking...</p>
-                  </div>
+                  <ListaVacia Icono={IconCargando} texto="Cargando ranking..." cargando />
                 ) : athleteLeaderboard.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Trophy className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-muted-foreground">Aún no hay seguidores registrados</p>
-                  </div>
+                  <ListaVacia Icono={IconGanador} texto="Aún no hay seguidores registrados" />
                 ) : (
-                  <div className="divide-y">
+                  <div className="divide-y divide-border/60">
                     {athleteLeaderboard.map((athlete, index) => (
-                      <div key={athlete.athlete_bib} className={`p-4 flex items-center gap-4 ${
-                        index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50' :
-                        index === 1 ? 'bg-gradient-to-r from-gray-50 to-slate-50' :
-                        index === 2 ? 'bg-gradient-to-r from-orange-50 to-amber-50' : ''
-                      }`}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
-                          index === 0 ? 'bg-yellow-400 text-yellow-900' :
-                          index === 1 ? 'bg-gray-300 text-gray-700' :
-                          index === 2 ? 'bg-orange-400 text-orange-900' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                      <div
+                        key={athlete.athlete_bib}
+                        className={`p-4 flex items-center gap-4 ${index === 0 ? 'bg-primary/5' : ''}`}
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-display text-lg leading-none ${claseRango(index)}`}>
+                          {index + 1}
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">
-                            {athlete.athlete_name}
-                          </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{athlete.athlete_name}</p>
                           <p className="text-sm text-muted-foreground">
-                            #{athlete.athlete_bib} • {athlete.nacionalidad}
+                            <span className="font-mono">#{athlete.athlete_bib}</span> · {athlete.nacionalidad}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-2xl font-bold text-purple-600">{athlete.subscriber_count}</p>
-                          <p className="text-xs text-muted-foreground">seguidores</p>
+                          <p className="font-display text-2xl leading-none text-foreground">{athlete.subscriber_count}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">seguidores</p>
                         </div>
                       </div>
                     ))}
@@ -669,61 +714,65 @@ export default function ComunidadPage() {
             </Card>
           )}
 
-          {/* Fans Tab */}
+          {/* Top fans */}
           {activeTab === 'fans' && (
-            <Card className="shadow-lg">
-              <CardHeader className="border-b bg-gradient-to-r from-green-50 to-emerald-50">
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="w-6 h-6 text-green-500" />
-                  Top Fans
-                </CardTitle>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="text-xs px-2 py-1 bg-white rounded-full border">🌱 Novato (1+)</span>
-                  <span className="text-xs px-2 py-1 bg-white rounded-full border">📣 Animador (3+)</span>
-                  <span className="text-xs px-2 py-1 bg-white rounded-full border">⭐ Súper Fan (5+)</span>
-                  <span className="text-xs px-2 py-1 bg-white rounded-full border">🏆 Leyenda (10+)</span>
+            <Card className="border-border/60 shadow-soft overflow-hidden">
+              <div className="px-5 py-4 border-b border-border/60 bg-muted/30 space-y-3">
+                <h2 className="font-display text-xl text-foreground leading-none flex items-center gap-2">
+                  <IconFans className="w-5 h-5 text-primary" />
+                  Fans que más animan
+                </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { Icono: IconNivelNovato, texto: 'Novato (1+)' },
+                    { Icono: IconNivelAnimador, texto: 'Animador (3+)' },
+                    { Icono: IconNivelSuperFan, texto: 'Súper Fan (5+)' },
+                    { Icono: IconNivelLeyenda, texto: 'Leyenda (10+)' },
+                  ].map(({ Icono, texto }) => (
+                    <span
+                      key={texto}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs text-muted-foreground"
+                    >
+                      <Icono className="w-3.5 h-3.5" />
+                      {texto}
+                    </span>
+                  ))}
                 </div>
-              </CardHeader>
+              </div>
               <CardContent className="p-0">
                 {loadingFans ? (
-                  <div className="text-center py-12">
-                    <Award className="w-12 h-12 text-green-300 animate-pulse mx-auto mb-4" />
-                    <p className="text-muted-foreground">Cargando ranking...</p>
-                  </div>
+                  <ListaVacia Icono={IconCargando} texto="Cargando ranking..." cargando />
                 ) : fanLeaderboard.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Award className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <p className="text-muted-foreground">Aún no hay datos</p>
-                  </div>
+                  <ListaVacia Icono={IconFans} texto="Aún no hay datos" />
                 ) : (
-                  <div className="divide-y">
-                    {fanLeaderboard.map((fan, index) => (
-                      <div key={fan.fan_name} className={`p-4 flex items-center gap-4 ${
-                        index === 0 ? 'bg-gradient-to-r from-green-50 to-emerald-50' :
-                        index === 1 ? 'bg-gradient-to-r from-teal-50 to-cyan-50' :
-                        index === 2 ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : ''
-                      }`}>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                          index === 0 ? 'bg-green-500 text-white' :
-                          index === 1 ? 'bg-teal-400 text-white' :
-                          index === 2 ? 'bg-blue-400 text-white' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {index + 1}
+                  <div className="divide-y divide-border/60">
+                    {fanLeaderboard.map((fan, index) => {
+                      const nivel = nivelFan(fan.badge);
+                      const IconoNivel = nivel.Icono;
+                      return (
+                        <div
+                          key={fan.fan_name}
+                          className={`p-4 flex items-center gap-3 sm:gap-4 ${index === 0 ? 'bg-primary/5' : ''}`}
+                        >
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-display text-lg leading-none ${claseRango(index)}`}>
+                            {index + 1}
+                          </div>
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${nivel.clase}`}>
+                            <IconoNivel className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">{fan.fan_name}</p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {fan.badge.name} · {fan.athletes_cheered} atleta{fan.athletes_cheered !== 1 ? 's' : ''} apoyado{fan.athletes_cheered !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <p className="font-display text-2xl leading-none text-foreground">{fan.cheer_count}</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">mensajes</p>
+                          </div>
                         </div>
-                        <span className="text-2xl">{fan.badge.emoji}</span>
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">{fan.fan_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {fan.badge.name} • {fan.athletes_cheered} atleta{fan.athletes_cheered !== 1 ? 's' : ''} apoyado{fan.athletes_cheered !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-green-600">{fan.cheer_count}</p>
-                          <p className="text-xs text-muted-foreground">mensajes</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -732,33 +781,45 @@ export default function ComunidadPage() {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <Button
+      {/* Boton flotante */}
+      <button
+        type="button"
         onClick={() => setShowSendModal(true)}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-2xl"
         data-testid="send-cheer-fab"
+        title="Enviar mensaje de ánimo"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-strong hover:bg-primary/90 transition-colors flex items-center justify-center"
       >
-        <Send className="w-6 h-6" />
-      </Button>
+        <IconEnviar className="w-6 h-6" />
+      </button>
 
-      {/* Send Message Modal */}
+      {/* Enviar mensaje */}
       {showSendModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-strong max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5 text-purple-600" />
-                    Mensaje de Ánimo
-                  </h3>
+              <div className="flex justify-between items-start gap-4 mb-5">
+                <div className="flex items-start gap-3">
+                  <IconChip size="sm">
+                    <IconAnimo className="w-4 h-4" />
+                  </IconChip>
+                  <div>
+                    <h3 className="font-display text-xl text-foreground leading-none">Mensaje de ánimo</h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Escoge a quién animar y escríbele
+                    </p>
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowSendModal(false)} className="p-1">
-                  <X className="w-5 h-5" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSendModal(false)}
+                  className="p-1 text-muted-foreground hover:bg-muted"
+                >
+                  <IconCerrar className="w-5 h-5" />
                 </Button>
               </div>
 
-              {/* Select Athlete */}
+              {/* Atleta */}
               <div className="mb-4">
                 <label className="text-sm font-medium mb-2 block">Selecciona un atleta</label>
                 <Input
@@ -769,30 +830,38 @@ export default function ComunidadPage() {
                   className="mb-2"
                 />
                 {selectedAthlete ? (
-                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 flex items-center justify-between">
+                  <div className="p-3 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium">#{selectedAthlete.bib} {selectedAthlete.nombre} {selectedAthlete.apellidos}</p>
+                      <p className="font-medium">
+                        <span className="font-mono">#{selectedAthlete.bib}</span> {selectedAthlete.nombre} {selectedAthlete.apellidos}
+                      </p>
                       <p className="text-sm text-muted-foreground">{selectedAthlete.nacionalidad}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedAthlete(null)}>
-                      <X className="w-4 h-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedAthlete(null)}
+                      className="text-muted-foreground hover:bg-muted"
+                    >
+                      <IconCerrar className="w-4 h-4" />
                     </Button>
                   </div>
                 ) : searchAthlete.length > 0 ? (
-                  <div className="max-h-40 overflow-y-auto border rounded-lg">
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-border/60 divide-y divide-border/60">
                     {filteredAthletes.length === 0 ? (
                       <p className="p-3 text-sm text-muted-foreground text-center">No se encontraron corredores</p>
                     ) : (
                       filteredAthletes.slice(0, 10).map(athlete => (
                         <button
                           key={athlete.bib}
+                          type="button"
                           onClick={() => {
                             setSelectedAthlete(athlete);
                             setSearchAthlete('');
                           }}
-                          className="w-full p-2 text-left hover:bg-purple-50 border-b last:border-b-0 text-sm"
+                          className="w-full p-2.5 text-left hover:bg-primary/5 text-sm transition-colors"
                         >
-                          <span className="font-mono text-purple-600">#{athlete.bib}</span> {athlete.nombre} {athlete.apellidos}
+                          <span className="font-mono text-primary">#{athlete.bib}</span> {athlete.nombre} {athlete.apellidos}
                           <span className="text-muted-foreground ml-2">{athlete.nacionalidad}</span>
                         </button>
                       ))
@@ -803,7 +872,7 @@ export default function ComunidadPage() {
                 )}
               </div>
 
-              {/* Fan Name */}
+              {/* Nombre del fan */}
               <div className="mb-4">
                 <label className="text-sm font-medium mb-2 block">Tu nombre</label>
                 <Input
@@ -817,26 +886,30 @@ export default function ComunidadPage() {
                   }}
                   maxLength={50}
                 />
-                {fanBadge && (
-                  <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{fanBadge.badge.emoji}</span>
+                {fanBadge && (() => {
+                  const nivel = nivelFan(fanBadge.badge);
+                  const IconoNivel = nivel.Icono;
+                  return (
+                    <div className="mt-2 p-3 rounded-xl border border-primary/25 bg-primary/5 flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${nivel.clase}`}>
+                        <IconoNivel className="w-4 h-4" />
+                      </div>
                       <div>
-                        <p className="text-sm font-medium text-green-800">
+                        <p className="text-sm font-medium text-foreground">
                           ¡Hola {fanBadge.badge.name}! ({fanBadge.cheer_count} mensajes)
                         </p>
                         {fanBadge.next_badge && (
-                          <p className="text-xs text-green-600">
-                            {fanBadge.next_badge.required - fanBadge.cheer_count} más para {fanBadge.next_badge.emoji} {fanBadge.next_badge.name}
+                          <p className="text-xs text-muted-foreground">
+                            {fanBadge.next_badge.required - fanBadge.cheer_count} más para {fanBadge.next_badge.name}
                           </p>
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
-              {/* Message */}
+              {/* Mensaje */}
               <div className="mb-4">
                 <label className="text-sm font-medium mb-2 block">Tu mensaje</label>
                 <textarea
@@ -845,28 +918,28 @@ export default function ComunidadPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   maxLength={280}
                   rows={4}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                 />
                 <p className="text-xs text-muted-foreground text-right mt-1">{message.length}/280</p>
               </div>
 
-              {/* Result */}
               {sendResult && (
-                <div className={`p-3 rounded-lg mb-4 ${
-                  sendResult.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                <div className={`rounded-xl p-3 mb-4 text-sm ${
+                  sendResult.type === 'success'
+                    ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/25'
+                    : 'bg-destructive/10 text-destructive border border-destructive/25'
                 }`}>
                   {sendResult.text}
                 </div>
               )}
 
-              {/* Submit */}
               <Button
                 onClick={handleSendMessage}
                 disabled={sending || !selectedAthlete || !fanName.trim() || !message.trim()}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                className="w-full"
               >
-                <Send className="w-4 h-4 mr-2" />
-                {sending ? 'Enviando...' : 'Enviar Mensaje'}
+                <IconEnviar className="w-4 h-4" />
+                {sending ? 'Enviando...' : 'Enviar mensaje'}
               </Button>
             </div>
           </div>
@@ -874,13 +947,4 @@ export default function ComunidadPage() {
       )}
     </div>
   );
-}
-
-function getFlag(code) {
-  const flags = {
-    "DOM": "🇩🇴", "COL": "🇨🇴", "VEN": "🇻🇪", "MEX": "🇲🇽", "USA": "🇺🇸",
-    "ARG": "🇦🇷", "BRA": "🇧🇷", "FRA": "🇫🇷", "ESP": "🇪🇸", "GUA": "🇬🇹",
-    "HAI": "🇭🇹", "PER": "🇵🇪", "JAP": "🇯🇵"
-  };
-  return flags[code] || "🏃";
 }

@@ -17,13 +17,18 @@ import React from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
+  Award,
   BadgeCheck,
   Bell,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Copy,
+  Crown,
   Download,
   FileText,
   Flag,
@@ -35,7 +40,9 @@ import {
   Mail,
   MapPin,
   Medal,
+  Megaphone,
   MessageCircle,
+  Monitor,
   RefreshCw,
   Repeat,
   Route,
@@ -43,6 +50,8 @@ import {
   Send,
   Share2,
   SlidersHorizontal,
+  Sprout,
+  Star,
   Trophy,
   UserCheck,
   UserMinus,
@@ -92,6 +101,14 @@ export const IconAnimo = definir(MessageCircle, 'IconAnimo');
 export const IconNotificar = definir(Bell, 'IconNotificar');
 export const IconEmail = definir(Mail, 'IconEmail');
 export const IconEnviar = definir(Send, 'IconEnviar');
+export const IconFans = definir(Award, 'IconFans');
+export const IconPresentacion = definir(Monitor, 'IconPresentacion');
+
+/* --- Niveles del fan (los que el backend llama rookie, cheerleader, ...) --- */
+export const IconNivelNovato = definir(Sprout, 'IconNivelNovato');
+export const IconNivelAnimador = definir(Megaphone, 'IconNivelAnimador');
+export const IconNivelSuperFan = definir(Star, 'IconNivelSuperFan');
+export const IconNivelLeyenda = definir(Crown, 'IconNivelLeyenda');
 
 /* --- Certificados y descargas --- */
 export const IconCertificado = definir(BadgeCheck, 'IconCertificado');
@@ -109,6 +126,9 @@ export const IconCerrar = definir(X, 'IconCerrar');
 export const IconActualizar = definir(RefreshCw, 'IconActualizar');
 export const IconCargando = definir(Loader2, 'IconCargando');
 export const IconAvanzar = definir(ArrowRight, 'IconAvanzar');
+export const IconVolver = definir(ArrowLeft, 'IconVolver');
+export const IconAnterior = definir(ChevronLeft, 'IconAnterior');
+export const IconSiguiente = definir(ChevronRight, 'IconSiguiente');
 export const IconDesplegar = definir(ChevronDown, 'IconDesplegar');
 export const IconInicio = definir(Home, 'IconInicio');
 export const IconAviso = definir(AlertTriangle, 'IconAviso');
