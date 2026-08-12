@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, Settings, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { useRaceConfig } from '../contexts/RaceConfigContext';
+import {
+  IconAjustes,
+  IconAvanzar,
+  IconCargando,
+  IconCerrar,
+  IconPausar,
+  IconReproducir,
+  IconVolver,
+} from '../components/icons';
 
 // Sponsors data
 const sponsors = [
@@ -30,7 +39,82 @@ const sponsors = [
   { name: 'Vida Sana Vida Ultra', logo: '/sponsors/vida-sana-ultra.png' },
 ];
 
+// Esta pantalla se proyecta en el evento, asi que va en negro con el naranja de
+// la marca, igual que la cabecera del sitio. El resplandor se dibuja con estilo
+// en linea porque son dos degradados radiales, no un color de la paleta.
+const FONDO_PRESENTACION = 'min-h-screen bg-[#0C0C0C] text-white flex flex-col relative overflow-hidden';
+
+function ResplandorNaranja() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(60% 60% at 20% 0%, hsl(22 88% 52% / 0.35), transparent 70%)' }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(55% 55% at 85% 100%, hsl(25 45% 25% / 0.55), transparent 70%)' }}
+      />
+    </div>
+  );
+}
+
+// Barra superior: salir, pausar y ajustes. Se desvanece sola con el raton.
+function Controles({ visible, isPlaying, setIsPlaying, setShowSettings }) {
+  return (
+    <div className={`absolute top-0 left-0 right-0 z-50 p-4 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="flex justify-between items-center max-w-7xl mx-auto">
+        <Link to="/comunidad">
+          <Button variant="ghost" className="text-white/70 hover:text-white hover:bg-white/10">
+            <IconVolver className="w-5 h-5" />
+            Salir
+          </Button>
+        </Link>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+            title={isPlaying ? 'Pausar' : 'Reanudar'}
+          >
+            {isPlaying ? <IconPausar className="w-5 h-5" /> : <IconReproducir className="w-5 h-5" />}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowSettings(true)}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+            title="Configuración"
+          >
+            <IconAjustes className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cabecera de las dos pantallas: logo, nombre y edicion.
+function MarcaEvento({ compacta = false, anio }) {
+  return (
+    <div className="mb-8 text-center">
+      <img
+        src="/icon-bu.png"
+        alt="Backyard Ultra"
+        className={`${compacta ? 'w-20 h-20' : 'w-24 h-24'} mx-auto mb-4 rounded-full shadow-strong`}
+        onError={(e) => { e.target.style.display = 'none'; }}
+      />
+      <h1 className={`font-display ${compacta ? 'text-xl md:text-2xl' : 'text-2xl md:text-3xl'} text-white tracking-wider`}>
+        BACKYARD ULTRA
+      </h1>
+      <p className="text-white/50 text-sm tracking-[0.3em] mt-1">
+        SANTO DOMINGO {anio}
+      </p>
+    </div>
+  );
+}
+
 export default function MensajesPresentacionPage() {
+  const { getYear } = useRaceConfig();
   const [messages, setMessages] = useState([]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -39,12 +123,12 @@ export default function MensajesPresentacionPage() {
   const [duration, setDuration] = useState(8);
   const [showSettings, setShowSettings] = useState(false);
   const [sponsorScreenDuration, setSponsorScreenDuration] = useState(4);
-  
+
   // New state for alternating pattern
   const [displayMode, setDisplayMode] = useState('message'); // 'message' or 'sponsor'
   const [messagesShownInCycle, setMessagesShownInCycle] = useState(0);
   const [currentSponsorIndex, setCurrentSponsorIndex] = useState(0);
-  
+
   const timerRef = useRef(null);
 
   // Load messages
@@ -81,7 +165,7 @@ export default function MensajesPresentacionPage() {
       if (displayMode === 'message') {
         // We just showed a message
         const newMessagesShown = messagesShownInCycle + 1;
-        
+
         if (newMessagesShown >= 3) {
           // After 3 messages, show sponsor
           setDisplayMode('sponsor');
@@ -161,10 +245,11 @@ export default function MensajesPresentacionPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl">Cargando mensajes...</p>
+      <div className={`${FONDO_PRESENTACION} items-center justify-center`}>
+        <ResplandorNaranja />
+        <div className="relative text-center space-y-4">
+          <IconCargando className="w-12 h-12 text-primary animate-spin mx-auto" />
+          <p className="text-xl text-white/70">Cargando mensajes...</p>
         </div>
       </div>
     );
@@ -172,12 +257,13 @@ export default function MensajesPresentacionPage() {
 
   if (messages.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex items-center justify-center">
-        <div className="text-center text-white">
-          <p className="text-2xl mb-4">No hay mensajes de ánimo aún</p>
+      <div className={`${FONDO_PRESENTACION} items-center justify-center`}>
+        <ResplandorNaranja />
+        <div className="relative text-center">
+          <p className="font-display text-3xl mb-6">No hay mensajes de ánimo aún</p>
           <Link to="/comunidad">
-            <Button variant="outline" className="border-white text-white hover:bg-white/20">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/15 hover:text-white">
+              <IconVolver className="w-4 h-4" />
               Volver a Comunidad
             </Button>
           </Link>
@@ -189,56 +275,24 @@ export default function MensajesPresentacionPage() {
   // Sponsor dedicated screen
   if (displayMode === 'sponsor' && currentSponsor) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex flex-col relative overflow-hidden">
-        {/* Background animation */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-full animate-pulse"></div>
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-500/20 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-        </div>
+      <div className={FONDO_PRESENTACION}>
+        <ResplandorNaranja />
 
-        {/* Controls */}
-        <div className={`absolute top-0 left-0 right-0 z-50 p-4 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="flex justify-between items-center max-w-7xl mx-auto">
-            <Link to="/comunidad">
-              <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Salir
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={() => setIsPlaying(!isPlaying)} className="text-white/80 hover:text-white hover:bg-white/10">
-                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-              </Button>
-              <Button variant="ghost" onClick={() => setShowSettings(true)} className="text-white/80 hover:text-white hover:bg-white/10">
-                <Settings className="w-5 h-5" />
-              </Button>
-            </div>
-          </div>
-        </div>
+        <Controles
+          visible={showControls}
+          isPlaying={isPlaying}
+          setIsPlaying={setIsPlaying}
+          setShowSettings={setShowSettings}
+        />
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-8 py-16 relative z-10">
-          {/* Logo */}
-          <div className="mb-8 text-center">
-            <img 
-              src="/icon-bu.png" 
-              alt="Backyard Ultra" 
-              className="w-20 h-20 mx-auto mb-4 rounded-full shadow-2xl"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-            <h1 className="text-xl md:text-2xl font-bold text-white/90 tracking-wider">
-              BACKYARD ULTRA
-            </h1>
-            <p className="text-white/60 text-sm tracking-widest">
-              SANTO DOMINGO 2026
-            </p>
-          </div>
+          <MarcaEvento compacta anio={getYear()} />
 
-          {/* Sponsor Card */}
+          {/* Patrocinador */}
           <div key={currentSponsorIndex} className="animate-sponsorFadeIn">
-            <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-2xl max-w-lg mx-auto">
-              <p className="text-center text-purple-600 font-semibold text-sm uppercase tracking-wider mb-6">
-                Patrocinador Oficial
+            <div className="bg-card rounded-3xl p-8 md:p-12 shadow-strong max-w-lg mx-auto">
+              <p className="text-center text-primary font-semibold text-xs uppercase tracking-[0.25em] mb-6">
+                Patrocinador oficial
               </p>
               <div className="w-full h-40 md:h-56 flex items-center justify-center p-4">
                 <img
@@ -248,21 +302,19 @@ export default function MensajesPresentacionPage() {
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
-              <p className="text-center text-gray-800 font-bold text-xl md:text-2xl mt-6">
+              <p className="text-center font-display text-2xl md:text-3xl text-foreground mt-6">
                 {currentSponsor.name}
               </p>
             </div>
           </div>
 
-          {/* Thank you message */}
-          <p className="text-white/70 text-center mt-8 text-lg">
+          <p className="text-white/60 text-center mt-8 text-lg">
             Gracias por hacer posible este evento
           </p>
         </div>
 
-        {/* Settings Modal */}
-        {showSettings && <SettingsModal 
-          duration={duration} 
+        {showSettings && <SettingsModal
+          duration={duration}
           setDuration={setDuration}
           sponsorScreenDuration={sponsorScreenDuration}
           setSponsorScreenDuration={setSponsorScreenDuration}
@@ -284,58 +336,26 @@ export default function MensajesPresentacionPage() {
 
   // Message screen
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 flex flex-col relative overflow-hidden">
-      {/* Background animation */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-500/20 to-transparent rounded-full animate-pulse"></div>
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-500/20 to-transparent rounded-full animate-pulse" style={{ animationDelay: '1s' }}></div>
-      </div>
+    <div className={FONDO_PRESENTACION}>
+      <ResplandorNaranja />
 
-      {/* Controls */}
-      <div className={`absolute top-0 left-0 right-0 z-50 p-4 transition-opacity duration-500 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <Link to="/comunidad">
-            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Salir
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => setIsPlaying(!isPlaying)} className="text-white/80 hover:text-white hover:bg-white/10">
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-            </Button>
-            <Button variant="ghost" onClick={() => setShowSettings(true)} className="text-white/80 hover:text-white hover:bg-white/10">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      <Controles
+        visible={showControls}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
+        setShowSettings={setShowSettings}
+      />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 py-16 relative z-10">
-        {/* Logo */}
-        <div className="mb-8 text-center">
-          <img 
-            src="/icon-bu.png" 
-            alt="Backyard Ultra" 
-            className="w-24 h-24 mx-auto mb-4 rounded-full shadow-2xl"
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-          <h1 className="text-2xl md:text-3xl font-bold text-white/90 tracking-wider">
-            BACKYARD ULTRA
-          </h1>
-          <p className="text-white/60 text-sm tracking-widest">
-            SANTO DOMINGO 2026
-          </p>
-        </div>
+        <MarcaEvento anio={getYear()} />
 
-        {/* Message Card */}
+        {/* Mensaje */}
         <div key={currentMessageIndex} className="w-full max-w-4xl animate-fadeIn">
-          <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20">
-            {/* Athlete Info */}
+          <div className="bg-white/[0.06] backdrop-blur-lg rounded-3xl p-8 md:p-12 shadow-strong border border-white/10">
+            {/* Atleta */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-3 bg-white/20 rounded-full px-6 py-3 mb-4">
-                <span className="text-3xl md:text-4xl font-bold text-white">
+              <div className="inline-flex items-center gap-3 rounded-full border border-primary/40 bg-primary/15 px-6 py-3">
+                <span className="font-display text-3xl md:text-4xl text-primary leading-none">
                   #{currentMessage.athlete_bib}
                 </span>
                 <span className="text-xl md:text-2xl text-white/90">
@@ -344,46 +364,46 @@ export default function MensajesPresentacionPage() {
               </div>
             </div>
 
-            {/* Message */}
+            {/* Texto */}
             <div className="text-center mb-8">
               <p className="text-2xl md:text-4xl lg:text-5xl text-white font-medium leading-relaxed">
-                "{currentMessage.message}"
+                “{currentMessage.message}”
               </p>
             </div>
 
-            {/* Fan Name */}
+            {/* Quien lo manda */}
             <div className="text-center">
-              <p className="text-xl md:text-2xl text-white/70">
+              <p className="text-xl md:text-2xl text-white/60">
                 — {currentMessage.fan_name}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Progress indicator */}
+        {/* Progreso del ciclo */}
         <div className="mt-8 flex items-center gap-4">
-          <span className="text-white/60 text-sm">
+          <span className="text-white/50 text-sm">
             Mensaje {currentMessageIndex + 1} / {messages.length}
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {[0, 1, 2].map(i => (
-              <div 
+              <div
                 key={i}
-                className={`w-3 h-3 rounded-full transition-all ${
-                  i <= messagesShownInCycle ? 'bg-white' : 'bg-white/30'
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  i <= messagesShownInCycle ? 'bg-primary' : 'bg-white/25'
                 }`}
               />
             ))}
           </div>
-          <span className="text-white/40 text-xs">
-            → Patrocinador
+          <span className="inline-flex items-center gap-1 text-white/40 text-xs">
+            <IconAvanzar className="w-3.5 h-3.5" />
+            Patrocinador
           </span>
         </div>
       </div>
 
-      {/* Settings Modal */}
-      {showSettings && <SettingsModal 
-        duration={duration} 
+      {showSettings && <SettingsModal
+        duration={duration}
         setDuration={setDuration}
         sponsorScreenDuration={sponsorScreenDuration}
         setSponsorScreenDuration={setSponsorScreenDuration}
@@ -406,18 +426,23 @@ export default function MensajesPresentacionPage() {
 // Settings Modal Component
 function SettingsModal({ duration, setDuration, sponsorScreenDuration, setSponsorScreenDuration, setShowSettings }) {
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-card text-card-foreground border border-border rounded-2xl p-6 w-full max-w-md shadow-strong">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Configuración</h3>
-          <Button variant="ghost" size="sm" onClick={() => setShowSettings(false)}>
-            <X className="w-5 h-5" />
+          <h3 className="font-display text-xl text-foreground leading-none">Configuración</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettings(false)}
+            className="text-muted-foreground hover:bg-muted"
+          >
+            <IconCerrar className="w-5 h-5" />
           </Button>
         </div>
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Duración por mensaje: {duration} segundos
             </label>
             <input
@@ -426,16 +451,16 @@ function SettingsModal({ duration, setDuration, sponsorScreenDuration, setSponso
               max="15"
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>3s</span>
               <span>15s</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Duración pantalla patrocinador: {sponsorScreenDuration} segundos
             </label>
             <input
@@ -444,36 +469,33 @@ function SettingsModal({ duration, setDuration, sponsorScreenDuration, setSponso
               max="8"
               value={sponsorScreenDuration}
               onChange={(e) => setSponsorScreenDuration(Number(e.target.value))}
-              className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>2s</span>
               <span>8s</span>
             </div>
           </div>
 
-          <div className="bg-purple-50 rounded-lg p-4">
-            <h4 className="font-medium text-purple-900 mb-2">Secuencia</h4>
-            <p className="text-sm text-purple-700">
+          <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
+            <h4 className="font-medium text-foreground mb-1">Secuencia</h4>
+            <p className="text-sm text-muted-foreground">
               3 mensajes → 1 patrocinador → 3 mensajes → 1 patrocinador...
             </p>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-2">Controles de teclado</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Espacio</kbd> Pausar/Reanudar</li>
-              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">←</kbd> Mensaje anterior</li>
-              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">→</kbd> Siguiente</li>
-              <li><kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Esc</kbd> Cerrar</li>
+          <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+            <h4 className="font-medium text-foreground mb-2">Controles de teclado</h4>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li><kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">Espacio</kbd> Pausar/Reanudar</li>
+              <li><kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">←</kbd> Mensaje anterior</li>
+              <li><kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">→</kbd> Siguiente</li>
+              <li><kbd className="px-2 py-1 bg-muted rounded text-xs text-foreground">Esc</kbd> Cerrar</li>
             </ul>
           </div>
         </div>
 
-        <Button
-          onClick={() => setShowSettings(false)}
-          className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600"
-        >
+        <Button onClick={() => setShowSettings(false)} className="w-full mt-6">
           Cerrar
         </Button>
       </div>
