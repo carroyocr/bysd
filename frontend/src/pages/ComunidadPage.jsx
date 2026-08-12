@@ -57,7 +57,9 @@ const claseRango = (indice) => {
   return 'bg-muted text-muted-foreground';
 };
 
-// Las tres cifras de arriba son ademas el selector de pestana.
+// Las tres cifras de arriba son ademas el selector de pestana. El fondo de la
+// activa tiene que ser opaco: las tarjetas montan sobre la cabecera negra, y
+// con un naranja translucido se le veia el negro por la mitad de arriba.
 function PestanaCifra({ activa, onClick, Icono, valor, etiqueta, testId }) {
   return (
     <button
@@ -66,7 +68,7 @@ function PestanaCifra({ activa, onClick, Icono, valor, etiqueta, testId }) {
       data-testid={testId}
       className={`rounded-xl border p-3 sm:p-4 text-center transition-colors ${
         activa
-          ? 'border-primary bg-primary/10 shadow-soft'
+          ? 'border-primary bg-secondary shadow-soft'
           : 'border-border/60 bg-card hover:border-primary/40'
       }`}
     >
@@ -590,12 +592,12 @@ export default function ComunidadPage() {
                                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                                   <span className="font-mono text-foreground">#{msg.athlete_bib}</span>
                                   {msg.athlete_name}
-                                  {msg.athlete_nacionalidad && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider">
-                                      {msg.athlete_nacionalidad}
-                                    </span>
-                                  )}
                                 </span>
+                                {msg.athlete_nacionalidad && (
+                                  <span className="text-xs text-muted-foreground/80">
+                                    {msg.athlete_nacionalidad}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-foreground">{msg.message}</p>
                               <p className="text-xs text-muted-foreground mt-1">
