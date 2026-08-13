@@ -13,7 +13,7 @@
 // válido hasta sus 72 horas. Es un cerrojo contra quien coge el aparato, no
 // contra quien se lleve el token; para eso está la biometría, que sí guarda la
 // credencial en el llavero del sistema.
-import { biometriaActiva, ATLETA, STAFF } from './biometria';
+import { biometriaActiva, desactivarBiometria, ATLETA, STAFF } from './biometria';
 
 export const TOKEN_ATLETA = 'athlete_token';
 export const TOKEN_STAFF = 'admin_token';
@@ -52,6 +52,23 @@ export function cerrarSesionStaff() {
 
 export const hayAtleta = () => !!localStorage.getItem(TOKEN_ATLETA);
 export const hayStaff = () => !!localStorage.getItem(TOKEN_STAFF);
+
+/**
+ * Cierra desde el menú lo que esté abierto, sea el corredor, el staff o los
+ * dos. Apaga también la biometría de cada uno: el token del llavero es esa
+ * misma sesión, y dejarlo haría que cerrar sesión no cerrara nada —bastaría la
+ * cara para volver a entrar.
+ */
+export async function cerrarSesion() {
+  if (hayAtleta()) {
+    cerrarSesionAtleta();
+    await desactivarBiometria(ATLETA);
+  }
+  if (hayStaff()) {
+    cerrarSesionStaff();
+    await desactivarBiometria(STAFF);
+  }
+}
 
 /** Para el menú: qué accesos enseñar. */
 export function sesionesAbiertas() {
