@@ -75,5 +75,21 @@ export function sesionesAbiertas() {
   return { atleta: hayAtleta(), staff: hayStaff() };
 }
 
+/**
+ * A dónde va la app al abrirse, pasada la bienvenida.
+ *
+ * Con sesión abierta se entra directo: preguntar "¿cómo quieres entrar?" a
+ * quien ya entró es un paso de más en cada arranque. La pantalla de acceso
+ * solo aparece cuando de verdad hay algo que elegir.
+ *
+ * Esto no salta ninguna comprobación: el perfil sigue pidiendo la cara o la
+ * contraseña cuando toca, que es donde vive esa decisión.
+ */
+export function rutaDeEntrada() {
+  if (hayAtleta()) return '/live/perfil';
+  if (hayStaff()) return '/live/staff';
+  return '/live/login';
+}
+
 export { ATLETA, STAFF };
 export const HORAS_SESION = HORAS_SIN_BIOMETRIA;

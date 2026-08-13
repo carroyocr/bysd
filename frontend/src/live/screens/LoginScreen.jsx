@@ -4,7 +4,7 @@ import { User, ShieldCheck, ChevronRight, ScanFace, Loader2, Eye } from 'lucide-
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
-import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff } from '../sesion';
+import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rutaDeEntrada } from '../sesion';
 
 /**
  * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
@@ -29,6 +29,14 @@ export default function LoginScreen() {
   const [bioStaff, setBioStaff] = useState({ activada: false, nombre: '' });
   const [entrando, setEntrando] = useState(null);
   const [error, setError] = useState('');
+
+  // Con sesión abierta aquí no hay nada que elegir: se pasa de largo. Cubre
+  // llegar por enlace directo o por el botón de atrás; la bienvenida ya manda
+  // a cada uno a su sitio sin pasar por aquí.
+  const conSesion = hayAtleta() || hayStaff();
+  useEffect(() => {
+    if (conSesion) navigate(rutaDeEntrada(), { replace: true });
+  }, [conSesion, navigate]);
 
   useEffect(() => {
     let cancel = false;
@@ -59,24 +67,14 @@ export default function LoginScreen() {
     }
   };
 
-  // Con la sesión abierta el botón no lleva a un formulario, sino de vuelta a
-  // donde estabas: decir "Iniciar sesión" ahí confunde.
   const opciones = [
-    {
-      quien: ATLETA,
-      Icon: User,
-      titulo: hayAtleta() ? 'Continuar como corredor' : 'Soy corredor',
-      ruta: '/live/perfil',
-      bio: bioAtleta,
-    },
-    {
-      quien: STAFF,
-      Icon: ShieldCheck,
-      titulo: hayStaff() ? 'Continuar como staff' : 'Soy del staff',
-      ruta: '/live/staff',
-      bio: bioStaff,
-    },
+    { quien: ATLETA, Icon: User, titulo: 'Soy corredor', ruta: '/live/perfil', bio: bioAtleta },
+    { quien: STAFF, Icon: ShieldCheck, titulo: 'Soy del staff', ruta: '/live/staff', bio: bioStaff },
   ];
+
+  // Mientras el efecto de arriba redirige, no se pinta la elección: verla
+  // aparecer y desaparecer es peor que no verla.
+  if (conSesion) return null;
 
   return (
     <Screen title="Iniciar sesión">
