@@ -1,18 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, ShieldCheck, ChevronRight, ScanFace, Loader2 } from 'lucide-react';
+import { User, ShieldCheck, ChevronRight, ScanFace, Loader2, Eye } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
 import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff } from '../sesion';
 
 /**
- * Única puerta de entrada: primero se elige quién eres y solo entonces se ve
- * el acceso que te toca.
+ * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
+ * elige quién eres y solo entonces se ve el acceso que te toca.
  *
  * Antes el menú ofrecía "Perfil del corredor" y "Staff" a la vez, y cualquiera
  * podía asomarse al formulario de staff. Ahora el menú solo muestra "Iniciar
  * sesión" mientras no haya sesión, y desde aquí se va a uno u otro.
+ *
+ * Espectador no es una sesión: es seguir la carrera sin identificarse, que es
+ * lo que hace la mayoría. Va aparte de los otros dos, y pasa directo al
+ * selector de carreras sin pedir nada.
  *
  * Si el teléfono ya tiene la biometría activada para alguno de los dos, se
  * ofrece entrar directamente con la cara o la huella.
@@ -55,9 +59,23 @@ export default function LoginScreen() {
     }
   };
 
+  // Con la sesión abierta el botón no lleva a un formulario, sino de vuelta a
+  // donde estabas: decir "Iniciar sesión" ahí confunde.
   const opciones = [
-    { quien: ATLETA, Icon: User, titulo: 'Soy corredor', ruta: '/live/perfil', bio: bioAtleta },
-    { quien: STAFF, Icon: ShieldCheck, titulo: 'Soy del staff', ruta: '/live/staff', bio: bioStaff },
+    {
+      quien: ATLETA,
+      Icon: User,
+      titulo: hayAtleta() ? 'Continuar como corredor' : 'Soy corredor',
+      ruta: '/live/perfil',
+      bio: bioAtleta,
+    },
+    {
+      quien: STAFF,
+      Icon: ShieldCheck,
+      titulo: hayStaff() ? 'Continuar como staff' : 'Soy del staff',
+      ruta: '/live/staff',
+      bio: bioStaff,
+    },
   ];
 
   return (
@@ -94,6 +112,22 @@ export default function LoginScreen() {
             )}
           </div>
         ))}
+
+        <div className={`rounded-2xl mt-5 ${T.card}`}>
+          <button
+            onClick={() => navigate('/live/carreras')}
+            className="w-full flex items-center gap-3.5 px-4 py-4 text-left"
+          >
+            <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">
+              <Eye className="w-5 h-5 text-[#E77622]" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <p className="text-sm font-bold">Soy espectador</p>
+              <p className={`text-xs mt-0.5 ${T.muted}`}>Sigue la carrera sin iniciar sesión</p>
+            </span>
+            <ChevronRight className={`w-4 h-4 shrink-0 ${T.subtle}`} />
+          </button>
+        </div>
       </div>
     </Screen>
   );
