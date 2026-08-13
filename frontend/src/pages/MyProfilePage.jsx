@@ -89,6 +89,12 @@ export default function MyProfilePage() {
   const [pendingEmail, setPendingEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // Correo al que se le pidió recuperar la contraseña y no tiene cuenta
+  const [correoSinCuenta, setCorreoSinCuenta] = useState('');
+  // Segundos que faltan para poder pedir otro código (el backend admite 5
+  // envíos por IP cada 15 minutos: sin esta espera se agotan en un momento)
+  const [esperaReenvio, setEsperaReenvio] = useState(0);
+  const [reenviando, setReenviando] = useState(false);
   const [athlete, setAthlete] = useState(null);
   
   // Register multi-step
@@ -159,6 +165,13 @@ export default function MyProfilePage() {
     const token = localStorage.getItem('athlete_token');
     if (token) fetchProfile();
   }, []);
+
+  // Cuenta atrás del botón de reenviar código
+  useEffect(() => {
+    if (esperaReenvio <= 0) return undefined;
+    const t = setTimeout(() => setEsperaReenvio((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [esperaReenvio]);
 
   const fetchProfile = async () => {
     const { ok, data } = await apiCall('GET', `${API_URL}/api/athletes/profile`);
@@ -243,15 +256,44 @@ export default function MyProfilePage() {
   const handleForgot = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setCorreoSinCuenta('');
     try {
-      const { ok } = await apiCall('POST', `${API_URL}/api/athletes/forgot-password`, { email: email.trim() });
+      const { ok, status, data } = await apiCall('POST', `${API_URL}/api/athletes/forgot-password`, { email: email.trim() });
       if (ok) {
         setPendingEmail(email.trim());
         toast.success('Codigo enviado a tu correo');
         setCurrentView(VIEW_RESET);
+      } else if (status === 404) {
+        // No hay cuenta: no tiene sentido mandarlo a esperar un código
+        setCorreoSinCuenta(email.trim());
+      } else {
+        toast.error(data.detail || 'No se pudo enviar el código');
       }
     } catch { toast.error('Error de conexion'); }
     finally { setLoading(false); }
+  };
+
+  const crearCuentaConEseCorreo = () => {
+    updateReg('email', correoSinCuenta);
+    setCorreoSinCuenta('');
+    setRegStep(0);
+    setCurrentView(VIEW_REGISTER);
+  };
+
+  const handleReenviarCodigo = async () => {
+    if (esperaReenvio > 0 || reenviando) return;
+    setReenviando(true);
+    try {
+      const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/resend-code`, { email: pendingEmail });
+      if (ok) {
+        toast.success('Te enviamos un código nuevo. Revisa también la carpeta de spam.');
+        setVerificationCode('');
+        setEsperaReenvio(60);
+      } else {
+        toast.error(data.detail || 'No se pudo reenviar el código');
+      }
+    } catch { toast.error('Error de conexion'); }
+    finally { setReenviando(false); }
   };
 
   const handleReset = async (e) => {
@@ -817,6 +859,23 @@ export default function MyProfilePage() {
                 <Button type="submit" className="w-full" disabled={loading} data-testid="verify-submit-btn">
                   {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Verificar
                 </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  ¿No te llegó?{' '}
+                  <button
+                    type="button"
+                    onClick={handleReenviarCodigo}
+                    disabled={esperaReenvio > 0 || reenviando}
+                    className="font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-not-allowed"
+                    data-testid="verify-resend-btn"
+                  >
+                    {reenviando
+                      ? 'Enviando...'
+                      : esperaReenvio > 0
+                        ? `Reenviar código (${esperaReenvio}s)`
+                        : 'Reenviar código'}
+                  </button>
+                  <span className="block text-xs mt-1">Revisa también la carpeta de spam.</span>
+                </div>
                 <Button variant="ghost" type="button" className="w-full" onClick={() => setCurrentView(VIEW_LANDING)}>Volver</Button>
               </form>
             </CardContent>
@@ -835,14 +894,37 @@ export default function MyProfilePage() {
           <Card>
             <CardContent className="pt-6">
               <form onSubmit={handleForgot} className="space-y-4">
-                <Button variant="ghost" size="sm" type="button" onClick={() => setCurrentView(VIEW_LANDING)} className="w-fit mb-2"><ArrowLeft className="w-4 h-4 mr-2" /> Volver</Button>
+                <Button variant="ghost" size="sm" type="button" onClick={() => { setCorreoSinCuenta(''); setCurrentView(VIEW_LANDING); }} className="w-fit mb-2"><ArrowLeft className="w-4 h-4 mr-2" /> Volver</Button>
                 <div className="space-y-2">
                   <Label>Correo electronico</Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" required />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setCorreoSinCuenta(''); }}
+                    placeholder="tu@email.com"
+                    required
+                    data-testid="forgot-email-input"
+                  />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Enviar Codigo
-                </Button>
+                {correoSinCuenta ? (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="forgot-sin-cuenta">
+                    <p className="text-sm text-amber-900">
+                      No encontramos ninguna cuenta con <strong>{correoSinCuenta}</strong>.
+                      Puede que aún no la hayas creado: estar inscrito en la carrera y tener
+                      cuenta en el sitio son dos cosas distintas.
+                    </p>
+                    <Button type="button" className="w-full" onClick={crearCuentaConEseCorreo} data-testid="forgot-crear-cuenta-btn">
+                      Crear una cuenta con ese correo
+                    </Button>
+                    <p className="text-xs text-amber-800">
+                      ¿Te equivocaste al escribirlo? Corrígelo arriba y vuelve a intentar.
+                    </p>
+                  </div>
+                ) : (
+                  <Button type="submit" className="w-full" disabled={loading} data-testid="forgot-submit-btn">
+                    {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />} Enviar Codigo
+                  </Button>
+                )}
               </form>
             </CardContent>
           </Card>

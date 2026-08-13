@@ -569,8 +569,15 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request = None):
     
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
-        # Don't reveal if email exists
-        return {"success": True, "message": "Si el correo existe, recibirás un código"}
+        # Se dice que la cuenta no existe en vez del mensaje generico de
+        # "si el correo existe...". Mandar a esperar un codigo que nunca va a
+        # llegar es peor: el atleta lo que necesita es crear la cuenta. Esto
+        # deja saber desde fuera si un correo tiene cuenta, pero eso ya se sabia
+        # por el registro, que responde "Este correo ya esta registrado".
+        raise HTTPException(
+            status_code=404,
+            detail="No hay una cuenta con ese correo",
+        )
     
     # Generate reset code
     reset_code = generate_verification_code()
@@ -639,7 +646,7 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request = None):
     except Exception as e:
         print(f"Error sending reset email: {e}")
     
-    return {"success": True, "message": "Si el correo existe, recibirás un código"}
+    return {"success": True, "message": "Te enviamos un código a tu correo"}
 
 
 @router.post("/reset-password")

@@ -392,6 +392,44 @@ DEFAULT_TEMPLATES = [
 """
     },
     {
+        "id": "registration_courtesy",
+        "name": "Inscripción Confirmada (sin costo)",
+        "description": (
+            "Se envía al marcar a un atleta como inscripción libre de costo "
+            "(invitados y cupones de patrocinio). Confirma el cupo sin hablar de dinero: "
+            "el motivo de la bonificación queda en el panel, no en el correo."
+        ),
+        "subject": "Inscripción confirmada - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": """
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">¡Inscripción Confirmada!</h1></div>
+    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
+        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu inscripción para <strong>{{race_name}}</strong> queda confirmada. Ya tienes tu lugar en la línea de salida.</p>
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4b5563;">
+            <table style="width: 100%;">
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Carrera:</strong></td>
+                    <td style="text-align: right;">{{race_name}}</td></tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Fecha:</strong></td>
+                    <td style="text-align: right;">{{race_date}}</td></tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Estado:</strong></td>
+                    <td style="text-align: right; color: #4b5563; font-weight: bold;">Confirmada</td></tr></table></div>
+        <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">No tienes ningún trámite pendiente. Revisa que tus datos estén correctos desde tu perfil:</p>
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="{{frontend_url}}/mi-perfil" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Ir a mi Perfil</a></div>
+        <p style="font-size: 14px; color: #6b7280;">¡Nos vemos en la salida!</p></div>
+    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
+        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
+</div>
+"""
+    },
+    {
         "id": "payment_period_opening",
         "name": "Apertura del Período de Pagos",
         "description": "Anuncia el inicio del período de pagos de la inscripción, con fecha límite del 15 de septiembre",

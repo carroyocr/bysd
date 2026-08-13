@@ -208,7 +208,9 @@ async def send_templated_email_with_error(
 
         if not EMAILS_ACTIVOS:
             print(f"[EMAILS_ACTIVOS=false] No se envia a {to_email}")
-            return True
+            # Esta funcion devuelve (exito, error): un True suelto revienta al
+            # desempaquetar y cada correo se contaba como fallido.
+            return True, ""
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)

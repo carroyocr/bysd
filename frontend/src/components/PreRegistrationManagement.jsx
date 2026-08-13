@@ -9,7 +9,7 @@ import {
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
   Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown,
-  QrCode, ArrowUpCircle
+  QrCode, ArrowUpCircle, Ticket
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
@@ -485,6 +485,75 @@ export default function PreRegistrationManagement() {
   };
 
 
+  /* --------- Inscripción libre de costo (invitados y cupones) --------- */
+
+  const [cortesiaTarget, setCortesiaTarget] = useState(null); // registro completo
+  const [cortesiaMotivo, setCortesiaMotivo] = useState('');
+  const [guardandoCortesia, setGuardandoCortesia] = useState(false);
+
+  const abrirCortesia = (reg) => {
+    setCortesiaTarget(reg);
+    setCortesiaMotivo(reg.cortesia_motivo || '');
+  };
+
+  const marcarCortesia = async () => {
+    if (!cortesiaMotivo.trim()) {
+      toast.error('Escribe por qué se bonificó la inscripción');
+      return;
+    }
+    setGuardandoCortesia(true);
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/registration/admin/cortesia/${encodeURIComponent(cortesiaTarget.email)}?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ motivo: cortesiaMotivo.trim() })
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        toast.success(
+          data.correo_enviado
+            ? 'Inscripción marcada sin costo y correo de bienvenida enviado'
+            : 'Inscripción marcada sin costo, pero el correo no salió. Revisa el envío.'
+        );
+        setCortesiaTarget(null);
+        loadData();
+      } else {
+        toast.error(data.detail || 'Error al marcar la cortesía');
+      }
+    } catch (error) {
+      console.error('Error marcando cortesía:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setGuardandoCortesia(false);
+    }
+  };
+
+  const quitarCortesia = async () => {
+    setGuardandoCortesia(true);
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/registration/admin/cortesia/${encodeURIComponent(cortesiaTarget.email)}?race_code=${raceCode}`,
+        { method: 'DELETE' }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        toast.success('Se quitó la cortesía. El pago vuelve a quedar pendiente.');
+        setCortesiaTarget(null);
+        loadData();
+      } else {
+        toast.error(data.detail || 'Error al quitar la cortesía');
+      }
+    } catch (error) {
+      console.error('Error quitando cortesía:', error);
+      toast.error('Error de conexión');
+    } finally {
+      setGuardandoCortesia(false);
+    }
+  };
+
   const assignNextBib = () => {
     setEditForm(prev => ({ ...prev, bib: nextBib }));
   };
@@ -540,7 +609,7 @@ export default function PreRegistrationManagement() {
     const headers = [
       'BIB', 'Nombre', 'Apellidos', 'Email', 'Teléfono', 'Nacionalidad', 
       'Ciudad', 'Fecha Nacimiento', 'Sexo', 'Talla', 'Personalización',
-      'Tipo Sangre', 'Estado', 'Pago', 'Fecha Registro'
+      'Tipo Sangre', 'Estado', 'Pago', 'Sin Costo', 'Motivo Sin Costo', 'Fecha Registro'
     ];
 
     const rows = filteredRegistrations.map(reg => [
@@ -558,6 +627,9 @@ export default function PreRegistrationManagement() {
       reg.tipo_sangre,
       reg.status,
       reg.payment_status,
+      reg.inscripcion_cortesia ? 'Sí' : '',
+      // Las comas parten la fila del CSV: el motivo es texto libre
+      (reg.cortesia_motivo || '').replace(/,/g, ';'),
       reg.created_at
     ]);
 
@@ -586,8 +658,17 @@ export default function PreRegistrationManagement() {
     return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
 
-  const getPaymentBadge = (paymentStatus) => {
-    if (paymentStatus === 'paid') {
+  const getPaymentBadge = (reg) => {
+    // La cortesía manda sobre el estado del pago: por dentro cuenta como
+    // pagado, pero decir "Pagado" escondería que entró sin costo.
+    if (reg.inscripcion_cortesia) {
+      return (
+        <Badge className="bg-indigo-500" title={reg.cortesia_motivo || ''}>
+          <Ticket className="w-3 h-3 mr-1" />Sin costo
+        </Badge>
+      );
+    }
+    if (reg.payment_status === 'paid') {
       return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Pagado</Badge>;
     }
     return <Badge variant="outline" className="border-yellow-500 text-yellow-600"><AlertCircle className="w-3 h-3 mr-1" />Pendiente</Badge>;
@@ -1129,7 +1210,7 @@ export default function PreRegistrationManagement() {
                             <option value="paid">Pagado</option>
                           </select>
                         ) : (
-                          getPaymentBadge(reg.payment_status)
+                          getPaymentBadge(reg)
                         )}
                       </td>
                       <td className="py-3 px-2 text-right">
@@ -1162,9 +1243,19 @@ export default function PreRegistrationManagement() {
                                 )}
                               </Button>
                             )}
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => abrirCortesia(reg)}
+                              className={`h-8 ${reg.inscripcion_cortesia ? 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50' : ''}`}
+                              title={reg.inscripcion_cortesia ? 'Inscripción sin costo' : 'Marcar inscripción sin costo'}
+                              data-testid={`cortesia-btn-${reg.email}`}
+                            >
+                              <Ticket className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               onClick={() => setExpandedRow(expandedRow === reg.email ? null : reg.email)}
                               className="h-8"
                             >
@@ -1237,6 +1328,18 @@ export default function PreRegistrationManagement() {
                               </div>
                             </div>
                           </div>
+                          {reg.inscripcion_cortesia && (
+                            <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded">
+                              <h4 className="font-semibold text-sm mb-1 flex items-center gap-2 text-indigo-800">
+                                <Ticket className="w-4 h-4" /> Inscripción sin costo
+                              </h4>
+                              <p className="text-sm text-indigo-900">{reg.cortesia_motivo}</p>
+                              <p className="text-xs text-indigo-700 mt-1">
+                                Marcada por {reg.cortesia_por || 'el panel'}
+                                {reg.cortesia_fecha ? ` · ${new Date(reg.cortesia_fecha).toLocaleDateString('es-DO')}` : ''}
+                              </p>
+                            </div>
+                          )}
                           {reg.motivacion && (
                             <div className="mt-4 p-3 bg-background rounded border">
                               <h4 className="font-semibold text-sm mb-1">Motivación:</h4>
@@ -1260,6 +1363,78 @@ export default function PreRegistrationManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Inscripción libre de costo */}
+      {cortesiaTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="cortesia-modal">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="px-6 py-4 border-b">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-indigo-600" />
+                Inscripción sin costo
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {cortesiaTarget.nombre} {cortesiaTarget.apellidos} — {cortesiaTarget.email}
+              </p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="cortesia-motivo" className="text-sm">
+                  ¿Por qué se bonificó? *
+                </Label>
+                <textarea
+                  id="cortesia-motivo"
+                  value={cortesiaMotivo}
+                  onChange={(e) => setCortesiaMotivo(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Atleta invitado del Campeonato Mundial / Cupón del patrocinio de Gatorade"
+                  className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
+                  disabled={!!cortesiaTarget.inscripcion_cortesia}
+                  data-testid="cortesia-motivo-input"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Queda solo en el panel: el correo al atleta no menciona ni el costo ni el motivo.
+                </p>
+              </div>
+              {cortesiaTarget.inscripcion_cortesia ? (
+                <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
+                  Ya está marcada por {cortesiaTarget.cortesia_por || 'el panel'}
+                  {cortesiaTarget.cortesia_fecha
+                    ? ` el ${new Date(cortesiaTarget.cortesia_fecha).toLocaleDateString('es-DO')}`
+                    : ''}. Al quitarla, el pago vuelve a quedar pendiente.
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
+                  El pago queda confirmado para efectos del cupo y el dorsal, pero no se registra
+                  ningún ingreso en finanzas. Se le envía un correo de bienvenida.
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCortesiaTarget(null)}>Cancelar</Button>
+              {cortesiaTarget.inscripcion_cortesia ? (
+                <Button
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={quitarCortesia}
+                  disabled={guardandoCortesia}
+                  data-testid="cortesia-quitar"
+                >
+                  {guardandoCortesia ? 'Quitando...' : 'Quitar cortesía'}
+                </Button>
+              ) : (
+                <Button
+                  onClick={marcarCortesia}
+                  disabled={guardandoCortesia}
+                  data-testid="cortesia-confirm"
+                >
+                  {guardandoCortesia ? 'Guardando...' : 'Marcar y notificar'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Promover desde lista de espera */}
       {promoteTarget && (

@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from services.auth import require_permission
+from services import sponsor_categories
 
 router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
 
@@ -61,9 +62,11 @@ def sponsor_esta_publicado(doc: dict) -> bool:
 
 # El endpoint publico solo expone los campos de la vitrina del sitio; los
 # datos comerciales (RNC, montos, bitacora, contactos) son solo del panel.
+# La categoria si sale al publico: es la que agrupa la vitrina del sitio.
 PUBLIC_FIELDS = {
     "_id": 0, "name": 1, "description": 1, "instagram": 1,
     "logo_url": 1, "order": 1, "race_code": 1, "is_active": 1,
+    "propuesta_categoria": 1,
 }
 
 # Uploads directory for sponsor logos
@@ -197,6 +200,10 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     if publicar_desde not in ORDERED_PIPELINE:
         raise HTTPException(status_code=400, detail="Momento de publicación inválido")
 
+    categoria = (sponsor.propuesta_categoria or "").strip()
+    if not sponsor_categories.es_valida(categoria):
+        raise HTTPException(status_code=400, detail="Categoría de patrocinio inválida")
+
     sponsor_data = {
         "name": sponsor.name,
         "description": sponsor.description,
@@ -212,7 +219,7 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "telefono": (sponsor.telefono or "").strip(),
         "correo": (sponsor.correo or "").strip(),
         "pagina_web": (sponsor.pagina_web or "").strip(),
-        "propuesta_categoria": (sponsor.propuesta_categoria or "").strip(),
+        "propuesta_categoria": categoria,
         "propuesta_monto": sponsor.propuesta_monto,
         "status": status,
         "publicar_desde": publicar_desde,
@@ -254,6 +261,11 @@ async def update_sponsor(
 
     if "publicar_desde" in update_data and update_data["publicar_desde"] not in ORDERED_PIPELINE:
         raise HTTPException(status_code=400, detail="Momento de publicación inválido")
+
+    if "propuesta_categoria" in update_data and not sponsor_categories.es_valida(
+        update_data["propuesta_categoria"].strip()
+    ):
+        raise HTTPException(status_code=400, detail="Categoría de patrocinio inválida")
 
     update_data["updated_at"] = datetime.now(timezone.utc)
 
@@ -429,8 +441,12 @@ async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
                 )
                 logo_url = f"/api/uploads/sponsors/{destino_archivo}"
 
+        # La categoria y el monto de la edicion anterior no viajan como
+        # propuesta vigente, pero quedan escritos para saber de donde se parte.
+        categoria_anterior = sponsor_categories.etiqueta(fuente.get("propuesta_categoria"))
         monto_anterior = fuente.get("propuesta_monto")
-        referencia = f" Aportó RD${monto_anterior:,.2f}." if monto_anterior else ""
+        referencia = f" Entró como {categoria_anterior}." if categoria_anterior else ""
+        referencia += f" Aportó RD${monto_anterior:,.2f}." if monto_anterior else ""
 
         await db.sponsors.insert_one({
             "name": name,

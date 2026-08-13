@@ -1633,5 +1633,130 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
     }
 
 
+class CortesiaRequest(BaseModel):
+    """Motivo por el que el atleta entra sin pagar la inscripción."""
+    motivo: str
+
+
+async def _enviar_correo_bienvenida_cortesia(race_code: str, registration: dict) -> None:
+    """Correo de bienvenida del atleta bonificado.
+
+    Es el equivalente al de pago confirmado, pero sin una sola línea de dinero:
+    ni monto, ni fecha de pago, ni el motivo de la cortesía. Eso se queda en el
+    panel; al atleta solo le llega que su cupo está confirmado.
+    """
+    from services.template_email_service import (
+        send_email_with_template, build_race_data, build_athlete_data
+    )
+
+    race_config = await db["race_configurations"].find_one({"code": race_code})
+    await send_email_with_template(
+        db=db,
+        template_id="registration_courtesy",
+        to_email=registration.get("email"),
+        data={
+            **build_race_data(race_config),
+            **build_athlete_data(registration, registration.get("edit_token")),
+        },
+    )
+
+
+@admin_router.post("/cortesia/{email}")
+async def marcar_inscripcion_cortesia(
+    email: str,
+    race_code: str,
+    datos: CortesiaRequest,
+    usuario: dict = Depends(require_permission("athletes")),
+):
+    """Marcar una inscripción como libre de costo (invitados y cupones de patrocinio).
+
+    Deja el pago como confirmado para que el atleta cuente igual que cualquier
+    otro inscrito (cupo, dorsal, salida), pero NO registra un ingreso en
+    finanzas: no entró dinero, y anotarlo inflaría la contabilidad de la
+    carrera.
+    """
+    motivo = (datos.motivo or "").strip()
+    if not motivo:
+        raise HTTPException(status_code=400, detail="Hay que indicar por qué se bonificó la inscripción")
+
+    registration = await registrations_collection.find_one({
+        "email": email.lower(),
+        "race_code": race_code
+    })
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    # Quien ya pagó y tiene el comprobante aprobado no es una cortesía: sería
+    # borrar de los papeles un pago que sí entró.
+    if (registration.get("payment_receipt") or {}).get("status") == "approved":
+        raise HTTPException(
+            status_code=400,
+            detail="Este atleta tiene un comprobante de pago aprobado. Revierte el pago antes de marcarlo como cortesía."
+        )
+
+    ahora = datetime.now(timezone.utc)
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"$set": {
+            "inscripcion_cortesia": True,
+            "cortesia_motivo": motivo,
+            "cortesia_por": usuario.get("username", ""),
+            "cortesia_fecha": ahora,
+            "payment_status": "paid",
+            "updated_at": ahora,
+        }}
+    )
+
+    import asyncio as _asyncio
+    from routes.push import avisar_atleta
+    _asyncio.create_task(avisar_atleta(
+        db, email.lower(),
+        "Inscripción confirmada",
+        "Tu inscripción queda confirmada. Nos vemos en la salida.",
+        {"tipo": "inscripcion_confirmada"},
+    ))
+
+    # El correo no debe tumbar la operación: la marca ya quedó guardada.
+    correo_enviado = True
+    try:
+        await _enviar_correo_bienvenida_cortesia(race_code, registration)
+    except Exception as e:
+        correo_enviado = False
+        print(f"Error enviando el correo de inscripción de cortesía a {email}: {e}")
+
+    return {
+        "message": "Inscripción marcada como libre de costo",
+        "correo_enviado": correo_enviado,
+    }
+
+
+@admin_router.delete("/cortesia/{email}")
+async def quitar_inscripcion_cortesia(email: str, race_code: str):
+    """Deshacer la cortesía: el atleta vuelve a quedar con el pago pendiente."""
+    registration = await registrations_collection.find_one({
+        "email": email.lower(),
+        "race_code": race_code
+    })
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+    if not registration.get("inscripcion_cortesia"):
+        raise HTTPException(status_code=400, detail="Esta inscripción no está marcada como cortesía")
+
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {
+            "$set": {"payment_status": "pending", "updated_at": datetime.now(timezone.utc)},
+            "$unset": {
+                "inscripcion_cortesia": "",
+                "cortesia_motivo": "",
+                "cortesia_por": "",
+                "cortesia_fecha": "",
+            },
+        }
+    )
+
+    return {"message": "Se quitó la cortesía. La inscripción queda con el pago pendiente."}
+
+
 # El sub-router admin se monta al final, cuando ya estan definidas sus rutas.
 router.include_router(admin_router)

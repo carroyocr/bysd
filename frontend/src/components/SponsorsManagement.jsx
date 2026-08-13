@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { adminFetch } from '../lib/adminApi';
+import { SPONSOR_CATEGORIES, getCategory } from '../lib/sponsorCategories';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -120,6 +121,9 @@ export default function SponsorsManagement() {
   const [savingNota, setSavingNota] = useState(false);
 
   const [formData, setFormData] = useState(EMPTY_FORM);
+  // Categoría escrita a mano antes de que existiera el esquema: se muestra
+  // para que quede claro qué decía, pero hay que elegir una del catálogo.
+  const [categoriaFueraDeEsquema, setCategoriaFueraDeEsquema] = useState('');
 
   const loadSponsors = useCallback(async () => {
     if (!selectedRace) return;
@@ -165,9 +169,20 @@ export default function SponsorsManagement() {
 
   const resetForm = () => {
     setFormData(EMPTY_FORM);
+    setCategoriaFueraDeEsquema('');
     setShowAddForm(false);
     setEditingSponsor(null);
   };
+
+  // Cupos ya tomados en la edición que se está mirando. No bloquea nada: es
+  // el aviso de que esa categoría se está quedando sin espacio. El
+  // patrocinador que se edita no se cuenta a sí mismo.
+  const cuposTomados = (slug) => sponsors.filter((s) => (
+    s.propuesta_categoria === slug
+    && s.is_active
+    && s.status !== 'declinado'
+    && s.name !== editingSponsor
+  )).length;
 
   const buildPayload = () => ({
     name: formData.name,
@@ -180,7 +195,9 @@ export default function SponsorsManagement() {
     telefono: formData.telefono || null,
     correo: formData.correo || null,
     pagina_web: formData.pagina_web || null,
-    propuesta_categoria: formData.propuesta_categoria || null,
+    // Vacío viaja como cadena, no como null: null lo descarta el backend y
+    // no habría forma de quitarle la categoría a un patrocinador.
+    propuesta_categoria: formData.propuesta_categoria || '',
     propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
     status: formData.status || 'prospecto',
     publicar_desde: formData.publicar_desde || DEFAULT_PUBLICAR_DESDE,
@@ -245,6 +262,9 @@ export default function SponsorsManagement() {
   };
 
   const handleEdit = (sponsor) => {
+    const categoriaGuardada = sponsor.propuesta_categoria || '';
+    const esDelEsquema = !categoriaGuardada || !!getCategory(categoriaGuardada);
+    setCategoriaFueraDeEsquema(esDelEsquema ? '' : categoriaGuardada);
     setEditingSponsor(sponsor.name);
     setFormData({
       name: sponsor.name,
@@ -257,7 +277,7 @@ export default function SponsorsManagement() {
       telefono: sponsor.telefono || '',
       correo: sponsor.correo || '',
       pagina_web: sponsor.pagina_web || '',
-      propuesta_categoria: sponsor.propuesta_categoria || '',
+      propuesta_categoria: esDelEsquema ? categoriaGuardada : '',
       propuesta_monto: sponsor.propuesta_monto ?? '',
       status: sponsor.status || 'prospecto',
       publicar_desde: sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE,
@@ -459,6 +479,12 @@ export default function SponsorsManagement() {
       setImporting(false);
     }
   };
+
+  const categoriaElegida = getCategory(formData.propuesta_categoria);
+  const tomadosEnCategoria = categoriaElegida ? cuposTomados(categoriaElegida.slug) : 0;
+  const sinCupos = !!categoriaElegida
+    && categoriaElegida.cupos != null
+    && tomadosEnCategoria >= categoriaElegida.cupos;
 
   if (loading) {
     return (
@@ -744,13 +770,39 @@ export default function SponsorsManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="propuesta_categoria">Categoría</Label>
-                    <Input
+                    <select
                       id="propuesta_categoria"
                       value={formData.propuesta_categoria}
                       onChange={(e) => setFormData(prev => ({ ...prev, propuesta_categoria: e.target.value }))}
-                      placeholder="Ej: Platino, Oro, Plata, Bronce"
+                      className="w-full px-3 py-2 border rounded-md bg-background"
                       data-testid="sponsor-categoria-input"
-                    />
+                    >
+                      <option value="">Sin categoría asignada</option>
+                      {SPONSOR_CATEGORIES.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.label}{c.subtitle ? ` — ${c.subtitle}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {categoriaFueraDeEsquema && (
+                      <p className="text-xs text-amber-600">
+                        Antes decía «{categoriaFueraDeEsquema}», que no es del esquema.
+                        Elige la categoría que le corresponde.
+                      </p>
+                    )}
+                    {categoriaElegida ? (
+                      <p className={`text-xs ${sinCupos ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                        Cupos: {categoriaElegida.cuposLabel}
+                        {categoriaElegida.cupos != null && ` · ${tomadosEnCategoria} ocupado${tomadosEnCategoria === 1 ? '' : 's'}`}
+                        {' · Aporte de referencia: '}
+                        {categoriaElegida.monto != null ? `RD$${categoriaElegida.montoLabel}` : categoriaElegida.montoLabel}
+                        {sinCupos && ' · Ya no quedan cupos'}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Es la categoría con la que entra y con la que se agrupa en la página de patrocinadores.
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="propuesta_monto">Monto (RD$)</Label>
@@ -840,6 +892,7 @@ export default function SponsorsManagement() {
             const statusInfo = getStatusInfo(sponsor.status);
             const publicado = isPublished(sponsor);
             const ultima = ultimoContacto(sponsor);
+            const categoria = getCategory(sponsor.propuesta_categoria);
             return (
             <Card key={sponsor.name} className={!sponsor.is_active ? 'opacity-50' : ''}>
               <CardContent className="py-4">
@@ -885,6 +938,17 @@ export default function SponsorsManagement() {
                           {sponsor.name}
                           {!sponsor.is_active && (
                             <Badge variant="outline" className="text-xs">Inactivo</Badge>
+                          )}
+                          {categoria && (
+                            <Badge className={`text-xs ${categoria.badgeClass} hover:${categoria.badgeClass}`}>
+                              {categoria.label}
+                            </Badge>
+                          )}
+                          {/* Categoría escrita antes del esquema: se marca para corregirla */}
+                          {!categoria && sponsor.propuesta_categoria && (
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
+                              {sponsor.propuesta_categoria}
+                            </Badge>
                           )}
                           <Badge className={`text-xs ${statusInfo.badgeClass} hover:${statusInfo.badgeClass}`}>
                             {statusInfo.label}
@@ -993,11 +1057,11 @@ export default function SponsorsManagement() {
                           <Globe className="w-3 h-3" />{sponsor.pagina_web}
                         </a>
                       )}
-                      {(sponsor.propuesta_categoria || sponsor.propuesta_monto != null) && (
+                      {/* La categoría ya sale como etiqueta junto al nombre */}
+                      {sponsor.propuesta_monto != null && (
                         <span className="flex items-center gap-1 font-medium text-foreground">
                           <BadgeDollarSign className="w-3 h-3" />
-                          {sponsor.propuesta_categoria || 'Propuesta'}
-                          {formatMonto(sponsor.propuesta_monto) ? ` · ${formatMonto(sponsor.propuesta_monto)}` : ''}
+                          {formatMonto(sponsor.propuesta_monto)}
                         </span>
                       )}
                     </div>

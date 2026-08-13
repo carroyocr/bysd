@@ -1,19 +1,212 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Heart } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
+import { IconSeguir, IconInstagram } from './icons';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { SPONSOR_CATEGORIES, getCategory } from '../lib/sponsorCategories';
+
+// Cómo se ve cada categoría en la vitrina. Es la segmentación hecha diseño:
+// mientras más alta la categoría, más ancho ocupa la marca, más grande va su
+// logo y más se cuenta de ella. Las de abajo se muestran en cuadrícula
+// compacta, solo logo y nombre.
+//
+// `tono` y `fondoLogo` salen de los tokens del sitio (index.css), no de
+// colores sueltos: así el modo oscuro sigue funcionando sin tocar nada.
+const CLARO = 'bg-card border-border shadow-soft hover:shadow-medium';
+const FONDO_LOGO_CLARO = 'bg-muted/20';
+
+const PRESENTACION = {
+  titulo: {
+    // En la vitrina no se anuncia la categoría que compró, se anuncia lo que
+    // significa. "Título / Presenting" es el nombre comercial y se queda en el
+    // panel; el sitio dice de quién se trata.
+    encabezado: 'Presentado por:',
+    // Más angosta que el resto y al centro: no es una tarjeta más de una fila,
+    // es la marca que da nombre al evento. El aire alrededor es lo que la
+    // separa de la cuadrícula.
+    centrado: true,
+    grid: 'grid-cols-1 max-w-2xl mx-auto',
+    logo: 'h-40',
+    nombre: 'text-3xl sm:text-4xl',
+    descripcion: true,
+    tono: 'bg-foreground text-background border-transparent shadow-strong',
+    fondoLogo: 'bg-background/95',
+    enlace: 'text-primary hover:opacity-80',
+  },
+  platino: {
+    grid: 'sm:grid-cols-2',
+    logo: 'h-32',
+    nombre: 'text-2xl',
+    descripcion: true,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+    enlace: 'text-primary hover:text-accent',
+  },
+  oro: {
+    grid: 'sm:grid-cols-2 lg:grid-cols-3',
+    logo: 'h-28',
+    nombre: 'text-xl',
+    descripcion: true,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+    enlace: 'text-primary hover:text-accent',
+  },
+  plata: {
+    grid: 'grid-cols-2 lg:grid-cols-4',
+    logo: 'h-24',
+    nombre: 'text-base',
+    descripcion: false,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+  },
+  bronce: {
+    grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+    logo: 'h-20',
+    nombre: 'text-sm',
+    descripcion: false,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+  },
+  experiencia_4x4: {
+    grid: 'grid-cols-1',
+    logo: 'h-32',
+    nombre: 'text-2xl sm:text-3xl',
+    descripcion: true,
+    tono: 'bg-accent text-accent-foreground border-transparent shadow-medium',
+    fondoLogo: 'bg-background/95',
+    enlace: 'hover:opacity-80',
+  },
+  especie: {
+    grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
+    logo: 'h-24',
+    nombre: 'text-base',
+    descripcion: false,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+  },
+  media_partner: {
+    // En el panel la categoría es de uno ("Media Partner"); el bloque del
+    // sitio agrupa a varios y por eso va en plural.
+    encabezado: 'Media Partners',
+    grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
+    logo: 'h-24',
+    nombre: 'text-base',
+    descripcion: false,
+    tono: CLARO,
+    fondoLogo: FONDO_LOGO_CLARO,
+  },
+  zona_marcas: {
+    grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+    logo: 'h-16',
+    nombre: 'text-sm',
+    descripcion: false,
+    tono: 'bg-muted/30 border-border/60',
+    fondoLogo: 'bg-background/60',
+  },
+};
+
+// Los que todavía no tienen categoría asignada en el panel: se muestran como
+// se mostraban antes, para que ninguno desaparezca del sitio mientras se
+// clasifican.
+const SIN_CATEGORIA = {
+  grid: 'sm:grid-cols-2 lg:grid-cols-3',
+  logo: 'h-32',
+  nombre: 'text-xl',
+  descripcion: true,
+  tono: CLARO,
+  fondoLogo: FONDO_LOGO_CLARO,
+  enlace: 'text-primary hover:text-accent',
+};
+
+function TarjetaPatrocinador({ sponsor, estilo }) {
+  // Sin descripción que leer, la tarjeta entera es el enlace: no hay dónde
+  // poner un "Ver en Instagram" sin apretar el logo.
+  const enlaceCompleto = !!sponsor.instagram && !estilo.descripcion;
+  const Contenedor = enlaceCompleto ? 'a' : 'div';
+  const propsEnlace = enlaceCompleto
+    ? {
+        href: sponsor.instagram,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        'aria-label': `${sponsor.name} en Instagram`,
+      }
+    : {};
+
+  return (
+    <Contenedor
+      {...propsEnlace}
+      className={`block rounded-xl border p-5 space-y-4 transition-all duration-300 hover-lift ${estilo.tono}`}
+    >
+      <div className={`w-full ${estilo.logo} flex items-center justify-center rounded-lg p-4 ${estilo.fondoLogo}`}>
+        {sponsor.logo ? (
+          <img
+            src={sponsor.logo}
+            alt={`Logo de ${sponsor.name}`}
+            className="max-h-full max-w-full object-contain"
+            loading="lazy"
+          />
+        ) : (
+          <span className="text-sm text-muted-foreground text-center">{sponsor.name}</span>
+        )}
+      </div>
+
+      <div className={`space-y-2 ${estilo.centrado ? 'text-center' : ''}`}>
+        <h4 className={`font-display leading-tight ${estilo.nombre}`}>{sponsor.name}</h4>
+        {estilo.descripcion && sponsor.description && (
+          <p className="text-sm leading-relaxed opacity-80">{sponsor.description}</p>
+        )}
+        {estilo.descripcion && sponsor.instagram && (
+          <a
+            href={sponsor.instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`inline-flex items-center gap-1.5 text-sm font-semibold transition-colors ${estilo.enlace || ''}`}
+          >
+            <IconInstagram className="w-4 h-4" />
+            Ver en Instagram
+          </a>
+        )}
+      </div>
+    </Contenedor>
+  );
+}
+
+function GrupoCategoria({ titulo, subtitulo, nota, sponsors, estilo }) {
+  // El grupo centrado no lleva la línea que cierra el encabezado: esa línea
+  // marca el ancho de una cuadrícula, y aquí no hay cuadrícula que marcar.
+  return (
+    <div className="space-y-5">
+      {estilo.centrado ? (
+        <h3 className="font-display text-2xl text-foreground text-center">{titulo}</h3>
+      ) : (
+        <div className="flex items-baseline gap-3">
+          <h3 className="font-display text-2xl text-foreground whitespace-nowrap">{titulo}</h3>
+          {subtitulo && (
+            <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{subtitulo}</span>
+          )}
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      )}
+      {nota && <p className="text-sm text-muted-foreground -mt-2">{nota}</p>}
+      <div className={`grid gap-6 ${estilo.grid}`}>
+        {sponsors.map((sponsor) => (
+          <TarjetaPatrocinador key={sponsor.name} sponsor={sponsor} estilo={estilo} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function SponsorsSection({ raceCode }) {
   const { raceName, config } = useRaceConfig();
-  
+
   // Determine which race to show - from URL param or active race
   const displayRaceCode = raceCode ? raceCode.toUpperCase() : config?.code;
   const [raceInfo, setRaceInfo] = useState(null);
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Fetch race info if viewing a specific race
   useEffect(() => {
     const fetchRaceInfo = async () => {
@@ -47,6 +240,7 @@ export default function SponsorsSection({ raceCode }) {
               name: s.name,
               description: s.description,
               instagram: s.instagram,
+              categoria: s.propuesta_categoria || '',
               // Convert relative logo URL to full URL
               logo: s.logo_url ? `${process.env.REACT_APP_BACKEND_URL}${s.logo_url}` : null
             }));
@@ -56,10 +250,10 @@ export default function SponsorsSection({ raceCode }) {
           console.error('Error fetching sponsors:', error);
         }
       }
-      
+
       setLoading(false);
     };
-    
+
     fetchSponsors();
   }, [displayRaceCode]);
 
@@ -68,6 +262,19 @@ export default function SponsorsSection({ raceCode }) {
     if (raceInfo) return raceInfo.name;
     return raceName;
   };
+
+  // Un grupo por categoría, en el orden del catálogo, y solo los que tienen
+  // marcas dentro. Lo que no cae en ninguna categoría del esquema (todavía sin
+  // asignar, o un valor viejo escrito a mano) va a un grupo final.
+  const grupos = SPONSOR_CATEGORIES
+    .map((categoria) => ({
+      categoria,
+      estilo: PRESENTACION[categoria.slug],
+      marcas: sponsors.filter((s) => s.categoria === categoria.slug),
+    }))
+    .filter((g) => g.marcas.length > 0);
+
+  const sinCategoria = sponsors.filter((s) => !getCategory(s.categoria));
 
   if (loading) {
     return (
@@ -104,7 +311,7 @@ export default function SponsorsSection({ raceCode }) {
           {sponsors.length === 0 ? (
             <Card className="bg-muted/50">
               <CardContent className="py-12 text-center">
-                <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <IconSeguir className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">
                   Aún no hay patrocinadores registrados para esta carrera
                 </p>
@@ -117,7 +324,7 @@ export default function SponsorsSection({ raceCode }) {
             <CardContent className="p-8 md:p-10 space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Heart className="w-6 h-6 text-primary" />
+                  <IconSeguir className="w-6 h-6 text-primary" />
                 </div>
                 <div className="space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
@@ -133,71 +340,33 @@ export default function SponsorsSection({ raceCode }) {
 
           <Separator className="my-8" />
 
-          {/* Sponsors Grid */}
-          <div>
-            <h3 className="font-display text-2xl text-foreground mb-6 text-center">
-              Patrocinadores (orden alfabético)
-            </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sponsors.map((sponsor, index) => (
-                <Card
-                  key={index}
-                  className="bg-card border-border shadow-soft hover-lift hover:shadow-medium transition-all duration-300 group"
-                >
-                  <CardHeader className="space-y-4">
-                    {/* Logo */}
-                    {sponsor.logo ? (
-                      <div className="w-full h-32 flex items-center justify-center bg-muted/20 rounded-lg p-4">
-                        <img
-                          src={sponsor.logo}
-                          alt={`Logo de ${sponsor.name}`}
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-full h-32 flex items-center justify-center bg-muted/20 rounded-lg">
-                        <span className="text-muted-foreground text-sm">Logo próximamente</span>
-                      </div>
-                    )}
-                    <CardTitle className="text-xl font-bold text-foreground flex items-start justify-between gap-2">
-                      <span>{sponsor.name}</span>
-                      <a
-                        href={sponsor.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                        aria-label={`Instagram de ${sponsor.name}`}
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                      </a>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {sponsor.description}
-                    </p>
-                    <a
-                      href={sponsor.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent transition-colors"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                      </svg>
-                      Ver en Instagram
-                    </a>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Vitrina por categoría */}
+          <div className="space-y-14">
+            {grupos.map(({ categoria, estilo, marcas }) => (
+              <GrupoCategoria
+                key={categoria.slug}
+                titulo={estilo.encabezado || categoria.label}
+                subtitulo={estilo.encabezado ? null : categoria.subtitle}
+                nota={categoria.esPatrocinio ? null : 'Marcas presentes en el evento con activación propia.'}
+                sponsors={marcas}
+                estilo={estilo}
+              />
+            ))}
+
+            {sinCategoria.length > 0 && (
+              <GrupoCategoria
+                titulo={grupos.length > 0 ? 'Otros patrocinadores' : 'Patrocinadores'}
+                sponsors={sinCategoria}
+                estilo={SIN_CATEGORIA}
+              />
+            )}
           </div>
 
           {/* Thank You Message */}
           <Card className="bg-gradient-to-br from-secondary/30 to-muted/30 border-border shadow-medium">
             <CardContent className="p-8 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <Heart className="w-8 h-8 text-primary" />
+                <IconSeguir className="w-8 h-8 text-primary" />
               </div>
               <h3 className="font-display text-2xl text-foreground">
                 Gracias a Todos Nuestros Patrocinadores

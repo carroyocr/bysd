@@ -164,26 +164,33 @@ export default function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
+          {/* shrink-0 + whitespace-nowrap: la marca no cede ancho ni parte el
+              nombre en varias líneas aunque el menú apriete */}
           <Link
             to="/"
             onClick={handleLinkClick}
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-3 group shrink-0"
           >
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300">
-              <img 
-                src={menuLogo} 
-                alt="Backyard Ultra Icon" 
+            <div className="w-12 h-12 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300 shrink-0">
+              <img
+                src={menuLogo}
+                alt="Backyard Ultra Icon"
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="hidden md:block">
+            <div className="hidden md:block whitespace-nowrap">
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
               <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO {getYear()}</div>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1">
+          {/* Desktop Navigation
+              Se enseña desde 2xl (1536px) y no desde lg: los enlaces piden
+              1318px y hasta xl el contenedor solo da 1248, así que la fila no
+              cabía y lo que cedía era la marca. Por debajo de eso manda el
+              menú lateral. Si mañana se agregan enlaces, hay que volver a
+              medir antes de bajar este punto de corte. */}
+          <div className="hidden 2xl:flex items-center gap-1">
             {staticNavLinks.map((link) => (
               <Link
                 key={link.href}
@@ -312,7 +319,7 @@ export default function Navigation() {
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="lg:hidden">
+            <SheetTrigger asChild className="2xl:hidden">
               <Button variant="ghost" size="icon">
                 {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
