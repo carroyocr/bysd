@@ -78,17 +78,15 @@ export function sesionesAbiertas() {
 /**
  * A dónde va la app al abrirse, pasada la bienvenida.
  *
- * Con sesión abierta se entra directo: preguntar "¿cómo quieres entrar?" a
- * quien ya entró es un paso de más en cada arranque. La pantalla de acceso
- * solo aparece cuando de verdad hay algo que elegir.
+ * Con sesión abierta se entra directo al inicio, igual que el espectador:
+ * preguntar "¿cómo quieres entrar?" a quien ya entró es un paso de más en cada
+ * arranque, y quien abre la app viene a ver la carrera, no su perfil. El
+ * perfil queda a un toque en el menú lateral.
  *
- * Esto no salta ninguna comprobación: el perfil sigue pidiendo la cara o la
- * contraseña cuando toca, que es donde vive esa decisión.
+ * La pantalla de acceso solo aparece cuando de verdad hay algo que elegir.
  */
 export function rutaDeEntrada() {
-  if (hayAtleta()) return '/live/perfil';
-  if (hayStaff()) return '/live/staff';
-  return '/live/login';
+  return hayAtleta() || hayStaff() ? '/live/carreras' : '/live/login';
 }
 
 export { ATLETA, STAFF };
