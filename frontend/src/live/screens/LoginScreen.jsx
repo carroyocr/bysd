@@ -4,6 +4,7 @@ import { Footprints, ShieldCheck, ScanFace, Loader2, Eye, Flame } from 'lucide-r
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
+import { clic } from '../sonido';
 import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rutaDeEntrada } from '../sesion';
 
 const ESPECTADOR = 'espectador';
@@ -27,6 +28,7 @@ const ROLES = [
     ruta: '/live/perfil',
     color: { dark: '#E77622', light: '#C25F12' },
     fondo: { dark: '#2A1707', light: '#FDEEDF' },
+    borde: { dark: 'rgba(231,118,34,0.40)', light: 'rgba(194,95,18,0.28)' },
   },
   {
     quien: STAFF,
@@ -35,6 +37,7 @@ const ROLES = [
     ruta: '/live/staff',
     color: { dark: '#5DCAA5', light: '#0F6E56' },
     fondo: { dark: '#0D2B23', light: '#E1F5EE' },
+    borde: { dark: 'rgba(93,202,165,0.40)', light: 'rgba(15,110,86,0.24)' },
   },
   {
     quien: ESPECTADOR,
@@ -43,8 +46,22 @@ const ROLES = [
     ruta: '/live/carreras',
     color: { dark: '#85B7EB', light: '#185FA5' },
     fondo: { dark: '#12212F', light: '#E6F1FB' },
+    borde: { dark: 'rgba(133,183,235,0.40)', light: 'rgba(24,95,165,0.24)' },
   },
 ];
+
+/**
+ * El relieve de los cuadros, que es lo que los hace leer como botones.
+ *
+ * En oscuro una sombra negra no se ve: el volumen lo da una luz fina en el
+ * borde de arriba, como si el botón recibiera luz cenital, más una sombra
+ * oscura debajo para despegarlo del fondo. En claro basta la sombra de toda
+ * la vida.
+ */
+const RELIEVE = {
+  dark: 'inset 0 1px 0 rgba(255,255,255,0.10), 0 3px 8px rgba(0,0,0,0.55)',
+  light: '0 2px 6px rgba(0,0,0,0.13)',
+};
 
 /**
  * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
@@ -142,11 +159,17 @@ export default function LoginScreen() {
         {error && <p className="text-xs text-red-500 text-center mb-4">{error}</p>}
 
         <div className="flex gap-2.5">
-          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo }) => (
-            <button key={quien} onClick={() => navigate(ruta)} className="flex-1 min-w-0">
+          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo, borde }) => (
+            <button
+              key={quien}
+              onClick={() => { clic(); navigate(ruta); }}
+              // El hundido al tocar es lo que confirma la pulsación en un
+              // teléfono, donde no hay puntero que se pose encima.
+              className="flex-1 min-w-0 transition-transform duration-100 ease-out active:scale-[0.94]"
+            >
               <span
-                className="w-full aspect-square rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: fondo[modo] }}
+                className="w-full aspect-square rounded-2xl border flex items-center justify-center"
+                style={{ backgroundColor: fondo[modo], borderColor: borde[modo], boxShadow: RELIEVE[modo] }}
               >
                 <Icon className="w-7 h-7" style={{ color: color[modo] }} strokeWidth={1.9} />
               </span>
@@ -158,9 +181,10 @@ export default function LoginScreen() {
         {atajos.map(({ quien, bio, prefijo }) => (
           <button
             key={quien}
-            onClick={() => entrarBio(quien)}
+            onClick={() => { clic(); entrarBio(quien); }}
             disabled={entrando === quien}
-            className={`w-full mt-5 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold disabled:opacity-50 ${T.card}`}
+            className={`w-full mt-5 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-transform duration-100 ease-out active:scale-[0.97] disabled:opacity-50 ${T.card}`}
+            style={{ boxShadow: RELIEVE[modo] }}
           >
             {entrando === quien
               ? <Loader2 className="w-4 h-4 animate-spin" />
