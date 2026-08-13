@@ -1,10 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, ShieldCheck, ChevronRight, ScanFace, Loader2, Eye } from 'lucide-react';
+import { Footprints, ShieldCheck, ScanFace, Loader2, Eye, Flame } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
 import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rutaDeEntrada } from '../sesion';
+
+const ESPECTADOR = 'espectador';
+
+/**
+ * Los tres accesos, cada uno con su color.
+ *
+ * El color no decora: dice a qué puerta lleva cada cosa, y es el mismo que
+ * usan después las pantallas de cada rol. La franja de la portada y el
+ * corredor comparten el naranja de la marca; staff y espectador traen los
+ * suyos para no depender solo del icono.
+ *
+ * Cada rol lleva dos tonos porque la app tiene tema claro y oscuro: sobre el
+ * crema del tema claro los fondos oscuros se ven como manchas.
+ */
+const ROLES = [
+  {
+    quien: ATLETA,
+    Icon: Footprints,
+    etiqueta: 'Corredor',
+    ruta: '/live/perfil',
+    color: { dark: '#E77622', light: '#C25F12' },
+    fondo: { dark: '#2A1707', light: '#FDEEDF' },
+  },
+  {
+    quien: STAFF,
+    Icon: ShieldCheck,
+    etiqueta: 'Staff',
+    ruta: '/live/staff',
+    color: { dark: '#5DCAA5', light: '#0F6E56' },
+    fondo: { dark: '#0D2B23', light: '#E1F5EE' },
+  },
+  {
+    quien: ESPECTADOR,
+    Icon: Eye,
+    etiqueta: 'Espectador',
+    ruta: '/live/carreras',
+    color: { dark: '#85B7EB', light: '#185FA5' },
+    fondo: { dark: '#12212F', light: '#E6F1FB' },
+  },
+];
 
 /**
  * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
@@ -15,15 +55,16 @@ import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rut
  * sesión" mientras no haya sesión, y desde aquí se va a uno u otro.
  *
  * Espectador no es una sesión: es seguir la carrera sin identificarse, que es
- * lo que hace la mayoría. Va aparte de los otros dos, y pasa directo al
- * selector de carreras sin pedir nada.
+ * lo que hace la mayoría. Por eso los tres pesan lo mismo en pantalla y ninguno
+ * pide nada hasta que se toca.
  *
- * Si el teléfono ya tiene la biometría activada para alguno de los dos, se
- * ofrece entrar directamente con la cara o la huella.
+ * Si el teléfono ya tiene la biometría activada para alguno de los dos accesos
+ * con cuenta, se ofrece entrar directamente con la cara o la huella.
  */
 export default function LoginScreen() {
-  const { T } = useLiveTheme();
+  const { T, theme } = useLiveTheme();
   const navigate = useNavigate();
+  const modo = theme === 'dark' ? 'dark' : 'light';
 
   const [bioAtleta, setBioAtleta] = useState({ activada: false, nombre: '' });
   const [bioStaff, setBioStaff] = useState({ activada: false, nombre: '' });
@@ -67,10 +108,12 @@ export default function LoginScreen() {
     }
   };
 
-  const opciones = [
-    { quien: ATLETA, Icon: User, titulo: 'Soy corredor', ruta: '/live/perfil', bio: bioAtleta },
-    { quien: STAFF, Icon: ShieldCheck, titulo: 'Soy del staff', ruta: '/live/staff', bio: bioStaff },
-  ];
+  // Un atajo por cada acceso que tenga la biometría puesta. Con los dos
+  // activados hay que decir cuál es cuál; con uno solo, la frase corta basta.
+  const atajos = [
+    { quien: ATLETA, bio: bioAtleta, prefijo: 'Entrar con' },
+    { quien: STAFF, bio: bioStaff, prefijo: 'Entrar al staff con' },
+  ].filter(({ bio }) => bio.activada);
 
   // Mientras el efecto de arriba redirige, no se pinta la elección: verla
   // aparecer y desaparecer es peor que no verla.
@@ -78,54 +121,53 @@ export default function LoginScreen() {
 
   return (
     <Screen title="Iniciar sesión">
-      <div className="px-4 py-5">
-        <p className={`text-sm mb-4 ${T.muted}`}>¿Cómo quieres entrar?</p>
-
-        {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
-
-        {opciones.map(({ quien, Icon, titulo, ruta, bio }) => (
-          <div key={quien} className={`rounded-2xl mb-3 ${T.card}`}>
-            <button
-              onClick={() => navigate(ruta)}
-              className="w-full flex items-center gap-3.5 px-4 py-4 text-left"
-            >
-              <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">
-                <Icon className="w-5 h-5 text-[#E77622]" />
-              </span>
-              <p className="flex-1 min-w-0 text-sm font-bold">{titulo}</p>
-              <ChevronRight className={`w-4 h-4 shrink-0 ${T.subtle}`} />
-            </button>
-
-            {bio.activada && (
-              <button
-                onClick={() => entrarBio(quien)}
-                disabled={entrando === quien}
-                className={`w-full flex items-center justify-center gap-2 py-3 text-xs font-bold border-t disabled:opacity-50 ${T.divider}`}
-              >
-                {entrando === quien
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <ScanFace className="w-4 h-4 text-[#E77622]" />}
-                {entrando === quien ? 'Verificando…' : `Entrar con ${bio.nombre}`}
-              </button>
-            )}
-          </div>
-        ))}
-
-        <div className={`rounded-2xl mt-5 ${T.card}`}>
-          <button
-            onClick={() => navigate('/live/carreras')}
-            className="w-full flex items-center gap-3.5 px-4 py-4 text-left"
-          >
-            <span className="w-11 h-11 rounded-full bg-[#E77622]/15 flex items-center justify-center shrink-0">
-              <Eye className="w-5 h-5 text-[#E77622]" />
-            </span>
-            <span className="flex-1 min-w-0">
-              <p className="text-sm font-bold">Soy espectador</p>
-              <p className={`text-xs mt-0.5 ${T.muted}`}>Sigue la carrera sin iniciar sesión</p>
-            </span>
-            <ChevronRight className={`w-4 h-4 shrink-0 ${T.subtle}`} />
-          </button>
+      {/* Portada: la banda oscura de marca se mantiene igual en los dos temas,
+          que es lo que hace que la pantalla se lea como la carrera y no como
+          un formulario. */}
+      <div className="bg-[#2A1707] px-6 py-8 flex flex-col items-center text-center">
+        <div className="w-14 h-14 rounded-2xl bg-[#E77622] flex items-center justify-center">
+          <Flame className="w-7 h-7 text-[#2A1707]" strokeWidth={2.2} />
         </div>
+        <p className="mt-3.5 text-lg font-extrabold tracking-wide text-white">
+          BYSD <span className="text-[#E77622]">LIVE</span>
+        </p>
+        <p className="mt-1.5 text-[11px] tracking-[0.18em] uppercase text-[#D6B18A]">
+          Last one standing
+        </p>
+      </div>
+
+      <div className="px-4 py-6">
+        <p className={`text-xs text-center mb-5 ${T.muted}`}>¿Cómo quieres entrar?</p>
+
+        {error && <p className="text-xs text-red-500 text-center mb-4">{error}</p>}
+
+        <div className="flex gap-2.5">
+          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo }) => (
+            <button key={quien} onClick={() => navigate(ruta)} className="flex-1 min-w-0">
+              <span
+                className="w-full aspect-square rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: fondo[modo] }}
+              >
+                <Icon className="w-7 h-7" style={{ color: color[modo] }} strokeWidth={1.9} />
+              </span>
+              <span className="block mt-2 text-xs font-semibold">{etiqueta}</span>
+            </button>
+          ))}
+        </div>
+
+        {atajos.map(({ quien, bio, prefijo }) => (
+          <button
+            key={quien}
+            onClick={() => entrarBio(quien)}
+            disabled={entrando === quien}
+            className={`w-full mt-5 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold disabled:opacity-50 ${T.card}`}
+          >
+            {entrando === quien
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <ScanFace className="w-4 h-4 text-[#E77622]" />}
+            {entrando === quien ? 'Verificando…' : `${prefijo} ${bio.nombre}`}
+          </button>
+        ))}
       </div>
     </Screen>
   );
