@@ -27,8 +27,9 @@ const ROLES = [
     etiqueta: 'Corredor',
     ruta: '/live/perfil',
     color: { dark: '#E77622', light: '#C25F12' },
-    fondo: { dark: '#2A1707', light: '#FDEEDF' },
-    borde: { dark: 'rgba(231,118,34,0.40)', light: 'rgba(194,95,18,0.28)' },
+    fondo: { dark: '#3A2410', light: '#FDEEDF' },
+    borde: { dark: 'rgba(231,118,34,0.45)', light: 'rgba(194,95,18,0.30)' },
+    canto: { dark: '#A85718', light: '#E0BE9B' },
   },
   {
     quien: STAFF,
@@ -36,8 +37,9 @@ const ROLES = [
     etiqueta: 'Staff',
     ruta: '/live/staff',
     color: { dark: '#5DCAA5', light: '#0F6E56' },
-    fondo: { dark: '#0D2B23', light: '#E1F5EE' },
-    borde: { dark: 'rgba(93,202,165,0.40)', light: 'rgba(15,110,86,0.24)' },
+    fondo: { dark: '#14342B', light: '#E1F5EE' },
+    borde: { dark: 'rgba(93,202,165,0.45)', light: 'rgba(15,110,86,0.26)' },
+    canto: { dark: '#2E8A6D', light: '#AFDACB' },
   },
   {
     quien: ESPECTADOR,
@@ -45,23 +47,11 @@ const ROLES = [
     etiqueta: 'Espectador',
     ruta: '/live/carreras',
     color: { dark: '#85B7EB', light: '#185FA5' },
-    fondo: { dark: '#12212F', light: '#E6F1FB' },
-    borde: { dark: 'rgba(133,183,235,0.40)', light: 'rgba(24,95,165,0.24)' },
+    fondo: { dark: '#1B2E40', light: '#E6F1FB' },
+    borde: { dark: 'rgba(133,183,235,0.45)', light: 'rgba(24,95,165,0.26)' },
+    canto: { dark: '#3C6FA8', light: '#B2CEEC' },
   },
 ];
-
-/**
- * El relieve de los cuadros, que es lo que los hace leer como botones.
- *
- * En oscuro una sombra negra no se ve: el volumen lo da una luz fina en el
- * borde de arriba, como si el botón recibiera luz cenital, más una sombra
- * oscura debajo para despegarlo del fondo. En claro basta la sombra de toda
- * la vida.
- */
-const RELIEVE = {
-  dark: 'inset 0 1px 0 rgba(255,255,255,0.10), 0 3px 8px rgba(0,0,0,0.55)',
-  light: '0 2px 6px rgba(0,0,0,0.13)',
-};
 
 /**
  * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
@@ -158,22 +148,29 @@ export default function LoginScreen() {
 
         {error && <p className="text-xs text-red-500 text-center mb-4">{error}</p>}
 
+        {/* Botón de canto, como una tecla: sobre negro una sombra difusa no se
+            ve —lo que da volumen es un borde inferior macizo y más oscuro, que
+            se lee como el grosor de la pieza. Al pulsar, el cuadro baja hasta
+            apoyarse en ese canto, que es el gesto de una tecla al hundirse. */}
         <div className="flex gap-2.5">
-          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo, borde }) => (
+          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo, borde, canto }) => (
             <button
               key={quien}
               onClick={() => { clic(); navigate(ruta); }}
-              // El hundido al tocar es lo que confirma la pulsación en un
-              // teléfono, donde no hay puntero que se pose encima.
-              className="flex-1 min-w-0 transition-transform duration-100 ease-out active:scale-[0.94]"
+              className="group flex-1 min-w-0"
+              style={{ '--fondo': fondo[modo], '--borde': borde[modo], '--canto': canto[modo] }}
             >
               <span
-                className="w-full aspect-square rounded-2xl border flex items-center justify-center"
-                style={{ backgroundColor: fondo[modo], borderColor: borde[modo], boxShadow: RELIEVE[modo] }}
+                className="block w-full aspect-square rounded-2xl border bg-[var(--fondo)] border-[var(--borde)]
+                  shadow-[0_4px_0_var(--canto),0_5px_10px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.13)]
+                  transition-all duration-75 ease-out
+                  group-active:translate-y-[3px]
+                  group-active:shadow-[0_1px_0_var(--canto),0_1px_3px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)]
+                  flex items-center justify-center"
               >
                 <Icon className="w-7 h-7" style={{ color: color[modo] }} strokeWidth={1.9} />
               </span>
-              <span className="block mt-2 text-xs font-semibold">{etiqueta}</span>
+              <span className="block mt-2.5 text-xs font-semibold">{etiqueta}</span>
             </button>
           ))}
         </div>
@@ -183,8 +180,10 @@ export default function LoginScreen() {
             key={quien}
             onClick={() => { clic(); entrarBio(quien); }}
             disabled={entrando === quien}
-            className={`w-full mt-5 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold transition-transform duration-100 ease-out active:scale-[0.97] disabled:opacity-50 ${T.card}`}
-            style={{ boxShadow: RELIEVE[modo] }}
+            className={`w-full mt-6 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold
+              shadow-[0_3px_0_var(--canto)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--canto)]
+              transition-all duration-75 ease-out disabled:opacity-50 ${T.card}`}
+            style={{ '--canto': modo === 'dark' ? '#000000' : '#E4DBC0' }}
           >
             {entrando === quien
               ? <Loader2 className="w-4 h-4 animate-spin" />
