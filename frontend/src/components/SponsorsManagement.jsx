@@ -40,8 +40,10 @@ const DEFAULT_PUBLICAR_DESDE = 'cierre';
 const getStatusInfo = (status) =>
   STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
 
-const isPublished = (sponsor) => {
+const isPublished = (sponsor, destino = 'web') => {
   if (!sponsor.is_active) return false;
+  // Cada sitio tiene su interruptor; sin el campo (los de antes) va encendido
+  if (sponsor[destino === 'app' ? 'publicar_app' : 'publicar_web'] === false) return false;
   // Publicación apagada por defecto: sin status cuenta como "prospecto"
   const idx = PIPELINE_ORDER.indexOf(sponsor.status || 'prospecto');
   if (idx === -1) return false; // declinado
@@ -75,6 +77,8 @@ const EMPTY_FORM = {
   propuesta_monto: '',
   status: 'prospecto',
   publicar_desde: DEFAULT_PUBLICAR_DESDE,
+  publicar_web: true,
+  publicar_app: true,
 };
 
 const formatFechaHora = (iso) => {
@@ -201,6 +205,8 @@ export default function SponsorsManagement() {
     propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
     status: formData.status || 'prospecto',
     publicar_desde: formData.publicar_desde || DEFAULT_PUBLICAR_DESDE,
+    publicar_web: formData.publicar_web,
+    publicar_app: formData.publicar_app,
   });
 
   const handleSubmit = async (e) => {
@@ -281,6 +287,8 @@ export default function SponsorsManagement() {
       propuesta_monto: sponsor.propuesta_monto ?? '',
       status: sponsor.status || 'prospecto',
       publicar_desde: sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE,
+      publicar_web: sponsor.publicar_web !== false,
+      publicar_app: sponsor.publicar_app !== false,
     });
     setShowAddForm(true);
   };
@@ -858,6 +866,41 @@ export default function SponsorsManagement() {
                 </div>
               </div>
 
+              {/* Sitio y app se encienden por separado: un patrocinador puede
+                  estar en la página y no en el pie de la app, o al revés. */}
+              <div className="grid md:grid-cols-2 gap-3">
+                <label className="flex items-start gap-2 text-sm border rounded-lg px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={formData.publicar_web}
+                    onChange={(e) => setFormData(prev => ({ ...prev, publicar_web: e.target.checked }))}
+                    data-testid="sponsor-publicar-web"
+                  />
+                  <span>
+                    Mostrar en el sitio web
+                    <span className="block text-xs text-muted-foreground">
+                      Página de patrocinadores de backyardultrasantodomingo.com
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm border rounded-lg px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={formData.publicar_app}
+                    onChange={(e) => setFormData(prev => ({ ...prev, publicar_app: e.target.checked }))}
+                    data-testid="sponsor-publicar-app"
+                  />
+                  <span>
+                    Mostrar en la app
+                    <span className="block text-xs text-muted-foreground">
+                      Menú, pantalla de patrocinadores y pie publicitario de BYSD Live
+                    </span>
+                  </span>
+                </label>
+              </div>
+
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving}>
                   <Save className="w-4 h-4 mr-2" />
@@ -891,6 +934,7 @@ export default function SponsorsManagement() {
           sponsors.map((sponsor) => {
             const statusInfo = getStatusInfo(sponsor.status);
             const publicado = isPublished(sponsor);
+            const enLaApp = isPublished(sponsor, 'app');
             const ultima = ultimoContacto(sponsor);
             const categoria = getCategory(sponsor.propuesta_categoria);
             return (
@@ -1078,11 +1122,20 @@ export default function SponsorsManagement() {
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
-                      {!publicado && sponsor.status !== 'declinado' && (
+                      {!publicado && !enLaApp && sponsor.status !== 'declinado' && (
                         <span className="text-xs text-muted-foreground">
                           Se publica al llegar a: <strong>{getStatusInfo(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE).label}</strong>
                         </span>
                       )}
+                      {/* Dónde se está viendo, sin tener que abrir la ficha */}
+                      <span className="flex gap-1.5">
+                        <Badge variant={publicado ? 'secondary' : 'outline'} className={publicado ? '' : 'opacity-60'}>
+                          Sitio {publicado ? 'sí' : 'no'}
+                        </Badge>
+                        <Badge variant={enLaApp ? 'secondary' : 'outline'} className={enLaApp ? '' : 'opacity-60'}>
+                          App {enLaApp ? 'sí' : 'no'}
+                        </Badge>
+                      </span>
                       {ultima && (
                         <span className="text-xs text-muted-foreground">
                           Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}

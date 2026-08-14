@@ -38,7 +38,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
       .then((d) => { if (!cancel) setHayGanador(!!d?.winner); })
       .catch(() => {});
 
-    getJson(`/api/sponsors/race/${raceCode}`)
+    getJson(`/api/sponsors/race/${raceCode}?destino=app`)
       .then((d) => {
         if (cancel) return;
         const lista = Array.isArray(d) ? d : (d?.sponsors || []);

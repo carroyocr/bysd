@@ -150,16 +150,21 @@ async def pie_publicitario(race_code: Optional[str] = None, db=Depends(get_db)):
         # Los tiene, pero pausados o fuera de fecha: es una decision, se respeta.
         return {"banners": [], "origen": "pausados"}
 
-    from routes.sponsors import PUBLIC_FIELDS as SPONSOR_FIELDS, sponsor_esta_publicado
+    from routes.sponsors import (
+        PUBLIC_FIELDS as SPONSOR_FIELDS,
+        CAMPOS_PUBLICACION,
+        sponsor_esta_publicado,
+    )
 
     docs = await db.sponsors.find(
         {"race_code": code, "is_active": True},
-        {**SPONSOR_FIELDS, "status": 1, "publicar_desde": 1},
+        {**SPONSOR_FIELDS, **CAMPOS_PUBLICACION},
     ).sort("order", 1).to_list(100)
 
     respaldo = []
     for i, s in enumerate(docs):
-        if not sponsor_esta_publicado(s):
+        # El pie es app: manda el interruptor de la app, no el del sitio.
+        if not sponsor_esta_publicado(s, "app"):
             continue
         instagram = s.get("instagram") or ""
         respaldo.append({

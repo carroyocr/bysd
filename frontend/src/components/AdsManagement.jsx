@@ -128,6 +128,27 @@ export default function AdsManagement() {
     }
   };
 
+  // La etiqueta "Patrocinador" se enciende también desde la lista: dentro del
+  // formulario había que abrir el banner para verla, y no se encontraba.
+  const handleToggleMarca = async (banner) => {
+    const siguiente = banner.mostrar_marca === false;
+    try {
+      const response = await adminFetch(`${API_URL}/api/ads/${banner.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mostrar_marca: siguiente }),
+      });
+      if (response.ok) {
+        toast.success(siguiente ? 'Se marcará como «Patrocinador»' : 'Sin la marca de «Patrocinador»');
+        fetchBanners();
+      } else {
+        toast.error('No se pudo cambiar la marca');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    }
+  };
+
   const handleToggleActive = async (banner) => {
     try {
       const response = await adminFetch(`${API_URL}/api/ads/${banner.id}`, {
@@ -414,6 +435,9 @@ export default function AdsManagement() {
                     {banner.detail_url && (
                       <Badge variant="secondary" className="ml-1 align-middle">con imagen ampliada</Badge>
                     )}
+                    {banner.mostrar_marca === false && (
+                      <Badge variant="outline" className="ml-1 align-middle opacity-70">sin marca</Badge>
+                    )}
                   </p>
                   {banner.text && <p className="text-xs text-muted-foreground truncate">{banner.text}</p>}
                   <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -428,6 +452,14 @@ export default function AdsManagement() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-1.5 ml-auto justify-end">
+                  <Button
+                    size="sm"
+                    variant={banner.mostrar_marca === false ? 'outline' : 'secondary'}
+                    onClick={() => handleToggleMarca(banner)}
+                    title="La nota «Patrocinador» sobre el banner"
+                  >
+                    Marca {banner.mostrar_marca === false ? 'no' : 'sí'}
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => triggerImageUpload(banner.id, 'logo')}>
                     <Upload className="w-3.5 h-3.5 mr-1" /> Logo
                   </Button>

@@ -51,7 +51,17 @@ ORDERED_PIPELINE = [s for s in SPONSOR_STATUSES if s != "declinado"]
 DEFAULT_PUBLICAR_DESDE = "cierre"
 
 
-def sponsor_esta_publicado(doc: dict) -> bool:
+def sponsor_esta_publicado(doc: dict, destino: str = "web") -> bool:
+    """Si un patrocinador se ensena, y donde.
+
+    El sitio y la app se encienden por separado: un patrocinador puede estar
+    en la pagina de patrocinadores y no salir en el pie de la app, o al reves.
+    Antes era la misma decision para los dos sitios, asi que apagarlo en uno
+    lo apagaba en el otro. Sin el campo (los de antes) cuenta como encendido.
+    """
+    interruptor = "publicar_app" if destino == "app" else "publicar_web"
+    if doc.get(interruptor) is False:
+        return False
     status = doc.get("status") or "prospecto"
     if status not in ORDERED_PIPELINE:
         return False  # declinado o valor desconocido
@@ -68,6 +78,10 @@ PUBLIC_FIELDS = {
     "logo_url": 1, "order": 1, "race_code": 1, "is_active": 1,
     "propuesta_categoria": 1,
 }
+
+# Los dos interruptores de publicacion no son de la vitrina, pero hacen falta
+# para decidir quien sale: se piden aparte y se quitan antes de responder.
+CAMPOS_PUBLICACION = {"status": 1, "publicar_desde": 1, "publicar_web": 1, "publicar_app": 1}
 
 # Uploads directory for sponsor logos
 UPLOADS_DIR = Path(__file__).parent.parent / "static" / "uploads" / "sponsors"
@@ -92,6 +106,8 @@ class SponsorCreate(BaseModel):
     propuesta_monto: Optional[float] = None
     status: Optional[str] = "prospecto"
     publicar_desde: Optional[str] = None
+    publicar_web: bool = True
+    publicar_app: bool = True
 
 
 class SponsorUpdate(BaseModel):
@@ -111,6 +127,8 @@ class SponsorUpdate(BaseModel):
     propuesta_monto: Optional[float] = None
     status: Optional[str] = None
     publicar_desde: Optional[str] = None
+    publicar_web: Optional[bool] = None
+    publicar_app: Optional[bool] = None
 
 
 class BitacoraEntry(BaseModel):
@@ -142,11 +160,16 @@ def get_db():
 
 
 @router.get("/race/{race_code}")
-async def get_sponsors_by_race(race_code: str, db=Depends(get_db)):
-    """Get published sponsors for a specific race (public endpoint)"""
-    # Se necesitan status y publicar_desde para decidir la publicacion,
-    # pero se quitan antes de responder: son datos del panel.
-    projection = {**PUBLIC_FIELDS, "status": 1, "publicar_desde": 1}
+async def get_sponsors_by_race(race_code: str, destino: str = "web", db=Depends(get_db)):
+    """Patrocinadores publicados de una carrera (publico).
+
+    `destino` dice quien pregunta: "web" es la pagina de patrocinadores del
+    sitio y "app" el BYSD Live. Cada uno tiene su interruptor, asi que la
+    misma carrera puede ensenar listas distintas en cada sitio.
+    """
+    # Los campos de publicacion se necesitan para decidir quien sale, pero se
+    # quitan antes de responder: son datos del panel.
+    projection = {**PUBLIC_FIELDS, **CAMPOS_PUBLICACION}
     docs = await db.sponsors.find(
         {"race_code": race_code.upper(), "is_active": True},
         projection
@@ -154,9 +177,9 @@ async def get_sponsors_by_race(race_code: str, db=Depends(get_db)):
 
     sponsors = []
     for doc in docs:
-        if sponsor_esta_publicado(doc):
-            doc.pop("status", None)
-            doc.pop("publicar_desde", None)
+        if sponsor_esta_publicado(doc, destino):
+            for campo in CAMPOS_PUBLICACION:
+                doc.pop(campo, None)
             sponsors.append(doc)
 
     return {"sponsors": sponsors, "race_code": race_code.upper()}
@@ -223,6 +246,8 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "propuesta_monto": sponsor.propuesta_monto,
         "status": status,
         "publicar_desde": publicar_desde,
+        "publicar_web": sponsor.publicar_web,
+        "publicar_app": sponsor.publicar_app,
         "bitacora": [],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
