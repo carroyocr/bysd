@@ -24,10 +24,10 @@ const mmss = (segundos) => {
 /** Fila de dato: icono, nombre y el número grande a la derecha. */
 function Dato({ Icono, etiqueta, valor, unidad, T }) {
   return (
-    <div className={`flex items-center gap-3.5 py-5 border-b ${T.divider}`}>
+    <div className={`flex items-center gap-3.5 py-3.5 border-b ${T.divider}`}>
       <Icono className={`w-5 h-5 shrink-0 ${T.subtle}`} strokeWidth={1.6} />
       <span className={`flex-1 text-[13px] ${T.muted}`}>{etiqueta}</span>
-      <span className="text-[32px] font-light tracking-tight tabular-nums">{valor}</span>
+      <span className="text-[28px] font-light tracking-tight tabular-nums">{valor}</span>
       <span className={`text-[11px] w-6 ${T.subtle}`}>{unidad}</span>
     </div>
   );
@@ -35,8 +35,11 @@ function Dato({ Icono, etiqueta, valor, unidad, T }) {
 
 /**
  * Tablero de la carrera: la vuelta en curso arriba, las cifras acumuladas
- * debajo y el clima al pie, con el patrocinador entre los corredores y el
- * clima.
+ * debajo, el clima y el patrocinador al cerrar.
+ *
+ * Todo tiene que caber de una vez en la pantalla del teléfono: un tablero al
+ * que hay que bajarle el dedo para ver cuántos corredores quedan no es un
+ * tablero. Por eso los tamaños de aquí son los que son.
  */
 export default function DashboardScreen() {
   const { T } = useLiveTheme();
@@ -108,7 +111,22 @@ export default function DashboardScreen() {
   const activos = stats.athletes_active || 0;
   const dnf = stats.athletes_dnf || 0;
   const dns = stats.athletes_dns || 0;
-  const total = activos + dnf + dns;
+
+  // Terminada la carrera ya no hay nadie corriendo: "Activos 0" es la verdad
+  // más inútil que se puede poner en un tablero. Lo que se quiere ver ahí es
+  // quién ganó, así que esa columna pasa a ser el ganador.
+  const columnas = stats.winner
+    ? [
+        { etiqueta: 'GANADOR', n: 1, color: NARANJA },
+        { etiqueta: 'DNF', n: dnf, color: ROJO },
+        { etiqueta: 'DNS', n: dns, color: GRIS },
+      ]
+    : [
+        { etiqueta: 'ACTIVOS', n: activos, color: VERDE },
+        { etiqueta: 'DNF', n: dnf, color: ROJO },
+        { etiqueta: 'DNS', n: dns, color: GRIS },
+      ];
+  const total = columnas.reduce((suma, c) => suma + c.n, 0);
 
   // Una backyard es una vuelta por hora: las horas acumuladas son las vueltas
   // que ya se completaron, las mismas con las que se cuentan los kilómetros.
@@ -127,13 +145,13 @@ export default function DashboardScreen() {
 
   return (
     <Screen title="Tablero" back>
-      <div className="px-4 pt-6">
+      <div className="px-4 pt-4">
         {/* La vuelta en curso: lo único que se ve desde el otro lado de la carpa */}
-        <p className="text-[10px] tracking-[0.3em] mb-3.5" style={{ color: NARANJA }}>
+        <p className="text-[10px] tracking-[0.3em] mb-2.5" style={{ color: NARANJA }}>
           {cerrada ? 'VUELTA FINAL' : 'VUELTA'}
         </p>
         <div className="flex items-end justify-between">
-          <span className="text-[124px] font-light leading-[0.78] tracking-[-0.06em] tabular-nums">
+          <span className="text-[96px] font-light leading-[0.78] tracking-[-0.06em] tabular-nums">
             {cerrada ? horas : (vuelta.race_started ? stats.current_lap : '—')}
           </span>
           <div className="text-right pb-2.5">
@@ -149,7 +167,7 @@ export default function DashboardScreen() {
             )}
           </div>
         </div>
-        <div className="relative h-[2px] mt-6 overflow-hidden">
+        <div className="relative h-[2px] mt-5 overflow-hidden">
           <span className="absolute inset-0 bg-current opacity-[0.14]" />
           <span
             className="absolute inset-y-0 left-0 transition-[width] duration-1000 ease-linear"
@@ -157,7 +175,7 @@ export default function DashboardScreen() {
           />
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2">
           <Dato Icono={Clock} etiqueta="Horas acumuladas" valor={horas} unidad="h" T={T} />
           <Dato Icono={Route} etiqueta="Kilómetros" valor={(stats.total_km || 0).toFixed(1)} unidad="km" T={T} />
           {/* Lo que llevan corrido todos juntos, incluidos los que ya se
@@ -172,8 +190,8 @@ export default function DashboardScreen() {
         </div>
 
         {/* Corredores: la barra dice de un vistazo cuántos quedan en pie */}
-        <div className={`py-6 border-b ${T.divider}`}>
-          <div className="flex justify-between items-baseline mb-3.5">
+        <div className={`py-4 border-b ${T.divider}`}>
+          <div className="flex justify-between items-baseline mb-3">
             <span className={`text-[13px] ${T.muted}`}>Corredores</span>
             <span className={`text-[11px] ${T.subtle}`}>{total} en total</span>
           </div>
@@ -181,19 +199,19 @@ export default function DashboardScreen() {
             {total === 0 ? (
               <span className="flex-1 bg-current opacity-[0.14]" />
             ) : (
-              [[activos, VERDE], [dnf, ROJO], [dns, GRIS]].map(([n, color], i) => (
-                n > 0 ? <span key={i} style={{ flex: n, backgroundColor: color }} /> : null
+              columnas.map(({ etiqueta, n, color }) => (
+                n > 0 ? <span key={etiqueta} style={{ flex: n, backgroundColor: color }} /> : null
               ))
             )}
           </div>
-          <div className="flex gap-5 mt-4">
-            {[['ACTIVOS', activos, VERDE], ['DNF', dnf, ROJO], ['DNS', dns, GRIS]].map(([etiqueta, n, color]) => (
+          <div className="flex gap-5 mt-3.5">
+            {columnas.map(({ etiqueta, n, color }) => (
               <div key={etiqueta} className="flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                   <span className={`text-[10px] tracking-[0.1em] ${T.subtle}`}>{etiqueta}</span>
                 </div>
-                <p className="text-[30px] font-light mt-1.5 tabular-nums">{n}</p>
+                <p className="text-[26px] font-light mt-1 tabular-nums">{n}</p>
               </div>
             ))}
           </div>
@@ -201,17 +219,17 @@ export default function DashboardScreen() {
       </div>
 
       {clima && (
-        <div className="px-4 pt-6 pb-2 flex items-center gap-4">
-          <IconoClima className="w-8 h-8 shrink-0" strokeWidth={1.4} style={{ color: '#8fb4d8' }} />
+        <div className="px-4 pt-4 pb-1 flex items-center gap-4">
+          <IconoClima className="w-7 h-7 shrink-0" strokeWidth={1.4} style={{ color: '#8fb4d8' }} />
           <div className="flex-1">
             <p className="text-[14px]">{NOMBRE_CLIMA[condicion] || 'Nublado'}</p>
             <p className={`text-[10px] tracking-[0.14em] mt-0.5 ${T.subtle}`}>CLIMA</p>
           </div>
           <div className="flex gap-5 items-baseline">
-            <p className="text-[26px] font-light tabular-nums">
+            <p className="text-[24px] font-light tabular-nums">
               {clima.temperatura}<span className={`text-[13px] ${T.subtle}`}>°</span>
             </p>
-            <p className="text-[26px] font-light tabular-nums">
+            <p className="text-[24px] font-light tabular-nums">
               {clima.humedad}<span className={`text-[13px] ${T.subtle}`}>%</span>
             </p>
           </div>
@@ -219,7 +237,7 @@ export default function DashboardScreen() {
       )}
 
       {/* El patrocinador cierra la pantalla, debajo del clima */}
-      <div className="pt-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <div className="pt-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
         <AdFooter raceCode={raceCode} inline />
       </div>
     </Screen>

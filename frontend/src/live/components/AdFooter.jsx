@@ -25,39 +25,17 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
 
   useEffect(() => {
     let cancel = false;
+    // Quién va en el pie lo decide el backend. Antes el respaldo a los
+    // patrocinadores publicados se hacía aquí, y desde aquí no se distingue
+    // "esta carrera no tiene publicidad" de "la tiene toda pausada": al pausar
+    // el único banner, el pie resucitaba al mismo patrocinador y pausar no
+    // servía de nada.
     const load = async () => {
       try {
-        const data = await getJson(`/api/ads/public${raceCode ? `?race_code=${raceCode}` : ''}`);
-        if (data.length > 0) {
-          if (!cancel) setBanners(data);
-          return;
-        }
-        // Sin banners de publicidad: caer a los patrocinadores publicados de
-        // la carrera; si esa carrera tampoco tiene, usar los de la carrera
-        // activa para que el pie no quede vacío.
-        let sponsors = [];
-        let code = raceCode;
-        if (code) {
-          ({ sponsors } = await getJson(`/api/sponsors/race/${code}`));
-        }
-        if (!sponsors || sponsors.length === 0) {
-          const active = await getJson('/api/race-config/active');
-          if (active?.code && active.code !== code) {
-            code = active.code;
-            ({ sponsors } = await getJson(`/api/sponsors/race/${code}`));
-          }
-        }
-        const fallback = (sponsors || []).map((s, i) => ({
-          id: `sponsor-${code}-${i}`,
-          name: s.name,
-          text: s.description || null,
-          logo_url: s.logo_url || null,
-          link_url: s.instagram
-            ? (s.instagram.startsWith('http') ? s.instagram : `https://instagram.com/${s.instagram.replace('@', '')}`)
-            : null,
-          is_sponsor_fallback: true,
-        }));
-        if (!cancel) setBanners(fallback);
+        const { banners: lista } = await getJson(
+          `/api/ads/pie${raceCode ? `?race_code=${raceCode}` : ''}`
+        );
+        if (!cancel) setBanners(lista || []);
       } catch {
         /* sin publicidad no se rompe nada */
       }
