@@ -22,6 +22,7 @@ const EMPTY_FORM = {
   start_at: '',
   end_at: '',
   is_active: true,
+  mostrar_marca: true,
 };
 
 // datetime-local usa "YYYY-MM-DDTHH:MM"; el backend guarda ISO tal cual
@@ -76,6 +77,7 @@ export default function AdsManagement() {
       start_at: toInputValue(banner.start_at),
       end_at: toInputValue(banner.end_at),
       is_active: banner.is_active !== false,
+      mostrar_marca: banner.mostrar_marca !== false,
     });
     setShowForm(true);
   };
@@ -95,6 +97,7 @@ export default function AdsManagement() {
         start_at: form.start_at || '',
         end_at: form.end_at || '',
         is_active: form.is_active,
+        mostrar_marca: form.mostrar_marca,
       };
       let response;
       if (editingId) {
@@ -324,6 +327,21 @@ export default function AdsManagement() {
                 onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
               />
               Activo (visible en la rotación)
+            </label>
+            <label className="flex items-start gap-2 mt-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.mostrar_marca}
+                onChange={(e) => setForm({ ...form, mostrar_marca: e.target.checked })}
+              />
+              <span>
+                Marcar como &laquo;Patrocinador&raquo; sobre el banner
+                <span className="block text-xs text-gray-500">
+                  Distingue la publicidad del contenido de la app. Quítalo solo si la
+                  propia pieza ya deja claro de quién es.
+                </span>
+              </span>
             </label>
             <div className="flex gap-2 mt-4">
               <Button onClick={handleSave} disabled={saving}>

@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   MessageCircle, Star, Mountain, Radio, Loader2, Instagram, Activity, AtSign,
 } from 'lucide-react';
-import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed, abreviaNacionalidad } from '../liveApi';
+import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed, abreviaNacionalidad, statusLabel } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
@@ -20,6 +20,27 @@ import { openExternal } from '../../lib/nativeExport';
  * "Seguimiento" es la primera sección y la de entrada: las vueltas, los
  * kilómetros y el gráfico de ritmo, que es lo que se mira durante la carrera.
  */
+// Color del estado del corredor. Vivía en la sección de Seguimiento, donde
+// ocupaba una fila entera de la tarjeta y dejaba al gráfico sin sitio; aquí
+// viaja con el nombre y se ve en todas las secciones.
+const STATUS_STYLES = {
+  registered: 'bg-sky-500/15 text-sky-500 border border-sky-500/40',
+  active: 'bg-green-500/15 text-green-600 border border-green-500/40',
+  retired: 'bg-red-500/15 text-red-500 border border-red-500/40',
+  dns: 'bg-gray-500/15 text-gray-500 border border-gray-500/40',
+  waitlist: 'bg-amber-500/15 text-amber-600 border border-amber-500/40',
+  winner: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
+  honor: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
+};
+
+const textoEstado = (profile) => {
+  if (profile?.status === 'active') return 'En carrera';
+  const base = statusLabel(profile?.status);
+  return profile?.status === 'retired' && profile?.retired_at_lap
+    ? `${base} · vuelta ${profile.retired_at_lap}`
+    : base;
+};
+
 export default function FichaAtleta() {
   const { T } = useLiveTheme();
   const { raceCode, race } = useRace();
@@ -106,6 +127,13 @@ export default function FichaAtleta() {
                       `${flagOf(abreviaNacionalidad(profile.nacionalidad))} ${abreviaNacionalidad(profile.nacionalidad)}`.trim()]
                       .filter(Boolean).join(' · ')}
                   </p>
+                  {/* El estado, del tamaño del país: se recorta antes que
+                      empujar a las redes fuera de la línea. */}
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full truncate min-w-0 ${STATUS_STYLES[profile.status] || STATUS_STYLES.dns}`}
+                  >
+                    {textoEstado(profile)}
+                  </span>
                   {profile.instagram_url && (
                     <button
                       aria-label="Instagram del corredor"
