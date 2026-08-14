@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import {
   Plus, Edit, Trash2, Save, X, Upload, Megaphone,
-  ArrowUp, ArrowDown, MousePointerClick, Eye,
+  ArrowUp, ArrowDown, MousePointerClick, Eye, Globe, Smartphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -39,6 +39,54 @@ export default function AdsManagement() {
   const [saving, setSaving] = useState(false);
   const uploadTargetRef = useRef(null);
   const fileInputRef = useRef(null);
+  // Los patrocinadores de la carrera, para decidir aquí dónde se ve cada uno.
+  // Quién se ve de verdad no se recalcula aquí: se pregunta a las dos listas
+  // públicas, que son exactamente lo que reciben el sitio y la app.
+  const [sponsors, setSponsors] = useState([]);
+  const [visibles, setVisibles] = useState({ web: [], app: [] });
+
+  const fetchSponsors = useCallback(async () => {
+    if (!raceCode) return;
+    try {
+      const [admin, web, app] = await Promise.all([
+        adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`),
+        fetch(`${API_URL}/api/sponsors/race/${raceCode}`),
+        fetch(`${API_URL}/api/sponsors/race/${raceCode}?destino=app`),
+      ]);
+      if (!admin.ok) return;
+      const { sponsors: todos } = await admin.json();
+      const enWeb = web.ok ? (await web.json()).sponsors : [];
+      const enApp = app.ok ? (await app.json()).sponsors : [];
+      setSponsors(todos || []);
+      setVisibles({
+        web: (enWeb || []).map((x) => x.name),
+        app: (enApp || []).map((x) => x.name),
+      });
+    } catch (error) {
+      /* la publicidad se puede llevar igual sin esta lista */
+    }
+  }, [raceCode]);
+
+  const cambiarVisibilidad = async (sponsor, campo) => {
+    const siguiente = sponsor[campo] === false;
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [campo]: siguiente }),
+        }
+      );
+      if (response.ok) {
+        fetchSponsors();
+      } else {
+        toast.error('No se pudo cambiar la visibilidad');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    }
+  };
 
   const fetchBanners = useCallback(async () => {
     if (!raceCode) return;
@@ -60,6 +108,10 @@ export default function AdsManagement() {
   useEffect(() => {
     fetchBanners();
   }, [fetchBanners]);
+
+  useEffect(() => {
+    fetchSponsors();
+  }, [fetchSponsors]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -261,6 +313,7 @@ export default function AdsManagement() {
   };
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 gap-4">
         <div>
@@ -539,5 +592,81 @@ export default function AdsManagement() {
         )}
       </CardContent>
     </Card>
+
+    {/* Dónde se ve cada patrocinador. Vive aquí y no en Patrocinadores porque
+        aquella sección es la gestión comercial —el proceso, los contactos, la
+        bitácora— y esto es publicación: lo mismo que se decide de los banners. */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Globe className="w-5 h-5" /> Dónde se ve cada patrocinador
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          El sitio y la app se encienden por separado. Un patrocinador puede estar en la
+          página de patrocinadores y no en la app, o al revés.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {sponsors.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Esta carrera no tiene patrocinadores.</p>
+        ) : (
+          <div className="space-y-2">
+            {sponsors.map((sponsor) => {
+              const enWeb = visibles.web.includes(sponsor.name);
+              const enApp = visibles.app.includes(sponsor.name);
+              const apagadoWeb = sponsor.publicar_web === false;
+              const apagadoApp = sponsor.publicar_app === false;
+              return (
+                <div
+                  key={sponsor.name}
+                  className={`flex flex-wrap items-center gap-3 border rounded-xl px-3 py-2.5 ${sponsor.is_active ? '' : 'opacity-55'}`}
+                >
+                  {sponsor.logo_url ? (
+                    <img
+                      src={`${API_URL}${sponsor.logo_url}`}
+                      alt={sponsor.name}
+                      className="w-10 h-10 rounded-lg object-contain bg-white border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
+                      SIN LOGO
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm truncate">{sponsor.name}</p>
+                    {/* El interruptor encendido no basta: si el proceso comercial
+                        no ha llegado al momento de publicar, no se ve igual. */}
+                    {!enWeb && !apagadoWeb && !enApp && !apagadoApp && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Todavía no se publica: el proceso no ha llegado al momento elegido en Patrocinadores.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <Button
+                      size="sm"
+                      variant={apagadoWeb ? 'outline' : 'secondary'}
+                      onClick={() => cambiarVisibilidad(sponsor, 'publicar_web')}
+                      title="Página de patrocinadores del sitio"
+                    >
+                      <Globe className="w-3.5 h-3.5 mr-1" /> Sitio {apagadoWeb ? 'no' : 'sí'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={apagadoApp ? 'outline' : 'secondary'}
+                      onClick={() => cambiarVisibilidad(sponsor, 'publicar_app')}
+                      title="Menú, pantalla de patrocinadores y pie publicitario de BYSD Live"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 mr-1" /> App {apagadoApp ? 'no' : 'sí'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+    </div>
   );
 }
