@@ -166,18 +166,9 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           Patrocinador
         </span>
 
-        {/* Los puntos de la rotación no van en línea: ahí el banner es un
-            bloque más del contenido y esos puntos lo ensucian. */}
-        {banners.length > 1 && !inline && (
-          <div className="absolute bottom-1.5 right-3 flex gap-1.5">
-            {banners.map((b) => (
-              <span
-                key={b.id}
-                className={`w-1.5 h-1.5 rounded-full ${b.id === ad.id ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
-              />
-            ))}
-          </div>
-        )}
+        {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
+            fila de puntos de lado a lado que no dice nada, porque no se puede
+            saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
       </button>
     </Caja>
   );
