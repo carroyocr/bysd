@@ -11,6 +11,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import RaceSelectScreen from './screens/RaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
+import DashboardScreen from './screens/DashboardScreen';
 import FichaAtleta from './screens/FichaAtleta';
 import AthleteScreen from './screens/AthleteScreen';
 import ShareBibScreen from './screens/ShareBibScreen';
@@ -124,6 +125,7 @@ function RaceShell() {
       <Routes>
         <Route index element={<HomeScreen />} />
         <Route path="seguimiento" element={<TrackingScreen />} />
+        <Route path="tablero" element={<DashboardScreen />} />
         {/* Todas las secciones del corredor cuelgan de la misma ficha, que es
             quien pone el encabezado y los botones para pasar de una a otra */}
         <Route path="atleta/:bib" element={<FichaAtleta />}>

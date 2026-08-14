@@ -8,8 +8,12 @@ const AD_ROTATE_MS = 8000;
 
 /**
  * Pie publicitario fijo: rota banners ponderados por peso y acumula métricas.
+ *
+ * Con `inline` deja de ser pie y se queda donde se le ponga, dentro del
+ * contenido: lo usa el tablero, donde el patrocinador va entre los corredores
+ * y el clima en vez de pegado al borde de abajo.
  */
-export default function AdFooter({ raceCode, sobreFoto = false }) {
+export default function AdFooter({ raceCode, sobreFoto = false, inline = false }) {
   const { T, theme } = useLiveTheme();
   const navigate = useNavigate();
   // Color propio: la portada de la carrera fuerza texto blanco sobre la foto
@@ -104,6 +108,8 @@ export default function AdFooter({ raceCode, sobreFoto = false }) {
   };
 
   const bannerCompleto = !!ad.banner_url;
+  // En línea no es el pie de la pantalla, es un bloque más del contenido.
+  const Caja = inline ? 'div' : 'footer';
 
   return (
     // Fondo propio y no transparente: el pie va pegado abajo mientras se
@@ -111,8 +117,12 @@ export default function AdFooter({ raceCode, sobreFoto = false }) {
     // márgenes de la tarjeta y parecía que la publicidad tapaba la lectura.
     // Sobre la portada del inicio no: ahí la banda taparía la foto, y no hay
     // texto que se cuele porque no se desplaza nada por detrás.
-    <footer
-      className={`sticky bottom-0 z-40 px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${sobreFoto ? '' : `${T.page} ${T.footerShadow}`}`}
+    <Caja
+      className={
+        inline
+          ? 'px-4 py-1'
+          : `sticky bottom-0 z-40 px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${sobreFoto ? '' : `${T.page} ${T.footerShadow}`}`
+      }
     >
       {/* Proporción fija en vez de alto fijo: el ancho de la barra cambia con
           cada teléfono, así que con un alto fijo la pieza del patrocinador se
@@ -167,6 +177,6 @@ export default function AdFooter({ raceCode, sobreFoto = false }) {
           </div>
         )}
       </button>
-    </footer>
+    </Caja>
   );
 }

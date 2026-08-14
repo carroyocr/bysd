@@ -16,7 +16,7 @@ from models.race import (
 from pydantic import BaseModel
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 from services.auth import encode_admin_token, require_permission, verify_admin_token
-from services import laps, races, rate_limit
+from services import clima, laps, races, rate_limit
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
@@ -607,6 +607,22 @@ async def estado_de_vuelta(race_code: Optional[str] = None):
         "finished_at": info["finished_at"].isoformat() if info.get("finished_at") else None,
         "lap_start_time": info["lap_start_time"].isoformat() if info["lap_start_time"] else None,
         "lap_end_time": info["lap_end_time"].isoformat() if info["lap_end_time"] else None,
+    }
+
+
+@router.get("/clima")
+async def clima_de_la_carrera(race_code: Optional[str] = None):
+    """El tiempo en la sede. Publico: lo usa el tablero de la app.
+
+    Devuelve `clima: null` en vez de fallar cuando Open-Meteo no responde: el
+    tablero se queda sin ese bloque y el resto sigue funcionando.
+    """
+    from server import db as database
+
+    carrera = await races.resolver_carrera(database, race_code)
+    return {
+        "race_code": carrera.get("code"),
+        "clima": await clima.actual(carrera),
     }
 
 
