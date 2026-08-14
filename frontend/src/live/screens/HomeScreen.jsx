@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Radio, Trophy, MessageCircle, Clock } from 'lucide-react';
+import { Menu, Radio, Trophy, MessageCircle, Clock, Activity } from 'lucide-react';
 import { API, getJson, raceStartMs } from '../liveApi';
 import { useRace } from '../LiveApp';
 import AdFooter from '../components/AdFooter';
@@ -66,6 +66,7 @@ export default function HomeScreen() {
 
   const quickActions = [
     { label: 'Seguimiento', Icon: Radio, to: `/live/${raceCode}/seguimiento` },
+    { label: 'Tablero', Icon: Activity, to: `/live/${raceCode}/tablero` },
     { label: 'Ganadores', Icon: Trophy, to: `/live/${raceCode}/ganadores` },
     { label: 'Ánimo', Icon: MessageCircle, to: `/live/${raceCode}/animo` },
   ];
@@ -148,14 +149,16 @@ export default function HomeScreen() {
         )}
 
         {/* Accesos rápidos */}
-        <div className="relative z-10 mt-auto px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-          <div className="flex justify-center gap-8">
+        {/* Cuatro accesos: con los círculos de antes no cabían en un teléfono
+            estrecho, así que van algo más pequeños y más juntos. */}
+        <div className="relative z-10 mt-auto px-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+          <div className="flex justify-center gap-4">
             {quickActions.map(({ label, Icon, to }) => (
               <button key={label} onClick={() => navigate(to)} className="flex flex-col items-center gap-2">
-                <span className="w-16 h-16 rounded-full bg-black/55 backdrop-blur border border-white/15 flex items-center justify-center">
-                  <Icon className="w-7 h-7 text-[#E77622]" strokeWidth={2} />
+                <span className="w-14 h-14 rounded-full bg-black/55 backdrop-blur border border-white/15 flex items-center justify-center">
+                  <Icon className="w-6 h-6 text-[#E77622]" strokeWidth={2} />
                 </span>
-                <span className="text-xs font-semibold drop-shadow">{label}</span>
+                <span className="text-[11px] font-semibold drop-shadow">{label}</span>
               </button>
             ))}
           </div>
