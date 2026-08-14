@@ -113,6 +113,71 @@ async def get_public_banners(race_code: Optional[str] = None, db=Depends(get_db)
     return vigentes
 
 
+@router.get("/pie")
+async def pie_publicitario(race_code: Optional[str] = None, db=Depends(get_db)):
+    """Lo que va en el pie de la app, ya resuelto. Publico.
+
+    El respaldo a los patrocinadores publicados vivia en la app, y desde alli
+    no se puede distinguir "esta carrera no tiene publicidad montada" de "la
+    tiene toda pausada": las dos cosas llegaban como una lista vacia. Al pausar
+    el unico banner, el pie resucitaba al mismo patrocinador por la puerta de
+    atras y pausar no servia de nada.
+
+    La regla es la que se espera: si la carrera tiene banners montados, el pie
+    ensena solo los suyos que esten activos y en vigencia, aunque no quede
+    ninguno. El respaldo de patrocinadores es solo para las carreras que no
+    tienen publicidad montada.
+    """
+    code = race_code or await _active_race_code(db)
+    if not code:
+        return {"banners": [], "origen": "vacio"}
+    code = code.upper()
+
+    montados = await db.ad_banners.find(
+        {"race_code": code},
+        PUBLIC_FIELDS | {"start_at": 1, "end_at": 1, "is_active": 1},
+    ).sort("order", 1).to_list(100)
+
+    now = datetime.now(timezone.utc)
+    vigentes = [b for b in montados if b.get("is_active") and _vigente(b, now)]
+    for b in vigentes:
+        for campo in ("start_at", "end_at", "is_active"):
+            b.pop(campo, None)
+
+    if vigentes:
+        return {"banners": vigentes, "origen": "ads"}
+    if montados:
+        # Los tiene, pero pausados o fuera de fecha: es una decision, se respeta.
+        return {"banners": [], "origen": "pausados"}
+
+    from routes.sponsors import PUBLIC_FIELDS as SPONSOR_FIELDS, sponsor_esta_publicado
+
+    docs = await db.sponsors.find(
+        {"race_code": code, "is_active": True},
+        {**SPONSOR_FIELDS, "status": 1, "publicar_desde": 1},
+    ).sort("order", 1).to_list(100)
+
+    respaldo = []
+    for i, s in enumerate(docs):
+        if not sponsor_esta_publicado(s):
+            continue
+        instagram = s.get("instagram") or ""
+        respaldo.append({
+            "id": f"sponsor-{code}-{i}",
+            "name": s.get("name"),
+            "text": s.get("description") or None,
+            "logo_url": s.get("logo_url") or None,
+            "link_url": (
+                instagram if instagram.startswith("http")
+                else f"https://instagram.com/{instagram.lstrip('@')}" if instagram
+                else None
+            ),
+            "is_sponsor_fallback": True,
+        })
+
+    return {"banners": respaldo, "origen": "patrocinadores"}
+
+
 @router.get("/admin", dependencies=[solo_sponsors])
 async def get_banners_admin(race_code: str, db=Depends(get_db)):
     return await db.ad_banners.find(
