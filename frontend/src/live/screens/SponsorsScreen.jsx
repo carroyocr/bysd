@@ -15,7 +15,7 @@ export default function SponsorsScreen() {
 
   useEffect(() => {
     let cancel = false;
-    getJson(`/api/sponsors/race/${raceCode}`)
+    getJson(`/api/sponsors/race/${raceCode}?destino=app`)
       .then((data) => { if (!cancel) setSponsors(Array.isArray(data) ? data : data.sponsors || []); })
       .catch(() => { if (!cancel) setSponsors([]); });
     return () => { cancel = true; };
