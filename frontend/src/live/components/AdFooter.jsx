@@ -166,8 +166,10 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           Patrocinador
         </span>
 
-        {banners.length > 1 && (
-          <div className={`absolute bottom-1.5 right-3 flex gap-1.5 ${bannerCompleto ? '' : ''}`}>
+        {/* Los puntos de la rotación no van en línea: ahí el banner es un
+            bloque más del contenido y esos puntos lo ensucian. */}
+        {banners.length > 1 && !inline && (
+          <div className="absolute bottom-1.5 right-3 flex gap-1.5">
             {banners.map((b) => (
               <span
                 key={b.id}
