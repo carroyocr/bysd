@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { getJson, formatDuration, formatPace, statusLabel } from '../liveApi';
+import { getJson, formatDuration, formatPace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 
 /**
@@ -54,16 +54,6 @@ function PaceChart({ laps, T }) {
   );
 }
 
-const STATUS_STYLES = {
-  registered: 'bg-sky-500/15 text-sky-400 border border-sky-500/40',
-  active: 'bg-green-500/15 text-green-500 border border-green-500/40',
-  retired: 'bg-red-500/15 text-red-500 border border-red-500/40',
-  dns: 'bg-gray-500/15 text-gray-400 border border-gray-500/40',
-  waitlist: 'bg-amber-500/15 text-amber-500 border border-amber-500/40',
-  winner: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
-  honor: 'bg-[#E77622]/15 text-[#E77622] border border-[#E77622]/50',
-};
-
 /**
  * Sección "Seguimiento" de la ficha: vueltas, kilómetros y ritmo.
  *
@@ -89,37 +79,30 @@ export default function AthleteScreen() {
   // El gráfico necesita las vueltas en orden; la tabla, al revés.
   const vueltasRecientesPrimero = [...laps].reverse();
 
-  const statusText = profile?.status === 'active'
-    ? 'Aún en carrera'
-    : `${statusLabel(profile?.status)}${profile?.status === 'retired' && profile?.retired_at_lap ? ` · vuelta ${profile.retired_at_lap}` : ''}`;
-
   return (
     <>
-          {/* Vueltas y kilómetros como protagonistas + estado */}
-          <div className={`mx-4 rounded-2xl p-5 ${T.card}`}>
-            <div className="flex justify-center mb-4">
-              <span className={`text-[11px] font-extrabold tracking-wider px-3 py-1.5 rounded-full ${STATUS_STYLES[profile.status] || STATUS_STYLES.dns}`}>
-                {statusText.toUpperCase()}
-              </span>
-            </div>
-            <div className="flex items-center justify-center gap-12">
+          {/* Vueltas y kilómetros como protagonistas */}
+          <div className={`mx-4 rounded-2xl p-4 ${T.card}`}>
+            {/* El estado ya se ve arriba, junto al país: aquí ocupaba una fila
+                entera y era lo que dejaba la tarjeta sin sitio para el gráfico. */}
+            <div className="flex items-center justify-center gap-10">
               <div className="text-center">
-                <div className="text-5xl font-extrabold font-mono text-[#E77622] leading-none">
+                <div className="text-[2rem] font-extrabold font-mono text-[#E77622] leading-none">
                   {profile.laps_completed || 0}
                 </div>
-                <div className={`text-[10px] tracking-[0.18em] mt-2 ${T.subtle}`}>VUELTAS</div>
+                <div className={`text-[10px] tracking-[0.18em] mt-1.5 ${T.subtle}`}>VUELTAS</div>
               </div>
-              <div className={`w-px h-14 ${T.divider} border-l`} />
+              <div className={`w-px h-11 ${T.divider} border-l`} />
               <div className="text-center">
-                <div className="text-5xl font-extrabold font-mono leading-none">
+                <div className="text-[2rem] font-extrabold font-mono leading-none">
                   {(profile.total_km || 0).toFixed(1)}
                 </div>
-                <div className={`text-[10px] tracking-[0.18em] mt-2 ${T.subtle}`}>KILÓMETROS</div>
+                <div className={`text-[10px] tracking-[0.18em] mt-1.5 ${T.subtle}`}>KILÓMETROS</div>
               </div>
             </div>
 
             {/* Tabs Gráfico / Vueltas */}
-            <div className={`flex mt-5 border-b ${T.divider}`}>
+            <div className={`flex mt-4 border-b ${T.divider}`}>
               {[{ key: 'grafico', label: 'Gráfico' }, { key: 'vueltas', label: 'Vueltas' }].map(({ key, label }) => (
                 <button
                   key={key}
@@ -135,14 +118,17 @@ export default function AthleteScreen() {
                 entre los botones de sección y la banda de publicidad sin que la
                 pantalla tenga que desplazarse. Lo restado es lo que ocupan la
                 barra superior, el encabezado del corredor, el pie y la propia
-                cabecera de la tarjeta (estado, cifras y pestañas).
+                cabecera de la tarjeta (cifras y pestañas).
                 Sigue siendo el mismo alto en las dos pestañas: la tarjeta no
                 debe dar un salto al cambiar de una a otra, y con muchas vueltas
-                la lista se desplaza aquí dentro. */}
+                la lista se desplaza aquí dentro.
+                Lo restado eran 28rem y se quedaba corto: la tarjeta terminaba
+                metiéndose debajo de la banda de publicidad. Con las cifras más
+                pequeñas y el estado fuera, la cuenta baja a unas 27rem. */}
             <div
               className="mt-3 overflow-y-auto"
               style={{
-                height: 'calc(100dvh - 28rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+                height: 'calc(100dvh - 27.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
                 minHeight: '170px',
                 maxHeight: '360px',
               }}

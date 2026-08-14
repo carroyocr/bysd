@@ -21,6 +21,7 @@ solo_sponsors = Depends(require_permission("sponsors"))
 PUBLIC_FIELDS = {
     "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
     "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
+    "mostrar_marca": 1,
 }
 
 # banner_url: PNG del tamano exacto de la barra (1200x240, proporcion 5:1).
@@ -53,6 +54,9 @@ class BannerCreate(BaseModel):
     start_at: Optional[str] = None   # ISO; vigencia opcional
     end_at: Optional[str] = None
     is_active: bool = True
+    # La nota "Patrocinador" sobre el banner. Se puede quitar cuando la propia
+    # pieza ya deja claro de quien es y la nota solo estorba.
+    mostrar_marca: bool = True
 
 
 class BannerUpdate(BaseModel):
@@ -64,6 +68,7 @@ class BannerUpdate(BaseModel):
     end_at: Optional[str] = None
     is_active: Optional[bool] = None
     order: Optional[int] = None
+    mostrar_marca: Optional[bool] = None
 
 
 class ReorderRequest(BaseModel):
@@ -135,6 +140,7 @@ async def create_banner(data: BannerCreate, db=Depends(get_db)):
         "start_at": data.start_at,
         "end_at": data.end_at,
         "is_active": data.is_active,
+        "mostrar_marca": data.mostrar_marca,
         "order": count,
         "impressions": 0,
         "clicks": 0,

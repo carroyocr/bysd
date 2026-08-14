@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Clock, Route, Cloud, CloudRain, Sun, Loader2 } from 'lucide-react';
+import { Clock, Route, Sigma, Cloud, CloudRain, Sun, Loader2 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
@@ -160,6 +160,15 @@ export default function DashboardScreen() {
         <div className="mt-3">
           <Dato Icono={Clock} etiqueta="Horas acumuladas" valor={horas} unidad="h" T={T} />
           <Dato Icono={Route} etiqueta="Kilómetros" valor={(stats.total_km || 0).toFixed(1)} unidad="km" T={T} />
+          {/* Lo que llevan corrido todos juntos, incluidos los que ya se
+              retiraron: es un número de miles, así que va sin decimales. */}
+          <Dato
+            Icono={Sigma}
+            etiqueta="Suma de todos"
+            valor={Math.round(stats.total_km_all_athletes || 0).toLocaleString('es-DO')}
+            unidad="km"
+            T={T}
+          />
         </div>
 
         {/* Corredores: la barra dice de un vistazo cuántos quedan en pie */}
@@ -191,13 +200,8 @@ export default function DashboardScreen() {
         </div>
       </div>
 
-      {/* El patrocinador va aquí, entre los corredores y el clima */}
-      <div className="py-3">
-        <AdFooter raceCode={raceCode} inline />
-      </div>
-
       {clima && (
-        <div className="px-4 pb-8 flex items-center gap-4">
+        <div className="px-4 pt-6 pb-2 flex items-center gap-4">
           <IconoClima className="w-8 h-8 shrink-0" strokeWidth={1.4} style={{ color: '#8fb4d8' }} />
           <div className="flex-1">
             <p className="text-[14px]">{NOMBRE_CLIMA[condicion] || 'Nublado'}</p>
@@ -213,6 +217,11 @@ export default function DashboardScreen() {
           </div>
         </div>
       )}
+
+      {/* El patrocinador cierra la pantalla, debajo del clima */}
+      <div className="pt-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        <AdFooter raceCode={raceCode} inline />
+      </div>
     </Screen>
   );
 }

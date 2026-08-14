@@ -162,20 +162,19 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           </>
         )}
 
-        <span className={`absolute top-1 right-3 text-[8px] tracking-widest uppercase ${bannerCompleto ? 'text-white/70 drop-shadow' : T.subtle}`}>
-          Patrocinador
-        </span>
-
-        {banners.length > 1 && (
-          <div className={`absolute bottom-1.5 right-3 flex gap-1.5 ${bannerCompleto ? '' : ''}`}>
-            {banners.map((b) => (
-              <span
-                key={b.id}
-                className={`w-1.5 h-1.5 rounded-full ${b.id === ad.id ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
-              />
-            ))}
-          </div>
+        {/* La nota de publicidad va en voz baja: tiene que estar para que se
+            distinga de lo que es contenido de la app, pero sin disputarle el
+            sitio al nombre del patrocinador. Cada banner decide si la lleva:
+            hay piezas que ya dicen de quién son. */}
+        {ad.mostrar_marca !== false && (
+          <span className={`absolute top-1 right-3 text-[7px] tracking-[0.18em] uppercase ${bannerCompleto ? 'text-white/45 drop-shadow' : `${T.subtle} opacity-70`}`}>
+            Patrocinador
+          </span>
         )}
+
+        {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
+            fila de puntos de lado a lado que no dice nada, porque no se puede
+            saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
       </button>
     </Caja>
   );
