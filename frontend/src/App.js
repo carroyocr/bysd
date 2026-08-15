@@ -11,6 +11,7 @@ import CampeonatoPage from './pages/CampeonatoPage';
 import CorredoresPage from './pages/CorredoresPage';
 import VoluntariosPage from './pages/VoluntariosPage';
 import ReglasPage from './pages/ReglasPage';
+import PrivacidadPage from './pages/PrivacidadPage';
 import LogisticaPage from './pages/LogisticaPage';
 import FAQPage from './pages/FAQPage';
 import PatrocinadoresPage from './pages/PatrocinadoresPage';
@@ -76,6 +77,8 @@ export default function App() {
                     <Route path="/corredores" element={<CorredoresPage />} />
                     <Route path="/voluntarios" element={<VoluntariosPage />} />
                     <Route path="/reglas" element={<ReglasPage />} />
+                    {/* Google Play exige que esta URL sea pública y alcanzable sin cuenta */}
+                    <Route path="/privacidad" element={<PrivacidadPage />} />
                     <Route path="/logistica" element={<LogisticaPage />} />
                     {/* Patrocinadores routes - with and without race code */}
                     <Route path="/patrocinadores" element={<PatrocinadoresPage />} />

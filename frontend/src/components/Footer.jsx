@@ -127,6 +127,14 @@ export default function Footer() {
             <p>
               © {currentYear} Backyard Ultra Santo Domingo. Todos los derechos reservados.
             </p>
+            {/* Google Play pide que la política esté enlazada desde el sitio */}
+            <Link
+              to="/privacidad"
+              onClick={handleLinkClick}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Política de Privacidad
+            </Link>
             <div className="hidden sm:flex items-center gap-6">
               <span className="text-xs">Evento sin fines de lucro</span>
               <span className="text-xs">|</span>
