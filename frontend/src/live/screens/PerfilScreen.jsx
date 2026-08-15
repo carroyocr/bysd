@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  User, Eye, EyeOff, LogOut, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
+  User, Eye, EyeOff, Pencil, KeyRound, Trophy, FileText, Image as ImageIcon,
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
@@ -984,18 +984,6 @@ export default function PerfilScreen() {
     } finally {
       setSubmittingReceipt(false);
     }
-  };
-
-  const logout = async () => {
-    cerrarSesionAtleta();
-    // El token guardado en el llavero es esta misma sesión: si se deja, cerrar
-    // sesión no cerraría nada, bastaría la cara para volver a entrar.
-    await desactivarBiometria();
-    setBio((p) => ({ ...p, activada: false }));
-    setAthlete(null);
-    setEditMode(false);
-    setMsg(null);
-    setView('login');
   };
 
   const upd = (field) => (e) => setEditData((p) => ({ ...p, [field]: e.target.value }));
@@ -2173,10 +2161,8 @@ export default function PerfilScreen() {
           </>
         )}
 
-        {/* Cerrar sesión: fuera de las pestañas, para no tener que buscarlo */}
-        <button onClick={logout} className={`w-full flex items-center justify-center gap-2 py-3 text-sm font-bold ${T.muted}`}>
-          <LogOut className="w-4 h-4" /> Cerrar sesión
-        </button>
+        {/* Cerrar sesión vive en el menú lateral, no aquí: se busca desde
+            cualquier pantalla y no solo desde el perfil. */}
       </div>
     </Screen>
   );

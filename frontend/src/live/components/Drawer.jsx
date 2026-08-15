@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, Radio, Info, User, Building2, Settings, Trophy, X, RefreshCcw, ShieldCheck, LogIn,
-  BadgeInfo,
+  LogOut, BadgeInfo,
 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
-import { sesionesAbiertas } from '../sesion';
+import { sesionesAbiertas, cerrarSesion } from '../sesion';
 import { VERSION_CORTA } from '../version';
 
 /**
@@ -57,6 +57,15 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
   if (atleta) accesos.push({ label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') });
   if (staff) accesos.push({ label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') });
 
+  // Salir se hace desde aquí, no desde el perfil: es donde se busca, y desde
+  // cualquier pantalla. Cierra lo que haya abierto y deja la app en el acceso,
+  // que es la primera pantalla de la app.
+  const salir = async () => {
+    onClose();
+    await cerrarSesion();
+    navigate('/live/login', { replace: true });
+  };
+
   const items = [
     { label: 'Inicio', Icon: Home, action: () => go(base) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
@@ -70,7 +79,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     // quién eres. El menú es para seguir la carrera.
     ...(accesos.length === 0
       ? [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]
-      : []),
+      : [{ label: 'Cerrar sesión', Icon: LogOut, action: salir }]),
     { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
   ].filter(Boolean);
 

@@ -13,7 +13,7 @@
 // válido hasta sus 72 horas. Es un cerrojo contra quien coge el aparato, no
 // contra quien se lleve el token; para eso está la biometría, que sí guarda la
 // credencial en el llavero del sistema.
-import { biometriaActiva, ATLETA, STAFF } from './biometria';
+import { biometriaActiva, desactivarBiometria, ATLETA, STAFF } from './biometria';
 
 export const TOKEN_ATLETA = 'athlete_token';
 export const TOKEN_STAFF = 'admin_token';
@@ -53,9 +53,40 @@ export function cerrarSesionStaff() {
 export const hayAtleta = () => !!localStorage.getItem(TOKEN_ATLETA);
 export const hayStaff = () => !!localStorage.getItem(TOKEN_STAFF);
 
+/**
+ * Cierra desde el menú lo que esté abierto, sea el corredor, el staff o los
+ * dos. Apaga también la biometría de cada uno: el token del llavero es esa
+ * misma sesión, y dejarlo haría que cerrar sesión no cerrara nada —bastaría la
+ * cara para volver a entrar.
+ */
+export async function cerrarSesion() {
+  if (hayAtleta()) {
+    cerrarSesionAtleta();
+    await desactivarBiometria(ATLETA);
+  }
+  if (hayStaff()) {
+    cerrarSesionStaff();
+    await desactivarBiometria(STAFF);
+  }
+}
+
 /** Para el menú: qué accesos enseñar. */
 export function sesionesAbiertas() {
   return { atleta: hayAtleta(), staff: hayStaff() };
+}
+
+/**
+ * A dónde va la app al abrirse, pasada la bienvenida.
+ *
+ * Con sesión abierta se entra directo al inicio, igual que el espectador:
+ * preguntar "¿cómo quieres entrar?" a quien ya entró es un paso de más en cada
+ * arranque, y quien abre la app viene a ver la carrera, no su perfil. El
+ * perfil queda a un toque en el menú lateral.
+ *
+ * La pantalla de acceso solo aparece cuando de verdad hay algo que elegir.
+ */
+export function rutaDeEntrada() {
+  return hayAtleta() || hayStaff() ? '/live/carreras' : '/live/login';
 }
 
 export { ATLETA, STAFF };

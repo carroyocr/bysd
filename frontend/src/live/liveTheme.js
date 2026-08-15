@@ -28,10 +28,13 @@ export const THEMES = {
     tableHead: 'text-[#777777] border-b border-[#2a2a2a]',
     tableRow: 'border-b border-[#1e1e1e]',
     actionChip: 'bg-[#1d1d1d] text-[#cccccc]',
-    // Sobre fondo negro una sombra negra no se ve: el relieve se hace con un
-    // halo claro, que es lo unico que destaca contra el negro.
-    barShadow: 'shadow-[0_2px_12px_rgba(255,255,255,0.14)]',
-    footerShadow: 'shadow-[0_-2px_12px_rgba(255,255,255,0.14)]',
+    // Sobre fondo negro una sombra negra no se ve. El halo claro que habia
+    // aqui tampoco servia: contra el negro se leia como una mancha gris, y
+    // sobre la portada de la pantalla de acceso ensuciaba el color. El corte
+    // lo hace ahora una linea fina, que es lo que de verdad separa dos negros,
+    // con una sombra oscura muy suave para dar profundidad.
+    barShadow: 'border-b border-[#262626] shadow-[0_4px_14px_rgba(0,0,0,0.55)]',
+    footerShadow: 'border-t border-[#262626] shadow-[0_-4px_14px_rgba(0,0,0,0.55)]',
   },
   light: {
     name: 'light',
