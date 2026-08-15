@@ -51,7 +51,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
 
   // Cada acceso se muestra solo si su sesión está abierta: el corredor no ve
   // que exista un acceso de staff, y el del staff no ve el del corredor. Van
-  // justo debajo de Inicio, que es lo primero que busca quien ya entró.
+  // justo debajo de Home, que es lo primero que busca quien ya entró.
   const { atleta, staff } = sesionesAbiertas();
   const accesos = [];
   if (atleta) accesos.push({ label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') });
@@ -67,7 +67,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
   };
 
   const items = [
-    { label: 'Inicio', Icon: Home, action: () => go(base) },
+    { label: 'Home', Icon: Home, action: () => go(base) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     ...accesos,
