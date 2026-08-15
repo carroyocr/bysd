@@ -1411,7 +1411,24 @@ async def submit_cheer_message(
     
     # Get active race code
     active_race_code = await get_active_race_code(database)
-    
+
+    # El hilo de animos se cierra un mes despues de la carrera. Se comprueba
+    # aqui y no solo en la pantalla: la app vieja que siga instalada, o
+    # cualquiera que llame al endpoint, tiene que encontrarse la puerta cerrada
+    # igual.
+    from services import races as servicio_carreras
+
+    carrera = await database.race_configurations.find_one({"code": active_race_code}) if active_race_code else None
+    if servicio_carreras.animos_cerrados(carrera):
+        cierre = servicio_carreras.cierre_de_animos(carrera)
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Los mensajes de ánimo de esta carrera se cerraron el "
+                f"{cierre.strftime('%d/%m/%Y')}. Los que ya se enviaron siguen visibles."
+            ),
+        )
+
     # Validate athlete exists - check registrations first, then participants.
     # El bib se guarda como texto con ceros ("017") al inscribirse, pero hay
     # registros viejos con entero: se buscan ambas formas.
@@ -1592,8 +1609,16 @@ async def get_cheer_messages(
             msg["athlete_name"] = f"{athlete['nombre']} {athlete['apellidos']}"
             msg["athlete_nacionalidad"] = athlete.get("nacionalidad", "")
     
+    # Para que la pantalla sepa si todavía se puede escribir sin tener que
+    # intentarlo y comerse el error
+    from services import races as servicio_carreras
+
+    cierre = servicio_carreras.cierre_de_animos(race_config)
+
     return {
         "messages": messages,
+        "animo_abierto": not servicio_carreras.animos_cerrados(race_config),
+        "animo_cierra_el": cierre.isoformat() if cierre else None,
         "pagination": {
             "page": page,
             "limit": limit,

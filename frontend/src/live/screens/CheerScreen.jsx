@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Send, MessageCircle, Loader2, Search, X, Heart } from 'lucide-react';
+import { Send, MessageCircle, Loader2, Search, X, Heart, Lock } from 'lucide-react';
 import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
@@ -33,6 +33,8 @@ export default function CheerScreen() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
+  // null = abierto; una fecha = cerrado desde ese día
+  const [cierre, setCierre] = useState(null);
   // A qué mensajes dio "me gusta" este teléfono. Quien anima no tiene cuenta,
   // así que el propio aparato es el que se acuerda.
   const [misLikes, setMisLikes] = useState(() => {
@@ -65,7 +67,13 @@ export default function CheerScreen() {
   const fetchCheers = useCallback((forBib) => {
     const filtro = forBib ? `&athlete_bib=${forBib}` : '';
     getJson(`/api/race/cheers?limit=30&race_code=${raceCode}${filtro}`)
-      .then((d) => setCheers(d.messages || []))
+      .then((d) => {
+        setCheers(d.messages || []);
+        // Pasado un mes de la carrera el hilo se cierra: los mensajes se
+        // siguen leyendo, pero ya no se escribe.
+        if (d.animo_abierto === false) setCierre(d.animo_cierra_el || '');
+        else setCierre(null);
+      })
       .catch(() => {});
   }, [raceCode]);
 
@@ -144,6 +152,17 @@ export default function CheerScreen() {
           </div>
         )}
 
+        {cierre !== null ? (
+          <div className={`rounded-2xl p-4 mb-5 text-center ${T.card}`}>
+            <Lock className="w-6 h-6 mx-auto mb-2 opacity-60" />
+            <p className="text-sm font-semibold mb-1">Los ánimos de esta carrera están cerrados</p>
+            <p className={`text-xs ${T.muted}`}>
+              Se cerraron un mes después de la llegada
+              {cierre ? ` (${new Date(cierre).toLocaleDateString('es-DO')})` : ''}.
+              Los mensajes enviados siguen aquí.
+            </p>
+          </div>
+        ) : (
         <div className={`rounded-2xl p-4 mb-5 ${T.card}`}>
           {!bibParam && (
             seleccionado ? (
@@ -223,6 +242,7 @@ export default function CheerScreen() {
             Enviar ánimo
           </button>
         </div>
+        )}
 
         <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>
           {bibParam ? 'Mensajes recibidos' : 'Mensajes recientes'}

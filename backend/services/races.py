@@ -199,6 +199,34 @@ def hora_de_llegada(carrera: dict) -> Optional[datetime]:
     return None
 
 
+# Los mensajes de animo son para la carrera, no para siempre: pasado un mes
+# de la llegada, el hilo de cada corredor se cierra y queda como archivo.
+DIAS_DE_ANIMO_TRAS_LA_CARRERA = 30
+
+
+def cierre_de_animos(carrera: dict) -> Optional[datetime]:
+    """Hasta cuando se pueden mandar mensajes de animo a esta carrera.
+
+    Se cuenta desde `finished_at`, la hora que se sella al cerrar la carrera.
+    Si nadie la cerro se cuenta desde la salida, que para esto sirve igual: una
+    backyard dura dias, no un mes, asi que el margen sigue siendo holgado.
+
+    Devuelve None cuando la carrera no tiene ni salida ni fecha: sin reloj no
+    hay plazo que contar y los animos siguen abiertos.
+    """
+    referencia = hora_de_llegada(carrera) or hora_de_salida(carrera)
+    if referencia is None:
+        return None
+    return referencia + timedelta(days=DIAS_DE_ANIMO_TRAS_LA_CARRERA)
+
+
+def animos_cerrados(carrera: dict) -> bool:
+    cierre = cierre_de_animos(carrera)
+    if cierre is None:
+        return False
+    return ahora_en_carrera(carrera) > cierre
+
+
 def vuelta_actual(carrera: dict) -> dict:
     """En que vuelta va la carrera segun el reloj, y cuanto queda de ella.
 
