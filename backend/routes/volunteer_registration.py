@@ -862,6 +862,151 @@ async def get_volunteer_registrations(race_code: Optional[str] = None):
     return {"registrations": registrations, "count": len(registrations)}
 
 
+@admin_router.get("/profiles")
+async def get_volunteer_profiles(race_code: Optional[str] = None):
+    """Estado de la cuenta de cada voluntario, no de su inscripcion.
+
+    Es lo que no se ve en ninguna otra pantalla: quien se apunto como
+    voluntario pero nunca creo su cuenta, y quien la creo pero no llego a
+    ponerse contrasena. Sin esto, el que no puede entrar solo aparece cuando
+    escribe quejandose.
+
+    La cuenta del voluntario es un usuario del panel sin permisos
+    (`admin_users` con username = correo), asi que el estado se cruza por
+    correo. Un mismo correo puede tener un registro por evento; aqui se agrupa
+    por persona, que es como se mira esta pantalla.
+    """
+    from server import db
+
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+
+    registrations = await db.volunteer_registrations.find(
+        {"race_code": race_code},
+        {"_id": 0, "edit_token": 0}
+    ).sort("created_at", -1).to_list(1000)
+
+    correos = list({r.get("email", "").lower() for r in registrations if r.get("email")})
+
+    cuentas = await db.admin_users.find(
+        {"username": {"$in": correos}},
+        {"_id": 0, "username": 1, "password": 1, "permissions": 1}
+    ).to_list(1000)
+    cuenta_por_correo = {c["username"]: c for c in cuentas}
+
+    # Los turnos asignados viven en volunteer_assignments, no en el registro.
+    # Se filtra por carrera: el mismo correo puede haber sido voluntario en
+    # ediciones anteriores y esos turnos no cuentan para esta.
+    asignaciones = await db.volunteer_assignments.find(
+        {"email_asignado": {"$in": correos}, "race_code": race_code},
+        {"_id": 0, "email_asignado": 1}
+    ).to_list(5000)
+    turnos_por_correo = {}
+    for a in asignaciones:
+        correo = (a.get("email_asignado") or "").lower()
+        turnos_por_correo[correo] = turnos_por_correo.get(correo, 0) + 1
+
+    perfiles = {}
+    for r in registrations:
+        correo = (r.get("email") or "").lower()
+        if not correo:
+            continue
+        cuenta = cuenta_por_correo.get(correo)
+        if correo not in perfiles:
+            perfiles[correo] = {
+                "email": correo,
+                "nombre": r.get("nombre", ""),
+                "apellidos": r.get("apellidos", ""),
+                "telefono": r.get("telefono", ""),
+                "ciudad_residencia": r.get("ciudad_residencia", ""),
+                "talla_camiseta": r.get("talla_camiseta", ""),
+                "eventos": [],
+                "tiene_cuenta": cuenta is not None,
+                "tiene_password": bool(cuenta and cuenta.get("password")),
+                # Un voluntario con permisos ya no es solo voluntario: conviene
+                # que se note en la lista.
+                "permisos": (cuenta or {}).get("permissions") or [],
+                "turnos_asignados": turnos_por_correo.get(correo, 0),
+                "created_at": r.get("created_at"),
+            }
+        perfiles[correo]["eventos"].append(r.get("evento") or "carrera")
+
+    resultado = list(perfiles.values())
+    con_cuenta = sum(1 for p in resultado if p["tiene_cuenta"])
+    con_password = sum(1 for p in resultado if p["tiene_password"])
+
+    return {
+        "race_code": race_code,
+        "profiles": resultado,
+        "stats": {
+            "total": len(resultado),
+            "con_cuenta": con_cuenta,
+            "sin_cuenta": len(resultado) - con_cuenta,
+            "con_password": con_password,
+            "sin_password": con_cuenta - con_password,
+        },
+    }
+
+
+class UpdateVolunteerProfile(BaseModel):
+    nombre: Optional[str] = None
+    apellidos: Optional[str] = None
+    telefono: Optional[str] = None
+
+
+@admin_router.put("/profiles/{email}")
+async def update_volunteer_profile(email: str, datos: UpdateVolunteerProfile, race_code: Optional[str] = None):
+    """Corregir los datos basicos del voluntario.
+
+    Se escribe en todos sus registros de la carrera: si esta apuntado en la
+    carrera y en el campeonato, es la misma persona y su nombre no puede
+    quedar bien en uno y mal en el otro.
+    """
+    from server import db
+
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+
+    cambios = {k: v.strip() for k, v in datos.dict().items() if v is not None and v.strip()}
+    if not cambios:
+        raise HTTPException(status_code=400, detail="No se indicó ningún dato para actualizar")
+
+    cambios["updated_at"] = datetime.now(timezone.utc)
+    resultado = await db.volunteer_registrations.update_many(
+        {"email": email.lower(), "race_code": race_code},
+        {"$set": cambios}
+    )
+    if resultado.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+
+    return {"message": "Datos actualizados", "registros_actualizados": resultado.matched_count}
+
+
+@admin_router.post("/profiles/{email}/codigo-password")
+async def enviar_codigo_a_voluntario(email: str):
+    """Mandarle al voluntario el codigo para que se ponga su contrasena.
+
+    No se le pone una contrasena desde el panel a proposito: la elige el
+    voluntario con el codigo que le llega, y asi nadie de la organizacion
+    conoce la clave de otro.
+    """
+    from server import db
+    from routes.staff_account import enviar_codigo_password
+
+    correo = email.lower().strip()
+    registro = await db.volunteer_registrations.find_one({"email": correo})
+    if not registro:
+        raise HTTPException(status_code=404, detail="Voluntario no encontrado")
+
+    enviado = await enviar_codigo_password(db, correo)
+    if not enviado:
+        raise HTTPException(status_code=502, detail="No se pudo enviar el correo con el código")
+
+    return {"message": f"Código enviado a {correo}"}
+
+
 class UpdateEventoRequest(BaseModel):
     evento: str
 

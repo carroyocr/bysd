@@ -93,6 +93,38 @@ async def estado_de_la_cuenta(email: EmailStr, request: Request = None):
 # ==================== CONTRASENA ====================
 
 
+async def enviar_codigo_password(db, email: str) -> bool:
+    """Genera el codigo y lo manda por correo. Devuelve si el correo salio.
+
+    Vive aparte porque lo usan dos sitios: el voluntario que lo pide desde su
+    pantalla de acceso, y el panel cuando alguien del equipo tiene que echarle
+    una mano a un voluntario que no consigue entrar.
+    """
+    codigo = _generar_codigo()
+    await db.volunteer_verification_tokens.delete_many({"email": email})
+    await db.volunteer_verification_tokens.insert_one({
+        "email": email,
+        "code": codigo,
+        "proposito": "password",
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=CODIGO_VALIDO_MINUTOS),
+    })
+    try:
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_general_data,
+        )
+        carrera = await db.race_configurations.find_one({"is_active": True})
+        return bool(await send_email_with_template(
+            db=db,
+            template_id="volunteer_verification_code",
+            to_email=email,
+            data={**build_race_data(carrera), **build_general_data(verification_code=codigo)},
+        ))
+    except Exception as e:
+        logger.error(f"No se pudo enviar el codigo de staff a {email}: {e}")
+        return False
+
+
 @router.post("/password/request-code")
 async def solicitar_codigo(datos: SolicitarCodigo, request: Request = None):
     """Manda un codigo al correo para poder elegir contrasena."""
@@ -107,28 +139,7 @@ async def solicitar_codigo(datos: SolicitarCodigo, request: Request = None):
     # Se responde lo mismo exista o no la cuenta: si no, esto seria una forma
     # comoda de averiguar quien esta apuntado como voluntario.
     if voluntario or usuario:
-        codigo = _generar_codigo()
-        await db.volunteer_verification_tokens.delete_many({"email": email})
-        await db.volunteer_verification_tokens.insert_one({
-            "email": email,
-            "code": codigo,
-            "proposito": "password",
-            "created_at": datetime.now(timezone.utc),
-            "expires_at": datetime.now(timezone.utc) + timedelta(minutes=CODIGO_VALIDO_MINUTOS),
-        })
-        try:
-            from services.template_email_service import (
-                send_email_with_template, build_race_data, build_general_data,
-            )
-            carrera = await db.race_configurations.find_one({"is_active": True})
-            await send_email_with_template(
-                db=db,
-                template_id="volunteer_verification_code",
-                to_email=email,
-                data={**build_race_data(carrera), **build_general_data(verification_code=codigo)},
-            )
-        except Exception as e:
-            logger.error(f"No se pudo enviar el codigo de staff a {email}: {e}")
+        await enviar_codigo_password(db, email)
 
     return {
         "message": "Si ese correo tiene cuenta en el equipo, te enviamos un codigo.",

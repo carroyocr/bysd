@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -477,6 +477,78 @@ export default function VolunteerAssignmentsManagement() {
     setShowConfirmModal(true);
   };
 
+  /* ---------------- Descargar a CSV ---------------- */
+
+  // Una celda de CSV bien formada: el texto libre de los voluntarios trae
+  // comas, comillas y saltos de línea (comentarios, detalle médico), y sin
+  // entrecomillar aquí la fila se parte y el archivo sale corrido.
+  const celdaCSV = (valor) => {
+    const texto = valor === null || valor === undefined ? '' : String(valor);
+    return `"${texto.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+  };
+
+  // Los turnos no viven en el voluntario sino en los slots, así que se arman
+  // aquí en texto legible: "Día 1 · Turno A · Hidratación (3:00 AM - 7:00 AM)"
+  const describirSlot = (slot) => {
+    if (!slot) return '';
+    const dia = getDiaTipoDisplay(slot.dia_tipo).label;
+    const horario = `${formatTime(slot.hora_inicio)} - ${formatTime(slot.hora_fin)}`;
+    return `${dia} · Turno ${slot.turno} · ${slot.puesto} (${horario})`;
+  };
+
+  const exportarCSV = () => {
+    if (filteredVolunteers.length === 0) {
+      toast.error('No hay voluntarios para exportar');
+      return;
+    }
+
+    const cabeceras = [
+      'Nombre', 'Apellidos', 'Email', 'Teléfono', 'Fecha de Nacimiento', 'Sexo',
+      'Nacionalidad', 'Ciudad', 'Evento', 'Talla Camiseta',
+      'Experiencia Voluntariado', 'Detalle Experiencia',
+      'Tipo Sangre', 'Condición Médica', 'Detalle Condición', 'Alergias', 'Detalle Alergias',
+      'Contacto Emergencia', 'Relación', 'Teléfono Emergencia',
+      'Turnos Asignados', 'Detalle Turnos Asignados', 'Turnos de Interés',
+      'Cómo se Enteró', 'Comentarios', 'Fecha de Registro',
+    ];
+
+    const filas = filteredVolunteers.map((v) => {
+      const asignados = availableSlots.filter(s =>
+        s.email_asignado === v.email && (s.evento || 'carrera') === (v.evento || 'carrera')
+      );
+      const interes = (v.slots_interes || [])
+        .map(id => describirSlot(getSlotInfo(id)))
+        .filter(Boolean);
+
+      return [
+        v.nombre, v.apellidos, v.email, v.telefono, v.fecha_nacimiento, v.sexo,
+        v.nacionalidad, v.ciudad_residencia, getEventoLabel(v.evento || 'carrera'),
+        v.talla_camiseta,
+        v.experiencia_voluntariado, v.experiencia_voluntariado_detalle,
+        v.tipo_sangre, v.condicion_medica, v.condicion_medica_detalle,
+        v.alergias, v.alergias_detalle,
+        v.contacto_emergencia_nombre, v.contacto_emergencia_relacion, v.contacto_emergencia_telefono,
+        asignados.length,
+        asignados.map(describirSlot).join(' | '),
+        interes.join(' | '),
+        v.como_se_entero, v.comentarios,
+        v.created_at ? String(v.created_at).slice(0, 10) : '',
+      ];
+    });
+
+    // El BOM es lo que hace que Excel abra los acentos bien
+    const contenido = '﻿' + [cabeceras, ...filas]
+      .map(fila => fila.map(celdaCSV).join(','))
+      .join('\n');
+
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8;' }));
+    enlace.download = `voluntarios-${new Date().toISOString().split('T')[0]}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+    toast.success(`${filteredVolunteers.length} voluntario(s) exportado(s)`);
+  };
+
   // Statistics (scoped to the selected event)
   const totalVolunteers = eventVolunteers.length;
   const totalFormalAssignments = eventSlots.filter(s => s.email_asignado).length;
@@ -559,10 +631,23 @@ export default function VolunteerAssignmentsManagement() {
               <Users className="w-5 h-5" />
               Voluntarios Registrados
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Actualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Baja lo que se está viendo: respeta el evento, el estado y la búsqueda */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportarCSV}
+                disabled={loading || filteredVolunteers.length === 0}
+                data-testid="export-volunteers-csv"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Descargar CSV ({filteredVolunteers.length})
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">

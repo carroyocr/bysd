@@ -107,6 +107,7 @@ TAB_PERMISSION_GROUPS = {
     "athlete-profiles": "athletes", # tab Perfiles
     "seleccionados": "athletes",    # tab Seleccionados
     "assignments": "volunteers",    # tab Voluntarios (asignaciones)
+    "volunteer-profiles": "volunteers",  # tab Perfiles (cuentas de voluntario)
     "shifts": "volunteers",         # tab Turnos
     "email-templates": "emails",    # tab Correos
     "email-composer": "emails",     # tab Enviar Correos

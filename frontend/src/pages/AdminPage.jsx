@@ -18,6 +18,7 @@ import SponsorsManagement from '../components/SponsorsManagement';
 import AdsManagement from '../components/AdsManagement';
 import VolunteerConfigManagement from '../components/VolunteerConfigManagement';
 import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsManagement';
+import VolunteerProfilesManagement from '../components/VolunteerProfilesManagement';
 import FinancesManagement from '../components/FinancesManagement';
 import UserManagement from '../components/UserManagement';
 import EmailTemplatesManagement from '../components/EmailTemplatesManagement';
@@ -54,6 +55,7 @@ const TAB_PERMISSIONS = {
   'finances': ['finances'],
   'volunteers': ['shifts', 'volunteers'],
   'assignments': ['assignments', 'volunteers'],
+  'volunteer-profiles': ['volunteer-profiles', 'volunteers'],
   'sponsors': ['sponsors'],
   'ads': ['ads', 'sponsors'],
   'surveys': ['surveys'],
@@ -105,6 +107,7 @@ const ADMIN_SECTIONS = [
     icon: ClipboardCheck,
     items: [
       { id: 'assignments', label: 'Voluntarios', icon: ClipboardCheck },
+      { id: 'volunteer-profiles', label: 'Perfiles', icon: Users },
       { id: 'volunteers', label: 'Turnos', icon: CalendarClock },
     ],
   },
@@ -169,6 +172,7 @@ const TAB_VIEWS = {
   'seleccionados': () => <SeleccionadosManagement />,
   'tshirt': () => <TshirtManagement />,
   'assignments': () => <VolunteerAssignmentsManagement />,
+  'volunteer-profiles': () => <VolunteerProfilesManagement />,
   'volunteers': () => <VolunteerConfigManagement />,
   'capacitaciones': () => <CapacitacionesManagement />,
   'sponsors': () => <SponsorsManagement />,
