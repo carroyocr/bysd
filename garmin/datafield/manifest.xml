@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!--
+  BYSD Live, campo de datos.
+
+  Se elige desde la propia actividad de carrera y convive con el ritmo y el
+  pulso en la pantalla que el corredor ya lleva abierta. Es el unico sitio
+  donde hay distancia y ritmo, asi que es la casa del margen.
+
+  Va sin emblema a proposito: un campo de datos tiene un presupuesto de
+  memoria mucho menor que una app, y veinte kilobytes de mapa de bits ahi no
+  caben.
+-->
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+    <iq:application
+        id="8ec8f9a67f354756879e98549c1a8c4b"
+        type="datafield"
+        name="@Strings.fieldName"
+        entry="BysdFieldApp"
+        launcherIcon="@Drawables.LauncherIcon"
+        minApiLevel="3.1.0">
+
+        <iq:products>
+            <iq:product id="fenix6"/>
+            <iq:product id="fenix6pro"/>
+            <iq:product id="fenix6s"/>
+            <iq:product id="fenix6spro"/>
+            <iq:product id="fenix6xpro"/>
+            <iq:product id="fenix7"/>
+            <iq:product id="fenix7s"/>
+            <iq:product id="fenix7x"/>
+            <iq:product id="fenix843mm"/>
+            <iq:product id="fenix847mm"/>
+            <iq:product id="epix2"/>
+            <iq:product id="enduro"/>
+            <iq:product id="enduro3"/>
+            <iq:product id="forerunner255"/>
+            <iq:product id="forerunner255s"/>
+            <iq:product id="forerunner265"/>
+            <iq:product id="forerunner265s"/>
+            <iq:product id="forerunner955"/>
+            <iq:product id="forerunner965"/>
+            <iq:product id="instinct2"/>
+            <iq:product id="venu2"/>
+            <iq:product id="venu3"/>
+            <iq:product id="vivoactive4"/>
+            <iq:product id="vivoactive5"/>
+        </iq:products>
+
+        <iq:permissions>
+            <iq:uses-permission id="Communications"/>
+        </iq:permissions>
+
+        <iq:languages>
+            <iq:language>eng</iq:language>
+            <iq:language>spa</iq:language>
+            <iq:language>fre</iq:language>
+            <iq:language>deu</iq:language>
+            <iq:language>ita</iq:language>
+            <iq:language>por</iq:language>
+        </iq:languages>
+
+        <iq:barrelDependencies/>
+    </iq:application>
+</iq:manifest>

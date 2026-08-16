@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<settings>
+    <setting propertyKey="@Properties.bib" title="@Strings.settingBib">
+        <settingConfig type="alphaNumeric" maxLength="4"/>
+    </setting>
+    <!-- Vacio significa "la carrera que el sitio tenga publicada". -->
+    <setting propertyKey="@Properties.raceCode" title="@Strings.settingRace">
+        <settingConfig type="alphaNumeric" maxLength="24"/>
+    </setting>
+    <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.refreshSeconds" title="@Strings.settingRefresh">
+        <settingConfig type="numeric" min="30" max="600"/>
+    </setting>
+</settings>

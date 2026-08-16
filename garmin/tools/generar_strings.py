@@ -20,6 +20,10 @@ from xml.sax.saxutils import escape
 # lo que ve un reloj configurado en un idioma que la app no trae.
 IDIOMAS = ["eng", "spa", "fre", "deu", "ita", "por"]
 
+# Los dos productos comparten cadenas. Los XML son artefactos generados:
+# la tabla de abajo es la unica copia que se edita.
+PROYECTOS = ["app", "datafield"]
+
 # Cuantos caracteres caben comodos en una etiqueta pequena del reloj mas
 # pequeno que soportamos (208 px). Por encima de esto, a probar a mano.
 LARGO_COMODO = 18
@@ -27,6 +31,7 @@ LARGO_COMODO = 18
 TABLA = {
     #                    eng                      spa                   fre                    deu                     ita                    por
     "appName":         ("BYSD Live",              "BYSD Live",          "BYSD Live",           "BYSD Live",            "BYSD Live",           "BYSD Live"),
+    "fieldName":       ("BYSD Live",              "BYSD Live",          "BYSD Live",           "BYSD Live",            "BYSD Live",           "BYSD Live"),
     "lap":             ("Lap",                    "Vuelta",             "Tour",                "Runde",                "Giro",                "Volta"),
     "nextStart":       ("Next start",             "Próxima salida",     "Prochain départ",     "Nächster Start",       "Prossima partenza",   "Próxima partida"),
     "beforeStart":     ("For lap 1",              "Para la vuelta 1",   "Pour le tour 1",      "Für Runde 1",          "Per il giro 1",       "Para a volta 1"),
@@ -54,7 +59,8 @@ TABLA = {
 
 # Las que se dibujan en la esfera. Las de ajustes no cuentan para el aviso de
 # largo porque se leen en el telefono.
-EN_LA_ESFERA = [c for c in TABLA if not c.startswith("setting")]
+EN_LA_ESFERA = [c for c in TABLA
+                if not c.startswith("setting") and c not in ("appName", "fieldName")]
 
 
 def revisar():
@@ -69,6 +75,11 @@ def revisar():
 
 
 def escribir(raiz):
+    for proyecto in PROYECTOS:
+        _escribir_proyecto(os.path.join(raiz, proyecto))
+
+
+def _escribir_proyecto(raiz):
     for i, idioma in enumerate(IDIOMAS):
         carpeta = "resources" if i == 0 else "resources-%s" % idioma
         destino = os.path.join(raiz, carpeta, "strings", "strings.xml")

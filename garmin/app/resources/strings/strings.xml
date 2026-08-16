@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generado por tools/generar_strings.py. No editar a mano.
+     eng. Es tambien el respaldo: lo que ve un reloj configurado en
+     un idioma que la app no trae. -->
+<strings>
+    <string id="appName">BYSD Live</string>
+    <string id="fieldName">BYSD Live</string>
+    <string id="lap">Lap</string>
+    <string id="nextStart">Next start</string>
+    <string id="beforeStart">For lap 1</string>
+    <string id="corral">Corral</string>
+    <string id="toTheLine">To the line</string>
+    <string id="rest">Rest</string>
+    <string id="paceTooSlow">Pace too slow</string>
+    <string id="laps">Laps</string>
+    <string id="stillIn">Still in</string>
+    <string id="of">of</string>
+    <string id="notStarted">Not started</string>
+    <string id="raceClosed">Race closed</string>
+    <string id="syncing">Syncing</string>
+    <string id="noBib">No bib set</string>
+    <string id="settingBib">Bib number</string>
+    <string id="settingRace">Race code</string>
+    <string id="settingCorral">Corral alert</string>
+    <string id="settingRefresh">Refresh (seconds)</string>
+</strings>

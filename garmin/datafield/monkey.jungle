@@ -1,0 +1,11 @@
+# Campo de datos de BYSD Live.
+#
+# Comparte con la app de reloj todo lo que no es pantalla: el reloj local de la
+# carrera, el margen, los formatos y la capa de red. Aqui no hay emblema ni
+# carpetas por tamano de pantalla, porque un campo de datos no dibuja mapas de
+# bits: se le da un rectangulo y escribe numeros en el.
+
+project.manifest = manifest.xml
+
+base.sourcePath = source;../shared/source
+base.resourcePath = resources

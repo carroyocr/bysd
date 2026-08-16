@@ -73,23 +73,56 @@ detalles que no son adorno:
 
 ## Estructura
 
+Son **dos productos de Connect IQ**, porque un `manifest.xml` solo declara un
+tipo de app. Comparten todo lo que no es pantalla.
+
 ```
-manifest.xml            productos, permisos e idiomas
-monkey.jungle           qué carpeta de recursos usa cada familia de relojes
-source/
-  BysdApp.mc            el latido de un segundo: refrescar, avisar, repintar
+shared/source/
   RaceState.mc          el reloj local de la carrera y el margen. La pieza clave
+  Latido.mc             lo que hay que hacer cada segundo: refrescar y avisar
   ApiClient.mc          lo único que sale a la red
   Fmt.mc                formatos, y la única decisión de unidades (km o mi)
-  SplashView.mc         el emblema
-  MainView.mc           las cuatro páginas
-  MainDelegate.mc       botones y gestos
-resources/              inglés, emblema de 240 px, icono, ajustes
-resources-small/        emblema de 196 px (relojes de 208)
-resources-large/        emblema de 380 px (AMOLED grandes)
-resources-<lang>/       una carpeta por idioma
-tools/generar_strings.py  genera todos los strings.xml desde una sola tabla
+
+app/                    la app de reloj
+  manifest.xml          productos, permisos e idiomas
+  monkey.jungle         sourcePath incluye ../shared/source
+  source/
+    BysdApp.mc          el temporizador de un segundo
+    SplashView.mc       el emblema
+    MainView.mc         las cuatro páginas
+    MainDelegate.mc     botones y gestos
+  resources/            inglés, emblema de 240 px, icono, ajustes
+  resources-small/      emblema de 196 px (relojes de 208)
+  resources-large/      emblema de 380 px (AMOLED grandes)
+  resources-<lang>/     una carpeta por idioma
+
+datafield/              el campo de datos, dentro de la actividad
+  manifest.xml
+  monkey.jungle
+  source/
+    BysdFieldApp.mc     la cáscara que el sistema arranca
+    BysdField.mc        mide el hueco y elige el reparto
+  resources*/           sin emblema: ahí no cabe
+
+tools/generar_strings.py  genera los strings.xml de los dos, desde una tabla
 ```
+
+### El campo de datos
+
+Es donde vive de verdad el margen, porque es el único sitio con distancia y
+ritmo: la app de reloj no puede leer la actividad de otro. Y es donde el
+corredor ya está mirando, que vale más que cualquier pantalla que haya que ir
+a buscar.
+
+El tamaño lo decide el corredor al montar su pantalla de actividad, así que no
+hay medidas fijas: se mide el hueco y se elige el reparto — tres líneas si hay
+sitio, dos si hay medio, y solo las dos cifras si cae en una banda estrecha. La
+fuente se escoge midiendo con `getFontHeight`, porque una cifra recortada por
+arriba no se lee. El fondo sale de `getBackgroundColor()`: pintar negro a la
+fuerza dejaría un parche en un reloj con tema claro.
+
+Va sin emblema a propósito. Un campo de datos tiene un presupuesto de memoria
+mucho menor que una app, y veinte kilobytes de mapa de bits ahí no caben.
 
 ## Compilar
 
@@ -98,14 +131,17 @@ tools/generar_strings.py  genera todos los strings.xml desde una sola tabla
    gratis: publicar una app gratuita en la Connect IQ Store no cuesta nada. Los
    100 USD anuales de Garmin son solo para el programa de monetización, que
    aquí no aplica.
-3. Abre esta carpeta y compila:
+3. Abre `app/` o `datafield/` como carpeta de trabajo (son dos proyectos) y
+   compila:
 
 ```
+cd app        # o cd datafield
 monkeyc -f monkey.jungle -o bysd.prg -y <tu-developer-key.der> -d fenix7
 ```
 
 4. Para el simulador, `Ctrl+Shift+P` → *Monkey C: Run App*, o `connectiq` y
-   luego `monkeydo bysd.prg fenix7`.
+   luego `monkeydo bysd.prg fenix7`. El campo de datos no se abre solo: en el
+   simulador hay que empezar una actividad y añadirlo a una pantalla.
 
 Para cargarlo en un reloj de verdad: conéctalo por USB y copia el `.prg` a
 `GARMIN/APPS/` de la unidad que monta.
@@ -165,10 +201,10 @@ cualquier reloj.
   vuelta en curso, y evitaría las dos llamadas actuales. La app ya lee esos dos
   campos si aparecen: en cuanto el backend los publique, deja de usar sus
   valores por defecto sin tocar una línea.
-- **El campo de datos.** La pantalla del margen necesita que haya una actividad
-  grabando, así que su sitio natural es un campo de datos dentro de la
-  actividad. `RaceState` y `Fmt` están escritos para reutilizarse tal cual;
-  ojo con la memoria, que ahí es mucho menor, y con el emblema, que no cabe.
+- **La memoria del campo de datos.** Es el riesgo real de ese producto: el
+  presupuesto es de decenas de kilobytes según el modelo. Si no entra, lo
+  primero que sobra es la capa de red, y el campo pasa a leer el estado que ya
+  trajo la app de reloj.
 - **La lista de productos del `manifest.xml`.** Está puesta a mano y envejece
   con cada modelo nuevo. Conviene rehacerla con el selector de dispositivos de
   la extensión de VS Code, que conoce los del SDK instalado.
