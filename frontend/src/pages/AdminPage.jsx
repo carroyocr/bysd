@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone,
-  Bell, Radio
+  Bell, Radio, Eye
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -31,6 +31,7 @@ import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import PushComposer from '../components/PushComposer';
+import EspectadoresManagement from '../components/EspectadoresManagement';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 // El selector de carrera no va aquí arriba, sino dentro de En Vivo: es lo único
 // que se trabaja sobre una carrera concreta. El resto del panel (inscripciones,
@@ -40,6 +41,8 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
 // siendo las de enero. El proveedor sí envuelve todo el panel, para que Control
 // y Vueltas compartan la carrera elegida.
 import { AdminRaceProvider } from '../contexts/AdminRaceContext';
+import { cerrarSesion } from '../lib/sesion';
+import { token as sesionToken } from '../lib/sesion';
 
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
 // segundo el permiso "sombrilla" histórico de su grupo (sigue valiendo).
@@ -66,6 +69,8 @@ const TAB_PERMISSIONS = {
   'athlete-profiles': ['athlete-profiles', 'athletes'],
   'email-composer': ['email-composer', 'emails'],
   'whatsapp': ['whatsapp', 'emails'],
+  // La lista de espectadores sirve para escribirles: va con comunicaciones.
+  'espectadores': ['espectadores', 'emails'],
   'tshirt': ['tshirt', 'config'],
   'capacitaciones': ['capacitaciones', 'config'],
   'seleccionados': ['seleccionados', 'athletes'],
@@ -129,6 +134,7 @@ const ADMIN_SECTIONS = [
       { id: 'email-composer', label: 'Enviar Correos', icon: Send },
       { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
       { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
+      { id: 'espectadores', label: 'Espectadores', icon: Eye },
       { id: 'prensa', label: 'Prensa', icon: Newspaper },
     ],
   },
@@ -166,6 +172,7 @@ const TAB_VIEWS = {
     />
   ),
   'app-avisos': () => <PushComposer />,
+  'espectadores': () => <EspectadoresManagement />,
   'registrations': () => <PreRegistrationManagement />,
   'athlete-profiles': () => <AthleteProfilesManagement />,
   'results-2026': () => <ClaimedResultsManagement />,
@@ -196,7 +203,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     if (!token) {
       navigate('/admin/login');
     } else {
@@ -271,10 +278,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_username');
-    localStorage.removeItem('admin_is_admin');
-    localStorage.removeItem('admin_permissions');
+    cerrarSesion();
     navigate('/admin/login');
   };
 

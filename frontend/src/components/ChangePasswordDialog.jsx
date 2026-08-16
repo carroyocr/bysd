@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
+import { cerrarSesion } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 const MIN_PASSWORD = 12;
@@ -55,8 +56,7 @@ export default function ChangePasswordDialog() {
         cerrar();
         // La sesión vigente sigue siendo válida hasta que expire, pero forzar
         // el login deja claro que la contraseña nueva es la que manda.
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_username');
+        cerrarSesion();
         window.location.href = '/admin/login';
       } else {
         toast.error(data.detail || 'No se pudo cambiar la contraseña');

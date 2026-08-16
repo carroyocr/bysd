@@ -145,25 +145,43 @@ async def initialize_race_data():
     """Initialize race data: admin user and participants"""
     import bcrypt
     
-    # Create admin user if doesn't exist
-    admin_exists = await db.admin_users.find_one({"username": "admin"})
-    if not admin_exists:
-        # La contrasena inicial ya no esta escrita en el codigo: sale de
-        # ADMIN_INITIAL_PASSWORD y, si no esta definida, se genera una al azar
-        # y se escribe una sola vez en el log de arranque.
-        import secrets
+    # Usuario admin. Antes esto era `find_one` y luego `insert_one`, que no es
+    # atomico: el 17/01/2026 dos workers arrancaron a la vez, los dos vieron que
+    # no existia y los dos lo crearon, con 132 ms de diferencia y con una
+    # contrasena aleatoria distinta cada uno. Quedaron dos documentos `admin` en
+    # produccion, de los que solo uno responde al login —el que Mongo devuelva
+    # primero—, asi que una restauracion o una compactacion podia dejar el panel
+    # sin acceso sin que nadie hubiera tocado nada.
+    #
+    # Con `upsert` + `$setOnInsert` la creacion es una sola operacion atomica:
+    # arranquen los workers que arranquen, el documento se crea una vez. El
+    # indice unico lo deja garantizado tambien contra codigo futuro: el
+    # duplicado que quedo de aquel arranque se limpio el 16/08/2026, asi que
+    # crearlo aqui ya no falla. Ver PLAN_CUENTA_UNICA.md, seccion 10.
+    import secrets
 
-        initial_password = get_env("ADMIN_INITIAL_PASSWORD")
-        generada = initial_password is None
-        if generada:
-            initial_password = secrets.token_urlsafe(12)
+    from services import cuentas as servicio_cuentas
 
-        hashed_password = bcrypt.hashpw(initial_password.encode('utf-8'), bcrypt.gensalt())
-        await db.admin_users.insert_one({
+    await servicio_cuentas.asegurar_indices(db)
+    await db.admin_users.create_index("username", unique=True)
+
+    initial_password = get_env("ADMIN_INITIAL_PASSWORD")
+    generada = initial_password is None
+    if generada:
+        initial_password = secrets.token_urlsafe(12)
+
+    hashed_password = bcrypt.hashpw(initial_password.encode('utf-8'), bcrypt.gensalt())
+    resultado = await db.admin_users.update_one(
+        {"username": "admin"},
+        {"$setOnInsert": {
             "username": "admin",
             "password": hashed_password.decode('utf-8'),
-            "created_at": datetime.now(timezone.utc)
-        })
+            "created_at": datetime.now(timezone.utc),
+        }},
+        upsert=True,
+    )
+
+    if resultado.upserted_id is not None:
         if generada:
             logging.warning(
                 "Usuario 'admin' creado con una contrasena generada al azar: %s "
@@ -395,6 +413,11 @@ app.include_router(qr_scan_router)
 from routes.users import router as users_router, cuenta_router
 app.include_router(users_router)
 app.include_router(cuenta_router)
+
+# Cuentas de espectador (identidad unica). Va en /api/cuentas, en plural, porque
+# /api/cuenta lo ocupa el cambio de contrasena del panel que hay justo arriba.
+from routes.cuentas import router as cuentas_router
+app.include_router(cuentas_router)
 
 # Include email templates routes
 from routes.email_templates import router as email_templates_router

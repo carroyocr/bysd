@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { GraduationCap, Plus, Trash2, Loader2, Users, Download, Calendar, Clock, DollarSign, X, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -32,7 +33,7 @@ export default function CapacitacionesManagement() {
   const [participants, setParticipants] = useState([]);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
   const authHeader = { Authorization: `Bearer ${token}` };
 
   const loadData = useCallback(async () => {

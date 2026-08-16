@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MessageCircle, Send, ArrowLeft, Check } from 'lucide-react';
+import { MessageCircle, Send, ArrowLeft, Check, UserCircle2 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import CuentaAcceso from '../components/CuentaAcceso';
+import { cuentaFetch, cuentaGuardada, cerrarSesionCuenta } from '../lib/cuentaApi';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 export default function EnviarAnimoPage() {
@@ -17,6 +20,11 @@ export default function EnviarAnimoPage() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
   const [fanBadge, setFanBadge] = useState(null);
+  // La cuenta no se pide en la puerta sino aquí, al ir a enviar: leer la
+  // carrera sigue sin costar nada y el correo se pide cuando la persona ya
+  // quiere dejar algo escrito, que es cuando lo da de buena gana.
+  const [cuenta, setCuenta] = useState(() => cuentaGuardada());
+  const [pidiendoCuenta, setPidiendoCuenta] = useState(false);
 
   useEffect(() => {
     loadAthlete();
@@ -58,21 +66,40 @@ export default function EnviarAnimoPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!fanName.trim() || !message.trim()) {
+    if (!message.trim()) {
+      setResult({ type: 'error', text: 'Escribe tu mensaje' });
+      return;
+    }
+    if (!cuenta && !fanName.trim()) {
       setResult({ type: 'error', text: 'Por favor completa todos los campos' });
       return;
     }
 
+    // Sin cuenta se pide aquí, con el mensaje ya escrito: así no se pierde lo
+    // que la persona acaba de teclear y el alta es el último paso, no el
+    // primero. En cuanto termina, el mensaje sale solo.
+    if (!cuenta) {
+      setResult(null);
+      setPidiendoCuenta(true);
+      return;
+    }
+
+    await enviarMensaje();
+  };
+
+  const enviarMensaje = async () => {
     setSending(true);
     setResult(null);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheer`, {
+      const response = await cuentaFetch(`${process.env.REACT_APP_BACKEND_URL}/api/race/cheer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           athlete_bib: bib,
-          fan_name: fanName,
+          // Con cuenta manda el nombre de la cuenta; el servidor lo impone
+          // igualmente, pero enviarlo ya correcto evita un parpadeo raro.
+          fan_name: cuentaGuardada()?.nombre || fanName,
           message: message
         })
       });
@@ -207,19 +234,42 @@ export default function EnviarAnimoPage() {
               <CardContent className="p-6">
                 {/* Fan Name */}
                 <div className="mb-4">
-                  <label className="text-sm font-medium mb-2 block">Tu nombre</label>
-                  <Input
-                    type="text"
-                    placeholder="Tu nombre"
-                    value={fanName}
-                    onChange={(e) => {
-                      setFanName(e.target.value);
-                      clearTimeout(window.badgeTimeout);
-                      window.badgeTimeout = setTimeout(() => loadFanBadge(e.target.value), 500);
-                    }}
-                    maxLength={50}
-                  />
-                  {fanBadge && (
+                  {cuenta ? (
+                    <div className="flex items-center justify-between gap-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <UserCircle2 className="w-5 h-5 text-purple-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">Firmas como {cuenta.nombre}</p>
+                          <Link to="/mi-cuenta" className="text-xs text-purple-700 hover:underline">
+                            Ver mi cuenta
+                          </Link>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { cerrarSesionCuenta(); setCuenta(null); }}
+                      >
+                        Cambiar
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="text-sm font-medium mb-2 block">Tu nombre</label>
+                      <Input
+                        type="text"
+                        placeholder="Tu nombre"
+                        value={fanName}
+                        onChange={(e) => {
+                          setFanName(e.target.value);
+                          clearTimeout(window.badgeTimeout);
+                          window.badgeTimeout = setTimeout(() => loadFanBadge(e.target.value), 500);
+                        }}
+                        maxLength={50}
+                      />
+                    </>
+                  )}
+                  {!cuenta && fanBadge && (
                     <div className="mt-2 p-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{fanBadge.badge.emoji}</span>
@@ -262,7 +312,7 @@ export default function EnviarAnimoPage() {
                 {/* Submit */}
                 <Button
                   onClick={handleSendMessage}
-                  disabled={sending || !fanName.trim() || !message.trim()}
+                  disabled={sending || !message.trim() || (!cuenta && !fanName.trim())}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 mb-4"
                 >
                   <Send className="w-4 h-4 mr-2" />
@@ -289,6 +339,25 @@ export default function EnviarAnimoPage() {
           )}
         </div>
       </div>
+
+      {/* La cuenta se pide con el mensaje ya escrito, y en cuanto está hecha el
+          mensaje sale solo: para quien anima, el alta es un paso intermedio y
+          no un desvío que le haga perder lo que había tecleado. */}
+      <Dialog open={pidiendoCuenta} onOpenChange={setPidiendoCuenta}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Un paso antes de enviarlo</DialogTitle>
+          </DialogHeader>
+          <CuentaAcceso
+            motivo={`Con una cuenta tu mensaje va firmado, puedes seguir a ${athlete?.nombre || 'los corredores'} y te avisamos cuando pase por meta.`}
+            onListo={async (nueva) => {
+              setCuenta(nueva);
+              setPidiendoCuenta(false);
+              await enviarMensaje();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

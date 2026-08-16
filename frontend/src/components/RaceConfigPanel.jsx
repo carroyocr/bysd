@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -67,7 +68,7 @@ export default function RaceConfigPanel() {
     show_volunteer_carrera: false
   });
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const loadData = async () => {
     setLoading(true);

@@ -43,6 +43,11 @@ class RegistroDispositivo(BaseModel):
     # habia forma de mandar un aviso "a los inscritos": el registro solo sabia
     # a quien sigue el telefono, no de quien es.
     athlete_email: Optional[str] = None
+    # Cuenta unica. Sustituye a los dos campos de arriba: tener que llevar
+    # `athlete_email` y `staff_email` en el mismo documento era el sintoma de
+    # que una persona que corre y ademas es voluntaria tenia dos identidades.
+    # Los dos viejos se siguen aceptando hasta que la app deje de mandarlos.
+    account_id: Optional[str] = None
 
 
 class Baja(BaseModel):
@@ -125,6 +130,15 @@ async def registrar_dispositivo(registro: RegistroDispositivo, request: Request)
         campos["staff_email"] = registro.staff_email.strip().lower() or None
     if registro.athlete_email is not None:
         campos["athlete_email"] = registro.athlete_email.strip().lower() or None
+    if registro.account_id is not None:
+        from bson import ObjectId
+
+        try:
+            campos["account_id"] = ObjectId(registro.account_id.strip())
+        except Exception:
+            # Un identificador con mala pinta no vale para tumbar el registro
+            # del telefono: se ignora y el aparato sigue recibiendo lo general.
+            pass
 
     await database.push_devices.update_one(
         {"token": token},
@@ -256,7 +270,7 @@ async def avisar_a_seguidores(
 
 
 class FiltroPush(BaseModel):
-    # 'todos' | 'atletas' | 'staff' | 'seguidores' | 'manual'
+    # 'todos' | 'atletas' | 'staff' | 'espectadores' | 'seguidores' | 'manual'
     audiencia: str
     race_code: Optional[str] = None
     # Solo 'atletas'
@@ -319,10 +333,33 @@ async def _correos_staff(database, filtro: FiltroPush) -> List[str]:
     return [c.strip().lower() for c in correos if isinstance(c, str) and c.strip()]
 
 
+async def _cuentas_espectadoras(database) -> List:
+    """Los `_id` de las cuentas a las que se puede escribir.
+
+    Manda **solo el consentimiento**: tener cuenta no es haber aceptado que le
+    escriban, y esa casilla va aparte del alta a proposito. No se exige tambien
+    correo verificado porque el espectador no verifica —solo se le pide codigo
+    si algun dia pasa a corredor o a equipo—, y exigirlo dejaria este envio sin
+    destinatarios para siempre sin que nada fallara a la vista.
+
+    Esto es para el envio dirigido que escribe una persona desde el panel. El
+    aviso automatico de "el corredor al que sigues acaba de cerrar vuelta" no
+    pasa por aqui: ese es el servicio que la persona pidio al seguirlo, y va por
+    `followed` como siempre.
+    """
+    return await database.accounts.distinct("_id", {"acepta_comunicaciones": True})
+
+
 async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:
     """Dispositivos alcanzados por el filtro, sin repetir token."""
     if filtro.audiencia == "todos":
         query = {"race_code": filtro.race_code} if filtro.race_code else {}
+
+    elif filtro.audiencia == "espectadores":
+        ids = await _cuentas_espectadoras(database)
+        if not ids:
+            return []
+        query = {"account_id": {"$in": ids}}
 
     elif filtro.audiencia == "seguidores":
         formas: List[str] = []
@@ -377,13 +414,15 @@ async def previsualizar_destinatarios(filtro: FiltroPush, _=Depends(_puede_envia
         esperados = len(await _correos_atletas(database, filtro))
     elif filtro.audiencia == "staff":
         esperados = len(await _correos_staff(database, filtro))
+    elif filtro.audiencia == "espectadores":
+        esperados = len(await _cuentas_espectadoras(database))
     elif filtro.audiencia == "manual":
         esperados = len([c for c in filtro.correos if c and c.strip()])
 
     con_app = len({
-        (d.get("athlete_email") or d.get("staff_email"))
+        (d.get("account_id") or d.get("athlete_email") or d.get("staff_email"))
         for d in dispositivos
-        if d.get("athlete_email") or d.get("staff_email")
+        if d.get("account_id") or d.get("athlete_email") or d.get("staff_email")
     })
 
     return {

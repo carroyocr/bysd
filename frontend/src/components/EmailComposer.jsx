@@ -11,6 +11,7 @@ import {
   Newspaper, Handshake
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -77,7 +78,7 @@ export default function EmailComposer() {
   const [templateId, setTemplateId] = useState('');
   const editorRef = useRef(null);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const loadHistory = useCallback(async () => {
     try {
