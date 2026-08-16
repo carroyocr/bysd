@@ -401,14 +401,29 @@ solape es **una sola cuenta con los dos roles**.
 > no encontraba las cuentas de corredores y contaba el solape como cuenta nueva. Un
 > ensayo que da números falsos no vale, así que ahora simula lo ya creado.
 
-**Falta para cerrar la Fase 3** (esto es solo el movimiento de datos):
+**Los endpoints de acceso — hechos (16/08/2026).** `/api/athletes/login` y
+`/api/race/auth/admin-login` leen de `accounts` y, **si ahí no está, caen a las
+colecciones de siempre**. Esa caída es la pieza importante: permite **desplegar el
+código antes de correr la migración**, sin tener que coordinar los dos en el mismo
+minuto. El panel busca por correo **y por `staff_username`**, porque la identidad de
+`admin` no es un correo y sin esa segunda vía la migración lo dejaría fuera de su
+propio panel.
 
-- que `/api/athletes/login` y `/api/race/auth/admin-login` lean de `accounts` y emitan
-  el token nuevo;
-- que el login del panel siga aceptando **usuario** y no solo correo — la cuenta de
-  `admin` tiene `admin` como identidad, que no es un correo;
-- pasar la web al token único;
-- y entonces sí, correr el script en producción con respaldo fresco.
+`emitir_token` lleva `athlete_id` dentro: dieciséis endpoints de `athletes.py` leen ese
+campo, y así ninguno cambia. `get_current_athlete` acepta las dos formas de token.
+
+Comprobado contra el backend local apuntando a la copia de ensayo, **la misma batería
+antes y después de migrar**: el corredor entra y abre su perfil, recibe 403 en el
+panel; `admin` entra por su usuario y conserva `["all"]`; la contraseña mala da 401. Y
+la regla que no podía relajarse de tapadillo: **el corredor sin correo verificado sigue
+sin entrar** (403 y código nuevo), tanto antes como después — hay 13 así en producción.
+
+**Falta para cerrar la Fase 3:**
+
+- pasar la web al token único (`adminApi.js` y las seis pantallas que leen
+  `athlete_token` a mano);
+- correr el script en producción con respaldo fresco;
+- resolver a mano la cuenta del solape.
 
 Script de migración (idempotente, ejecutable en seco):
 

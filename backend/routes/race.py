@@ -55,20 +55,62 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     # autocompletado tampoco perdonaba.
     usuario = (credentials.username or "").strip().lower()
 
+    # Se mira primero en `accounts` y, si ahi no esta, en `admin_users` de
+    # siempre. Esa caida permite desplegar esto **antes** de correr la
+    # migracion: mientras `accounts` este vacia todo sigue igual, y en cuanto el
+    # script pase, cada quien entra por su cuenta sin coordinar el minuto exacto.
+    #
+    # Se busca por correo y tambien por `staff_username` porque la cuenta de
+    # `admin` no tiene correo: su identidad es el usuario. Sin esta segunda via
+    # la migracion dejaria al administrador fuera de su propio panel.
+    from services import cuentas as servicio_cuentas
+
+    cuenta = await database[servicio_cuentas.COLECCION].find_one(
+        {"$or": [{"email": usuario}, {"staff_username": usuario}]}
+    )
+
+    if cuenta:
+        if not servicio_cuentas.verificar_password(credentials.password, cuenta.get("password_hash")):
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        if servicio_cuentas.STAFF not in (cuenta.get("roles") or []):
+            raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
+
+        if servicio_cuentas.es_heredado(cuenta.get("password_hash")):
+            await database[servicio_cuentas.COLECCION].update_one(
+                {"_id": cuenta["_id"]},
+                {"$set": {"password_hash": servicio_cuentas.hash_password(credentials.password)}},
+            )
+
+        await database[servicio_cuentas.COLECCION].update_one(
+            {"_id": cuenta["_id"]}, {"$set": {"last_login_at": datetime.now(timezone.utc)}}
+        )
+
+        # Quien acierta no arrastra los fallos previos
+        rate_limit.olvidar("login", ip)
+
+        permissions = ["all"] if cuenta.get("is_admin") else (cuenta.get("permissions") or [])
+        nombre_usuario = cuenta.get("staff_username") or cuenta["email"]
+        return {
+            "token": servicio_cuentas.emitir_token({**cuenta, "permissions": permissions}),
+            "username": nombre_usuario,
+            "is_admin": bool(cuenta.get("is_admin")),
+            "permissions": permissions,
+        }
+
     # Find admin user
     admin = await database.admin_users.find_one({"username": usuario}, {"_id": 0})
 
     if not admin:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    
+
     # Verify password
     if not bcrypt.checkpw(credentials.password.encode('utf-8'), admin["password"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    
+
     # Get user permissions (admin user has all permissions)
     is_admin = usuario == "admin"
     permissions = admin.get("permissions", [])
-    
+
     # Create JWT token with permissions
     token_data = {
         "username": usuario,
@@ -82,7 +124,7 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     rate_limit.olvidar("login", ip)
 
     return {
-        "token": token, 
+        "token": token,
         "username": usuario,
         "is_admin": is_admin,
         "permissions": permissions if not is_admin else ["all"]

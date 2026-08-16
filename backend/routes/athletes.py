@@ -251,12 +251,22 @@ async def check_email_availability(data: dict):
 
 # Dependency to get current athlete
 async def get_current_athlete(authorization: str = Header(None)):
-    """Extract and verify athlete from Authorization header"""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="No autorizado")
-    
-    token = authorization.replace("Bearer ", "")
-    return verify_athlete_token(token)
+    """El corredor de la cabecera Authorization.
+
+    Acepta las dos formas de token: la de la cuenta unica y la que emitia este
+    mismo router antes, que sigue viva en las sesiones abiertas al desplegar. En
+    ambos casos el payload trae `athlete_id`, que es lo que leen los dieciseis
+    endpoints de este fichero, asi que ninguno de ellos cambia.
+    """
+    from services.auth import require_athlete
+
+    payload = require_athlete(authorization)
+    if not payload.get("athlete_id"):
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta no tiene perfil de corredor",
+        )
+    return payload
 
 
 # ==================== AUTHENTICATION ENDPOINTS ====================
@@ -489,18 +499,83 @@ async def resend_verification_code(data: ForgotPasswordRequest, request: Request
 
 @router.post("/login")
 async def login_athlete(data: AthleteLoginRequest, request: Request = None):
-    """Login athlete"""
+    """Acceso del corredor.
+
+    Mira primero en `accounts` y, si ahi no esta, cae a la coleccion `athletes`
+    de siempre. Esa caida es lo que permite **desplegar este codigo antes de
+    correr la migracion**: mientras `accounts` este vacia todo funciona como
+    hasta ahora, y en cuanto el script pase, cada quien empieza a entrar por su
+    cuenta sin que haya que coordinar despliegue y migracion en el mismo minuto.
+    """
     from server import db as database
+    from services import cuentas as servicio_cuentas
 
     ip = rate_limit.limitar_login(request, data.email)
-    
+
+    cuenta = await servicio_cuentas.autenticar(database, data.email, data.password)
+    if cuenta:
+        if servicio_cuentas.ATLETA not in (cuenta.get("roles") or []):
+            raise HTTPException(
+                status_code=403,
+                detail="Esta cuenta no tiene perfil de corredor",
+            )
+
+        # El corredor sin correo verificado no entra, igual que antes de la
+        # cuenta unica. Hay 13 asi en produccion: dejarlos pasar seria relajar
+        # una regla de acceso de tapadillo, aprovechando una migracion.
+        if not cuenta.get("email_verified"):
+            codigo = generate_verification_code()
+            await database[servicio_cuentas.COLECCION].update_one(
+                {"_id": cuenta["_id"]},
+                {"$set": {
+                    "verification_code": codigo,
+                    "verification_code_expires":
+                        datetime.now(timezone.utc) + timedelta(minutes=CODE_EXPIRATION_MINUTES),
+                    "verification_code_attempts": 0,
+                }},
+            )
+            try:
+                from services.template_email_service import build_race_data, send_email_with_template
+
+                carrera = await database.race_configurations.find_one({"is_active": True})
+                await send_email_with_template(
+                    database, "email_verification", cuenta["email"],
+                    {
+                        **(build_race_data(carrera) if carrera
+                           else {"race_name": "Backyard Ultra Santo Domingo"}),
+                        "nombre": cuenta.get("nombre") or "",
+                        "verification_code": codigo,
+                        "expires_minutes": str(CODE_EXPIRATION_MINUTES),
+                    },
+                )
+            except Exception as e:
+                print(f"Error sending verification email: {e}")
+
+            raise HTTPException(
+                status_code=403,
+                detail="Email no verificado. Te enviamos un nuevo código.",
+            )
+
+        perfil = await database.athletes.find_one({"_id": cuenta.get("athlete_profile_id")}) or {}
+        rate_limit.olvidar("login", ip)
+        return {
+            "success": True,
+            "token": servicio_cuentas.emitir_token(cuenta),
+            "athlete": {
+                "id": str(cuenta.get("athlete_profile_id") or ""),
+                "email": cuenta["email"],
+                "nombre": cuenta.get("nombre") or perfil.get("nombre"),
+                "apellidos": cuenta.get("apellidos") or perfil.get("apellidos"),
+            },
+        }
+
     athlete = await database.athletes.find_one({"email": data.email.lower()})
     if not athlete:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    
+
     if not verify_password(data.password, athlete.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
-    
+
     if not athlete.get("email_verified"):
         # Resend verification code
         verification_code = generate_verification_code()

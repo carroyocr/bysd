@@ -110,6 +110,12 @@ def emitir_token(cuenta: dict) -> str:
     payload = {
         "sub": str(cuenta.get("_id") or ""),
         "email": cuenta.get("email"),
+        # Dieciseis sitios de `routes/athletes.py` leen `payload["athlete_id"]`
+        # para buscar el perfil. La cuenta lo lleva encima para que ninguno de
+        # ellos tenga que cambiar: el token nuevo se comporta como el viejo alli
+        # donde el codigo ya funcionaba.
+        "athlete_id": (str(cuenta["athlete_profile_id"])
+                       if cuenta.get("athlete_profile_id") else None),
         # Se mantiene `username` con el correo porque los routers del panel leen
         # ese campo del token (`staff_account`, `push`). Quitarlo obligaria a
         # tocarlos todos en esta misma fase, que es justo lo que no se quiere.
