@@ -79,18 +79,31 @@ sueltos. Es un solo proyecto, ordenado para que la parte con riesgo caiga la úl
 
 ---
 
-## 3. Las tres restricciones que mandan en el orden
+## 3. Lo que manda en el orden
 
-### 3.1 La app instalada no se puede actualizar de golpe
+### 3.1 La app aún no está publicada — y eso lo cambia casi todo
 
-Una versión nueva tarda semanas en llegar a todos los teléfonos, y hay quien no
-actualiza nunca. Durante meses va a haber apps antiguas llamando a
-`/api/athletes/login` y a `/api/race/auth/admin-login` y esperando **tokens del
-formato viejo, firmados con las claves viejas**.
+La app BYSD Live no está en App Store ni en Play Store: la distribución sigue
+bloqueada por la membresía de Apple sin pagar, y las únicas instalaciones son las de
+prueba. **No hay ninguna app ahí fuera a la que haya que dar compatibilidad.**
 
-Consecuencia dura: los endpoints antiguos siguen vivos y siguen emitiendo tokens
-antiguos hasta que el plan lo diga. Las dependencias del backend tienen que aceptar
-los dos formatos durante toda la transición. Nada de esto es opcional.
+Eso elimina la restricción más pesada que tendría este proyecto en cualquier otro
+momento. En concreto:
+
+- No hace falta mantener vivos los formatos de token antiguos durante meses.
+- No hace falta que `push_devices` siga arrastrando `athlete_email` y `staff_email`.
+- **La app se construye con la cuenta única desde el principio**, en vez de meterle
+  cuentas de espectador encima del modelo de dos tokens para reescribirla después.
+  Esto fusiona dos fases del plan en una.
+- No hay ciclo de revisión de tiendas bloqueando nada.
+
+Lo que sí sigue en producción es **la web**, con corredores y staff reales entrando
+todos los días. Pero la web se despliega entera de una vez: el único coste de cambiar
+el formato de token es que las sesiones abiertas se caen y hay que volver a entrar
+una vez. Molestia de un día, no restricción de meses.
+
+**Esta es la razón de fondo para hacerlo ahora y no después de publicar.** Cada
+semana que la app esté en las tiendas, este mismo trabajo cuesta bastante más.
 
 ### 3.2 Al unificar la firma, la seguridad cambia de sitio
 
@@ -112,10 +125,11 @@ leer el perfil de staff y apuntarse turnos**. La contramedida es que `require_ad
 exija `"staff" in roles`, no solo firma válida — y que haya un test automático que
 lo demuestre. Ese test es la condición de salida de la Fase 3, no un extra.
 
-### 3.3 Producción en vivo, Mundial en octubre
+### 3.3 La web está en producción y el Mundial es en octubre
 
-`main` despliega solo. El Campeonato Mundial es en octubre de 2026. La Fase 3 es la
-única con migración de contraseñas y es la que no debe tocarse cerca de la carrera.
+`main` despliega solo. Hay corredores y staff con cuentas reales y contraseñas reales,
+y el Campeonato Mundial es en octubre de 2026. La migración de contraseñas es la única
+parte que no debe tocarse con la carrera encima.
 
 ---
 
@@ -171,7 +185,7 @@ mantiene el criterio actual de que el panel caduca antes.
 | `athletes` | gana `account_id`. Nada más se toca. |
 | `admin_users` | se mantiene como está durante la transición; los permisos se copian a `accounts`, no se mueven, hasta la Fase 5. |
 | `cheer_messages` | gana `account_id` opcional. `fan_name` se conserva para todo lo histórico. |
-| `push_devices` | gana `account_id`. `athlete_email` y `staff_email` se siguen aceptando y rellenando mientras haya apps viejas. |
+| `push_devices` | `athlete_email` y `staff_email` se sustituyen por `account_id`. Sin app publicada, no hace falta arrastrar los dos campos: se migran los registros existentes y se acabó. |
 
 ---
 
@@ -239,8 +253,10 @@ En `backend/services/auth.py`:
 
 - `require_admin` pasa a exigir `"staff" in roles` además de firma válida;
 - se añade `require_athlete` (`"athlete" in roles`) y `require_cuenta` (cualquier rol);
-- las tres siguen aceptando **también** los tokens heredados de las dos firmas
-  antiguas, traduciéndolos al payload nuevo. Es lo que sostiene la app vieja.
+- las tres aceptan **también** los tokens heredados de las dos firmas antiguas,
+  traduciéndolos al payload nuevo. Sin app publicada, esto ya no es un puente de
+  meses: solo cubre las sesiones web abiertas en el momento del despliegue, que
+  caducan solas en 72 h (atleta) y 12 h (panel). Pasada esa semana se retira.
 
 Tests (condición de salida):
 
@@ -268,24 +284,25 @@ el router nuevo va en `/api/cuentas` o se reordena aquel):
 - `POST /importar-local` — sube `followed`, `fan_name` y likes del teléfono.
 - `DELETE /perfil` — borrado de cuenta.
 
-Cambios en lo existente, todos compatibles hacia atrás:
+Cambios en lo existente:
 
 - `POST /api/race/cheer` acepta token opcional; con token guarda `account_id` y usa
-  el nombre de la cuenta. Sin token sigue funcionando igual que hoy (app vieja).
-- `POST /api/push/register` acepta `account_id` además de los dos correos de siempre.
+  el nombre de la cuenta. Sin token sigue funcionando como hoy, que es lo que
+  mantiene abierto el ánimo anónimo desde la web.
+- `POST /api/push/register` pasa a aceptar `account_id`.
 
-App y web:
+Web (la app se deja para la Fase 4, ver más abajo):
 
-- pantalla de alta y de acceso de espectador;
-- el botón de ánimo pide cuenta si no la hay, con el alta en la misma pantalla;
-- seguir a un corredor sincroniza contra la cuenta si la hay.
+- alta y acceso de espectador;
+- el botón de ánimo pide cuenta si no la hay, con el alta en la misma pantalla.
 
 Panel: una pestaña con el listado de espectadores, cuántos hay, cuántos verificados,
 cuántos con consentimiento — y esos correos disponibles como audiencia en el
 compositor de correo y en el push dirigido de
 [push.py:258](backend/routes/push.py:258).
 
-**Se despliega y se deja correr.** Semanas, no días. Es el rodaje del sistema.
+**Se despliega y se deja correr** mientras se prepara la Fase 3. Es el rodaje del
+sistema de cuentas antes de meterle los usuarios que ya existen.
 
 ---
 
@@ -314,37 +331,56 @@ Si el conteo de la Fase 0 da un solape muy pequeño (menos de ~10 personas), es 
 limpio unificar a mano y avisarles uno a uno. **Esa es la decisión que depende del
 número.**
 
-Endpoints antiguos: siguen funcionando, pero pasan a leer y escribir contra
-`accounts`. `/api/athletes/login` y `/api/race/auth/admin-login` **siguen emitiendo
-tokens del formato viejo** mientras haya apps antiguas.
+Endpoints antiguos: `/api/athletes/login` y `/api/race/auth/admin-login` siguen
+respondiendo (los usa la web), pero pasan a leer contra `accounts` y a emitir el token
+nuevo. La web: `adminApi.js` y las seis pantallas que leen `athlete_token` a mano pasan
+al token único — buen momento para centralizar las llamadas de atleta, que hoy no lo
+están.
+
+Las sesiones web abiertas en ese momento se caen y hay que volver a entrar una vez:
+conviene desplegar a una hora tranquila y avisar al equipo. La app compilada de
+pruebas también deja de funcionar aquí, y no pasa nada — no está en manos de nadie y
+se arregla recompilando en la Fase 4.
 
 ---
 
-### Fase 4 — Un solo acceso en app y web
+### Fase 4 — La app, construida una sola vez sobre el modelo final
 
-- Login único: correo y contraseña, y el backend decide qué se abre según los roles.
-- `sesion.js` pasa de dos tokens a uno (`bysd_token`) y de dos biometrías a una.
+Aquí está el ahorro grande de que la app no esté publicada: en vez de meterle cuentas
+de espectador encima del modelo de dos tokens y reescribirla después, se toca **una
+vez**, ya con el sistema definitivo.
+
+- `sesion.js` pasa de dos tokens a uno (`bysd_token`) y de dos biometrías a una (hoy
+  son dos entradas del llavero, `bysd-live-atleta` y `bysd-live-staff`).
 - La [pantalla de acceso](frontend/src/live/screens/LoginScreen.jsx) deja de preguntar
-  «¿cómo quieres entrar?» y pasa a ofrecer *entrar* o *ver la carrera sin cuenta*.
-  Lo que hoy es elegir rol pasa a ser el menú de después: quien tiene los dos roles ve
-  las dos secciones.
-- La web: `adminApi.js` y las seis pantallas que leen `athlete_token` a mano pasan al
-  token único. Buen momento para centralizar las llamadas de atleta, que hoy no lo
-  están.
-- Versión nueva en App Store y Play Store.
+  «¿cómo quieres entrar?». Pasa a ofrecer *entrar* o *ver la carrera sin cuenta*, y lo
+  que hoy es elegir rol se convierte en el menú de después: quien tiene los dos roles
+  ve las dos secciones.
+- Alta y acceso de espectador dentro de la app, con la subida de `followed`,
+  `fan_name` y likes del `localStorage` a la cuenta.
+- Registro de push contra `account_id`.
+- Compilar con `yarn build:mobile`. **Nunca `yarn build` + `cap copy`**: hornea la URL
+  de `frontend/.env` y deja la app sin backend y sin más error visible que pantallas
+  vacías.
 
 Aquí es donde el voluntario que además corre deja de tener dos cuentas.
 
 ---
 
-### Fase 5 — Retirada
-*Cuando el reparto de versiones de la app diga que las antiguas ya no pesan.*
+### Fase 5 — Limpieza
 
-- Se dejan de emitir tokens heredados; las dependencias dejan de aceptarlos.
+Ya no hay que esperar a que se renueve un parque de apps instaladas: en cuanto la
+Fase 4 esté compilada y probada, esto se puede cerrar.
+
+- Las dependencias dejan de aceptar tokens heredados. Basta una semana desde la
+  Fase 3, cuando hayan caducado las sesiones web que quedaran abiertas.
 - `ATHLETE_SECRET_KEY` desaparece de `auth.py`.
-- `password_hash_legacy` se borra.
+- `password_hash_legacy` se borra al vencer el plazo del solape (ver 6.3).
 - `admin_users` se retira; los permisos viven solo en `accounts`.
-- `athlete_email` y `staff_email` salen de `push_devices`.
+
+**La primera versión de la app que se publique sale ya con la cuenta única.** Nadie
+va a tener nunca instalada una app con el modelo viejo, que es justo el problema que
+este proyecto tendría si se hiciera dentro de seis meses.
 
 ---
 
@@ -365,26 +401,41 @@ Aquí es donde el voluntario que además corre deja de tener dos cuentas.
 4. **El solape de contraseñas** — depende del número de la Fase 0, pero dime si te
    parece bien la vía de «aceptar las dos durante tres meses» frente a avisar a mano.
 
-5. **Calendario.** Ver abajo.
+5. **La puerta de septiembre.** ¿Te vale el criterio de la sección 8 para decidir si
+   la migración de corredores y staff entra antes del Mundial o espera? Es la única
+   decisión del plan que hay que tomar con datos que aún no tenemos.
 
 ---
 
 ## 8. Calendario propuesto
 
-Hoy es 16 de agosto de 2026; el Mundial es en octubre.
+Hoy es 16 de agosto de 2026; el Mundial es en octubre. Con la app sin publicar, todo
+el proyecto cabe antes de la carrera — pero con una puerta de decisión en medio.
 
 | | Cuándo | Por qué ahí |
 |---|---|---|
 | Fase 0 | ya | medio día, sin riesgo |
-| Fase 1 | ya | invisible, no despliega cambios visibles |
-| Fase 2 | ya, en producción antes de septiembre | quieres los correos de espectadores **del Mundial**, que es cuando más tráfico habrá |
-| **Congelación** | de finales de septiembre a después del Mundial | no se toca identidad con la carrera encima |
-| Fase 3 | después del Mundial | es la única con migración de contraseñas |
-| Fase 4 | después de la 3 | tiendas de por medio |
-| Fase 5 | 3-6 meses después de la 4 | cuando las apps viejas ya no pesen |
+| Fase 1 | ya | invisible: no cambia nada de lo que se ve |
+| Fase 2 | en producción antes de septiembre | quieres los correos de espectadores **del Mundial**, que es cuando más público habrá |
+| **Puerta** | primeros de septiembre | ver abajo |
+| Fase 3 | primera quincena de septiembre, si la puerta se pasa | deja 4-6 semanas de margen antes de la carrera |
+| Fase 4 | mientras la 3 asienta | la app no bloquea nada: no está publicada |
+| Fase 5 | una semana después de la 4 | ya no espera a ningún parque de apps |
 
-La Fase 2 llegando antes del Mundial es lo que hace que el proyecto tenga sentido
-este año: es la carrera con más público, y es exactamente el dato que hoy se pierde.
+### La puerta de septiembre
+
+La Fase 3 es la única que toca contraseñas de gente real, y las inscripciones del
+Mundial están vivas justo ahora. Se pasa a la Fase 3 **solo si** se cumple todo:
+
+- la Fase 2 lleva **dos semanas limpias** en producción, con altas reales;
+- el script de migración se ha corrido en seco sobre una copia restaurada del dump y
+  cuadra el número de cuentas;
+- los tests de roles de la Fase 1 pasan en verde;
+- faltan **más de cuatro semanas** para la carrera.
+
+Si alguna falla, la Fase 3 espera a después del Mundial y no pasa nada: la Fase 2 ya
+está entregando lo que más valor tenía este año. Esa condición de «más de cuatro
+semanas» es la que no se negocia sobre la marcha.
 
 ---
 
@@ -394,7 +445,8 @@ este año: es la carrera con más público, y es exactamente el dato que hoy se 
 |---|---|
 | Un token de atleta abre el panel | El role check de la Fase 1 y su test, antes de tocar nada más |
 | Alguien se queda sin poder entrar tras la migración | Doble hash durante tres meses; `mongodump` previo; script idempotente y en seco primero |
-| La app vieja deja de funcionar | Los endpoints y formatos antiguos viven hasta la Fase 5; nada se retira antes |
+| Se caen las sesiones web al desplegar la Fase 3 | Se acepta: es volver a entrar una vez. Desplegar a hora tranquila y avisar al equipo |
+| La app de pruebas deja de funcionar entre la Fase 3 y la 4 | No está publicada; se arregla recompilando. No es un riesgo, es una consecuencia |
 | Correos de espectador mal recogidos legalmente | Privacidad y consentimiento cerrados en la Fase 0, antes de la primera alta |
 | La Fase 3 sale mal | `accounts` es una colección nueva: `athletes` y `admin_users` siguen intactas. La vuelta atrás es desplegar el backend anterior |
 
