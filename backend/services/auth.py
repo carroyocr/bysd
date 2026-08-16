@@ -59,9 +59,19 @@ def _load_secret() -> str:
 
 SECRET_KEY = _load_secret()
 
-# Los tokens de atleta se firman con una clave derivada: asi un token de atleta
-# nunca es valido en el panel de administracion, ni al reves.
+# Los tokens de atleta se firmaban con una clave derivada, de modo que un token
+# de atleta nunca valia en el panel ni al reves. Con la cuenta unica esa
+# separacion desaparece —hay un solo token con roles dentro— y la clave derivada
+# solo sigue viva para leer los tokens que ya estaban emitidos cuando se
+# desplego el cambio. Se retira en cuanto caduquen (72 h). Ver
+# PLAN_CUENTA_UNICA.md, fase 5.
 ATHLETE_SECRET_KEY = SECRET_KEY + "-athletes"
+
+# Los tres roles de una cuenta. Viven aqui, y no en `services.cuentas`, porque
+# ese modulo importa de este: ponerlos alli haria el circulo.
+FAN = "fan"
+ATLETA = "athlete"
+STAFF = "staff"
 
 
 def _extract_bearer(authorization: Optional[str]) -> str:
@@ -84,14 +94,108 @@ def encode_admin_token(payload: dict) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def normalizar_payload(payload: dict) -> dict:
+    """Deja cualquier token en la forma nueva, con `roles`.
+
+    Conviven tres formas mientras caducan las sesiones abiertas al desplegar:
+
+      nuevo    {sub, email, username, roles, permissions, is_admin, ver: 2}
+      panel    {username, is_admin, permissions}          sin `ver`
+      atleta   {athlete_id, email, type: "athlete"}       otra firma
+
+    Las dos heredadas se traducen aqui para que el resto del codigo vea siempre
+    `roles`. Se conservan `username`, `permissions` e `is_admin` tal cual porque
+    los routers del panel leen esos campos del token; cambiarlos obligaria a
+    tocarlos todos a la vez, que es justo lo que no se quiere en esta fase.
+    """
+    if payload.get("ver"):
+        payload.setdefault("roles", [FAN])
+        return payload
+
+    if payload.get("type") == "athlete":
+        # Token de atleta ya emitido. Nunca lleva rol de staff: es lo que impide
+        # que una sesion vieja de corredor se cuele en el panel.
+        return {
+            **payload,
+            "sub": payload.get("athlete_id"),
+            "roles": [FAN, ATLETA],
+            "permissions": [],
+            "is_admin": False,
+        }
+
+    # Token del panel ya emitido.
+    return {
+        **payload,
+        "sub": None,
+        "email": payload.get("username"),
+        "roles": [FAN, STAFF],
+        "permissions": payload.get("permissions") or [],
+        "is_admin": bool(payload.get("is_admin")),
+    }
+
+
+def decodificar(token: str) -> dict:
+    """Valida la firma contra las claves vigentes y normaliza el contenido."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        # Puede ser un token de atleta de los de antes, con la clave derivada.
+        try:
+            payload = jwt.decode(token, ATHLETE_SECRET_KEY, algorithms=[ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expirado")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Token invalido")
+
+    return normalizar_payload(payload)
+
+
+def tiene_rol(payload: dict, rol: str) -> bool:
+    return rol in (payload.get("roles") or [])
+
+
 def verify_admin_token(authorization: Optional[str]) -> dict:
-    """Version llamable a mano, para rutas que reciben el header sueltas."""
-    return decode_admin_token(_extract_bearer(authorization))
+    """Exige un token de alguien del equipo. Llamable a mano.
+
+    Hasta la cuenta unica bastaba con que la firma fuera valida, porque solo el
+    panel se firmaba con esta clave. Ahora el corredor y el espectador tambien
+    llevan token, asi que aqui se comprueba el rol: sin esta linea, cualquiera
+    con cuenta entraria en las rutas que solo piden "token valido" —las cuatro
+    de `/api/staff/mi-perfil`, el cambio de contrasena de `users.py` y las que
+    cuelgan de `race.verify_token`.
+
+    Se mantiene el nombre a proposito: asi todo lo que ya llamaba a esta funcion
+    queda protegido sin tener que tocarlo.
+    """
+    payload = decodificar(_extract_bearer(authorization))
+    if not tiene_rol(payload, STAFF):
+        raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
+    return payload
+
+
+def verify_cuenta_token(authorization: Optional[str]) -> dict:
+    """Cualquier cuenta con sesion abierta, sea del rol que sea."""
+    return decodificar(_extract_bearer(authorization))
 
 
 def require_admin(authorization: Optional[str] = Header(None)) -> dict:
-    """Dependencia FastAPI: exige un token valido del panel."""
+    """Dependencia FastAPI: exige un token de alguien del equipo."""
     return verify_admin_token(authorization)
+
+
+def require_athlete(authorization: Optional[str] = Header(None)) -> dict:
+    """Dependencia FastAPI: exige una cuenta con rol de corredor."""
+    payload = decodificar(_extract_bearer(authorization))
+    if not tiene_rol(payload, ATLETA):
+        raise HTTPException(status_code=403, detail="Necesitas una cuenta de corredor")
+    return payload
+
+
+def require_cuenta(authorization: Optional[str] = Header(None)) -> dict:
+    """Dependencia FastAPI: basta con haber iniciado sesion."""
+    return verify_cuenta_token(authorization)
 
 
 # Permisos por tab del panel. Cada tab tiene su permiso propio; los permisos

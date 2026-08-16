@@ -223,8 +223,29 @@ El envío por correo y el push segmentado solo van a cuentas con
 
 ## 6. Fases
 
-### Fase 0 — Medir y respaldar
+### Fase 0 — Medir y respaldar — **HECHA (16/08/2026)**
 *Sin código. Es lo que decide varias cosas de la Fase 3.*
+
+**Resultados sobre producción** (solo lecturas, `scratchpad/fase0_conteos.py`):
+
+| | |
+|---|---|
+| `athletes` | **246** (246 correos distintos), 13 sin verificar, 0 sin contraseña |
+| `admin_users` | **19 documentos / 18 correos**, todos bcrypt, todos con contraseña |
+| — de ellos voluntarios | 16 marcados `es_voluntario`, 18 sin ningún permiso |
+| **Solape (misma persona, dos cuentas)** | **1** — `carroyo@riesgobancario.com` |
+| `cheer_messages` | **1.625** ánimos, **696** nombres distintos, **0 correos recuperables** |
+| `push_devices` | 21; 10 ligados a un corredor, 0 a staff, **11 sin cuenta** |
+
+Dos lecturas de esos números:
+
+- **La decisión 4 se resuelve sola.** Con **una sola persona** en el solape no hace
+  falta el esquema de doble hash durante tres meses: se unifica a mano y se le avisa.
+  El plan se simplifica y `password_hash_legacy` deja de necesitar plazo.
+- **696 personas han animado y no hay forma de contactar con ninguna.** Ese es el
+  tamaño exacto de lo que hoy se pierde, y la justificación de la Fase 2.
+
+**Hallazgo no buscado: hay dos usuarios `admin` en producción.** Ver sección 10.
 
 1. `mongodump` completo del Atlas.
 2. Contar el solape: cuántos correos están a la vez en `athletes` y en `admin_users`.
@@ -238,8 +259,17 @@ El envío por correo y el push segmentado solo van a cuentas con
 
 ---
 
-### Fase 1 — Infraestructura de cuentas
+### Fase 1 — Infraestructura de cuentas — **HECHA (16/08/2026)**
 *Backend, invisible: nada del sitio cambia.*
+
+Entregado: [`services/cuentas.py`](backend/services/cuentas.py) nuevo,
+[`services/auth.py`](backend/services/auth.py) con los roles, y
+[`tests/test_cuenta_unica.py`](backend/tests/test_cuenta_unica.py) con 24 tests en
+verde. Comprobado además contra el backend local sobre las rutas reales: el panel
+entra igual que siempre, y un token de corredor y uno de espectador reciben 403 en
+las cinco rutas que solo pedían firma válida. Falta por hacer de esta fase: llamar a
+`cuentas.asegurar_indices` en el arranque (va con la Fase 2, que es cuando se escribe
+la primera cuenta).
 
 Nuevo `backend/services/cuentas.py`:
 
@@ -320,16 +350,15 @@ Script de migración (idempotente, ejecutable en seco):
    con sus `permissions`; si no, cuenta nueva con `roles: ["fan","staff"]`.
 3. `cheer_messages` y `push_devices` reciben `account_id` donde el correo case.
 
-**6.3 — El solape de contraseñas.** Quien esté en las dos colecciones tiene dos
-contraseñas distintas en dos algoritmos distintos. Propuesta: la cuenta guarda las
-dos (`password_hash` bcrypt del staff + `password_hash_legacy` PBKDF2 del atleta) y
-el login acepta **cualquiera de las dos** durante un plazo (tres meses). Así nadie se
-queda fuera, nadie recibe un correo raro y la conversión pasa sola: la que se use se
-rehashea a bcrypt y la otra se retira al vencer el plazo.
+**6.3 — El solape de contraseñas — resuelto por la Fase 0.** El conteo dio **una sola
+persona** en las dos colecciones (`carroyo@riesgobancario.com`). No hace falta el
+esquema de doble hash con plazo de tres meses que se había previsto: se unifica esa
+cuenta a mano, se le avisa, y listo.
 
-Si el conteo de la Fase 0 da un solape muy pequeño (menos de ~10 personas), es más
-limpio unificar a mano y avisarles uno a uno. **Esa es la decisión que depende del
-número.**
+Lo que sí se mantiene es la **conversión transparente de PBKDF2 a bcrypt**: los 246
+corredores traen su hash heredado y `cuentas.autenticar` lo reescribe en bcrypt la
+primera vez que cada uno entra con la contraseña correcta. Nadie recibe un correo
+pidiéndole que cambie nada.
 
 Endpoints antiguos: `/api/athletes/login` y `/api/race/auth/admin-login` siguen
 respondiendo (los usa la web), pero pasan a leer contra `accounts` y a emitir el token
@@ -452,3 +481,36 @@ semanas» es la que no se negocia sobre la marcha.
 
 La última fila es el motivo de no mover los perfiles a `accounts`: mientras las
 colecciones viejas sigan enteras, deshacer es un despliegue, no una restauración.
+
+---
+
+## 10. Hallazgo aparte: hay dos usuarios `admin` en producción
+
+Salió midiendo la Fase 0, no se buscaba. **No es parte de este plan pero lo bloquea**,
+porque `accounts.email` va con índice único y la migración fallaría ahí.
+
+En `admin_users` hay **dos documentos con `username: "admin"`**, creados con 132 ms de
+diferencia el 17/01/2026 y con **hashes bcrypt distintos**. La causa está en
+[server.py:149](backend/server.py:149): el arranque hace `find_one` y después
+`insert_one`, sin nada que lo haga atómico. Dos workers arrancaron a la vez, los dos
+vieron que no existía y los dos lo crearon; como `ADMIN_INITIAL_PASSWORD` no estaba
+definida, cada uno generó una contraseña aleatoria distinta.
+
+La misma base local de pruebas tiene también dos: no fue mala suerte de un día.
+
+**Qué pasa hoy:** el login hace `find_one({"username": "admin"})` y Mongo devuelve el
+que encuentra primero. Solo una de las dos contraseñas funciona. No es explotable
+—para entrar hay que saber la contraseña igual—, pero es frágil: si los documentos se
+reordenan (una restauración, una compactación), el acceso de administrador podría
+dejar de funcionar sin que nadie haya tocado nada.
+
+**Arreglo propuesto**, en dos partes:
+
+1. *El dato:* borrar el documento sobrante — el que **no** tiene la contraseña en uso.
+   Es un borrado en producción, así que hace falta tu visto bueno y decidir cuál se
+   queda comprobando antes cuál valida la contraseña que usas.
+2. *El código:* sustituir el `find_one` + `insert_one` por un `update_one` con
+   `upsert=True` y `$setOnInsert`, que es atómico y no puede duplicar aunque arranquen
+   diez workers a la vez. Añadir además índice único en `admin_users.username`.
+
+La parte 2 se puede hacer ya y sola. La parte 1 espera a que digas cuál se borra.
