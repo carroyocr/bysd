@@ -373,8 +373,14 @@ sistema de cuentas antes de meterle los usuarios que ya existen.
 
 ---
 
-### Fase 3 — Migrar corredores y staff — **ENSAYO PASADO (16/08/2026), FALTAN LOS ENDPOINTS**
+### Fase 3 — Migrar corredores y staff — **HECHA Y EN PRODUCCIÓN (16/08/2026)**
 *La fase con riesgo.*
+
+**Ejecutada en producción el 16/08/2026**, con respaldo previo
+(`respaldo-20260816-pre-migracion-cuentas.gz`). Resultado: **263 cuentas** —246
+corredores, 17 del equipo y 1 fusionada—, los 10 dispositivos con correo enlazados, y
+`athletes` (246) y `admin_users` (18) intactas. Los números salieron idénticos a los
+del ensayo.
 
 El script está en
 [`scripts/migrar_a_cuentas.py`](backend/scripts/migrar_a_cuentas.py). Por defecto no
@@ -440,10 +446,9 @@ no encuentra cuenta y no hace nada, que es justo lo que debe pasar.
 Comprobado sobre la copia migrada: se cambia la contraseña, **se entra con la nueva y
 la vieja deja de valer**.
 
-**Falta para cerrar la Fase 3:**
-
-- correr el script en producción con respaldo fresco;
-- resolver a mano la cuenta del solape.
+**Pendiente de la Fase 3, ya no es código:** la cuenta fusionada
+`carroyo@riesgobancario.com` entra al panel con **la contraseña de corredor**; la del
+panel quedó guardada en `password_hash_staff_legacy` sin usarse.
 
 Script de migración (idempotente, ejecutable en seco):
 
