@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 // Google Play exige una URL pública con esta política y que lo que diga aquí
 // cuadre con el formulario de "Seguridad de los datos" de la ficha. Por eso
 // esta página describe lo que el sistema recoge de verdad (los campos de
-// `RegistrationBase` y `AthleteRegisterRequest`, los tokens de
-// `push_devices`, los archivos en GridFS): si mañana se agrega un dato nuevo
-// al formulario de inscripción, hay que actualizar esta página y el
+// `RegistrationBase`, `AthleteRegisterRequest` y la colección `accounts`, los
+// tokens de `push_devices`, los archivos en GridFS): si mañana se agrega un
+// dato nuevo al formulario de inscripción, hay que actualizar esta página y el
 // formulario de Play.
-const ACTUALIZADA = '15 de agosto de 2026';
+const ACTUALIZADA = '16 de agosto de 2026';
 const CORREO = 'backyardultrasantodomingo@gmail.com';
 
 function Seccion({ titulo, children }) {
@@ -52,7 +52,35 @@ export default function PrivacidadPage() {
             </Seccion>
 
             <Seccion titulo="Qué datos recogemos y para qué">
-              <p className="font-medium text-foreground">Cuenta de atleta</p>
+              <p className="font-medium text-foreground">Ver la carrera no pide nada</p>
+              <p>
+                Seguir la carrera en vivo, mirar la lista de corredores, las vueltas, la
+                clasificación, las fotos y los mensajes no requiere cuenta ni registro. Puedes
+                usar el sitio y la app sin decirnos quién eres.
+              </p>
+
+              <p className="font-medium text-foreground pt-2">Cuenta de espectador</p>
+              <p>
+                Si quieres enviar un mensaje de ánimo, seguir a un corredor o recibir avisos
+                cuando pase por meta, te pedimos <strong>correo, nombre y una contraseña</strong>.
+                Nada más. El nombre es el que firma tus mensajes; el correo sirve para
+                identificarte, recuperar tu contraseña y, solo si lo aceptas, enviarte avisos de
+                la carrera. La contraseña se guarda cifrada.
+              </p>
+              <p>
+                Guardamos también <strong>a qué corredores sigues</strong>, para poder avisarte
+                de sus vueltas, y la fecha de tu última entrada. Si quieres, puedes añadir tu
+                país y de qué conoces la carrera: son opcionales, los rellenas después desde tu
+                perfil y puedes dejarlos vacíos o borrarlos cuando quieras.
+              </p>
+              <p>
+                La casilla para recibir avisos por correo va <strong>aparte del registro y sin
+                marcar</strong>: tener cuenta no es haber aceptado que te escribamos. Solo
+                enviamos comunicaciones a quien confirmó su correo <em>y</em> marcó esa casilla,
+                y puedes desmarcarla en cualquier momento desde tu perfil.
+              </p>
+
+              <p className="font-medium text-foreground pt-2">Cuenta de atleta</p>
               <p>
                 Correo electrónico, contraseña, nombre y apellidos, teléfono, fecha de nacimiento,
                 sexo, nacionalidad y ciudad de residencia. Sirven para identificarte, permitirte
@@ -126,6 +154,12 @@ export default function PrivacidadPage() {
                 prensa.
               </p>
               <p>
+                Los mensajes de ánimo son públicos y van firmados con el nombre de quien los
+                escribe: es un hilo abierto que leen los corredores y el resto del público. Del
+                espectador no se publica nada más — ni el correo, ni a quién sigue, ni si tiene
+                cuenta.
+              </p>
+              <p>
                 Nunca se publican tu correo, tu teléfono, tu fecha de nacimiento, tus datos
                 médicos, tu contacto de emergencia ni tus comprobantes de pago.
               </p>
@@ -162,6 +196,14 @@ export default function PrivacidadPage() {
                 Los comprobantes de pago se conservan mientras duren las obligaciones contables de
                 la organización.
               </p>
+              <p>
+                La cuenta de espectador se conserva mientras la mantengas abierta, y puedes
+                borrarla tú desde tu perfil. Al borrarla desaparecen tu correo, tu nombre y la
+                lista de a quién seguías. Los mensajes de ánimo que hubieras escrito se quedan
+                en el hilo público con el nombre con el que los firmaste, porque forman parte de
+                conversaciones de otras personas y borrarlos dejaría huecos; si quieres que
+                retiremos alguno en concreto, escríbenos.
+              </p>
             </Seccion>
 
             <Seccion titulo="Tus derechos">
@@ -170,16 +212,23 @@ export default function PrivacidadPage() {
                 <strong>Mi Perfil</strong>, tanto en el sitio como en la app.
               </p>
               <p>
-                Puedes pedir que borremos tu cuenta y tus datos personales escribiendo a{' '}
+                Si tienes <strong>cuenta de espectador</strong>, puedes borrarla tú mismo desde
+                tu perfil, sin pedírselo a nadie y sin esperar.
+              </p>
+              <p>
+                Si tienes <strong>cuenta de atleta</strong>, pide que borremos tu cuenta y tus
+                datos personales escribiendo a{' '}
                 <a href={`mailto:${CORREO}`} className="text-primary hover:underline">{CORREO}</a>{' '}
-                desde el correo con el que te registraste. Atendemos la solicitud en un plazo
-                razonable. Ten en cuenta que los resultados de las carreras que ya corriste se
-                mantienen como parte del registro histórico del evento.
+                desde el correo con el que te registraste. No es un botón porque detrás hay
+                inscripciones, pagos y resultados que no se pueden deshacer solos. Atendemos la
+                solicitud en un plazo razonable. Ten en cuenta que los resultados de las carreras
+                que ya corriste se mantienen como parte del registro histórico del evento.
               </p>
               <p>
                 También puedes retirar tu consentimiento para las notificaciones (desactivándolas
-                en el teléfono) o para los correos del evento (respondiendo al correo y
-                pidiéndolo).
+                en el teléfono) o para los correos del evento: si tienes cuenta de espectador,
+                desmarcando la casilla en tu perfil; en los demás casos, respondiendo al correo y
+                pidiéndolo.
               </p>
             </Seccion>
 

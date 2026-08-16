@@ -30,6 +30,7 @@ import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
 import MyProfilePage from './pages/MyProfilePage';
+import MiCuentaPage from './pages/MiCuentaPage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import LiveApp from './live/LiveApp';
@@ -104,6 +105,9 @@ export default function App() {
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
                     {/* Athlete Profile + Legacy routes */}
                     <Route path="/mi-perfil" element={<MyProfilePage />} />
+                    {/* Perfil del espectador. Aparte de /mi-perfil, que es el
+                        del corredor, hasta que la fase 3 los una. */}
+                    <Route path="/mi-cuenta" element={<MiCuentaPage />} />
                     <Route path="/pre-registro" element={<MyProfilePage />} />
                     <Route path="/pre-registro/editar" element={<MyProfilePage />} />
                     <Route path="/inscripcion" element={<MyProfilePage />} />

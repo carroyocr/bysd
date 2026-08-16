@@ -326,9 +326,13 @@ escrito, y en cuanto está hecha el mensaje sale solo. Así el alta es un paso
 intermedio y no un desvío que haga perder lo tecleado. Ver la carrera, los corredores
 y los mensajes sigue sin pedir nada.
 
-**Pendiente antes de desplegar esta fase:** el texto nuevo de la
-[política de privacidad](frontend/src/pages/PrivacidadPage.jsx) (Fase 0, punto 5), que
-es condición para la primera alta real.
+La [política de privacidad](frontend/src/pages/PrivacidadPage.jsx) queda actualizada con
+la cuenta de espectador (Fase 0, punto 5), y con ella el perfil
+[`MiCuentaPage.jsx`](frontend/src/pages/MiCuentaPage.jsx) en `/mi-cuenta`: la política
+promete retirar el consentimiento y borrar la cuenta sin escribirle a nadie, así que
+tiene que haber botones que lo hagan. Borrar solo se deja a la cuenta que es *solo* de
+espectador; con rol de corredor o de equipo responde 409, porque detrás hay
+inscripciones, vueltas y turnos que no pueden quedarse sin dueño desde un botón.
 
 Backend, router nuevo `/api/cuenta` (ojo: `/api/cuenta` ya lo usa
 [users.py:25](backend/routes/users.py:25) para el cambio de contraseña del panel —

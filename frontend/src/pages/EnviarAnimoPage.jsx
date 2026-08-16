@@ -240,11 +240,11 @@ export default function EnviarAnimoPage() {
                         <UserCircle2 className="w-5 h-5 text-purple-600 shrink-0" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">Firmas como {cuenta.nombre}</p>
-                          {!cuenta.email_verified && (
-                            <p className="text-xs text-muted-foreground">
-                              Confirma tu correo con el código que te enviamos
-                            </p>
-                          )}
+                          <Link to="/mi-cuenta" className="text-xs text-purple-700 hover:underline">
+                            {cuenta.email_verified
+                              ? 'Ver mi cuenta'
+                              : 'Confirma tu correo con el código que te enviamos'}
+                          </Link>
                         </div>
                       </div>
                       <Button
