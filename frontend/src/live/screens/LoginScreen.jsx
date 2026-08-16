@@ -32,10 +32,13 @@ function IconCorredor({ className, style, strokeWidth = 1.5 }) {
   );
 }
 
+// Espectador entra directo a elegir carrera porque no tiene nada que
+// acreditar. Corredor y staff pasan antes por su login; la carrera se la
+// pregunta la app al terminar de entrar.
 const ROLES = [
-  { rol: ESPECTADOR, Icon: Eye, etiqueta: 'Espectador', destacado: true },
-  { rol: ATLETA, Icon: IconCorredor, etiqueta: 'Corredor' },
-  { rol: STAFF, Icon: ShieldCheck, etiqueta: 'Staff' },
+  { rol: ESPECTADOR, Icon: Eye, etiqueta: 'Espectador', ruta: '/live/carreras', destacado: true },
+  { rol: ATLETA, Icon: IconCorredor, etiqueta: 'Corredor', ruta: '/live/perfil' },
+  { rol: STAFF, Icon: ShieldCheck, etiqueta: 'Staff', ruta: '/live/staff' },
 ];
 
 /**
@@ -79,10 +82,10 @@ export default function LoginScreen() {
     return () => { cancel = true; };
   }, []);
 
-  const elegir = (rol) => {
+  const elegir = (rol, ruta) => {
     clic();
     guardarRol(rol);
-    navigate('/live/carreras');
+    navigate(ruta);
   };
 
   const entrarBio = async (quien) => {
@@ -144,10 +147,10 @@ export default function LoginScreen() {
         {error && <p className="text-xs text-red-400 mt-5">{error}</p>}
 
         <div className="w-full mt-7 flex flex-col gap-3">
-          {ROLES.map(({ rol, Icon, etiqueta, destacado }) => (
+          {ROLES.map(({ rol, Icon, etiqueta, ruta, destacado }) => (
             <button
               key={rol}
-              onClick={() => elegir(rol)}
+              onClick={() => elegir(rol, ruta)}
               data-testid={`rol-${rol}`}
               className={`w-full rounded-full px-5 py-3.5 flex items-center gap-3.5 border
                 transition-all duration-100 ease-out active:scale-[0.985]

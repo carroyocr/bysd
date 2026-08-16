@@ -5,8 +5,9 @@ import {
   HeartPulse, ScanFace, Loader2, Users, UserRound, Check,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
+import { useLiveTheme, THEMES } from '../liveTheme';
 import { Screen } from '../LiveApp';
+import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, STAFF } from '../biometria';
 import { cerrarSesionStaff } from '../sesion';
 import InputClave from '../components/InputClave';
@@ -68,6 +69,7 @@ export default function StaffScreen() {
     if (token) {
       localStorage.setItem('admin_token', token);
       setLogged(true);
+      navigate('/live/carreras');
     } else {
       setError('No se pudo verificar. Entra con tu usuario y contraseña.');
     }
@@ -164,6 +166,7 @@ export default function StaffScreen() {
     }
     setClave({ modo: 'login', email: '', code: '', password: '', password2: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
+    navigate('/live/carreras');
   };
 
   /** El mismo submit sirve para los tres estados del formulario. */
@@ -211,6 +214,8 @@ export default function StaffScreen() {
     }
     setPassword('');
     setLogged(true);
+    // Entró: lo siguiente es qué carrera quiere consultar.
+    navigate('/live/carreras');
   };
 
   const logout = async () => {
@@ -224,28 +229,26 @@ export default function StaffScreen() {
 
   if (!logged) {
     const enVoluntario = clave.modo !== 'login';
+    // Paleta oscura fija: el acceso es nocturno aunque el tema esté claro.
+    const Tacc = THEMES.dark;
 
     return (
-      <Screen title="Staff">
-        <div className="px-4 py-6">
-          <div className={`rounded-2xl px-5 py-6 ${T.card}`}>
-            <div className="flex flex-col items-center mb-5">
-              <span className="w-14 h-14 rounded-full bg-[#E77622]/15 flex items-center justify-center mb-3">
-                <ShieldCheck className="w-7 h-7 text-[#E77622]" />
-              </span>
-              <h2 className="text-lg font-bold">Acceso del staff</h2>
-              <p className={`text-xs mt-1 text-center ${T.muted}`}>
-                {clave.modo === 'login' && 'Usa tus credenciales del panel'}
-                {clave.modo === 'codigo' && 'Te enviamos un código al correo de tu cuenta para que pongas una contraseña nueva'}
-                {clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`}
-              </p>
-            </div>
+      <PantallaAcceso>
+        <TarjetaAcceso
+          Icono={ShieldCheck}
+          titulo="Acceso del staff"
+          subtitulo={
+            (clave.modo === 'login' && 'Usa tus credenciales del panel')
+            || (clave.modo === 'codigo' && 'Te enviamos un código al correo de tu cuenta para que pongas una contraseña nueva')
+            || (clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`)
+          }
+        >
 
             <form onSubmit={enviarFormulario} className="space-y-3">
               {/* Usuario, o correo del voluntario: el mismo hueco cambia de
                   papel para no llenar la pantalla de campos. */}
               <label className="block">
-                <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>
+                <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>
                   {enVoluntario ? 'Tu correo' : 'Usuario'}
                 </span>
                 <input
@@ -258,26 +261,26 @@ export default function StaffScreen() {
                   readOnly={clave.modo === 'definir'}
                   required
                   autoCapitalize="none"
-                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
+                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
                 />
               </label>
 
               {clave.modo === 'definir' && (
                 <>
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Código de 6 dígitos</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Código de 6 dígitos</span>
                     <input
                       inputMode="numeric"
                       value={clave.code}
                       onChange={(e) => setClave((p) => ({ ...p, code: e.target.value }))}
                       required
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input}`}
                     />
                   </label>
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Nueva contraseña (mínimo 8)</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Nueva contraseña (mínimo 8)</span>
                     <InputClave
-                      T={T}
+                      T={Tacc}
                       value={clave.password}
                       onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
                       required
@@ -286,9 +289,9 @@ export default function StaffScreen() {
                   {/* Repetirla: es la unica ocasion en que se escribe a ciegas
                       y no hay forma de recuperarla si sale un dedazo. */}
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Repite la contraseña</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Repite la contraseña</span>
                     <InputClave
-                      T={T}
+                      T={Tacc}
                       value={clave.password2}
                       onChange={(e) => setClave((p) => ({ ...p, password2: e.target.value }))}
                       required
@@ -302,16 +305,16 @@ export default function StaffScreen() {
 
               {clave.modo === 'login' && (
                 <label className="block">
-                  <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Contraseña</span>
+                  <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Contraseña</span>
                   <div className="relative">
                     <input
                       type={showPwd ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input}`}
                     />
-                    <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${Tacc.muted}`} aria-label="Mostrar contraseña">
                       {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -352,7 +355,7 @@ export default function StaffScreen() {
                   type="button"
                   onClick={entrarBiometrico}
                   disabled={bioBusy}
-                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${T.divider}`}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${Tacc.divider}`}
                 >
                   {bioBusy
                     ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -371,14 +374,14 @@ export default function StaffScreen() {
                     <button
                       type="button"
                       onClick={() => cambiarModo('codigo')}
-                      className={`text-xs underline ${T.muted}`}
+                      className={`text-xs underline ${Tacc.muted}`}
                     >
                       Olvidé mi contraseña
                     </button>
                     <button
                       type="button"
                       onClick={() => cambiarModo('codigo')}
-                      className={`text-xs underline ${T.muted}`}
+                      className={`text-xs underline ${Tacc.muted}`}
                     >
                       Soy voluntario y no tengo contraseña
                     </button>
@@ -394,16 +397,15 @@ export default function StaffScreen() {
                   <button
                     type="button"
                     onClick={() => cambiarModo('login')}
-                    className={`text-xs underline ${T.muted}`}
+                    className={`text-xs underline ${Tacc.muted}`}
                   >
                     Ya tengo contraseña, quiero entrar
                   </button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
-      </Screen>
+        </TarjetaAcceso>
+      </PantallaAcceso>
     );
   }
 

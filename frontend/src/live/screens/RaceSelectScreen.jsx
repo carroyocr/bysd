@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, CalendarDays, MapPin, Loader2, Clock } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { API, getJson, raceStartMs, formatCountdown } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
+import { clic } from '../sonido';
 
 const fmtDate = (iso) => {
   if (!iso) return '';
@@ -15,11 +15,21 @@ const fmtDate = (iso) => {
   }
 };
 
+// El mismo haz de luz que la pantalla de acceso y la portada: las tres son
+// el camino de entrada y se leen como una sola pieza.
+const FONDO_NOCTURNO =
+  'radial-gradient(90% 55% at 50% -8%, rgba(231,118,34,.30) 0%, rgba(231,118,34,.06) 45%, transparent 72%),'
+  + 'radial-gradient(70% 45% at 50% 108%, rgba(133,183,235,.10) 0%, transparent 70%),'
+  + '#070707';
+
 /**
- * Capa de selección de carrera: actuales/próximas arriba, pasadas abajo.
+ * Selección de carrera: en curso y próximas arriba, pasadas abajo.
+ *
+ * Segundo paso del camino de entrada, entre elegir quién eres y la portada de
+ * la carrera. Sin barra ni menú, y en el mismo nocturno que las otras dos,
+ * aunque el tema esté en claro.
  */
 export default function RaceSelectScreen() {
-  const { T } = useLiveTheme();
   const navigate = useNavigate();
   const [races, setRaces] = useState(null);
   const [winners, setWinners] = useState({});
@@ -62,69 +72,63 @@ export default function RaceSelectScreen() {
     .filter((r) => !actuales.includes(r))
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  const raceCard = (race) => (
-    <button
-      key={race.code}
-      onClick={() => navigate(`/live/portada/${race.code}`)}
-      className={`w-full flex items-center gap-3.5 rounded-2xl px-4 py-4 mb-3 text-left ${T.card}`}
-    >
-      {race.logo_url ? (
-        <img
-          src={race.logo_url.startsWith('/api') ? `${API}${race.logo_url}` : race.logo_url}
-          alt={race.name}
-          className="w-14 h-14 rounded-xl object-contain bg-white/90 shrink-0"
-        />
-      ) : (
-        <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 ${T.avatar}`}>
-          {race.code?.slice(-2)}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-bold text-[15px] leading-tight">{race.name}</p>
-        </div>
-        <p className={`text-xs mt-1 flex items-center gap-1.5 ${T.muted}`}>
-          <CalendarDays className="w-3.5 h-3.5 shrink-0" /> {fmtDate(race.date)}
-        </p>
-        {race.location && (
-          <p className={`text-xs mt-0.5 flex items-center gap-1.5 truncate ${T.muted}`}>
-            <MapPin className="w-3.5 h-3.5 shrink-0" /> {race.location}
-          </p>
+  const raceCard = (race, apagada = false) => {
+    const salida = raceStartMs(race);
+    const arrancada = salida != null && now >= salida;
+    const enVivo = arrancada && winners[race.code] === false;
+    const faltan = !arrancada && salida != null ? formatCountdown(salida - now) : null;
+
+    return (
+      <button
+        key={race.code}
+        onClick={() => { clic(); navigate(`/live/portada/${race.code}`); }}
+        data-testid={`carrera-${race.code}`}
+        className={`w-full text-left rounded-[20px] px-4 py-4 mb-2.5 flex items-center gap-3.5
+          border bg-white/[0.04] transition-transform duration-100 ease-out active:scale-[0.99]
+          ${enVivo
+            ? 'border-[rgba(74,222,128,0.34)] shadow-[0_0_26px_rgba(74,222,128,0.10)]'
+            : 'border-white/[0.08]'}
+          ${apagada ? 'opacity-60' : ''}`}
+      >
+        {race.logo_url && (
+          <img
+            src={race.logo_url.startsWith('/api') ? `${API}${race.logo_url}` : race.logo_url}
+            alt=""
+            className="w-11 h-11 rounded-full object-contain bg-white/90 shrink-0"
+          />
         )}
-        {(() => {
-          const start = raceStartMs(race);
-          const started = start != null && now >= start;
-          if (started && winners[race.code] === false) {
-            return (
-              <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-extrabold tracking-wider text-green-500">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]" /> EN VIVO
-              </span>
-            );
-          }
-          if (!started && start != null) {
-            return (
-              <span className="inline-flex items-center gap-1.5 mt-1.5 text-[10px] font-bold tracking-wider text-[#E77622]">
-                <Clock className="w-3 h-3" /> INICIA EN {formatCountdown(start - now)}
-              </span>
-            );
-          }
-          return null;
-        })()}
-      </div>
-      <ChevronRight className={`w-5 h-5 shrink-0 ${T.subtle}`} />
-    </button>
-  );
+        <span className="min-w-0 flex-1">
+          <span className="block text-[12.5px] font-medium tracking-[0.06em] leading-snug text-white">
+            {race.name}
+          </span>
+          <span className="block text-[10px] uppercase tracking-[0.1em] text-[#9a9184] mt-1.5">
+            {fmtDate(race.date)}
+            {faltan ? ` · faltan ${faltan}` : ''}
+          </span>
+          {enVivo && (
+            <span className="inline-flex items-center gap-1.5 mt-2 text-[9px] uppercase tracking-[0.2em] text-[#4ADE80]">
+              <span className="w-[5px] h-[5px] rounded-full bg-[#4ADE80] shadow-[0_0_9px_#4ADE80]" />
+              En vivo
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  };
 
   return (
-    <div className={`min-h-[100dvh] ${T.page}`}>
-      <div className="w-full max-w-md mx-auto px-4 pb-8 pt-[calc(2.5rem+env(safe-area-inset-top))]">
-        <h1 className="text-2xl font-extrabold">
-          BYSD <span className="text-[#E77622]">LIVE</span>
-        </h1>
-        <p className={`text-sm mt-1 mb-7 ${T.muted}`}>Elige la carrera que quieres seguir</p>
+    <div
+      className="min-h-[100dvh] text-[#EFE9DD]"
+      style={{ background: FONDO_NOCTURNO, WebkitTapHighlightColor: 'transparent' }}
+    >
+      <div className="w-full max-w-md mx-auto px-7 pb-10 pt-[calc(3rem+env(safe-area-inset-top))]">
+        <p className="text-xs font-light uppercase tracking-[0.16em] text-[#a49c8f]">
+          Elige la carrera
+        </p>
+        <span className="block w-7 h-px bg-white/20 mt-4 mb-7" />
 
         {races === null && (
-          <div className={`flex justify-center py-16 ${T.muted}`}>
+          <div className="flex justify-center py-16 text-[#a49c8f]">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         )}
@@ -133,22 +137,22 @@ export default function RaceSelectScreen() {
           <>
             {actuales.length > 0 && (
               <>
-                <p className={`text-[11px] font-bold tracking-[0.18em] uppercase mb-2.5 ${T.subtle}`}>
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[#6d655a] mb-3">
                   En curso y próximas
                 </p>
-                {actuales.map(raceCard)}
+                {actuales.map((r) => raceCard(r))}
               </>
             )}
             {pasadas.length > 0 && (
               <>
-                <p className={`text-[11px] font-bold tracking-[0.18em] uppercase mt-6 mb-2.5 ${T.subtle}`}>
-                  Carreras pasadas
+                <p className="text-[9px] uppercase tracking-[0.2em] text-[#6d655a] mt-7 mb-3">
+                  Ediciones anteriores
                 </p>
-                {pasadas.map(raceCard)}
+                {pasadas.map((r) => raceCard(r, true))}
               </>
             )}
             {races.length === 0 && (
-              <p className={`text-sm text-center py-16 ${T.muted}`}>No hay carreras disponibles.</p>
+              <p className="text-sm text-center py-16 text-[#a49c8f]">No hay carreras disponibles.</p>
             )}
           </>
         )}
