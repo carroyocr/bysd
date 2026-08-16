@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { getJson, raceStartMs, formatCountdown } from '../liveApi';
 import { clic } from '../sonido';
 import { rolElegido, ESPECTADOR } from '../sesion';
-import { ATLETA, STAFF } from '../biometria';
+
 
 const fechaLarga = (iso) => {
   if (!iso) return '';
@@ -30,8 +30,8 @@ const hora12 = (hhmm) => {
 // la carrera —es a lo que se viene—; corredor y staff llevan además su puerta
 // propia justo debajo.
 const PUERTA_PROPIA = {
-  [ATLETA]: { ruta: '/live/perfil', texto: 'Ir a mi perfil' },
-  [STAFF]: { ruta: '/live/staff', texto: 'Ir al panel del staff' },
+  atleta: { ruta: '/live/perfil', texto: 'Ir a mi perfil' },
+  staff: { ruta: '/live/staff', texto: 'Ir al panel del staff' },
 };
 
 /**

@@ -14,12 +14,12 @@ import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, recordarUsuarioBiometrico } from '../biometria';
 import { registrarAtleta } from '../push';
-import { marcarAccesoAtleta, accesoAtletaCaducado, cerrarSesionAtleta, HORAS_SESION } from '../sesion';
+import { marcarAcceso, accesoCaducado, cerrarSesion, HORAS_SESION, TOKEN } from '../sesion';
 import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
 import Picker from '../components/Picker';
 import DateField from '../components/DateField';
 
-const TOKEN_KEY = 'athlete_token';
+const TOKEN_KEY = TOKEN;
 
 /** "2027-01-23T14:05:00Z" -> "23 ene 2027, 10:05 a. m." (hora de RD). */
 function fechaHora(iso) {
@@ -601,13 +601,13 @@ export default function PerfilScreen() {
         if (cancelado) return;
         if (!guardado) return;                       // canceló: se queda bloqueado
         localStorage.setItem(TOKEN_KEY, guardado);
-        marcarAccesoAtleta();
+        marcarAcceso();
         if (!(await fetchAll()) && !cancelado) await sesionBiometricaCaducada();
         return;
       }
 
-      if (accesoAtletaCaducado()) {
-        cerrarSesionAtleta();
+      if (accesoCaducado()) {
+        cerrarSesion();
         setMsg({ type: 'error', text: `Han pasado más de ${HORAS_SESION} horas. Entra otra vez.` });
         setView('login');
         return;
@@ -625,7 +625,7 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
-      marcarAccesoAtleta();
+      marcarAcceso();
       if (conBio && bio.disponible && !bio.activada) {
         const { ok: okBio } = await activarBiometria(email.trim(), data.token);
         if (okBio) {
@@ -654,7 +654,7 @@ export default function PerfilScreen() {
     setBioBusy(false);
     if (guardado) {
       localStorage.setItem(TOKEN_KEY, guardado);
-      marcarAccesoAtleta();
+      marcarAcceso();
       if (!(await fetchAll())) await sesionBiometricaCaducada();
       else navigate('/live/carreras');
     } else {
@@ -738,7 +738,7 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
-      marcarAccesoAtleta();
+      marcarAcceso();
       await fetchAll();
       navigate('/live/carreras');
     } else {
@@ -1041,7 +1041,7 @@ export default function PerfilScreen() {
               const correo = bio.usuario || email;
               await desactivarBiometria();
               setBio((p) => ({ ...p, activada: false }));
-              cerrarSesionAtleta();
+              cerrarSesion();
               setEmail(correo);
               setView('login');
             }}

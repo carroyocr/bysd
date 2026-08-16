@@ -229,6 +229,11 @@ async def registro(datos: Registro, request: Request = None):
 
 @router.post("/login")
 async def login(datos: Acceso, request: Request = None):
+    """Acceso unico: vale para cualquier cuenta, sea del rol que sea.
+
+    Es la puerta de la app, que ya no pregunta "¿corredor o staff?" antes de
+    saber quien eres. El backend mira los roles y decide que abre.
+    """
     from server import db
 
     ip = rate_limit.limitar_login(request, datos.email.lower())
@@ -236,6 +241,17 @@ async def login(datos: Acceso, request: Request = None):
     cuenta = await cuentas.autenticar(db, datos.email, datos.password)
     if not cuenta:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    # El corredor sin correo verificado no entra, igual que en
+    # `/api/athletes/login`. Sin esta linea, esta puerta seria la forma comoda
+    # de saltarse esa regla. Al espectador no se le pide —no verifica nada— y al
+    # equipo tampoco: sus cuentas vienen de `admin_users`, que nunca guardo esa
+    # marca, y exigirla dejaria fuera a los 18 de golpe.
+    if cuentas.ATLETA in (cuenta.get("roles") or []) and not cuenta.get("email_verified"):
+        raise HTTPException(
+            status_code=403,
+            detail="Tu correo esta sin verificar. Entra desde tu perfil de corredor para recibir un codigo.",
+        )
 
     rate_limit.olvidar("login", ip)
     return _sesion(cuenta)

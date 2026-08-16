@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
-import { sesionesAbiertas, cerrarSesion } from '../sesion';
+import { zonasAbiertas, cerrarSesion } from '../sesion';
 import { VERSION_CORTA } from '../version';
 
 /**
@@ -52,7 +52,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
   // Cada acceso se muestra solo si su sesión está abierta: el corredor no ve
   // que exista un acceso de staff, y el del staff no ve el del corredor. Van
   // justo debajo de Home, que es lo primero que busca quien ya entró.
-  const { atleta, staff } = sesionesAbiertas();
+  const { atleta, staff } = zonasAbiertas();
   const accesos = [];
   if (atleta) accesos.push({ label: 'Perfil del corredor', Icon: User, action: () => go('/live/perfil') });
   if (staff) accesos.push({ label: 'Staff', Icon: ShieldCheck, action: () => go('/live/staff') });

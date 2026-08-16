@@ -8,8 +8,8 @@ import { authJson } from '../liveApi';
 import { useLiveTheme, THEMES } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
-import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, STAFF } from '../biometria';
-import { cerrarSesionStaff } from '../sesion';
+import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
+import { cerrarSesion, guardarSesion, token as tokenSesion } from '../sesion';
 import InputClave from '../components/InputClave';
 
 /**
@@ -21,7 +21,7 @@ export default function StaffScreen() {
   const { T } = useLiveTheme();
   const navigate = useNavigate();
 
-  const [logged, setLogged] = useState(() => !!localStorage.getItem('admin_token'));
+  const [logged, setLogged] = useState(() => !!tokenSesion());
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -35,7 +35,7 @@ export default function StaffScreen() {
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const estado = await estadoBiometria(STAFF);
+      const estado = await estadoBiometria();
       if (cancel) return;
       setBio(estado);
       // Igual que en el perfil del corredor: si luego prefiere la contraseña,
@@ -49,10 +49,10 @@ export default function StaffScreen() {
       setClave((p) => ({ ...p, conBio: estado.disponible && !estado.activada }));
       // Con biometría activada se pide siempre, aunque quede sesión guardada:
       // estas herramientas abren la ficha médica de todos los inscritos.
-      if (estado.activada && !localStorage.getItem('admin_token')) {
-        const token = await entrarConBiometria(STAFF);
+      if (estado.activada && !tokenSesion()) {
+        const token = await entrarConBiometria();
         if (!cancel && token) {
-          localStorage.setItem('admin_token', token);
+          guardarSesion({ token });
           setLogged(true);
         }
       }
@@ -64,10 +64,10 @@ export default function StaffScreen() {
     if (bioBusy) return;
     setBioBusy(true);
     setError('');
-    const token = await entrarConBiometria(STAFF);
+    const token = await entrarConBiometria();
     setBioBusy(false);
     if (token) {
-      localStorage.setItem('admin_token', token);
+      guardarSesion({ token });
       setLogged(true);
       navigate('/live/carreras');
     } else {
@@ -79,11 +79,11 @@ export default function StaffScreen() {
     if (bioBusy) return;
     setBioBusy(true);
     if (bio.activada) {
-      await desactivarBiometria(STAFF);
+      await desactivarBiometria();
       setBio((p) => ({ ...p, activada: false }));
     } else {
       const { ok } = await activarBiometria(
-        localStorage.getItem('admin_username'), localStorage.getItem('admin_token'), STAFF,
+        localStorage.getItem('admin_username'), tokenSesion(),
       );
       if (ok) setBio((p) => ({ ...p, activada: true }));
     }
@@ -155,13 +155,10 @@ export default function StaffScreen() {
       setError(data.detail || 'No se pudo guardar la contraseña');
       return;
     }
-    localStorage.setItem('admin_token', data.token);
-    localStorage.setItem('admin_username', data.username);
-    localStorage.setItem('admin_is_admin', 'false');
-    localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    guardarSesion({ ...data, is_admin: false, permissions: data.permissions || [] });
 
     if (clave.conBio && bio.disponible) {
-      const { ok: okBio } = await activarBiometria(email, data.token, STAFF);
+      const { ok: okBio } = await activarBiometria(email, data.token);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
     setClave({ modo: 'login', email: '', code: '', password: '', password2: '', conBio: false, cargando: false, msg: '' });
@@ -204,12 +201,9 @@ export default function StaffScreen() {
       setError(data.detail || 'Usuario o contraseña incorrectos');
       return;
     }
-    localStorage.setItem('admin_token', data.token);
-    localStorage.setItem('admin_username', data.username);
-    localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
-    localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    guardarSesion({ ...data, permissions: data.permissions || [] });
     if (clave.conBio && bio.disponible && !bio.activada) {
-      const { ok: okBio } = await activarBiometria(username.trim(), data.token, STAFF);
+      const { ok: okBio } = await activarBiometria(username.trim(), data.token);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
     setPassword('');
@@ -219,10 +213,9 @@ export default function StaffScreen() {
   };
 
   const logout = async () => {
-    cerrarSesionStaff();
-    // El token del llavero es esta misma sesión: dejarlo haría que cerrar
-    // sesión no cerrara nada.
-    await desactivarBiometria(STAFF);
+    // `cerrarSesion` apaga también la biometría: el token del llavero es esta
+    // misma sesión, y dejarlo haría que cerrar sesión no cerrara nada.
+    await cerrarSesion();
     setBio((p) => ({ ...p, activada: false }));
     setLogged(false);
   };

@@ -6,6 +6,7 @@ import {
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
+import { token } from '../sesion';
 
 const esSi = (v) => /^s[ií]$/i.test(v || '');
 
@@ -31,7 +32,7 @@ export default function FichaEmergencia({ titulo, endpoint, campoLista, encabeza
   const [abierto, setAbierto] = useState(null);
 
   const cargar = useCallback(async () => {
-    const token = localStorage.getItem('admin_token');
+    const token = token();
     if (!token) { navigate('/live/login'); return; }
     const { ok, status, data } = await authJson('GET', endpoint, { token });
     if (ok) {

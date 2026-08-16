@@ -1,81 +1,158 @@
-// Cuánto dura una sesión abierta dentro de la app.
+// La sesión dentro de la app: una sola.
 //
-// El backend firma el token del atleta para 72 horas, que es lo razonable para
-// la web: se entra desde un ordenador propio y molestar cada rato sobra. En el
-// teléfono el riesgo es otro —se presta, se pierde, se deja en la mesa— así
-// que la app es más estricta que el token:
+// El backend firma el token para 72 horas, que es lo razonable para la web: se
+// entra desde un ordenador propio y molestar cada rato sobra. En el teléfono el
+// riesgo es otro —se presta, se pierde, se deja en la mesa— así que la app es
+// más estricta que el token:
 //
-//   - Con biometría activada se pide la cara o la huella en CADA entrada al
-//     perfil. La sesión puede seguir viva; lo que se protege es el acceso.
+//   - Con biometría activada se pide la cara o la huella en CADA entrada a la
+//     zona con cuenta. La sesión puede seguir viva; lo que se protege es el
+//     acceso.
 //   - Sin biometría, a las 3 horas hay que volver a escribir la contraseña.
 //
 // Esto se decide en el teléfono, no en el servidor: el token sigue siendo
 // válido hasta sus 72 horas. Es un cerrojo contra quien coge el aparato, no
 // contra quien se lleve el token; para eso está la biometría, que sí guarda la
 // credencial en el llavero del sistema.
-import { biometriaActiva, desactivarBiometria, ATLETA, STAFF } from './biometria';
+//
+// Antes había dos tokens —`athlete_token` y `admin_token`— y la app llegó a
+// mantener las dos sesiones abiertas a la vez, con biometría por separado,
+// porque detrás había dos cuentas para una misma persona. Con la cuenta única
+// hay un token con roles dentro, y el backend decide qué abre.
+import { biometriaActiva, desactivarBiometria, limpiarBiometriaHeredada } from './biometria';
 
-export const TOKEN_ATLETA = 'athlete_token';
-export const TOKEN_STAFF = 'admin_token';
+export const TOKEN = 'bysd_token';
 
-const DESDE_ATLETA = 'bysd_live_atleta_desde';
+// Lo que guardaban las versiones anteriores de la app.
+const HEREDADAS = ['athlete_token', 'admin_token'];
+const EXTRAS_STAFF = ['admin_username', 'admin_is_admin', 'admin_permissions'];
+
+const DESDE = 'bysd_live_acceso_desde';
 const HORAS_SIN_BIOMETRIA = 3;
 
 const ahora = () => Date.now();
 
-/** Marca el momento en que se validó la identidad del atleta. */
-export function marcarAccesoAtleta() {
-  localStorage.setItem(DESDE_ATLETA, String(ahora()));
+/**
+ * Adopta la sesión que hubiera de una versión anterior.
+ *
+ * Con las dos abiertas a la vez no se puede elegir por la persona: cada token
+ * abre cosas distintas y quedarse con el que no toca daría errores raros en vez
+ * de una pantalla de acceso. Se limpian y entra una vez; con la cuenta
+ * unificada esto no vuelve a pasar.
+ */
+function adoptarHeredada() {
+  const encontradas = HEREDADAS.map((k) => localStorage.getItem(k)).filter(Boolean);
+  HEREDADAS.forEach((k) => localStorage.removeItem(k));
+
+  if (encontradas.length !== 1) {
+    EXTRAS_STAFF.forEach((k) => localStorage.removeItem(k));
+    return null;
+  }
+  localStorage.setItem(TOKEN, encontradas[0]);
+  return encontradas[0];
+}
+
+export function token() {
+  return localStorage.getItem(TOKEN) || adoptarHeredada();
+}
+
+export const haySesion = () => !!token();
+
+/** Lo que lleva el token dentro, sin comprobar la firma: eso es del backend. */
+function contenido() {
+  const t = token();
+  if (!t) return null;
+  try {
+    return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Qué roles trae la sesión. Es lo que decide qué enseña el menú.
+ *
+ * Se traducen también los tokens de las versiones anteriores, que no llevaban
+ * `roles`: el del corredor traía `type: "athlete"` y el del panel, `username`.
+ */
+export function roles() {
+  const p = contenido();
+  if (!p) return [];
+  if (Array.isArray(p.roles)) return p.roles;
+  if (p.type === 'athlete') return ['fan', 'athlete'];
+  if (p.username) return ['fan', 'staff'];
+  return ['fan'];
+}
+
+/** El id de la cuenta, que es lo que ata este teléfono a su dueño. */
+export function cuentaId() {
+  return contenido()?.sub || null;
+}
+
+export const esCorredor = () => roles().includes('athlete');
+export const esStaff = () => roles().includes('staff');
+
+/** Para el menú: qué zonas con cuenta puede abrir quien entró. */
+export function zonasAbiertas() {
+  return { atleta: esCorredor(), staff: esStaff() };
+}
+
+/** Guarda la sesión que devuelve cualquiera de los endpoints de acceso. */
+export function guardarSesion(datos) {
+  if (!datos?.token) return null;
+  localStorage.setItem(TOKEN, datos.token);
+  if (datos.username !== undefined) localStorage.setItem('admin_username', datos.username);
+  if (datos.is_admin !== undefined) localStorage.setItem('admin_is_admin', String(datos.is_admin));
+  if (datos.permissions !== undefined) {
+    localStorage.setItem('admin_permissions', JSON.stringify(datos.permissions));
+  }
+  marcarAcceso();
+  return datos.token;
+}
+
+/** Marca el momento en que se validó la identidad. */
+export function marcarAcceso() {
+  localStorage.setItem(DESDE, String(ahora()));
 }
 
 /**
  * true si hay que volver a pedir la contraseña por tiempo.
  * Con biometría no aplica: ahí se pide la cara en cada entrada.
  */
-export function accesoAtletaCaducado() {
-  if (!localStorage.getItem(TOKEN_ATLETA)) return false;
-  if (biometriaActiva(ATLETA)) return false;
-  const desde = Number(localStorage.getItem(DESDE_ATLETA) || 0);
+export function accesoCaducado() {
+  if (!token()) return false;
+  if (biometriaActiva()) return false;
+  const desde = Number(localStorage.getItem(DESDE) || 0);
   if (!desde) return true;   // sesión de una versión anterior: que se identifique
   return ahora() - desde > HORAS_SIN_BIOMETRIA * 3600 * 1000;
 }
 
-export function cerrarSesionAtleta() {
-  localStorage.removeItem(TOKEN_ATLETA);
-  localStorage.removeItem(DESDE_ATLETA);
-}
-
-export function cerrarSesionStaff() {
-  ['admin_token', 'admin_username', 'admin_is_admin', 'admin_permissions']
-    .forEach((k) => localStorage.removeItem(k));
-}
-
-export const hayAtleta = () => !!localStorage.getItem(TOKEN_ATLETA);
-export const hayStaff = () => !!localStorage.getItem(TOKEN_STAFF);
-
 /**
- * Cierra desde el menú lo que esté abierto, sea el corredor, el staff o los
- * dos. Apaga también la biometría de cada uno: el token del llavero es esa
- * misma sesión, y dejarlo haría que cerrar sesión no cerrara nada —bastaría la
- * cara para volver a entrar.
+ * Cierra la sesión y apaga la biometría.
+ *
+ * Lo segundo no es un extra: el token del llavero es esa misma sesión, y
+ * dejarlo haría que cerrar sesión no cerrara nada —bastaría la cara para
+ * volver a entrar—.
  */
 export async function cerrarSesion() {
-  if (hayAtleta()) {
-    cerrarSesionAtleta();
-    await desactivarBiometria(ATLETA);
-  }
-  if (hayStaff()) {
-    cerrarSesionStaff();
-    await desactivarBiometria(STAFF);
+  [TOKEN, ...HEREDADAS, ...EXTRAS_STAFF, DESDE].forEach((k) => localStorage.removeItem(k));
+  await desactivarBiometria();
+}
+
+export function permisosStaff() {
+  try {
+    return JSON.parse(localStorage.getItem('admin_permissions')) || [];
+  } catch {
+    return [];
   }
 }
 
 /**
  * Con qué papel entró la persona: corredor, staff o espectador.
  *
- * No es una sesión ni da permisos —la sesión son los tokens de arriba—: es
- * solo el camino que eligió en la primera pantalla, para saber a dónde
- * llevarla cuando ya haya escogido carrera.
+ * No es una sesión ni da permisos —eso son los roles del token—: es solo el
+ * camino que eligió en la primera pantalla, para saber a dónde llevarla cuando
+ * ya haya escogido carrera.
  */
 const ROL_KEY = 'bysd_live_rol';
 export const ESPECTADOR = 'espectador';
@@ -88,11 +165,6 @@ export function rolElegido() {
   try { return localStorage.getItem(ROL_KEY) || ESPECTADOR; } catch { return ESPECTADOR; }
 }
 
-/** Para el menú: qué accesos enseñar. */
-export function sesionesAbiertas() {
-  return { atleta: hayAtleta(), staff: hayStaff() };
-}
-
 /**
  * A dónde va la app al abrirse, pasada la bienvenida.
  *
@@ -100,12 +172,15 @@ export function sesionesAbiertas() {
  * preguntar "¿cómo quieres entrar?" a quien ya entró es un paso de más en cada
  * arranque, y quien abre la app viene a ver la carrera, no su perfil. El
  * perfil queda a un toque en el menú lateral.
- *
- * La pantalla de acceso solo aparece cuando de verdad hay algo que elegir.
  */
 export function rutaDeEntrada() {
-  return hayAtleta() || hayStaff() ? '/live/carreras' : '/live/login';
+  return haySesion() ? '/live/carreras' : '/live/login';
 }
 
-export { ATLETA, STAFF };
+/** Se llama una vez al arrancar la app. */
+export async function migrarSesionHeredada() {
+  token();                          // adopta o limpia lo viejo
+  await limpiarBiometriaHeredada(); // el llavero de cuando había dos accesos
+}
+
 export const HORAS_SESION = HORAS_SIN_BIOMETRIA;

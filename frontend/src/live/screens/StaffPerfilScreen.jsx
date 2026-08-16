@@ -8,6 +8,7 @@ import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { registrarStaff } from '../push';
+import { token } from '../sesion';
 
 // El orden sigue lo que hace el voluntario: primero se ve, luego pide turnos y
 // al final consulta lo que le confirmaron. "Asignados" y no "Turnos", que se
@@ -93,7 +94,7 @@ export default function StaffPerfilScreen() {
   const cargarOferta = useCallback(async (ev) => {
     setOferta(null);
     setPuestoAbierto(null);
-    const token = localStorage.getItem('admin_token');
+    const token = token();
     const { ok, data } = await authJson('GET', `/api/staff/mi-perfil/turnos-disponibles?evento=${ev}`, { token });
     setOferta(ok ? (data.positions || []) : []);
   }, []);
@@ -132,7 +133,7 @@ export default function StaffPerfilScreen() {
     if (!window.confirm(`¿Cancelar el turno de ${turno.puesto}? Quedará libre para otro voluntario.`)) return;
     setSoltando(turno.slot_id);
     setAviso(null);
-    const token = localStorage.getItem('admin_token');
+    const token = token();
     const { ok, data } = await authJson('DELETE', `/api/staff/mi-perfil/turnos/${turno.slot_id}`, { token });
     setSoltando(null);
     if (ok) {
@@ -146,7 +147,7 @@ export default function StaffPerfilScreen() {
   const guardarTurnos = async () => {
     setGuardando(true);
     setAviso(null);
-    const token = localStorage.getItem('admin_token');
+    const token = token();
     const { ok, data } = await authJson('PUT', '/api/staff/mi-perfil/turnos', {
       token, body: { evento, slots_interes: elegidos },
     });
@@ -160,7 +161,7 @@ export default function StaffPerfilScreen() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = token();
     if (!token) { navigate('/live/login'); return; }
     authJson('GET', '/api/staff/mi-perfil', { token })
       .then(({ ok, data }) => {

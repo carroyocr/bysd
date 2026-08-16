@@ -10,6 +10,7 @@
 import { Capacitor } from '@capacitor/core';
 import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 import { API, FOLLOWED_KEY, NOTIF_KEY } from './liveApi';
+import { cuentaId } from './sesion';
 
 const TOKEN_KEY = 'bysd_live_push_token';
 const RACE_KEY = 'bysd_live_push_race';
@@ -36,9 +37,11 @@ async function registrarEnBackend(token, raceCode, staffEmail, atletaEmail) {
     race_code: raceCode || localStorage.getItem(RACE_KEY) || null,
     followed: leerSeguidos(),
   };
-  // Solo se manda cuando se registra desde el acceso de staff: si fuera
-  // siempre, entrar como corredor borraría el vínculo con el voluntario y se
-  // perderían los avisos de turno.
+  // La cuenta es lo que ata el teléfono a su dueño desde la cuenta única. Los
+  // dos correos siguen yendo mientras el backend los acepte: son lo que hace
+  // que un teléfono que aún no ha vuelto a entrar siga siendo alcanzable.
+  const id = cuentaId();
+  if (id) cuerpo.account_id = id;
   if (staffEmail) cuerpo.staff_email = staffEmail;
   if (atletaEmail) cuerpo.athlete_email = atletaEmail;
 

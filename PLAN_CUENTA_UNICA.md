@@ -482,7 +482,7 @@ se arregla recompilando en la Fase 4.
 
 ---
 
-### Fase 4 — La app, construida una sola vez sobre el modelo final
+### Fase 4 — La app, construida una sola vez sobre el modelo final — **HECHA (16/08/2026)**
 
 Aquí está el ahorro grande de que la app no esté publicada: en vez de meterle cuentas
 de espectador encima del modelo de dos tokens y reescribirla después, se toca **una
@@ -502,6 +502,23 @@ vez**, ya con el sistema definitivo.
   vacías.
 
 Aquí es donde el voluntario que además corre deja de tener dos cuentas.
+
+**Lo entregado.** `sesion.js` pasa de dos tokens a uno (`bysd_token`) y lee los roles
+del propio token para decidir qué enseña el menú. `biometria.js` pasa de dos entradas
+del llavero a una; las viejas se borran al arrancar, y **la clave nueva se llama
+distinto a propósito** —reutilizar `bysd_live_biometria` habría dejado la marca de
+"activada" en `on` con el llavero nuevo vacío, y la app pediría la cara para no
+encontrar nada, una y otra vez, sin que nada pareciera roto—.
+
+La pantalla de acceso ya no pregunta "¿cómo entras?" con tres caminos. Ofrece **ver la
+carrera** o **entrar**, y quien entra lo hace una vez contra `/api/cuentas/login`, que
+vale para cualquier rol. Ese endpoint exige lo mismo que el del corredor: **sin correo
+verificado no entra quien tiene rol de corredor**, para que la puerta nueva no fuera la
+forma cómoda de saltarse esa regla. Al espectador no se le pide —no verifica nada— y al
+equipo tampoco, porque sus cuentas vienen de `admin_users`, que nunca guardó esa marca.
+
+El registro de push manda ya `account_id`. Compilado con `yarn build:mobile`: web con
+la URL de producción horneada, y Android e iOS sincronizados.
 
 ---
 

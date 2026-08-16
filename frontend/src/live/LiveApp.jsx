@@ -3,6 +3,7 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { LiveThemeProvider, useLiveTheme } from './liveTheme';
 import { getJson, FOLLOWED_KEY, NOTIF_KEY } from './liveApi';
 import { pushDisponible, refrescarPush } from './push';
+import { migrarSesionHeredada } from './sesion';
 import useSwipeBack from './useSwipeBack';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
@@ -53,6 +54,12 @@ export const useRace = () => useContext(RaceContext);
  */
 function useLapNotifications(raceCode) {
   const lastLaps = useRef({});
+
+  // Una sola vez al arrancar: adopta la sesión que hubiera de una versión
+  // anterior de la app y borra del llavero las credenciales biométricas de
+  // cuando había dos accesos separados. Sin esto, un teléfono que ya tenía la
+  // app pediría la cara para no encontrar nada.
+  useEffect(() => { migrarSesionHeredada(); }, []);
 
   useEffect(() => {
     if (pushDisponible()) return undefined;
