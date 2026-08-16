@@ -373,10 +373,42 @@ sistema de cuentas antes de meterle los usuarios que ya existen.
 
 ---
 
-### Fase 3 — Migrar corredores y staff
-*La fase con riesgo. Solo cuando la 2 lleve tiempo estable.*
+### Fase 3 — Migrar corredores y staff — **ENSAYO PASADO (16/08/2026), FALTAN LOS ENDPOINTS**
+*La fase con riesgo.*
 
-**Antes: `mongodump` nuevo.**
+El script está en
+[`scripts/migrar_a_cuentas.py`](backend/scripts/migrar_a_cuentas.py). Por defecto no
+escribe: hay que pedirlo con `--aplicar`, y para tocar producción hace falta además
+`--produccion`.
+
+**Ensayo sobre el respaldo restaurado en `ensayo_migracion`:**
+
+| | |
+|---|---|
+| Cuentas resultantes | **263** = 246 corredores + 17 del equipo + **1 fusionada** |
+| Con rol de corredor / de equipo / los dos | 246 / 18 / **1** |
+| Dispositivos push enlazados | 10 de 10 con correo (11 no tenían cuenta) |
+| Segunda pasada | 0 cuentas nuevas — **idempotente** |
+| `athletes` y `admin_users` | intactas; `athletes` solo gana `account_id` |
+
+Y lo que de verdad importaba, comprobado sobre la copia migrada: **un corredor entra
+con su contraseña de siempre**, su hash PBKDF2 queda reescrito en bcrypt en ese primer
+acceso, su token vale como corredor y **recibe 403 en el panel**; el del equipo
+conserva sus permisos y entra; el voluntario entra sin permisos; y la persona del
+solape es **una sola cuenta con los dos roles**.
+
+> El ensayo tuvo primero un fallo suyo: en seco no escribe, así que al llegar al equipo
+> no encontraba las cuentas de corredores y contaba el solape como cuenta nueva. Un
+> ensayo que da números falsos no vale, así que ahora simula lo ya creado.
+
+**Falta para cerrar la Fase 3** (esto es solo el movimiento de datos):
+
+- que `/api/athletes/login` y `/api/race/auth/admin-login` lean de `accounts` y emitan
+  el token nuevo;
+- que el login del panel siga aceptando **usuario** y no solo correo — la cuenta de
+  `admin` tiene `admin` como identidad, que no es un correo;
+- pasar la web al token único;
+- y entonces sí, correr el script en producción con respaldo fresco.
 
 Script de migración (idempotente, ejecutable en seco):
 
