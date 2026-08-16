@@ -8,6 +8,7 @@ import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
 import AdFooter from './components/AdFooter';
 import WelcomeScreen from './screens/WelcomeScreen';
+import RacePortadaScreen from './screens/RacePortadaScreen';
 import RaceSelectScreen from './screens/RaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
@@ -244,6 +245,9 @@ export default function LiveApp() {
       <Routes>
         <Route index element={<WelcomeScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
+        {/* La carrera elegida, antes de entrar en ella. Va antes de
+            :raceCode para que "portada" no se lea como un código. */}
+        <Route path="portada/:raceCode" element={<RacePortadaScreen />} />
         {/* Antes de :raceCode para que no se interpreten como código de carrera */}
         <Route path="login" element={<LoginScreen />} />
         <Route path="perfil" element={<PerfilScreen />} />

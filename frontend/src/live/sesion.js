@@ -70,6 +70,24 @@ export async function cerrarSesion() {
   }
 }
 
+/**
+ * Con qué papel entró la persona: corredor, staff o espectador.
+ *
+ * No es una sesión ni da permisos —la sesión son los tokens de arriba—: es
+ * solo el camino que eligió en la primera pantalla, para saber a dónde
+ * llevarla cuando ya haya escogido carrera.
+ */
+const ROL_KEY = 'bysd_live_rol';
+export const ESPECTADOR = 'espectador';
+
+export function guardarRol(rol) {
+  try { localStorage.setItem(ROL_KEY, rol); } catch { /* modo privado */ }
+}
+
+export function rolElegido() {
+  try { return localStorage.getItem(ROL_KEY) || ESPECTADOR; } catch { return ESPECTADOR; }
+}
+
 /** Para el menú: qué accesos enseñar. */
 export function sesionesAbiertas() {
   return { atleta: hayAtleta(), staff: hayStaff() };

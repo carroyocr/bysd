@@ -65,7 +65,7 @@ export default function RaceSelectScreen() {
   const raceCard = (race) => (
     <button
       key={race.code}
-      onClick={() => navigate(`/live/${race.code}`)}
+      onClick={() => navigate(`/live/portada/${race.code}`)}
       className={`w-full flex items-center gap-3.5 rounded-2xl px-4 py-4 mb-3 text-left ${T.card}`}
     >
       {race.logo_url ? (

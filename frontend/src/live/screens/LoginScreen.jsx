@@ -1,77 +1,61 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Footprints, ShieldCheck, ScanFace, Loader2, Eye, Flame } from 'lucide-react';
-import { useLiveTheme } from '../liveTheme';
-import { Screen } from '../LiveApp';
+import { ShieldCheck, ScanFace, Loader2, Flame, Eye } from 'lucide-react';
 import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
 import { clic } from '../sonido';
-import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rutaDeEntrada } from '../sesion';
-
-const ESPECTADOR = 'espectador';
+import {
+  TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff,
+  rutaDeEntrada, guardarRol, ESPECTADOR,
+} from '../sesion';
 
 /**
- * Los tres accesos, cada uno con su color.
+ * Un corredor de perfil, en zancada.
  *
- * El color no decora: dice a qué puerta lleva cada cosa, y es el mismo que
- * usan después las pantallas de cada rol. La franja de la portada y el
- * corredor comparten el naranja de la marca; staff y espectador traen los
- * suyos para no depender solo del icono.
- *
- * Cada rol lleva dos tonos porque la app tiene tema claro y oscuro: sobre el
- * crema del tema claro los fondos oscuros se ven como manchas.
+ * Dibujado a mano porque lucide no trae ninguno: lo más cercano eran unas
+ * huellas o un monigote de pie, y esta app va de gente corriendo. Mismo trazo
+ * y misma caja que el resto de iconos para que no desentone.
  */
+function IconCorredor({ className, style, strokeWidth = 1.5 }) {
+  return (
+    <svg
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+      strokeLinecap="round" strokeLinejoin="round"
+      className={className} style={style} aria-hidden="true"
+    >
+      <circle cx="16.6" cy="4.4" r="2.1" />
+      <path d="M14.4 8.4 11.7 12.9" />
+      <path d="M11.7 12.9 14.3 16.4 13.3 20.6" />
+      <path d="M11.7 12.9 8.2 15.6 5.3 14.5" />
+      <path d="M14.7 9.2 17.9 11 19.9 8.7" />
+      <path d="M14.2 8.7 10.5 9.7 8.3 11.9" />
+    </svg>
+  );
+}
+
 const ROLES = [
-  {
-    quien: ATLETA,
-    Icon: Footprints,
-    etiqueta: 'Corredor',
-    ruta: '/live/perfil',
-    color: { dark: '#E77622', light: '#C25F12' },
-    fondo: { dark: '#3A2410', light: '#FDEEDF' },
-    borde: { dark: 'rgba(231,118,34,0.45)', light: 'rgba(194,95,18,0.30)' },
-    canto: { dark: '#A85718', light: '#E0BE9B' },
-  },
-  {
-    quien: STAFF,
-    Icon: ShieldCheck,
-    etiqueta: 'Staff',
-    ruta: '/live/staff',
-    color: { dark: '#5DCAA5', light: '#0F6E56' },
-    fondo: { dark: '#14342B', light: '#E1F5EE' },
-    borde: { dark: 'rgba(93,202,165,0.45)', light: 'rgba(15,110,86,0.26)' },
-    canto: { dark: '#2E8A6D', light: '#AFDACB' },
-  },
-  {
-    quien: ESPECTADOR,
-    Icon: Eye,
-    etiqueta: 'Espectador',
-    ruta: '/live/carreras',
-    color: { dark: '#85B7EB', light: '#185FA5' },
-    fondo: { dark: '#1B2E40', light: '#E6F1FB' },
-    borde: { dark: 'rgba(133,183,235,0.45)', light: 'rgba(24,95,165,0.26)' },
-    canto: { dark: '#3C6FA8', light: '#B2CEEC' },
-  },
+  { rol: ESPECTADOR, Icon: Eye, etiqueta: 'Espectador', destacado: true },
+  { rol: ATLETA, Icon: IconCorredor, etiqueta: 'Corredor' },
+  { rol: STAFF, Icon: ShieldCheck, etiqueta: 'Staff' },
 ];
 
 /**
- * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
- * elige quién eres y solo entonces se ve el acceso que te toca.
+ * Primera pantalla de la app: quién entra.
  *
- * Antes el menú ofrecía "Perfil del corredor" y "Staff" a la vez, y cualquiera
- * podía asomarse al formulario de staff. Ahora el menú solo muestra "Iniciar
- * sesión" mientras no haya sesión, y desde aquí se va a uno u otro.
+ * Aquí no se habla de ninguna carrera todavía, y por eso no hay cuenta atrás:
+ * cuál sea la carrera se decide en la pantalla siguiente, y prometer días
+ * antes de saber a qué carrera es lo que hacía que el flujo no cuadrara.
  *
- * Espectador no es una sesión: es seguir la carrera sin identificarse, que es
- * lo que hace la mayoría. Por eso los tres pesan lo mismo en pantalla y ninguno
- * pide nada hasta que se toca.
+ * Los tres papeles llevan al mismo sitio —la selección de carrera—; lo que
+ * cambia es a dónde va cada uno una vez elegida. Espectador no es una sesión:
+ * es seguir la carrera sin identificarse, que es lo que hace la mayoría.
  *
- * Si el teléfono ya tiene la biometría activada para alguno de los dos accesos
- * con cuenta, se ofrece entrar directamente con la cara o la huella.
+ * Va sin barra superior y sin menú: es una puerta, no una pantalla donde haya
+ * nada que consultar. El negro se mantiene aunque el tema esté en claro, igual
+ * que la banda de marca: es lo que hace que se lea como la carrera y no como
+ * un formulario.
  */
 export default function LoginScreen() {
-  const { T, theme } = useLiveTheme();
   const navigate = useNavigate();
-  const modo = theme === 'dark' ? 'dark' : 'light';
 
   const [bioAtleta, setBioAtleta] = useState({ activada: false, nombre: '' });
   const [bioStaff, setBioStaff] = useState({ activada: false, nombre: '' });
@@ -79,8 +63,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
 
   // Con sesión abierta aquí no hay nada que elegir: se pasa de largo. Cubre
-  // llegar por enlace directo o por el botón de atrás; la bienvenida ya manda
-  // a cada uno a su sitio sin pasar por aquí.
+  // llegar por enlace directo o por el botón de atrás.
   const conSesion = hayAtleta() || hayStaff();
   useEffect(() => {
     if (conSesion) navigate(rutaDeEntrada(), { replace: true });
@@ -96,6 +79,12 @@ export default function LoginScreen() {
     return () => { cancel = true; };
   }, []);
 
+  const elegir = (rol) => {
+    clic();
+    guardarRol(rol);
+    navigate('/live/carreras');
+  };
+
   const entrarBio = async (quien) => {
     setEntrando(quien);
     setError('');
@@ -108,69 +97,68 @@ export default function LoginScreen() {
     if (quien === ATLETA) {
       localStorage.setItem(TOKEN_ATLETA, token);
       marcarAccesoAtleta();
-      navigate('/live/perfil');
     } else {
       localStorage.setItem(TOKEN_STAFF, token);
-      navigate('/live/staff');
     }
+    guardarRol(quien);
+    navigate('/live/carreras');
   };
 
-  // Un atajo por cada acceso que tenga la biometría puesta. Con los dos
-  // activados hay que decir cuál es cuál; con uno solo, la frase corta basta.
   const atajos = [
     { quien: ATLETA, bio: bioAtleta, prefijo: 'Entrar con' },
     { quien: STAFF, bio: bioStaff, prefijo: 'Entrar al staff con' },
   ].filter(({ bio }) => bio.activada);
 
-  // Mientras el efecto de arriba redirige, no se pinta la elección: verla
-  // aparecer y desaparecer es peor que no verla.
   if (conSesion) return null;
 
   return (
-    <Screen title="Iniciar sesión">
-      {/* Portada: la banda oscura de marca se mantiene igual en los dos temas,
-          que es lo que hace que la pantalla se lea como la carrera y no como
-          un formulario. */}
-      <div className="bg-[#2A1707] px-6 py-8 flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#E77622] flex items-center justify-center">
-          <Flame className="w-7 h-7 text-[#2A1707]" strokeWidth={2.2} />
+    <div
+      className="min-h-[100dvh] flex flex-col items-center text-center text-[#EFE9DD]"
+      style={{
+        // El haz cálido de arriba y el frío tenue de abajo son la identidad
+        // "linterna nocturna": dan atmósfera sin necesidad de una sola foto.
+        background:
+          'radial-gradient(90% 55% at 50% -8%, rgba(231,118,34,.30) 0%, rgba(231,118,34,.06) 45%, transparent 72%),'
+          + 'radial-gradient(70% 45% at 50% 108%, rgba(133,183,235,.10) 0%, transparent 70%),'
+          + '#070707',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <div className="w-full max-w-md px-7 pb-10 pt-[calc(3.5rem+env(safe-area-inset-top))] flex flex-col items-center flex-1">
+        <div
+          className="w-[74px] h-[74px] rounded-full grid place-items-center text-[#E77622]
+            border border-[rgba(231,118,34,0.45)]
+            shadow-[0_0_34px_rgba(231,118,34,0.32),inset_0_0_22px_rgba(231,118,34,0.14)]"
+        >
+          <Flame className="w-8 h-8" strokeWidth={1.5} />
         </div>
-        <p className="mt-3.5 text-lg font-extrabold tracking-wide text-white">
-          BYSD <span className="text-[#E77622]">LIVE</span>
+
+        <p className="mt-6 text-[15px] font-light uppercase tracking-[0.42em] indent-[0.42em] text-white">
+          BYSD Live
         </p>
-        <p className="mt-1.5 text-[11px] tracking-[0.18em] uppercase text-[#D6B18A]">
-          Last one standing
+        <span className="w-7 h-px bg-white/20 mt-5 mb-6" />
+        <p className="text-xs font-light uppercase tracking-[0.16em] text-[#a49c8f]">
+          ¿Cómo entras?
         </p>
-      </div>
 
-      <div className="px-4 py-6">
-        <p className={`text-xs text-center mb-5 ${T.muted}`}>¿Cómo quieres entrar?</p>
+        {error && <p className="text-xs text-red-400 mt-5">{error}</p>}
 
-        {error && <p className="text-xs text-red-500 text-center mb-4">{error}</p>}
-
-        {/* Botón de canto, como una tecla: sobre negro una sombra difusa no se
-            ve —lo que da volumen es un borde inferior macizo y más oscuro, que
-            se lee como el grosor de la pieza. Al pulsar, el cuadro baja hasta
-            apoyarse en ese canto, que es el gesto de una tecla al hundirse. */}
-        <div className="flex gap-2.5">
-          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo, borde, canto }) => (
+        <div className="w-full mt-7 flex flex-col gap-3">
+          {ROLES.map(({ rol, Icon, etiqueta, destacado }) => (
             <button
-              key={quien}
-              onClick={() => { clic(); navigate(ruta); }}
-              className="group flex-1 min-w-0"
-              style={{ '--fondo': fondo[modo], '--borde': borde[modo], '--canto': canto[modo] }}
+              key={rol}
+              onClick={() => elegir(rol)}
+              data-testid={`rol-${rol}`}
+              className={`w-full rounded-full px-5 py-3.5 flex items-center gap-3.5 border
+                transition-all duration-100 ease-out active:scale-[0.985]
+                ${destacado
+                  ? 'border-[rgba(231,118,34,0.5)] bg-white/[0.035] shadow-[0_0_26px_rgba(231,118,34,0.16)]'
+                  : 'border-white/10 bg-white/[0.035]'}`}
             >
-              <span
-                className="block w-full aspect-square rounded-2xl border bg-[var(--fondo)] border-[var(--borde)]
-                  shadow-[0_4px_0_var(--canto),0_5px_10px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.13)]
-                  transition-all duration-75 ease-out
-                  group-active:translate-y-[3px]
-                  group-active:shadow-[0_1px_0_var(--canto),0_1px_3px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)]
-                  flex items-center justify-center"
-              >
-                <Icon className="w-7 h-7" style={{ color: color[modo] }} strokeWidth={1.9} />
+              <Icon className="w-[18px] h-[18px] shrink-0" style={{ color: destacado ? '#E77622' : '#EFE9DD' }} />
+              <span className={`text-[12.5px] uppercase tracking-[0.14em] ${destacado ? 'text-[#E77622]' : ''}`}>
+                {etiqueta}
               </span>
-              <span className="block mt-2.5 text-xs font-semibold">{etiqueta}</span>
             </button>
           ))}
         </div>
@@ -180,10 +168,9 @@ export default function LoginScreen() {
             key={quien}
             onClick={() => { clic(); entrarBio(quien); }}
             disabled={entrando === quien}
-            className={`w-full mt-6 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold
-              shadow-[0_3px_0_var(--canto)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--canto)]
-              transition-all duration-75 ease-out disabled:opacity-50 ${T.card}`}
-            style={{ '--canto': modo === 'dark' ? '#000000' : '#E4DBC0' }}
+            className="w-full mt-4 rounded-full px-5 py-3 flex items-center justify-center gap-2
+              border border-white/10 bg-white/[0.02] text-[11px] uppercase tracking-[0.14em]
+              disabled:opacity-50 transition-all duration-100 active:scale-[0.985]"
           >
             {entrando === quien
               ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -191,7 +178,11 @@ export default function LoginScreen() {
             {entrando === quien ? 'Verificando…' : `${prefijo} ${bio.nombre}`}
           </button>
         ))}
+
+        <p className="mt-auto pt-8 text-[10px] uppercase tracking-[0.2em] text-[#6d655a]">
+          Backyard Ultra Santo Domingo
+        </p>
       </div>
-    </Screen>
+    </div>
   );
 }
