@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generado por tools/generar_strings.py. No editar a mano.
+     spa -->
+<strings>
+    <string id="appName">BYSD Live</string>
+    <string id="lap">Vuelta</string>
+    <string id="nextStart">Próxima salida</string>
+    <string id="beforeStart">Para la vuelta 1</string>
+    <string id="corral">Corral</string>
+    <string id="toTheLine">A la línea</string>
+    <string id="rest">De descanso</string>
+    <string id="paceTooSlow">Ritmo insuficiente</string>
+    <string id="laps">Vueltas</string>
+    <string id="stillIn">En carrera</string>
+    <string id="of">de</string>
+    <string id="notStarted">Sin empezar</string>
+    <string id="raceClosed">Carrera cerrada</string>
+    <string id="syncing">Sincronizando</string>
+    <string id="noBib">Sin dorsal</string>
+    <string id="settingBib">Dorsal</string>
+    <string id="settingRace">Código de carrera</string>
+    <string id="settingCorral">Aviso de corral</string>
+    <string id="settingRefresh">Refresco (segundos)</string>
+</strings>

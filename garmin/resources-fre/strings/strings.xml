@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generado por tools/generar_strings.py. No editar a mano.
+     fre -->
+<strings>
+    <string id="appName">BYSD Live</string>
+    <string id="lap">Tour</string>
+    <string id="nextStart">Prochain départ</string>
+    <string id="beforeStart">Pour le tour 1</string>
+    <string id="corral">Corral</string>
+    <string id="toTheLine">Sur la ligne</string>
+    <string id="rest">De repos</string>
+    <string id="paceTooSlow">Rythme insuffisant</string>
+    <string id="laps">Tours</string>
+    <string id="stillIn">En course</string>
+    <string id="of">sur</string>
+    <string id="notStarted">Pas commencé</string>
+    <string id="raceClosed">Course terminée</string>
+    <string id="syncing">Synchronisation</string>
+    <string id="noBib">Sans dossard</string>
+    <string id="settingBib">Dossard</string>
+    <string id="settingRace">Code de course</string>
+    <string id="settingCorral">Alerte corral</string>
+    <string id="settingRefresh">Rafraîchissement (s)</string>
+</strings>

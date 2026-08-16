@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<properties>
+    <!--
+      El dorsal y la carrera se ponen una vez desde Garmin Connect Mobile. En
+      el reloj no se pregunta nada: a las veinte horas de carrera nadie quiere
+      teclear en una esfera.
+    -->
+    <property id="bib" type="string"></property>
+    <property id="raceCode" type="string"></property>
+    <property id="corralAlert" type="boolean">true</property>
+    <property id="refreshSeconds" type="number">60</property>
+</properties>

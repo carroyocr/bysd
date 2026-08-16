@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!-- Relojes de 208 px: mismo emblema, dibujado a 196. -->
+<drawables>
+    <bitmap id="Emblema" filename="emblema.png"/>
+</drawables>

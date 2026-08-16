@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!-- Pantallas AMOLED grandes: emblema de 380. -->
+<drawables>
+    <bitmap id="Emblema" filename="emblema.png"/>
+</drawables>

@@ -1,0 +1,9 @@
+# Salidas de compilacion de Connect IQ
+bin/
+*.prg
+*.prg.debug.xml
+*.iq
+
+# La developer key NUNCA va al repo: es la firma de la app.
+*.der
+*.pem

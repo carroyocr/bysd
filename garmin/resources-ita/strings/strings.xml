@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generado por tools/generar_strings.py. No editar a mano.
+     ita -->
+<strings>
+    <string id="appName">BYSD Live</string>
+    <string id="lap">Giro</string>
+    <string id="nextStart">Prossima partenza</string>
+    <string id="beforeStart">Per il giro 1</string>
+    <string id="corral">Corral</string>
+    <string id="toTheLine">In linea</string>
+    <string id="rest">Di riposo</string>
+    <string id="paceTooSlow">Ritmo insufficiente</string>
+    <string id="laps">Giri</string>
+    <string id="stillIn">In gara</string>
+    <string id="of">di</string>
+    <string id="notStarted">Non iniziata</string>
+    <string id="raceClosed">Gara chiusa</string>
+    <string id="syncing">Sincronizzo</string>
+    <string id="noBib">Nessun pettorale</string>
+    <string id="settingBib">Pettorale</string>
+    <string id="settingRace">Codice gara</string>
+    <string id="settingCorral">Avviso corral</string>
+    <string id="settingRefresh">Aggiornamento (s)</string>
+</strings>

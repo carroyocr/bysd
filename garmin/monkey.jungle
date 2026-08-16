@@ -1,0 +1,24 @@
+# Configuracion de compilacion de BYSD Live.
+#
+# El emblema es un mapa de bits, y Connect IQ no lo escala al compilar: cada
+# tamano de pantalla necesita su archivo. Aqui se dice que carpeta extra de
+# recursos usa cada familia de relojes. Un dispositivo que no aparezca abajo
+# se queda con el emblema base de 240 px, que es el que cabe en la mayoria.
+
+project.manifest = manifest.xml
+
+base.sourcePath = source
+base.resourcePath = resources
+
+# Pantallas pequenas (208 px de lado): emblema de 196 px.
+fenix6s.resourcePath = $(base.resourcePath);resources-small
+fenix6spro.resourcePath = $(base.resourcePath);resources-small
+forerunner255s.resourcePath = $(base.resourcePath);resources-small
+forerunner265s.resourcePath = $(base.resourcePath);resources-small
+instinct2.resourcePath = $(base.resourcePath);resources-small
+
+# Pantallas grandes AMOLED (416 px y alrededores): emblema de 380 px.
+fenix843mm.resourcePath = $(base.resourcePath);resources-large
+fenix847mm.resourcePath = $(base.resourcePath);resources-large
+venu3.resourcePath = $(base.resourcePath);resources-large
+enduro3.resourcePath = $(base.resourcePath);resources-large
