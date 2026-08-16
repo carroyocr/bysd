@@ -19,11 +19,14 @@ const fecha = (v) => {
 /**
  * Quién sigue la carrera sin correr ni trabajar en ella.
  *
- * Los tres números de arriba no son decoración: el total dice cuánta gente se
- * dio de alta, pero a quien se le puede escribir de verdad es solo a quien
- * confirmó el correo *y* aceptó recibir avisos. Sin ese desglose, un total
- * grande da una impresión equivocada y se acaba contando como alcance algo que
- * no lo es.
+ * Los dos números de arriba no son decoración: el total dice cuánta gente se
+ * dio de alta, pero a quien se le puede escribir es solo a quien marcó que
+ * quiere avisos. Sin ese desglose se acaba contando como alcance algo que no lo
+ * es.
+ *
+ * El espectador no confirma su correo —eso se le pide solo si algún día pasa a
+ * corredor o a equipo—, así que aquí no hay columna de verificados: lo único
+ * que decide a quién se escribe es el consentimiento.
  */
 export default function EspectadoresManagement() {
   const [datos, setDatos] = useState(null);
@@ -82,20 +85,11 @@ export default function EspectadoresManagement() {
         <div className="p-3 rounded-lg bg-red-100 text-red-800 text-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Con cuenta</p>
             <p className="text-3xl font-bold">{datos?.total ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <MailCheck className="w-4 h-4 text-green-600" />
-              Correo confirmado
-            </p>
-            <p className="text-3xl font-bold">{datos?.verificados ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
@@ -106,7 +100,7 @@ export default function EspectadoresManagement() {
             </p>
             <p className="text-3xl font-bold">{datos?.escribibles ?? 0}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Confirmaron el correo y aceptaron recibir avisos
+              Marcaron que quieren recibir avisos
             </p>
           </CardContent>
         </Card>
@@ -141,24 +135,17 @@ export default function EspectadoresManagement() {
                   <td className="p-3 font-medium">{e.nombre || '—'}</td>
                   <td className="p-3 text-muted-foreground">{e.email}</td>
                   <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {e.email_verified ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                          <MailCheck className="w-3 h-3 mr-1" />
-                          Confirmado
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-amber-700 border-amber-300">
-                          <MailX className="w-3 h-3 mr-1" />
-                          Sin confirmar
-                        </Badge>
-                      )}
-                      {e.acepta_comunicaciones && (
-                        <Badge variant="outline" className="text-blue-700 border-blue-300">
-                          Acepta avisos
-                        </Badge>
-                      )}
-                    </div>
+                    {e.acepta_comunicaciones ? (
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                        <MailCheck className="w-3 h-3 mr-1" />
+                        Acepta avisos
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        <MailX className="w-3 h-3 mr-1" />
+                        No escribir
+                      </Badge>
+                    )}
                   </td>
                   <td className="p-3">
                     {e.sigue_a > 0 ? (

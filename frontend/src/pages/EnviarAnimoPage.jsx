@@ -241,9 +241,7 @@ export default function EnviarAnimoPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">Firmas como {cuenta.nombre}</p>
                           <Link to="/mi-cuenta" className="text-xs text-purple-700 hover:underline">
-                            {cuenta.email_verified
-                              ? 'Ver mi cuenta'
-                              : 'Confirma tu correo con el código que te enviamos'}
+                            Ver mi cuenta
                           </Link>
                         </div>
                       </div>

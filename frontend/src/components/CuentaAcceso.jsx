@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, Mail, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
+import { Loader2, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { registrarse, entrar } from '../lib/cuentaApi';
@@ -11,10 +11,10 @@ import { registrarse, entrar } from '../lib/cuentaApi';
  * de más cuesta altas, y lo demás —país, de qué conoce la carrera— se puede
  * rellenar luego desde el perfil si a la persona le apetece.
  *
- * El alta no espera a la verificación del correo: quien se registra para animar
- * a alguien que está corriendo ahora mismo no puede quedarse mirando la bandeja
- * de entrada. El código sale detrás, y hasta que lo confirme la cuenta queda
- * marcada como sin verificar, que es lo que la deja fuera de los envíos.
+ * No hay código de verificación. Ser espectador no da acceso a nada que no sea
+ * ya público, así que confirmar el correo sería un trámite sin nada detrás, y
+ * cada trámite cuesta altas. El código se pide cuando la cuenta pasa a tener
+ * consecuencias: al convertirse en corredor o en parte del equipo.
  *
  * La casilla de comunicaciones va aparte y sin marcar: tener cuenta no es haber
  * aceptado que le escriban.
@@ -152,18 +152,10 @@ export default function CuentaAcceso({ onListo, motivo }) {
             : <><LogIn className="w-4 h-4 mr-2" />Entrar</>}
       </Button>
 
-      {esRegistro && (
-        <p className="text-xs text-gray-500 flex items-start gap-1.5">
-          <Mail className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          Te mandamos un código para confirmar el correo, pero no hace falta
-          esperarlo: puedes seguir ahora mismo.
-        </p>
-      )}
-
       <p className="text-xs text-gray-500 flex items-start gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-        Solo guardamos tu correo y tu nombre. Puedes borrar la cuenta cuando
-        quieras.
+        Solo guardamos tu correo y tu nombre, y no hay ningún código que
+        confirmar. Puedes borrar la cuenta cuando quieras.
       </p>
     </form>
   );

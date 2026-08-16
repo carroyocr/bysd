@@ -180,16 +180,35 @@ def _sesion(cuenta: dict) -> dict:
 
 @router.post("/registro")
 async def registro(datos: Registro, request: Request = None):
-    """Crea la cuenta y devuelve la sesion en el acto.
+    """Crea la cuenta de espectador y devuelve la sesion en el acto.
 
-    No se espera a verificar el correo: quien acaba de darse de alta para animar
-    a alguien que esta corriendo ahora mismo no puede quedarse esperando un
-    correo. El codigo sale detras y la cuenta queda `email_verified: False`
-    hasta que lo confirme.
+    **No se manda codigo de verificacion.** Ser espectador no da acceso a nada
+    que no sea ya publico: se anima, se sigue a un corredor y se reciben avisos.
+    Pedir que confirme el correo para eso es un tramite sin nada detras, y cada
+    tramite cuesta altas.
+
+    La verificacion se exige cuando la cuenta pasa a tener consecuencias —al
+    ganar el rol de corredor o de equipo, donde hay inscripciones, pagos, fichas
+    medicas y turnos— y no antes. Para eso siguen vivos `/verificar` y
+    `/reenviar-codigo`.
+
+    Que un correo sea falso no rompe nada: esa cuenta simplemente nunca recibira
+    lo que se le mande. Lo que decide a quien se escribe es el consentimiento.
     """
     from server import db
 
-    rate_limit.limitar_envio_codigo(request)
+    # Antes esto usaba `limitar_envio_codigo` (5 cada 15 min) porque el alta
+    # mandaba un correo. Ya no lo manda, y ese limite era demasiado estrecho
+    # para lo que ahora es: varias personas apuntandose desde la misma red —el
+    # wifi del evento, una casa— chocarian entre ellas. El tope de aqui deja
+    # pasar un grupo real y sigue cortando el alta masiva por script.
+    rate_limit.comprobar(
+        "registro-cuenta",
+        rate_limit.ip_cliente(request),
+        limite=20,
+        ventana_segundos=900,
+        mensaje="Demasiadas cuentas creadas desde aqui. Espera unos minutos.",
+    )
 
     if await cuentas.por_email(db, datos.email):
         raise HTTPException(
@@ -205,7 +224,6 @@ async def registro(datos: Registro, request: Request = None):
         acepta_comunicaciones=datos.acepta_comunicaciones,
     )
 
-    await _mandar_codigo(db, cuenta, "verificar")
     return _sesion(cuenta)
 
 
@@ -412,23 +430,23 @@ async def listado_espectadores(limit: int = 200, solo_escribibles: bool = False)
     """Quien sigue la carrera sin correr ni trabajar en ella.
 
     Va con el permiso de comunicaciones porque para lo que sirve esta lista es
-    para escribirles. Los tres numeros de arriba son los que importan: cuantos
-    hay, cuantos confirmaron el correo y a cuantos se les puede escribir de
-    verdad. Sin ese desglose, un total grande da una impresion equivocada.
+    para escribirles. Y lo que decide a quien se puede escribir es **solo el
+    consentimiento**: el espectador no verifica su correo, asi que exigir
+    `email_verified` dejaria la lista vacia para siempre sin que nada fallara a
+    la vista.
     """
     from server import db
 
     solo_fan = {"roles": [cuentas.FAN]}
 
     total = await db[cuentas.COLECCION].count_documents(solo_fan)
-    verificados = await db[cuentas.COLECCION].count_documents({**solo_fan, "email_verified": True})
     escribibles = await db[cuentas.COLECCION].count_documents(
-        {**solo_fan, "email_verified": True, "acepta_comunicaciones": True}
+        {**solo_fan, "acepta_comunicaciones": True}
     )
 
     filtro = dict(solo_fan)
     if solo_escribibles:
-        filtro.update({"email_verified": True, "acepta_comunicaciones": True})
+        filtro["acepta_comunicaciones"] = True
 
     docs = await db[cuentas.COLECCION].find(
         filtro,
@@ -437,7 +455,6 @@ async def listado_espectadores(limit: int = 200, solo_escribibles: bool = False)
 
     return {
         "total": total,
-        "verificados": verificados,
         "escribibles": escribibles,
         "espectadores": [
             {

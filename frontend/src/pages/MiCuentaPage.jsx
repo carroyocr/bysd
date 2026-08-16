@@ -145,6 +145,10 @@ export default function MiCuentaPage() {
     );
   }
 
+  const roles = perfil.roles || ['fan'];
+  const esSoloEspectador = roles.length === 1 && roles[0] === 'fan';
+  const necesitaConfirmar = !esSoloEspectador && !perfil.email_verified;
+
   return (
     <div className="pt-24 pb-16">
       <div className="container mx-auto px-4 max-w-2xl space-y-6">
@@ -163,7 +167,11 @@ export default function MiCuentaPage() {
           </div>
         )}
 
-        {!perfil.email_verified && (
+        {/* El espectador no confirma nada: su cuenta no da acceso a nada que no
+            sea ya público. El código aparece solo cuando la cuenta gana un rol
+            con consecuencias detrás —corredor o equipo—, donde hay
+            inscripciones, pagos, fichas médicas y turnos. */}
+        {necesitaConfirmar && (
           <Card className="border-amber-300">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -173,8 +181,8 @@ export default function MiCuentaPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Te enviamos un código de seis dígitos. Mientras no lo confirmes no te
-                mandaremos avisos, aunque puedes seguir usando la cuenta con normalidad.
+                Tu cuenta ya no es solo de espectador, así que necesitamos confirmar que
+                el correo es tuyo. Te enviamos un código de seis dígitos.
               </p>
               <form onSubmit={confirmarCodigo} className="flex gap-2">
                 <Input
@@ -209,6 +217,13 @@ export default function MiCuentaPage() {
           </div>
         )}
 
+        {esSoloEspectador && (
+          <p className="text-sm text-muted-foreground">
+            Tu cuenta es de espectador: sirve para firmar tus mensajes, seguir a los
+            corredores y recibir avisos si los quieres. No hay nada más que confirmar.
+          </p>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Avisos de la carrera</CardTitle>
@@ -223,8 +238,9 @@ export default function MiCuentaPage() {
                 className="mt-1"
               />
               <span>
-                Quiero recibir avisos de la carrera por correo. Puedes desmarcarlo
-                cuando quieras y deja de aplicarse de inmediato.
+                Quiero recibir avisos de la carrera por correo. Es lo único que decide
+                si te escribimos: puedes desmarcarlo cuando quieras y deja de aplicarse
+                de inmediato.
               </span>
             </label>
             {perfil.followed?.length > 0 && (

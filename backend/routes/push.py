@@ -334,19 +334,20 @@ async def _correos_staff(database, filtro: FiltroPush) -> List[str]:
 
 
 async def _cuentas_espectadoras(database) -> List:
-    """Los `_id` de las cuentas de espectador a las que se puede escribir.
+    """Los `_id` de las cuentas a las que se puede escribir.
 
-    Solo verificadas y solo con el consentimiento dado: tener cuenta no es haber
-    aceptado que le escriban, y esa casilla va aparte del alta a proposito.
+    Manda **solo el consentimiento**: tener cuenta no es haber aceptado que le
+    escriban, y esa casilla va aparte del alta a proposito. No se exige tambien
+    correo verificado porque el espectador no verifica —solo se le pide codigo
+    si algun dia pasa a corredor o a equipo—, y exigirlo dejaria este envio sin
+    destinatarios para siempre sin que nada fallara a la vista.
 
     Esto es para el envio dirigido que escribe una persona desde el panel. El
     aviso automatico de "el corredor al que sigues acaba de cerrar vuelta" no
     pasa por aqui: ese es el servicio que la persona pidio al seguirlo, y va por
     `followed` como siempre.
     """
-    return await database.accounts.distinct(
-        "_id", {"email_verified": True, "acepta_comunicaciones": True}
-    )
+    return await database.accounts.distinct("_id", {"acepta_comunicaciones": True})
 
 
 async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:

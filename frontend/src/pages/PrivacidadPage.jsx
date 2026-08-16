@@ -63,7 +63,9 @@ export default function PrivacidadPage() {
               <p>
                 Si quieres enviar un mensaje de ánimo, seguir a un corredor o recibir avisos
                 cuando pase por meta, te pedimos <strong>correo, nombre y una contraseña</strong>.
-                Nada más. El nombre es el que firma tus mensajes; el correo sirve para
+                Nada más, y no hay ningún código que confirmar: la cuenta de espectador no da
+                acceso a nada que no sea ya público, así que no te hacemos pasar por un trámite
+                sin motivo. El nombre es el que firma tus mensajes; el correo sirve para
                 identificarte, recuperar tu contraseña y, solo si lo aceptas, enviarte avisos de
                 la carrera. La contraseña se guarda cifrada.
               </p>
@@ -75,9 +77,15 @@ export default function PrivacidadPage() {
               </p>
               <p>
                 La casilla para recibir avisos por correo va <strong>aparte del registro y sin
-                marcar</strong>: tener cuenta no es haber aceptado que te escribamos. Solo
-                enviamos comunicaciones a quien confirmó su correo <em>y</em> marcó esa casilla,
-                y puedes desmarcarla en cualquier momento desde tu perfil.
+                marcar</strong>: tener cuenta no es haber aceptado que te escribamos. Esa casilla
+                es lo único que decide si te escribimos, y puedes desmarcarla en cualquier
+                momento desde tu perfil.
+              </p>
+              <p>
+                Si en algún momento tu cuenta pasa a ser también de corredor o de personal del
+                evento, entonces sí te pediremos confirmar el correo con un código: a partir de
+                ahí hay inscripciones, pagos y datos médicos detrás, y necesitamos estar seguros
+                de que la dirección es tuya.
               </p>
 
               <p className="font-medium text-foreground pt-2">Cuenta de atleta</p>

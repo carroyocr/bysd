@@ -302,10 +302,15 @@ Tests (condición de salida):
 ### Fase 2 — Cuenta de espectador — **HECHA (16/08/2026)**
 *El piloto en producción. Puramente aditivo: no toca nada existente.*
 
-Decidido: **se anima nada más registrarse** y el código de verificación llega
-detrás; solo las cuentas verificadas **y con consentimiento** entran en envíos. Se
-piden **correo, nombre y consentimiento**, nada más; país y relación quedan como
-opcionales editables después.
+Decidido: se piden **correo, nombre y consentimiento**, nada más, y **sin código de
+verificación**. Ser espectador no da acceso a nada que no sea ya público, así que
+confirmar el correo sería un trámite sin nada detrás. El código se exige cuando la
+cuenta gana rol de **corredor o de equipo**, donde hay inscripciones, pagos, fichas
+médicas y turnos. Lo único que decide a quién se escribe es **el consentimiento**.
+
+El nombre se mantiene porque los ánimos son públicos y van firmados: si solo hubiera
+correo, lo que aparecería en el hilo sería la dirección, y la política dice
+expresamente que el correo no se publica.
 
 Entregado en [`routes/cuentas.py`](backend/routes/cuentas.py): alta, acceso,
 verificación por código con límite de intentos, recuperación de contraseña, perfil,
@@ -478,25 +483,35 @@ el proyecto cabe antes de la carrera — pero con una puerta de decisión en med
 | Fase 0 | ya | medio día, sin riesgo |
 | Fase 1 | ya | invisible: no cambia nada de lo que se ve |
 | Fase 2 | en producción antes de septiembre | quieres los correos de espectadores **del Mundial**, que es cuando más público habrá |
-| **Puerta** | primeros de septiembre | ver abajo |
-| Fase 3 | primera quincena de septiembre, si la puerta se pasa | deja 4-6 semanas de margen antes de la carrera |
+| **Puerta** | cuando el ensayo en seco cuadre | ver abajo; ya no es una espera de calendario |
+| Fase 3 | en cuanto pase la puerta | deja 4-6 semanas de margen antes de la carrera |
 | Fase 4 | mientras la 3 asienta | la app no bloquea nada: no está publicada |
 | Fase 5 | una semana después de la 4 | ya no espera a ningún parque de apps |
 
-### La puerta de septiembre
+### La puerta de septiembre — revisada el 16/08/2026
 
-La Fase 3 es la única que toca contraseñas de gente real, y las inscripciones del
-Mundial están vivas justo ahora. Se pasa a la Fase 3 **solo si** se cumple todo:
+**La condición de «dos semanas limpias en producción» queda retirada.** Se apoyaba en
+buena parte en comprobar que los correos de verificación llegaran, y el espectador ya
+no lleva verificación. Además, mirándolo de cerca, las altas de espectadores **no
+ejercitan nada de lo específico de la migración**: ni el arrastre de hashes, ni los
+correos que chocan, ni los índices. Esperar por calendario habría dado la sensación de
+seguridad sin la seguridad.
 
-- la Fase 2 lleva **dos semanas limpias** en producción, con altas reales;
-- el script de migración se ha corrido en seco sobre una copia restaurada del dump y
-  cuadra el número de cuentas;
-- los tests de roles de la Fase 1 pasan en verde;
+Lo que de verdad protege la Fase 3 es otra cosa, y es lo que se exige:
+
+- el script de migración **corrido en seco sobre una copia restaurada** del respaldo,
+  cuadrando el número de cuentas y sin colisiones de correo;
+- los tests de roles de la Fase 1 en verde;
+- respaldo fresco inmediatamente antes;
 - faltan **más de cuatro semanas** para la carrera.
 
-Si alguna falla, la Fase 3 espera a después del Mundial y no pasa nada: la Fase 2 ya
-está entregando lo que más valor tenía este año. Esa condición de «más de cuatro
-semanas» es la que no se negocia sobre la marcha.
+Esa última sigue sin negociarse: no por el estado del código, sino porque si algo sale
+mal hace falta margen para arreglarlo con calma, y a dos semanas de la carrera no lo
+hay.
+
+Lo que queda expuesto en la Fase 3 es **la web**, con 246 corredores y 18 del equipo
+entrando a diario. La app no: no está publicada y las únicas instalaciones son las de
+la prueba alfa cerrada, así que romperla cuesta una recompilación.
 
 ---
 
