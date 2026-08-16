@@ -1,0 +1,402 @@
+# Plan — Cuenta única BYSD
+
+Unificar los accesos de corredor, staff y espectador en una sola cuenta con roles,
+manteniendo la entrada libre a ver la carrera sin registrarse.
+
+Estado: **propuesta, sin implementar**. Rama `cuenta-unica`.
+
+---
+
+## 1. De dónde partimos
+
+Hoy hay **dos sistemas de identidad completos y separados**, y un tercer grupo de
+personas del que no se guarda nada.
+
+| | Corredor | Staff / voluntario | Espectador |
+|---|---|---|---|
+| Colección | `athletes` | `admin_users` | — |
+| Alta | `POST /api/athletes/register` | `POST /api/staff/password/set` | — |
+| Login | `POST /api/athletes/login` | `POST /api/race/auth/admin-login` | — |
+| Contraseña | PBKDF2-SHA256, campo `password_hash` | bcrypt, campo `password` | — |
+| Firma del token | `JWT_SECRET_KEY + "-athletes"` | `JWT_SECRET_KEY` | — |
+| Contenido del token | `athlete_id`, `email`, `type` | `username`, `is_admin`, `permissions[]` | — |
+| Duración | 72 h | 12 h | — |
+| Clave en el móvil | `athlete_token` | `admin_token` | — |
+| Biometría (llavero) | `bysd-live-atleta` | `bysd-live-staff` | — |
+
+Del espectador solo queda un nombre suelto: `cheer_messages` guarda `fan_name` como
+texto libre ([race.py:1462](backend/routes/race.py:1462)). A quién sigue, qué le
+gustó y cómo se llama viven en el `localStorage` del teléfono
+(`backyard_ultra_followed_athletes`, `bysd_live_fan_name`, `bysd_live_cheer_likes`):
+se pierden al cambiar de móvil y no sirven para nada fuera de él.
+
+### La prueba de que el modelo actual ya no da más
+
+`push_devices` guarda **`athlete_email` y `staff_email` en el mismo documento**, con
+este comentario en [push.py:122](backend/routes/push.py:122):
+
+> «la app del corredor y la del staff registran el mismo token desde pantallas
+> distintas y una no debe borrar lo de la otra»
+
+Y [sesion.js](frontend/src/live/sesion.js) mantiene **las dos sesiones abiertas a la
+vez**, con biometría registrada por separado. El sistema ya está tratando a una
+persona como dos, y ya ha tenido que ponerle parches para que no se pisen.
+
+---
+
+## 2. La idea
+
+**Una colección `accounts` que es solo identidad. Los perfiles se quedan donde
+están.**
+
+`accounts` guarda: correo, contraseña, nombre, roles y permisos. Nada más.
+El perfil de corredor sigue en `athletes` (con todo su historial médico, contacto de
+emergencia, talla de camiseta, resultados reclamados); el de voluntario sigue
+saliendo de `volunteer_registrations`. La cuenta apunta a ellos, no los absorbe.
+
+```
+accounts (identidad)
+   ├── roles: ["fan"]                → espectador, sin perfil
+   ├── roles: ["fan","athlete"]      → athlete_profile_id → athletes._id
+   ├── roles: ["fan","staff"]        → permissions[]
+   └── roles: ["fan","athlete","staff"] → las dos cosas, UNA cuenta
+```
+
+Todo el mundo tiene `fan`: es el suelo común, y es lo que hace que un corredor pueda
+seguir a otro corredor sin ninguna lógica especial.
+
+### El orden importa más que el diseño
+
+El espectador **no tiene ni un solo usuario hoy**. Eso lo convierte en el mejor sitio
+posible para estrenar la infraestructura de cuentas: se construye `accounts`, el
+token con roles y el login unificado, se pone en producción, y si algo está mal no
+hay ningún dato de nadie en riesgo. Cuando eso lleve semanas funcionando, los
+corredores y el staff se migran **encima de código ya probado en producción**, no
+encima de código recién escrito.
+
+Por eso el plan no es «espectador primero y unificar después» como dos proyectos
+sueltos. Es un solo proyecto, ordenado para que la parte con riesgo caiga la última.
+
+---
+
+## 3. Las tres restricciones que mandan en el orden
+
+### 3.1 La app instalada no se puede actualizar de golpe
+
+Una versión nueva tarda semanas en llegar a todos los teléfonos, y hay quien no
+actualiza nunca. Durante meses va a haber apps antiguas llamando a
+`/api/athletes/login` y a `/api/race/auth/admin-login` y esperando **tokens del
+formato viejo, firmados con las claves viejas**.
+
+Consecuencia dura: los endpoints antiguos siguen vivos y siguen emitiendo tokens
+antiguos hasta que el plan lo diga. Las dependencias del backend tienen que aceptar
+los dos formatos durante toda la transición. Nada de esto es opcional.
+
+### 3.2 Al unificar la firma, la seguridad cambia de sitio
+
+Hoy la garantía de que un token de corredor no sirve en el panel es **criptográfica**:
+está firmado con otra clave, y así lo dice [auth.py:62](backend/services/auth.py:62).
+Al unificar, esa garantía pasa a depender de que cada endpoint mire los roles.
+
+Estos seis exigen hoy solo «token válido», sin permiso concreto:
+
+- [staff_account.py:235](backend/routes/staff_account.py:235) `GET /api/staff/mi-perfil`
+- [staff_account.py:283](backend/routes/staff_account.py:283) `DELETE /api/staff/mi-perfil/turnos/{id}`
+- [staff_account.py:353](backend/routes/staff_account.py:353) `GET /api/staff/mi-perfil/turnos-disponibles`
+- [staff_account.py:367](backend/routes/staff_account.py:367) `PUT /api/staff/mi-perfil/turnos`
+- [users.py:40](backend/routes/users.py:40) cambio de contraseña propia
+- [race.py:42](backend/routes/race.py:42) `verify_token`, usado por varias rutas del panel
+
+Si se unifica la firma sin tocarlos, **cualquier corredor con cuenta pasa a poder
+leer el perfil de staff y apuntarse turnos**. La contramedida es que `require_admin`
+exija `"staff" in roles`, no solo firma válida — y que haya un test automático que
+lo demuestre. Ese test es la condición de salida de la Fase 3, no un extra.
+
+### 3.3 Producción en vivo, Mundial en octubre
+
+`main` despliega solo. El Campeonato Mundial es en octubre de 2026. La Fase 3 es la
+única con migración de contraseñas y es la que no debe tocarse cerca de la carrera.
+
+---
+
+## 4. Modelo de datos
+
+### Colección `accounts`
+
+```js
+{
+  _id: ObjectId,
+  email: "persona@correo.com",        // único, siempre en minúsculas
+  password_hash: "$2b$...",           // bcrypt para las nuevas
+  password_hash_legacy: "salt:hex",   // PBKDF2 heredado, temporal (ver 6.3)
+  nombre: "Nombre",
+  apellidos: "Apellidos",             // opcional para el espectador
+  roles: ["fan"],                     // fan | athlete | staff
+  permissions: [],                    // solo con rol staff; los mismos de hoy
+  is_admin: false,
+  email_verified: false,
+  athlete_profile_id: ObjectId|null,  // → athletes._id
+  staff_username: "correo"|null,      // → admin_users.username, durante la transición
+  pais: null, ciudad: null,           // espectador, opcional
+  relacion: null,                     // familiar | amigo | corredor | publico
+  acepta_comunicaciones: false,       // consentimiento explícito, aparte del alta
+  followed: [],                       // dorsales seguidos, subidos del teléfono
+  created_at, updated_at, last_login_at
+}
+```
+
+Índices: `email` único; `roles`; `athlete_profile_id` disperso.
+
+### Token unificado
+
+```js
+{
+  sub: "<account_id>",
+  email: "...",
+  roles: ["fan","athlete"],
+  permissions: [...],      // solo si hay rol staff
+  is_admin: false,
+  ver: 2,                  // versión del formato: distingue nuevo de heredado
+  exp: ...
+}
+```
+
+Firmado con `JWT_SECRET_KEY`. Duración: 12 h si trae rol staff, 72 h si no —
+mantiene el criterio actual de que el panel caduca antes.
+
+### Lo que cambia en las colecciones existentes
+
+| Colección | Cambio |
+|---|---|
+| `athletes` | gana `account_id`. Nada más se toca. |
+| `admin_users` | se mantiene como está durante la transición; los permisos se copian a `accounts`, no se mueven, hasta la Fase 5. |
+| `cheer_messages` | gana `account_id` opcional. `fan_name` se conserva para todo lo histórico. |
+| `push_devices` | gana `account_id`. `athlete_email` y `staff_email` se siguen aceptando y rellenando mientras haya apps viejas. |
+
+---
+
+## 5. Dónde va el muro
+
+**Sin cuenta se puede:** ver la carrera en vivo, el listado de corredores, las
+vueltas, la clasificación, las fotos, las reglas, la logística, los patrocinadores.
+Todo lo que hoy es libre sigue siéndolo, y la entrada de espectador de la
+[pantalla de acceso](frontend/src/live/screens/LoginScreen.jsx) no desaparece.
+
+**Pide cuenta:** enviar un ánimo, seguir a un corredor con avisos, dar me gusta,
+y que las preferencias sobrevivan al cambio de teléfono.
+
+El razonamiento: el correo de quien quiere que le avisen cuando su hermano cierre la
+vuelta 30 es un correo bueno. El de quien lo escribe para pasar de una pantalla que
+le estorba, no. El muro en la puerta recoge más correos y peores.
+
+**Nadie pierde lo que ya tenía:** al crear la cuenta, la app sube el `fan_name`, los
+seguidos y los me gusta que hubiera en `localStorage` y los ata a la cuenta.
+
+### Consentimiento
+
+Levantar correos de espectadores obliga a:
+
+- actualizar la [política de privacidad](frontend/src/pages/PrivacidadPage.jsx) con
+  qué se guarda del espectador, para qué y cuánto tiempo;
+- una casilla de comunicaciones **separada del alta y no premarcada**
+  (`acepta_comunicaciones`); tener cuenta no es consentir que le escriban;
+- una forma de borrar la cuenta desde la propia app.
+
+El envío por correo y el push segmentado solo van a cuentas con
+`acepta_comunicaciones: true` y `email_verified: true`.
+
+---
+
+## 6. Fases
+
+### Fase 0 — Medir y respaldar
+*Sin código. Es lo que decide varias cosas de la Fase 3.*
+
+1. `mongodump` completo del Atlas.
+2. Contar el solape: cuántos correos están a la vez en `athletes` y en `admin_users`.
+   **Este número decide la política de contraseñas** (ver 6.3).
+3. Contar `athletes` con `email_verified: false` y `admin_users` sin `password`.
+4. Repasar el inventario de endpoints de 3.2 y confirmar que no falta ninguno
+   (`grep -rn "require_admin\|verify_token" backend/routes/`).
+5. Redactar el texto nuevo de privacidad.
+
+**Salida:** los tres números y el texto legal. Sin ellos no se empieza la Fase 1.
+
+---
+
+### Fase 1 — Infraestructura de cuentas
+*Backend, invisible: nada del sitio cambia.*
+
+Nuevo `backend/services/cuentas.py`:
+
+- creación, búsqueda y verificación de cuentas contra `accounts`;
+- verificador de contraseña que despacha por formato (`$2b$` → bcrypt;
+  `salt:hex` → PBKDF2 heredado) y **rehashea a bcrypt al primer login correcto**,
+  para que la conversión ocurra sola sin pedirle nada a nadie;
+- emisión y validación del token nuevo (`ver: 2`).
+
+En `backend/services/auth.py`:
+
+- `require_admin` pasa a exigir `"staff" in roles` además de firma válida;
+- se añade `require_athlete` (`"athlete" in roles`) y `require_cuenta` (cualquier rol);
+- las tres siguen aceptando **también** los tokens heredados de las dos firmas
+  antiguas, traduciéndolos al payload nuevo. Es lo que sostiene la app vieja.
+
+Tests (condición de salida):
+
+- un token heredado de atleta sigue valiendo en `/api/athletes/*` y **falla** en las
+  seis rutas de 3.2;
+- un token nuevo con `roles: ["fan"]` falla en todo lo de staff y todo lo de atleta;
+- un token nuevo con `roles: ["fan","staff"]` y `permissions: []` falla en cada
+  endpoint con `require_permission` y pasa en `/api/staff/mi-perfil`;
+- una contraseña PBKDF2 heredada valida y queda convertida a bcrypt.
+
+---
+
+### Fase 2 — Cuenta de espectador
+*El piloto en producción. Puramente aditivo: no toca nada existente.*
+
+Backend, router nuevo `/api/cuenta` (ojo: `/api/cuenta` ya lo usa
+[users.py:25](backend/routes/users.py:25) para el cambio de contraseña del panel —
+el router nuevo va en `/api/cuentas` o se reordena aquel):
+
+- `POST /registro` — correo, nombre, contraseña, consentimiento. Crea `roles: ["fan"]`
+  y devuelve sesión al momento. Manda el correo de verificación pero **no bloquea**:
+  quien acaba de crear la cuenta puede animar ya.
+- `POST /login`, `POST /verificar`, `POST /recuperar`, `POST /nueva-password`
+- `GET|PUT /perfil`
+- `POST /importar-local` — sube `followed`, `fan_name` y likes del teléfono.
+- `DELETE /perfil` — borrado de cuenta.
+
+Cambios en lo existente, todos compatibles hacia atrás:
+
+- `POST /api/race/cheer` acepta token opcional; con token guarda `account_id` y usa
+  el nombre de la cuenta. Sin token sigue funcionando igual que hoy (app vieja).
+- `POST /api/push/register` acepta `account_id` además de los dos correos de siempre.
+
+App y web:
+
+- pantalla de alta y de acceso de espectador;
+- el botón de ánimo pide cuenta si no la hay, con el alta en la misma pantalla;
+- seguir a un corredor sincroniza contra la cuenta si la hay.
+
+Panel: una pestaña con el listado de espectadores, cuántos hay, cuántos verificados,
+cuántos con consentimiento — y esos correos disponibles como audiencia en el
+compositor de correo y en el push dirigido de
+[push.py:258](backend/routes/push.py:258).
+
+**Se despliega y se deja correr.** Semanas, no días. Es el rodaje del sistema.
+
+---
+
+### Fase 3 — Migrar corredores y staff
+*La fase con riesgo. Solo cuando la 2 lleve tiempo estable.*
+
+**Antes: `mongodump` nuevo.**
+
+Script de migración (idempotente, ejecutable en seco):
+
+1. Cada `athletes` → una `accounts` con `roles: ["fan","athlete"]`,
+   `athlete_profile_id`, el `password_hash` PBKDF2 tal cual, `email_verified` y
+   `nombre`/`apellidos` copiados. `athletes` gana `account_id`.
+2. Cada `admin_users` → si el correo ya tiene cuenta, se le **añade** el rol `staff`
+   con sus `permissions`; si no, cuenta nueva con `roles: ["fan","staff"]`.
+3. `cheer_messages` y `push_devices` reciben `account_id` donde el correo case.
+
+**6.3 — El solape de contraseñas.** Quien esté en las dos colecciones tiene dos
+contraseñas distintas en dos algoritmos distintos. Propuesta: la cuenta guarda las
+dos (`password_hash` bcrypt del staff + `password_hash_legacy` PBKDF2 del atleta) y
+el login acepta **cualquiera de las dos** durante un plazo (tres meses). Así nadie se
+queda fuera, nadie recibe un correo raro y la conversión pasa sola: la que se use se
+rehashea a bcrypt y la otra se retira al vencer el plazo.
+
+Si el conteo de la Fase 0 da un solape muy pequeño (menos de ~10 personas), es más
+limpio unificar a mano y avisarles uno a uno. **Esa es la decisión que depende del
+número.**
+
+Endpoints antiguos: siguen funcionando, pero pasan a leer y escribir contra
+`accounts`. `/api/athletes/login` y `/api/race/auth/admin-login` **siguen emitiendo
+tokens del formato viejo** mientras haya apps antiguas.
+
+---
+
+### Fase 4 — Un solo acceso en app y web
+
+- Login único: correo y contraseña, y el backend decide qué se abre según los roles.
+- `sesion.js` pasa de dos tokens a uno (`bysd_token`) y de dos biometrías a una.
+- La [pantalla de acceso](frontend/src/live/screens/LoginScreen.jsx) deja de preguntar
+  «¿cómo quieres entrar?» y pasa a ofrecer *entrar* o *ver la carrera sin cuenta*.
+  Lo que hoy es elegir rol pasa a ser el menú de después: quien tiene los dos roles ve
+  las dos secciones.
+- La web: `adminApi.js` y las seis pantallas que leen `athlete_token` a mano pasan al
+  token único. Buen momento para centralizar las llamadas de atleta, que hoy no lo
+  están.
+- Versión nueva en App Store y Play Store.
+
+Aquí es donde el voluntario que además corre deja de tener dos cuentas.
+
+---
+
+### Fase 5 — Retirada
+*Cuando el reparto de versiones de la app diga que las antiguas ya no pesan.*
+
+- Se dejan de emitir tokens heredados; las dependencias dejan de aceptarlos.
+- `ATHLETE_SECRET_KEY` desaparece de `auth.py`.
+- `password_hash_legacy` se borra.
+- `admin_users` se retira; los permisos viven solo en `accounts`.
+- `athlete_email` y `staff_email` salen de `push_devices`.
+
+---
+
+## 7. Decisiones que necesito de ti
+
+1. **Verificación del espectador.** Mi propuesta: puede animar nada más registrarse y
+   la verificación llega por correo después; solo las cuentas verificadas entran en
+   envíos. ¿O prefieres exigir el código antes de dejar animar?
+
+2. **Qué se le pregunta al espectador.** Yo pediría correo, nombre y consentimiento, y
+   dejaría país y «relación con la carrera» como opcionales de un toque. Cada campo de
+   más cuesta altas.
+
+3. **Los ánimos anónimos que ya existen.** Se quedan con su `fan_name` y sin cuenta.
+   ¿De acuerdo, o quieres intentar atarlos por nombre? (Yo no: el nombre no identifica
+   y el falso positivo es peor que el hueco.)
+
+4. **El solape de contraseñas** — depende del número de la Fase 0, pero dime si te
+   parece bien la vía de «aceptar las dos durante tres meses» frente a avisar a mano.
+
+5. **Calendario.** Ver abajo.
+
+---
+
+## 8. Calendario propuesto
+
+Hoy es 16 de agosto de 2026; el Mundial es en octubre.
+
+| | Cuándo | Por qué ahí |
+|---|---|---|
+| Fase 0 | ya | medio día, sin riesgo |
+| Fase 1 | ya | invisible, no despliega cambios visibles |
+| Fase 2 | ya, en producción antes de septiembre | quieres los correos de espectadores **del Mundial**, que es cuando más tráfico habrá |
+| **Congelación** | de finales de septiembre a después del Mundial | no se toca identidad con la carrera encima |
+| Fase 3 | después del Mundial | es la única con migración de contraseñas |
+| Fase 4 | después de la 3 | tiendas de por medio |
+| Fase 5 | 3-6 meses después de la 4 | cuando las apps viejas ya no pesen |
+
+La Fase 2 llegando antes del Mundial es lo que hace que el proyecto tenga sentido
+este año: es la carrera con más público, y es exactamente el dato que hoy se pierde.
+
+---
+
+## 9. Riesgos y vuelta atrás
+
+| Riesgo | Cobertura |
+|---|---|
+| Un token de atleta abre el panel | El role check de la Fase 1 y su test, antes de tocar nada más |
+| Alguien se queda sin poder entrar tras la migración | Doble hash durante tres meses; `mongodump` previo; script idempotente y en seco primero |
+| La app vieja deja de funcionar | Los endpoints y formatos antiguos viven hasta la Fase 5; nada se retira antes |
+| Correos de espectador mal recogidos legalmente | Privacidad y consentimiento cerrados en la Fase 0, antes de la primera alta |
+| La Fase 3 sale mal | `accounts` es una colección nueva: `athletes` y `admin_users` siguen intactas. La vuelta atrás es desplegar el backend anterior |
+
+La última fila es el motivo de no mover los perfiles a `accounts`: mientras las
+colecciones viejas sigan enteras, deshacer es un despliegue, no una restauración.
