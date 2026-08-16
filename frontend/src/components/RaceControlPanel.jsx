@@ -16,6 +16,7 @@ import {
 import { useAdminRace } from '../contexts/AdminRaceContext';
 import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
+import { token as sesionToken } from '../lib/sesion';
 
 export default function RaceControlPanel({
   puedeControlar = true,
@@ -98,7 +99,7 @@ export default function RaceControlPanel({
   }, []);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     if (!token) {
       navigate('/admin/login');
       return;
@@ -409,7 +410,7 @@ export default function RaceControlPanel({
   };
 
   const handleToggleRetired = async (participant) => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setSaving(true);
 
     try {
@@ -464,7 +465,7 @@ export default function RaceControlPanel({
   };
 
   const handleMarkDNS = async (participant) => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     
     const confirmDNS = window.confirm(
       `¿Está seguro de marcar al participante ${participant.bib} como DNS (No se presentó)?\n\n` +
@@ -500,7 +501,7 @@ export default function RaceControlPanel({
   };
 
   const handleCompleteLap = async (participant) => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setSaving(true);
 
     try {
@@ -540,7 +541,7 @@ export default function RaceControlPanel({
       return;
     }
 
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setResetting(true);
 
     try {
@@ -590,7 +591,7 @@ export default function RaceControlPanel({
   const handleEditParticipant = async () => {
     if (!editParticipant) return;
     
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setEditingParticipant(true);
 
     try {
@@ -631,7 +632,7 @@ export default function RaceControlPanel({
       return;
     }
     
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setMarkingWinner(true);
 
     try {
@@ -664,7 +665,7 @@ export default function RaceControlPanel({
       return;
     }
     
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setSaving(true);
 
     try {
@@ -695,7 +696,7 @@ export default function RaceControlPanel({
   const handleAdjustLaps = async () => {
     if (!adjustLapsParticipant) return;
     
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     setAdjustingLaps(true);
 
     try {

@@ -3,6 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { GraduationCap, Calendar, DollarSign, Users, Check, Loader2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -43,7 +44,7 @@ export default function CapacitacionesTab() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(null);
-  const token = localStorage.getItem('athlete_token');
+  const token = sesionToken();
 
   const loadData = useCallback(async () => {
     try {

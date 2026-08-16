@@ -418,10 +418,30 @@ panel; `admin` entra por su usuario y conserva `["all"]`; la contraseña mala da
 la regla que no podía relajarse de tapadillo: **el corredor sin correo verificado sigue
 sin entrar** (403 y código nuevo), tanto antes como después — hay 13 así en producción.
 
+**La web, con un solo token — hecha (16/08/2026).** [`lib/sesion.js`](frontend/src/lib/sesion.js)
+es ahora la única sesión del sitio: `bysd_token`. `adminApi.js` y `cuentaApi.js`
+delegan en él, y las 30 lecturas directas de `localStorage` repartidas por 16 ficheros
+pasan por ahí. Al cargar, adopta la sesión heredada (`admin_token`, `athlete_token`,
+`bysd_cuenta_token`) para que nadie se encuentre la puerta cerrada el día del
+despliegue. **Si encuentra dos a la vez** —quien corre y además es del equipo, que
+hasta ahora tenía dos cuentas— las limpia y pide entrar una vez: quedarse con el token
+que no toca daría errores raros en vez de una pantalla de acceso.
+
+`src/live/*` no se toca: es la app, y va en la Fase 4.
+
+**Un fallo que el ensayo no podía ver, y que había que arreglar.** Restablecer o
+cambiar la contraseña —y los equivalentes del panel— escribían solo en `athletes`.
+Desde que el login lee de `accounts`, eso habría producido algo peor que un error: la
+operación diría que fue bien, la contraseña nueva no serviría para entrar **y la vieja
+seguiría valiendo**, sin nada visible fallando. `cuentas.sincronizar_credenciales`
+copia el cambio a la cuenta desde los cinco sitios que lo hacen. Antes de la migración
+no encuentra cuenta y no hace nada, que es justo lo que debe pasar.
+
+Comprobado sobre la copia migrada: se cambia la contraseña, **se entra con la nueva y
+la vieja deja de valer**.
+
 **Falta para cerrar la Fase 3:**
 
-- pasar la web al token único (`adminApi.js` y las seis pantallas que leen
-  `athlete_token` a mano);
 - correr el script en producción con respaldo fresco;
 - resolver a mano la cuenta del solape.
 

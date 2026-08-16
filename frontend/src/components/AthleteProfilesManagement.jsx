@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { COUNTRIES } from '../data/countries';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -28,7 +29,7 @@ export default function AthleteProfilesManagement() {
   const [editForm, setEditForm] = useState({ nombre: '', apellidos: '', telefono: '', sexo: '', nacionalidad: '' });
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const openEditModal = (athlete) => {
     setEditForm({

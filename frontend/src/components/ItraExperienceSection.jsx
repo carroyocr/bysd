@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Mountain, Plus, Trash2, Save, Loader2, ExternalLink, Edit, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -84,7 +85,7 @@ export default function ItraExperienceSection({ athlete, onSaved }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('athlete_token')}`,
+          Authorization: `Bearer ${sesionToken()}`,
         },
         body: JSON.stringify(payload),
       });

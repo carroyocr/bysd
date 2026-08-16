@@ -218,6 +218,36 @@ async def autenticar(db, email: str, password: str) -> Optional[dict]:
     return cuenta
 
 
+async def sincronizar_credenciales(
+    db,
+    email: str,
+    password_hash: Optional[str] = None,
+    email_verified: Optional[bool] = None,
+) -> bool:
+    """Copia a la cuenta un cambio de contrasena o de verificacion.
+
+    Los endpoints del perfil de corredor —restablecer contrasena, cambiarla,
+    verificar el correo, y los equivalentes del panel— escriben en `athletes`,
+    que es donde vivia todo. Desde que el login lee de `accounts`, si no se
+    copia el cambio aqui pasa algo peor que un error: la operacion dice que fue
+    bien y la contrasena nueva no sirve para entrar, mientras la vieja sigue
+    valiendo. No falla nada a la vista, que es lo malo.
+
+    Devuelve si habia cuenta que actualizar. Antes de la migracion no la hay y
+    esto no hace nada, que es justo lo que tiene que pasar.
+    """
+    cambios = {"updated_at": datetime.now(timezone.utc)}
+    if password_hash is not None:
+        cambios["password_hash"] = password_hash
+    if email_verified is not None:
+        cambios["email_verified"] = email_verified
+
+    resultado = await db[COLECCION].update_one(
+        {"email": normalizar_email(email)}, {"$set": cambios}
+    )
+    return resultado.matched_count > 0
+
+
 async def anadir_rol(db, cuenta_id, rol: str, permissions=None) -> None:
     """Suma un rol a una cuenta que ya existe.
 

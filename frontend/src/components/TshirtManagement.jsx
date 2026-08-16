@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Shirt, Upload, Trash2, Loader2, User, Vote, ImageIcon, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -19,7 +20,7 @@ export default function TshirtManagement() {
   const [proposedBy, setProposedBy] = useState('');
   const [file, setFile] = useState(null);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const loadDesigns = useCallback(async () => {
     setLoading(true);

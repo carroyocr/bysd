@@ -425,7 +425,15 @@ async def verify_email(data: VerifyEmailRequest, request: Request = None):
             }
         }
     )
-    
+
+    # El mismo cambio, en la cuenta. Si no, el login —que ya lee de `accounts`—
+    # seguiria diciendo que el correo esta sin verificar despues de haberlo
+    # verificado, y la persona quedaria dando vueltas sin ningun error visible.
+    from services import cuentas as servicio_cuentas
+    await servicio_cuentas.sincronizar_credenciales(
+        database, athlete["email"], email_verified=True
+    )
+
     # Generate token
     token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
     
@@ -770,7 +778,13 @@ async def reset_password(data: ResetPasswordRequest, request: Request = None):
             }
         }
     )
-    
+
+    from services import cuentas as servicio_cuentas
+    await servicio_cuentas.sincronizar_credenciales(
+        database, athlete["email"],
+        password_hash=hash_password(data.new_password), email_verified=True,
+    )
+
     return {"success": True, "message": "Contraseña actualizada"}
 
 
@@ -798,12 +812,18 @@ async def change_password(data: ChangePasswordRequest, authorization: str = Head
     if verify_password(data.new_password, athlete.get("password_hash", "")):
         raise HTTPException(status_code=400, detail="La nueva contraseña debe ser diferente a la actual")
 
+    nuevo_hash = hash_password(data.new_password)
     await database.athletes.update_one(
         {"_id": athlete["_id"]},
         {"$set": {
-            "password_hash": hash_password(data.new_password),
+            "password_hash": nuevo_hash,
             "updated_at": datetime.now(timezone.utc)
         }}
+    )
+
+    from services import cuentas as servicio_cuentas
+    await servicio_cuentas.sincronizar_credenciales(
+        database, athlete["email"], password_hash=nuevo_hash
     )
 
     return {"success": True, "message": "Contraseña actualizada correctamente"}
@@ -2440,6 +2460,10 @@ async def admin_verify_account(athlete_id: str, authorization: str = Header(None
             "updated_at": datetime.now(timezone.utc)
         }}
     )
+    from services import cuentas as servicio_cuentas
+    await servicio_cuentas.sincronizar_credenciales(
+        database, athlete.get("email"), email_verified=True
+    )
     return {"success": True, "message": "Cuenta activada", "email_verified": True}
 
 
@@ -2463,15 +2487,21 @@ async def admin_set_password(athlete_id: str, data: AdminSetPasswordRequest, aut
     if not athlete:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
+    nuevo_hash = hash_password(data.new_password)
     await database.athletes.update_one(
         {"_id": oid},
         {"$set": {
-            "password_hash": hash_password(data.new_password),
+            "password_hash": nuevo_hash,
             "email_verified": True,
             "reset_code": None,
             "reset_code_expires": None,
             "updated_at": datetime.now(timezone.utc)
         }}
+    )
+
+    from services import cuentas as servicio_cuentas
+    await servicio_cuentas.sincronizar_credenciales(
+        database, athlete.get("email"), password_hash=nuevo_hash, email_verified=True
     )
     return {"success": True, "message": "Contraseña actualizada"}
 

@@ -41,6 +41,8 @@ import ChangePasswordDialog from '../components/ChangePasswordDialog';
 // siendo las de enero. El proveedor sí envuelve todo el panel, para que Control
 // y Vueltas compartan la carrera elegida.
 import { AdminRaceProvider } from '../contexts/AdminRaceContext';
+import { cerrarSesion } from '../lib/sesion';
+import { token as sesionToken } from '../lib/sesion';
 
 // Permisos que abren cada tab: el primero es el permiso propio del tab y el
 // segundo el permiso "sombrilla" histórico de su grupo (sigue valiendo).
@@ -201,7 +203,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
+    const token = sesionToken();
     if (!token) {
       navigate('/admin/login');
     } else {
@@ -276,10 +278,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('admin_username');
-    localStorage.removeItem('admin_is_admin');
-    localStorage.removeItem('admin_permissions');
+    cerrarSesion();
     navigate('/admin/login');
   };
 

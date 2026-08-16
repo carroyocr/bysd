@@ -1,16 +1,16 @@
 /**
- * Cuenta única: la sesión de quien sigue la carrera.
+ * Alta y acceso de quien sigue la carrera.
  *
- * Es la tercera clave de sesión que convive en el navegador, junto a
- * `admin_token` (panel) y `athlete_token` (corredor). Las tres se unifican en
- * la fase 3 del plan; hasta entonces esta vive aparte y no toca a las otras.
+ * La sesión ya no es suya: vive en `lib/sesion.js`, que es la única del sitio.
+ * Aquí solo quedan las llamadas y el nombre de la cuenta que se guarda al lado
+ * para poder pintarlo sin ir al servidor.
  *
  * Ver PLAN_CUENTA_UNICA.md.
  */
+import { cerrarSesion, guardarSesion as guardarToken, token } from './sesion';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-export const TOKEN_CUENTA = 'bysd_cuenta_token';
 const CUENTA_CACHE = 'bysd_cuenta';
 
 // Lo que el navegador guardaba de quien animaba antes de que hubiera cuentas.
@@ -19,11 +19,11 @@ export const FAN_NAME_KEY = 'bysd_live_fan_name';
 export const FOLLOWED_KEY = 'backyard_ultra_followed_athletes';
 
 export function tokenCuenta() {
-  return localStorage.getItem(TOKEN_CUENTA);
+  return token();
 }
 
 export function hayCuenta() {
-  return !!tokenCuenta();
+  return !!token();
 }
 
 /** La cuenta que se guardó al entrar, para pintar el nombre sin ir al servidor. */
@@ -35,22 +35,22 @@ export function cuentaGuardada() {
   }
 }
 
-function guardarSesion({ token, cuenta }) {
-  localStorage.setItem(TOKEN_CUENTA, token);
-  localStorage.setItem(CUENTA_CACHE, JSON.stringify(cuenta));
-  return cuenta;
+function guardarSesion(datos) {
+  guardarToken(datos);
+  localStorage.setItem(CUENTA_CACHE, JSON.stringify(datos.cuenta));
+  return datos.cuenta;
 }
 
 export function cerrarSesionCuenta() {
-  localStorage.removeItem(TOKEN_CUENTA);
+  cerrarSesion();
   localStorage.removeItem(CUENTA_CACHE);
 }
 
-/** `fetch` con el token de la cuenta adjunto, si lo hay. */
+/** `fetch` con el token adjunto, si lo hay. */
 export function cuentaFetch(url, options = {}) {
-  const token = tokenCuenta();
+  const t = token();
   const headers = { ...(options.headers || {}) };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (t) headers.Authorization = `Bearer ${t}`;
   return fetch(url, { ...options, headers });
 }
 

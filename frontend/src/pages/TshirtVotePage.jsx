@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Shirt, Check, Trophy, Loader2, User, Vote, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -17,7 +18,7 @@ export default function TshirtVotePage() {
   const [totalVotes, setTotalVotes] = useState(0);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(null);
-  const token = localStorage.getItem('athlete_token');
+  const token = sesionToken();
   const isLoggedIn = !!token;
 
   const loadDesigns = useCallback(async () => {

@@ -5,21 +5,22 @@
  * estaban abiertos y por eso varias pantallas llamaban con `fetch` pelado.
  * Este helper adjunta la cabecera siempre, para que no vuelva a olvidarse en
  * una pantalla nueva.
+ *
+ * Desde la cuenta única el token es uno solo y vive en `lib/sesion.js`. Este
+ * módulo se queda como la puerta del panel —lo usan treinta sitios— pero ya no
+ * guarda nada por su cuenta: solo reexporta.
  */
+import { authHeaders, sesionFetch, token } from './sesion';
+
+export { authHeaders };
 
 export function adminToken() {
-  return localStorage.getItem('admin_token');
+  return token();
 }
 
-/** Cabeceras con el token del panel, conservando las que ya traiga la llamada. */
-export function authHeaders(extra = {}) {
-  const token = adminToken();
-  return token ? { ...extra, Authorization: `Bearer ${token}` } : { ...extra };
-}
-
-/** `fetch` con el token del panel adjunto. */
+/** `fetch` con el token adjunto. */
 export function adminFetch(url, options = {}) {
-  return fetch(url, { ...options, headers: authHeaders(options.headers || {}) });
+  return sesionFetch(url, options);
 }
 
 /* ---------------- Clave de escaneo (página /scan) ---------------- */
