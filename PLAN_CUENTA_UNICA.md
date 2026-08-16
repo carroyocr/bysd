@@ -554,4 +554,6 @@ no puede cambiar el acceso actual, solo quita el riesgo de que Mongo devolviera 
 día el huérfano. Ninguno de los dos tenía `updated_at`, así que la contraseña nunca se
 había cambiado desde el panel y ambos conservaban su hash de aquel arranque.
 
-Quedan 18 usuarios (eran 19), un solo `admin`, e índice único activo.
+Quedan 18 usuarios (eran 19), un solo `admin`, e índice único activo. **Cristian
+confirmó el 16/08/2026 que entra al panel sin problema tras el borrado**, que era la
+única comprobación que no se podía hacer sin él.
