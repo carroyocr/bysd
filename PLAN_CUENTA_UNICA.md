@@ -299,7 +299,7 @@ Tests (condición de salida):
 
 ---
 
-### Fase 2 — Cuenta de espectador — **BACKEND HECHO (16/08/2026), FALTA LA WEB**
+### Fase 2 — Cuenta de espectador — **HECHA (16/08/2026)**
 *El piloto en producción. Puramente aditivo: no toca nada existente.*
 
 Decidido: **se anima nada más registrarse** y el código de verificación llega
@@ -314,8 +314,21 @@ para el panel. Más el ánimo firmado en [`routes/race.py`](backend/routes/race.
 `account_id` y la audiencia `espectadores` en [`routes/push.py`](backend/routes/push.py),
 y los índices en el arranque. Probado end to end contra el backend local.
 
-**Falta:** la parte web (alta y acceso de espectador, el botón de ánimo pidiendo
-cuenta, y la pestaña del panel).
+En la web: [`lib/cuentaApi.js`](frontend/src/lib/cuentaApi.js) con la sesión,
+[`CuentaAcceso.jsx`](frontend/src/components/CuentaAcceso.jsx) con el alta y el acceso,
+la cuenta enganchada al envío de ánimo en
+[`EnviarAnimoPage.jsx`](frontend/src/pages/EnviarAnimoPage.jsx), y la pestaña
+[`EspectadoresManagement.jsx`](frontend/src/components/EspectadoresManagement.jsx) en
+Comunicación del panel.
+
+**Dónde queda el muro.** La cuenta se pide al pulsar *Enviar*, con el mensaje ya
+escrito, y en cuanto está hecha el mensaje sale solo. Así el alta es un paso
+intermedio y no un desvío que haga perder lo tecleado. Ver la carrera, los corredores
+y los mensajes sigue sin pedir nada.
+
+**Pendiente antes de desplegar esta fase:** el texto nuevo de la
+[política de privacidad](frontend/src/pages/PrivacidadPage.jsx) (Fase 0, punto 5), que
+es condición para la primera alta real.
 
 Backend, router nuevo `/api/cuenta` (ojo: `/api/cuenta` ya lo usa
 [users.py:25](backend/routes/users.py:25) para el cambio de contraseña del panel —

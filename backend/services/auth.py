@@ -215,6 +215,7 @@ TAB_PERMISSION_GROUPS = {
     "shifts": "volunteers",         # tab Turnos
     "email-templates": "emails",    # tab Correos
     "email-composer": "emails",     # tab Enviar Correos
+    "espectadores": "emails",       # tab Espectadores (cuentas de espectador)
     "whatsapp": "emails",           # tab WhatsApp
     "prensa": "emails",             # tab Prensa
     "race-config": "config",        # tab Carrera
