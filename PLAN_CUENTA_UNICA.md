@@ -519,15 +519,22 @@ que encuentra primero. Solo una de las dos contraseñas funciona. No es explotab
 reordenan (una restauración, una compactación), el acceso de administrador podría
 dejar de funcionar sin que nadie haya tocado nada.
 
-**Arreglo, en dos partes:**
+**Resuelto el 16/08/2026.** En dos partes:
 
-1. *El código* — **hecho (16/08/2026)**. El arranque usa ahora `update_one` con
-   `upsert=True` y `$setOnInsert`, que es una sola operación atómica: arranquen los
-   workers que arranquen, el documento se crea una vez.
-2. *El dato* — **pendiente**. Falta borrar el documento sobrante, el que **no** tiene
-   la contraseña en uso. Es un borrado en producción: hace falta respaldo previo,
-   comprobar cuál de los dos valida la contraseña que usas, y tu confirmación.
+1. *El código.* El arranque usa ahora `update_one` con `upsert=True` y `$setOnInsert`,
+   una sola operación atómica: arranquen los workers que arranquen, el documento se
+   crea una vez. Y crea el índice único en `admin_users.username`.
+2. *El dato.* Borrado el documento sobrante en producción, con respaldo previo
+   (`respaldo-20260816-pre-cuenta-unica.gz`, 14 MB) y los dos documentos guardados
+   aparte en `admin-duplicado-20260816.json`, ambos en `bysd-secretos`.
 
-El **índice único** en `admin_users.username` va con la parte 2 y no antes: crearlo
-ahora fallaría en el arranque, con los dos documentos vivos, y dejaría el backend sin
-levantar. Queda anotado en el código, en [server.py:149](backend/server.py:149).
+**Cómo se decidió cuál borrar, sin necesitar la contraseña de nadie.** El login hace
+`find_one({"username": "admin"})` y el cambio de contraseña hace `update_one` con el
+mismo filtro: los dos caen sobre el primer documento en orden natural. Comprobado diez
+veces seguidas, ese primero era siempre `696b363c923cd838fed14baa`. Luego la
+contraseña que funciona hoy es, por definición, la de ese documento — y borrar el otro
+no puede cambiar el acceso actual, solo quita el riesgo de que Mongo devolviera algún
+día el huérfano. Ninguno de los dos tenía `updated_at`, así que la contraseña nunca se
+había cambiado desde el panel y ambos conservaban su hash de aquel arranque.
+
+Quedan 18 usuarios (eran 19), un solo `admin`, e índice único activo.

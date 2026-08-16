@@ -154,18 +154,16 @@ async def initialize_race_data():
     # sin acceso sin que nadie hubiera tocado nada.
     #
     # Con `upsert` + `$setOnInsert` la creacion es una sola operacion atomica:
-    # arranquen los workers que arranquen, el documento se crea una vez.
-    #
-    # Falta el indice unico en `username`, que es lo que lo dejaria garantizado
-    # tambien contra codigo futuro. No se puede poner todavia: en produccion
-    # siguen los dos documentos `admin`, y crear el indice ahi fallaria en el
-    # arranque y dejaria el backend sin levantar. Va en cuanto se borre el
-    # sobrante. Ver PLAN_CUENTA_UNICA.md, seccion 10.
+    # arranquen los workers que arranquen, el documento se crea una vez. El
+    # indice unico lo deja garantizado tambien contra codigo futuro: el
+    # duplicado que quedo de aquel arranque se limpio el 16/08/2026, asi que
+    # crearlo aqui ya no falla. Ver PLAN_CUENTA_UNICA.md, seccion 10.
     import secrets
 
     from services import cuentas as servicio_cuentas
 
     await servicio_cuentas.asegurar_indices(db)
+    await db.admin_users.create_index("username", unique=True)
 
     initial_password = get_env("ADMIN_INITIAL_PASSWORD")
     generada = initial_password is None
