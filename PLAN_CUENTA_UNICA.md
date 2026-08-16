@@ -299,8 +299,23 @@ Tests (condición de salida):
 
 ---
 
-### Fase 2 — Cuenta de espectador
+### Fase 2 — Cuenta de espectador — **BACKEND HECHO (16/08/2026), FALTA LA WEB**
 *El piloto en producción. Puramente aditivo: no toca nada existente.*
+
+Decidido: **se anima nada más registrarse** y el código de verificación llega
+detrás; solo las cuentas verificadas **y con consentimiento** entran en envíos. Se
+piden **correo, nombre y consentimiento**, nada más; país y relación quedan como
+opcionales editables después.
+
+Entregado en [`routes/cuentas.py`](backend/routes/cuentas.py): alta, acceso,
+verificación por código con límite de intentos, recuperación de contraseña, perfil,
+importación de lo que traía el teléfono, borrado de la propia cuenta, y el listado
+para el panel. Más el ánimo firmado en [`routes/race.py`](backend/routes/race.py), el
+`account_id` y la audiencia `espectadores` en [`routes/push.py`](backend/routes/push.py),
+y los índices en el arranque. Probado end to end contra el backend local.
+
+**Falta:** la parte web (alta y acceso de espectador, el botón de ánimo pidiendo
+cuenta, y la pestaña del panel).
 
 Backend, router nuevo `/api/cuenta` (ojo: `/api/cuenta` ya lo usa
 [users.py:25](backend/routes/users.py:25) para el cambio de contraseña del panel —
@@ -504,13 +519,15 @@ que encuentra primero. Solo una de las dos contraseñas funciona. No es explotab
 reordenan (una restauración, una compactación), el acceso de administrador podría
 dejar de funcionar sin que nadie haya tocado nada.
 
-**Arreglo propuesto**, en dos partes:
+**Arreglo, en dos partes:**
 
-1. *El dato:* borrar el documento sobrante — el que **no** tiene la contraseña en uso.
-   Es un borrado en producción, así que hace falta tu visto bueno y decidir cuál se
-   queda comprobando antes cuál valida la contraseña que usas.
-2. *El código:* sustituir el `find_one` + `insert_one` por un `update_one` con
-   `upsert=True` y `$setOnInsert`, que es atómico y no puede duplicar aunque arranquen
-   diez workers a la vez. Añadir además índice único en `admin_users.username`.
+1. *El código* — **hecho (16/08/2026)**. El arranque usa ahora `update_one` con
+   `upsert=True` y `$setOnInsert`, que es una sola operación atómica: arranquen los
+   workers que arranquen, el documento se crea una vez.
+2. *El dato* — **pendiente**. Falta borrar el documento sobrante, el que **no** tiene
+   la contraseña en uso. Es un borrado en producción: hace falta respaldo previo,
+   comprobar cuál de los dos valida la contraseña que usas, y tu confirmación.
 
-La parte 2 se puede hacer ya y sola. La parte 1 espera a que digas cuál se borra.
+El **índice único** en `admin_users.username` va con la parte 2 y no antes: crearlo
+ahora fallaría en el arranque, con los dos documentos vivos, y dejaría el backend sin
+levantar. Queda anotado en el código, en [server.py:149](backend/server.py:149).

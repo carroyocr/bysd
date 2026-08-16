@@ -1403,9 +1403,17 @@ async def get_subscribers_count_public(
 @router.post("/cheer")
 async def submit_cheer_message(
     request: CheerMessageRequest,
+    authorization: Optional[str] = Header(None),
     db=Depends(lambda: None)
 ):
-    """Submit a cheer message for an athlete"""
+    """Submit a cheer message for an athlete.
+
+    El token es opcional a proposito. Animar sin cuenta sigue funcionando igual
+    que siempre —es como llega la mayoria, y cerrarlo de golpe cortaria el hilo
+    de la carrera—, pero cuando viene firmado se guarda `account_id` y el
+    mensaje deja de ser un nombre suelto: se sabe quien anima, se le puede
+    avisar, y el ano que viene se le reconoce.
+    """
     from server import db as database
     from services.twitter_service import post_cheer_to_twitter
     
@@ -1458,6 +1466,20 @@ async def submit_cheer_message(
     if len(request.fan_name) > 50:
         raise HTTPException(status_code=400, detail="El nombre no puede exceder 50 caracteres")
     
+    # Quien viene con sesion abierta firma el mensaje con su cuenta. Un token
+    # invalido o caducado no tumba el envio: se anima igual, sin cuenta, que es
+    # lo que se hacia hasta ahora.
+    cuenta = None
+    if authorization:
+        try:
+            from services import cuentas as servicio_cuentas
+            from services.auth import verify_cuenta_token
+
+            payload = verify_cuenta_token(authorization)
+            cuenta = await servicio_cuentas.por_id(database, payload.get("sub"))
+        except Exception:
+            cuenta = None
+
     # Create cheer message with race_code
     cheer_data = {
         "athlete_bib": request.athlete_bib,
@@ -1466,7 +1488,13 @@ async def submit_cheer_message(
         "race_code": active_race_code,
         "created_at": datetime.now(timezone.utc)
     }
-    
+    if cuenta:
+        cheer_data["account_id"] = cuenta["_id"]
+        # El nombre de la cuenta manda sobre el que venga escrito en el cuerpo:
+        # es el que la persona eligio para si, no uno tecleado de paso.
+        if (cuenta.get("nombre") or "").strip():
+            cheer_data["fan_name"] = cuenta["nombre"].strip()
+
     await database.cheer_messages.insert_one(cheer_data)
     
     # Try to post to Twitter (non-blocking, don't fail if Twitter fails)
@@ -1474,7 +1502,8 @@ async def submit_cheer_message(
     nacionalidad = athlete.get('nacionalidad', '')
     
     twitter_result = await post_cheer_to_twitter(
-        fan_name=request.fan_name,
+        # El mismo nombre que se guardo, que con cuenta es el de la cuenta.
+        fan_name=cheer_data["fan_name"],
         athlete_name=athlete_name,
         athlete_bib=request.athlete_bib,
         message=request.message,
