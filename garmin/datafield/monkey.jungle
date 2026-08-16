@@ -1,0 +1,15 @@
+# Configuracion de compilacion del campo de datos de BYSD Live.
+#
+# Comparte con la app de reloj el reloj local de la carrera, los formatos y la
+# unica pieza que sale a la red: son exactamente el mismo problema resuelto una
+# vez. Lo que no comparte es el dibujo, porque aqui la pantalla es un trozo de
+# la esfera y no la esfera entera.
+#
+# No hay emblema: en un campo de datos no cabe, y ademas la memoria de la que
+# se dispone aqui es mucho menor que en una app.
+
+project.manifest = manifest.xml
+
+base.sourcePath = source;../shared/source
+base.resourcePath = resources;../shared/resources
+

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!--
+  El emblema solo lo usa la app: es la pantalla de bienvenida, y en un campo
+  de datos no cabe. Los relojes pequenos y los AMOLED grandes lo sustituyen
+  desde resources-small y resources-large.
+-->
+<drawables>
+    <bitmap id="Emblema" filename="emblema.png"/>
+</drawables>

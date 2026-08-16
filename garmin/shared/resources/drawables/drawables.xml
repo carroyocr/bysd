@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!--
+  El icono del lanzador lo usan los dos proyectos: la app y el campo de datos
+  se ven igual en la lista del reloj. No es el emblema encogido: a 60 px el
+  texto curvo se convierte en papilla, asi que lleva solo el aro y la lagartija.
+-->
+<drawables>
+    <bitmap id="LauncherIcon" filename="launcher_icon.png"/>
+</drawables>

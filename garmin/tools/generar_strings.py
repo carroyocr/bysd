@@ -27,6 +27,9 @@ LARGO_COMODO = 18
 TABLA = {
     #                    eng                      spa                   fre                    deu                     ita                    por
     "appName":         ("BYSD Live",              "BYSD Live",          "BYSD Live",           "BYSD Live",            "BYSD Live",           "BYSD Live"),
+    # El nombre del campo de datos, tal y como sale en la lista donde el
+    # corredor elige que poner en cada hueco de su pantalla de carrera.
+    "fieldName":       ("BYSD Margin",            "BYSD Margen",        "BYSD Marge",          "BYSD Puffer",          "BYSD Margine",        "BYSD Margem"),
     "lap":             ("Lap",                    "Vuelta",             "Tour",                "Runde",                "Giro",                "Volta"),
     "nextStart":       ("Next start",             "Próxima salida",     "Prochain départ",     "Nächster Start",       "Prossima partenza",   "Próxima partida"),
     "beforeStart":     ("For lap 1",              "Para la vuelta 1",   "Pour le tour 1",      "Für Runde 1",          "Per il giro 1",       "Para a volta 1"),
@@ -52,9 +55,12 @@ TABLA = {
     "settingRefresh":  ("Refresh (seconds)",      "Refresco (segundos)","Rafraîchissement (s)","Aktualisierung (Sek.)","Aggiornamento (s)",   "Atualização (s)"),
 }
 
-# Las que se dibujan en la esfera. Las de ajustes no cuentan para el aviso de
-# largo porque se leen en el telefono.
-EN_LA_ESFERA = [c for c in TABLA if not c.startswith("setting")]
+# Las que se dibujan en la esfera. No cuentan para el aviso de largo ni las de
+# ajustes, que se leen en el telefono, ni los dos nombres, que salen en listas
+# donde el reloj ya se encarga de recortar.
+FUERA_DE_LA_ESFERA = ["appName", "fieldName"]
+EN_LA_ESFERA = [c for c in TABLA
+                if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 
 
 def revisar():
@@ -109,5 +115,15 @@ if __name__ == "__main__":
         for p in problemas:
             print("ERROR " + p, file=sys.stderr)
         sys.exit(1)
-    escribir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # Las traducciones son las mismas para la app y para el campo de datos,
+    # pero hay que escribirlas dos veces, una en cada proyecto.
+    #
+    # No es por gusto: monkeyc solo mira las carpetas resources-<idioma> que
+    # son hermanas del manifest.xml del proyecto que compila. Una carpeta
+    # compartida en ../shared no la lee, y no avisa: compila igual y el reloj
+    # sale en ingles. Por eso los XML se generan y no se editan, y por eso
+    # este script es el unico sitio donde estan las palabras.
+    raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for proyecto in ["app", "datafield"]:
+        escribir(os.path.join(raiz, proyecto))
     avisar_de_los_largos()

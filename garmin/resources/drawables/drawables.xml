@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<drawables>
-    <!--
-      El icono del lanzador no es el emblema encogido: a 60 px el texto curvo
-      se convierte en papilla, asi que lleva solo el aro y la lagartija.
-    -->
-    <bitmap id="LauncherIcon" filename="launcher_icon.png"/>
-    <bitmap id="Emblema" filename="emblema.png"/>
-</drawables>

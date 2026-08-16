@@ -1,0 +1,35 @@
+# Configuracion de compilacion de BYSD Live (app de reloj).
+#
+# El codigo que tambien usa el campo de datos vive en ../shared/source, y los
+# ajustes y el icono en ../shared/resources. Las traducciones no: esas tienen
+# que estar aqui al lado, porque monkeyc solo mira las carpetas resources-<lang>
+# hermanas del manifest.xml que compila. Las genera tools/generar_strings.py.
+#
+# El emblema es un mapa de bits y Connect IQ no lo escala al compilar, asi que
+# hay uno por tamano. El reparto va por FAMILIA de pantalla y no por lista de
+# modelos: una lista de modelos hay que tocarla con cada reloj nuevo, y mientras
+# no se toca, el reloj nuevo se lleva un emblema que no le cabe. Por familia,
+# un modelo que no exista todavia cae solo en el grupo que le corresponde.
+#
+# La regla es simple: el emblema mas grande que quepa entero.
+
+project.manifest = manifest.xml
+
+base.sourcePath = source;../shared/source
+base.resourcePath = resources;../shared/resources
+
+# Hasta 239 px: emblema de 196. La esfera redonda mas pequena que existe hoy
+# en el SDK es de 218; no hay ninguna de 208, pese a lo que decia este archivo.
+round-218x218.resourcePath = $(base.resourcePath);resources-small
+
+# El Instinct 2 es de 176 px: no hay emblema que le quepa, ni siquiera el de
+# 196. Se le da el pequeno porque es el que menos hay que encoger, y del
+# encogido se encarga SplashView en el propio reloj.
+semioctagon-176x176.resourcePath = $(base.resourcePath);resources-small
+
+# De 240 a 379 px se queda el emblema base de 240, que es el de resources/.
+
+# De 380 px en adelante: emblema de 380.
+round-390x390.resourcePath = $(base.resourcePath);resources-large
+round-416x416.resourcePath = $(base.resourcePath);resources-large
+round-454x454.resourcePath = $(base.resourcePath);resources-large
