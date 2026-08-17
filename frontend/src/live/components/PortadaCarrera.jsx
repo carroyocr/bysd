@@ -1,7 +1,7 @@
 import React from 'react';
 import { raceStartMs, formatCountdown } from '../liveApi';
 
-const fechaLarga = (iso) => {
+export const fechaLarga = (iso) => {
   if (!iso) return '';
   try {
     return new Date(`${iso}T12:00:00`).toLocaleDateString('es-DO', {
@@ -12,7 +12,7 @@ const fechaLarga = (iso) => {
   }
 };
 
-const hora12 = (hhmm) => {
+export const hora12 = (hhmm) => {
   if (!hhmm) return '';
   const [h, m] = hhmm.split(':');
   const hora = parseInt(h, 10);
@@ -29,28 +29,29 @@ export const PUERTA_PROPIA = {
   staff: { ruta: '/live/staff', texto: 'Ir al panel del staff' },
 };
 
-/**
- * La carrera elegida: cuenta atrás, nombre, fecha y la puerta de entrada.
- *
- * Vive aparte porque lo usan dos sitios: la ruta `/live/portada/:code`, para
- * quien llega por un enlace, y la propia lista de carreras, que ahora lo
- * despliega en el mismo sitio en vez de saltar a otra pantalla. Teniendo el
- * mismo componente detrás, las dos no pueden separarse con el tiempo.
- *
- * Aparece escalonado de arriba abajo: es el momento en que la app deja de
- * preguntar y empieza a contar.
- */
-export default function PortadaCarrera({ carrera, ahora, alEntrar, puertaPropia, alIrAPuerta }) {
+export function estadoCarrera(carrera, ahora) {
   const salida = raceStartMs(carrera);
   const arrancada = salida != null && ahora >= salida;
-  const terminada = !!carrera?.finished_at;
-  const faltan = !arrancada && salida != null ? formatCountdown(salida - ahora) : null;
+  return {
+    arrancada,
+    terminada: !!carrera?.finished_at,
+    faltan: !arrancada && salida != null ? formatCountdown(salida - ahora) : null,
+  };
+}
+
+/**
+ * La cuenta atrás con su halo.
+ *
+ * Va aparte del resto porque la lista de carreras la despliega sobre la ficha
+ * que ya estaba en pantalla, sin volver a pintar el nombre: ahí el nombre lo
+ * pone la propia ficha, que se queda.
+ */
+export function CuentaAtras({ carrera, ahora }) {
+  const { arrancada, terminada, faltan } = estadoCarrera(carrera, ahora);
 
   return (
     <>
-      {/* El número, con su halo. Es lo primero que aparece y lo único que
-          respira: llamar la atención una vez es un gesto. */}
-      <div className="relative mt-10 bysd-halo">
+      <div className="relative mt-6 bysd-halo">
         <span
           className="absolute inset-0 -m-10 rounded-full"
           style={{ background: 'radial-gradient(circle, rgba(231,118,34,.22) 0%, transparent 68%)' }}
@@ -80,6 +81,48 @@ export default function PortadaCarrera({ carrera, ahora, alEntrar, puertaPropia,
       >
         {arrancada && !terminada ? 'la carrera está corriendo' : faltan ? 'para la salida' : 'gracias por correrla'}
       </p>
+    </>
+  );
+}
+
+/** El botón de entrar y, para corredor y staff, su puerta propia. */
+export function PieCarrera({ alEntrar, puertaPropia, alIrAPuerta, retraso = '.85s' }) {
+  return (
+    <div className="mt-auto w-full bysd-entra" style={{ animationDelay: retraso }}>
+      <button
+        onClick={alEntrar}
+        data-testid="ver-la-carrera"
+        className="w-full rounded-full py-3.5 text-xs font-medium uppercase tracking-[0.24em]
+          text-[#E77622] border border-[rgba(231,118,34,0.6)] bg-[rgba(231,118,34,0.10)]
+          shadow-[0_0_26px_rgba(231,118,34,0.16)]
+          transition-transform duration-100 ease-out active:scale-[0.985]"
+      >
+        Ver la carrera
+      </button>
+
+      {puertaPropia && (
+        <button
+          onClick={alIrAPuerta}
+          className="w-full mt-3 py-2 text-[11px] uppercase tracking-[0.16em] text-[#a49c8f]"
+        >
+          {puertaPropia.texto}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * La portada completa, para quien llega por enlace directo.
+ *
+ * El camino normal ya no pasa por aquí: la lista de carreras monta estas
+ * mismas piezas alrededor de la ficha que ya estaba en pantalla. Compartir los
+ * trozos es lo que impide que las dos versiones se separen con el tiempo.
+ */
+export default function PortadaCarrera({ carrera, ahora, alEntrar, puertaPropia, alIrAPuerta }) {
+  return (
+    <>
+      <CuentaAtras carrera={carrera} ahora={ahora} />
 
       <p
         className="bysd-entra mt-8 text-sm font-normal uppercase tracking-[0.2em] leading-relaxed text-white"
@@ -105,27 +148,7 @@ export default function PortadaCarrera({ carrera, ahora, alEntrar, puertaPropia,
         </p>
       )}
 
-      <div className="mt-auto w-full bysd-entra" style={{ animationDelay: '.85s' }}>
-        <button
-          onClick={alEntrar}
-          data-testid="ver-la-carrera"
-          className="w-full rounded-full py-3.5 text-xs font-medium uppercase tracking-[0.24em]
-            text-[#E77622] border border-[rgba(231,118,34,0.6)] bg-[rgba(231,118,34,0.10)]
-            shadow-[0_0_26px_rgba(231,118,34,0.16)]
-            transition-transform duration-100 ease-out active:scale-[0.985]"
-        >
-          Ver la carrera
-        </button>
-
-        {puertaPropia && (
-          <button
-            onClick={alIrAPuerta}
-            className="w-full mt-3 py-2 text-[11px] uppercase tracking-[0.16em] text-[#a49c8f]"
-          >
-            {puertaPropia.texto}
-          </button>
-        )}
-      </div>
+      <PieCarrera alEntrar={alEntrar} puertaPropia={puertaPropia} alIrAPuerta={alIrAPuerta} />
     </>
   );
 }
