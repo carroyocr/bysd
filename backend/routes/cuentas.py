@@ -56,6 +56,9 @@ class Registro(BaseModel):
     apellidos: str = Field(default="", max_length=80)
     password: str = Field(min_length=cuentas.MIN_PASSWORD, max_length=200)
     acepta_comunicaciones: bool = False
+    # 'espectador' | 'staff'. El corredor va por `/api/athletes/register`,
+    # que ademas crea su ficha en `athletes`.
+    tipo: str = "espectador"
 
 
 class Acceso(BaseModel):
@@ -244,12 +247,21 @@ async def registro(datos: Registro, request: Request = None):
             detail="Ese correo ya tiene cuenta. Entra con tu contrasena.",
         )
 
+    # Una cuenta de equipo se crea desde cero, sin que la organizacion tenga que
+    # apuntar antes a nadie: es lo que hace que haya un solo perfil para todo el
+    # mundo. Lo que NO se decide aqui son los permisos, que salen siempre vacios
+    # y los da despues el panel. Sin ellos, el rol de staff abre su propio perfil
+    # y los turnos libres, nada mas: las fichas medicas exigen el permiso
+    # `scanner`, y el resto del panel, el suyo.
+    roles = [cuentas.STAFF] if datos.tipo == "staff" else []
+
     cuenta = await cuentas.crear(
         db,
         email=datos.email,
         password=datos.password,
         nombre=datos.nombre,
         apellidos=datos.apellidos,
+        roles=roles,
         acepta_comunicaciones=datos.acepta_comunicaciones,
     )
 

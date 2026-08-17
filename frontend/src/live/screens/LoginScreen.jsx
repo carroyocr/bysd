@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check,
+  Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check, ChevronDown,
 } from 'lucide-react';
 import { API } from '../liveApi';
 import { clic } from '../sonido';
@@ -12,16 +12,16 @@ import {
 
 // Los tres tipos de cuenta.
 //
-// Espectador y Atleta se crean solos. Staff NO: una cuenta de equipo solo
-// existe si la organización ya tiene a esa persona apuntada como voluntaria.
-// Dejar que cualquiera se marque "Staff" al registrarse sería concederse el
-// rol a uno mismo, y con él las fichas médicas de todos los inscritos. Por eso
-// esta opción no crea nada: comprueba el correo contra el registro de
-// voluntarios y, si está, manda el código para poner contraseña.
+// Los tres se crean desde cero: el perfil es uno solo para todo el mundo, y esa
+// era la razón de unificarlo. Lo que el tipo decide es el rol, no el acceso:
+// una cuenta de equipo nace **sin ningún permiso** y con eso solo ve su propio
+// perfil y los turnos libres. Quién entra a inscripciones, a finanzas o a las
+// fichas médicas —que exigen el permiso `scanner`— lo sigue decidiendo la
+// organización desde el panel, que es donde debe decidirse.
 const TIPOS = [
-  { id: 'espectador', etiqueta: 'Espectador', pie: 'Seguir la carrera y animar' },
-  { id: 'atleta', etiqueta: 'Atleta', pie: 'Correr e inscribirte' },
-  { id: 'staff', etiqueta: 'Staff', pie: 'Si ya eres voluntario' },
+  { id: 'espectador', etiqueta: 'Espectador', pie: 'Seguir la carrera, animar a los corredores y recibir avisos.' },
+  { id: 'atleta', etiqueta: 'Atleta', pie: 'Correr, inscribirte y llevar tu historial de carreras.' },
+  { id: 'staff', etiqueta: 'Staff', pie: 'Voluntario o equipo. Los accesos del panel te los da la organización después.' },
 ];
 
 const SEXOS = ['Masculino', 'Femenino'];
@@ -113,6 +113,7 @@ export default function LoginScreen() {
   const [paso, setPaso] = useState(1);
   const [f, setF] = useState(vacio);
   const set = (k) => (ev) => setF((p) => ({ ...p, [k]: ev.target.value }));
+  const detalle = TIPOS.find((t) => t.id === f.tipo) || TIPOS[0];
 
   const conSesion = haySesion();
   useEffect(() => {
@@ -257,22 +258,19 @@ export default function LoginScreen() {
     if (f.password.length < 8) { setError('La contraseña necesita al menos 8 caracteres.'); return; }
     setError('');
 
-    // Staff no crea cuenta: su camino comprueba el registro de voluntarios y
-    // sirve igual para quien ya la tenga, así que no se le corta aquí.
-    if (f.tipo !== 'staff') {
-      setOcupado(true);
-      const usado = await comprobarCorreo(f.email.trim());
-      setOcupado(false);
-      if (usado) return undefined;
-    }
+    setOcupado(true);
+    const usado = await comprobarCorreo(f.email.trim());
+    setOcupado(false);
+    if (usado) return undefined;
 
-    if (f.tipo === 'espectador') return crearEspectador();
-    if (f.tipo === 'staff') return comprobarStaff();
+    // Espectador y staff terminan aquí: los dos son la misma cuenta con un rol
+    // distinto. Solo quien va a correr sigue rellenando.
+    if (f.tipo !== 'atleta') return crearCuenta();
     setPaso(2);
     return undefined;
   };
 
-  const crearEspectador = async () => {
+  const crearCuenta = async () => {
     setOcupado(true); setError('');
     try {
       const r = await fetch(`${API}/api/cuentas/registro`, {
@@ -281,6 +279,7 @@ export default function LoginScreen() {
         body: JSON.stringify({
           email: f.email.trim(), nombre: f.nombre.trim(), apellidos: f.apellidos.trim(),
           password: f.password, acepta_comunicaciones: f.acepta_comunicaciones,
+          tipo: f.tipo,
         }),
       });
       const d = await r.json().catch(() => ({}));
@@ -333,50 +332,6 @@ export default function LoginScreen() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setError(d.detail || 'Código incorrecto'); setOcupado(false); return; }
       await entrada({ token: d.token }, f.email.trim());
-    } catch {
-      setError('No se pudo conectar.'); setOcupado(false);
-    }
-  };
-
-  const comprobarStaff = async () => {
-    setOcupado(true); setError('');
-    try {
-      const r = await fetch(`${API}/api/staff/account-status?email=${encodeURIComponent(f.email.trim())}`);
-      const d = await r.json().catch(() => ({}));
-      if (!d.es_voluntario && !d.tiene_cuenta) {
-        setError('Ese correo no está apuntado como voluntario. Apúntate primero desde Voluntarios y luego vuelve aquí.');
-        setOcupado(false);
-        return;
-      }
-      await fetch(`${API}/api/staff/password/request-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: f.email.trim() }),
-      });
-      setAviso('Te enviamos un código al correo.');
-      setPasoCodigo('codigo');
-      setPaso(3);
-    } catch {
-      setError('No se pudo conectar.');
-    }
-    setOcupado(false);
-  };
-
-  const activarStaff = async (ev) => {
-    ev.preventDefault();
-    setOcupado(true); setError('');
-    try {
-      const r = await fetch(`${API}/api/staff/password/set`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: f.email.trim(), code: codigo.trim(), password: f.password }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setError(d.detail || 'No se pudo activar la cuenta'); setOcupado(false); return; }
-      await entrada({
-        token: d.token, username: d.username,
-        is_admin: d.is_admin, permissions: d.permissions || [],
-      }, f.email.trim());
     } catch {
       setError('No se pudo conectar.'); setOcupado(false);
     }
@@ -486,8 +441,10 @@ export default function LoginScreen() {
         {modo === 'acceso' && (
           <form onSubmit={entrar} className="w-full flex flex-col gap-3">
             <input
-              type="email" value={email} onChange={(ev) => setEmail(ev.target.value)}
-              placeholder="Correo" autoComplete="email" className={campo}
+              type="email" name="email" value={email}
+              onChange={(ev) => setEmail(ev.target.value.replace(/\s/g, ''))}
+              placeholder="Correo" autoComplete="email" inputMode="email"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} className={campo}
             />
             <Clave
               valor={password} alCambiar={(ev) => setPassword(ev.target.value)}
@@ -559,15 +516,26 @@ export default function LoginScreen() {
         {/* ---------- REGISTRO ---------- */}
         {modo === 'registro' && paso === 1 && (
           <form onSubmit={siguientePaso} className="w-full flex flex-col gap-3">
-            <input value={f.nombre} onChange={set('nombre')} placeholder="Nombre"
-              autoComplete="given-name" className={campo} />
-            <input value={f.apellidos} onChange={set('apellidos')} placeholder="Apellidos"
-              autoComplete="family-name" className={campo} />
+            {/* `name` e `id` además de `autoComplete`: iOS deriva el
+                textContentType del WKWebView de estos atributos, y sin ellos no
+                ofrece rellenar desde la ficha de contacto. */}
+            <input id="reg-nombre" name="given-name" value={f.nombre} onChange={set('nombre')}
+              placeholder="Nombre" autoComplete="given-name" className={campo} />
+            <input id="reg-apellidos" name="family-name" value={f.apellidos} onChange={set('apellidos')}
+              placeholder="Apellidos" autoComplete="family-name" className={campo} />
             <input
               type="email" value={f.email}
-              onChange={(ev) => { setF((p) => ({ ...p, email: ev.target.value })); setCorreoEnUso(false); }}
+              id="reg-email" name="email"
+              onChange={(ev) => {
+                // El teclado del teléfono mete un espacio al autocompletar y
+                // al pegar; sin quitarlo, el correo se guarda con él y luego
+                // no coincide con nada.
+                setF((p) => ({ ...p, email: ev.target.value.replace(/\s/g, '') }));
+                setCorreoEnUso(false);
+              }}
               onBlur={(ev) => comprobarCorreo(ev.target.value.trim())}
-              placeholder="Correo" autoComplete="email" className={campo}
+              placeholder="Correo" autoComplete="email" inputMode="email"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} className={campo}
             />
 
             {correoEnUso && (
@@ -593,29 +561,29 @@ export default function LoginScreen() {
               visible={verClave} alternar={() => setVerClave((v) => !v)}
             />
 
-            <p className="text-[10px] uppercase tracking-[0.16em] text-[#6d655a] mt-2">
+            <label htmlFor="tipo-cuenta" className="text-[10px] uppercase tracking-[0.16em] text-[#6d655a] mt-2 text-left px-2">
               Tipo de cuenta
-            </p>
-            <div className="flex flex-col gap-2">
-              {TIPOS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => { clic(); setF((p) => ({ ...p, tipo: t.id })); setError(''); }}
-                  className={`w-full rounded-2xl px-4 py-3 text-left border transition-all duration-100
-                    active:scale-[0.985] ${f.tipo === t.id
-                      ? 'border-[rgba(231,118,34,0.55)] bg-[rgba(231,118,34,0.08)]'
-                      : 'border-white/10 bg-white/[0.03]'}`}
-                >
-                  <span className={`block text-[12.5px] uppercase tracking-[0.12em] ${f.tipo === t.id ? 'text-[#E77622]' : ''}`}>
-                    {t.etiqueta}
-                  </span>
-                  <span className="block text-[10.5px] text-[#6d655a] mt-0.5 normal-case tracking-normal">
-                    {t.pie}
-                  </span>
-                </button>
-              ))}
+            </label>
+            <div className="relative">
+              <select
+                id="tipo-cuenta"
+                name="tipo-cuenta"
+                value={f.tipo}
+                onChange={(ev) => { setF((p) => ({ ...p, tipo: ev.target.value })); setError(''); }}
+                className={`${campo} appearance-none pr-11 text-left`}
+              >
+                {TIPOS.map((t) => (
+                  <option key={t.id} value={t.id} className="bg-[#141210]">{t.etiqueta}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#6d655a] absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
+
+            {/* El detalle del tipo elegido: en un desplegable el pie de cada
+                opción no se ve hasta abrirlo, así que se enseña aquí. */}
+            <p className="text-[11px] text-[#a49c8f] text-left px-2 -mt-1">
+              {detalle.pie}
+            </p>
 
             {f.tipo === 'espectador' && (
               <label className="flex items-start gap-2.5 px-2 text-[11px] text-[#a49c8f] text-left mt-1">
@@ -628,20 +596,13 @@ export default function LoginScreen() {
               </label>
             )}
 
-            {f.tipo === 'staff' && (
-              <p className="text-[10.5px] text-[#6d655a] px-2 text-left">
-                Las cuentas de equipo las da la organización. Comprobaremos que tu
-                correo esté apuntado como voluntario y te mandaremos un código.
-              </p>
-            )}
-
             <button
               type="submit"
-              disabled={ocupado || (correoEnUso && f.tipo !== 'staff')}
+              disabled={ocupado || correoEnUso}
               className={botonPrincipal}
             >
               {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-              {f.tipo === 'espectador' ? 'Crear cuenta' : 'Continuar'}
+              {f.tipo === 'atleta' ? 'Continuar' : 'Crear cuenta'}
             </button>
             {volver('puerta')}
           </form>
@@ -700,9 +661,9 @@ export default function LoginScreen() {
           </form>
         )}
 
-        {/* Paso 3: el código, para atleta y para staff. */}
+        {/* Paso 3: el código de verificación, solo para quien va a correr. */}
         {modo === 'registro' && paso === 3 && (
-          <form onSubmit={f.tipo === 'staff' ? activarStaff : verificarAtleta} className="w-full flex flex-col gap-3">
+          <form onSubmit={verificarAtleta} className="w-full flex flex-col gap-3">
             <p className="text-[11px] text-[#a49c8f] px-2 mb-1">
               Escribe el código de seis dígitos que enviamos a {f.email}.
             </p>
