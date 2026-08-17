@@ -324,9 +324,18 @@ code {
 /* Al elegir carrera, las demás se apartan: se van hacia arriba y su hueco se
    cierra, de modo que la elegida sube sola a su sitio. Es lo que hace que las
    dos pantallas se lean como una con una transición, y no como un salto. */
+/* El tope tiene que superar la altura real de la tarjeta más alta: si se queda
+   corto, la animación arranca recortando de golpe; si se pasa mucho, los
+   primeros fotogramas no hacen nada. 180px cubre la de dos líneas con logo. */
 @keyframes bysd-aparta {
-    from { opacity: 1; transform: none; max-height: 140px; margin-bottom: .625rem; }
+    from { opacity: 1; transform: none; max-height: 180px; margin-bottom: .625rem; }
     to   { opacity: 0; transform: translateY(-14px); max-height: 0; margin-bottom: 0; }
+}
+
+/* La misma sin desplazamiento, para quien pidió menos movimiento. */
+@keyframes bysd-aparta-suave {
+    from { opacity: 1; max-height: 180px; margin-bottom: .625rem; }
+    to   { opacity: 0; max-height: 0; margin-bottom: 0; }
 }
 .bysd-aparta {
     animation: bysd-aparta .42s cubic-bezier(.4, 0, .2, 1) both;
@@ -343,7 +352,11 @@ code {
 
 @media (prefers-reduced-motion: reduce) {
     .bysd-entra, .bysd-halo { animation: none; opacity: 1; transform: none; }
-    /* Aquí no se puede anular sin más: estas dos esconden algo, y dejarlas
-       visibles dejaría la lista encima de la portada. Se hacen instantáneas. */
-    .bysd-aparta, .bysd-desvanece { animation-duration: .01s; }
+    /* Estas dos no se pueden anular: esconden algo, y dejarlas visibles pondría
+       la lista encima de la portada. Tampoco conviene hacerlas instantáneas,
+       que era lo que había: la transición desaparecía y volvía a parecer un
+       salto. Se quedan, sin desplazamiento —que es lo que molesta— y solo con
+       el desvanecido, que no es movimiento. */
+    .bysd-aparta { animation-name: bysd-aparta-suave; }
+    .bysd-desvanece { animation-duration: .3s; }
 }
