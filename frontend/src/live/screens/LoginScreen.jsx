@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check, ChevronDown,
+  Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check, UserCheck,
 } from 'lucide-react';
 import { API } from '../liveApi';
 import { clic } from '../sonido';
 import { estadoBiometria, entrarConBiometria, activarBiometria } from '../biometria';
+import Picker from '../components/Picker';
+import DateField from '../components/DateField';
+import { COUNTRIES } from '../../data/countries';
 import {
   guardarSesion, haySesion, rutaDeEntrada, guardarRol, ESPECTADOR, marcarAcceso,
 } from '../sesion';
@@ -25,6 +28,18 @@ const TIPOS = [
 ];
 
 const SEXOS = ['Masculino', 'Femenino'];
+
+// La puerta va en negro siempre, con tema claro u oscuro, así que los
+// selectores de la app reciben aquí los valores oscuros a mano en vez del tema
+// vigente. La hoja inferior y el rodillo se quedan tal cual: eso es lo que hace
+// que se vean igual que en el resto de la app.
+const T_PUERTA = {
+  input: 'bg-white/[0.05] border border-white/10 text-[#EFE9DD] placeholder-[#6d655a]',
+  drawer: 'bg-[#141210] text-[#EFE9DD]',
+  divider: 'border-white/10',
+  itraBox: 'bg-white/[0.06]',
+  muted: 'text-[#6d655a]',
+};
 
 const CAMPO = 'w-full rounded-full px-5 py-3.5 bg-white/[0.05] border border-white/10 '
   + 'text-[13px] text-[#EFE9DD] placeholder:text-[#6d655a] outline-none '
@@ -57,6 +72,59 @@ function Clave({ valor, alCambiar, marcador, autocompletar, visible, alternar })
       >
         {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Aviso de correo ya registrado.
+ *
+ * Emergente y no una línea de texto porque llega mientras se escribe, con la
+ * atención puesta en el teclado: un renglón bajo el campo se lee tarde o no se
+ * lee, y para entonces la persona ya rellenó el resto.
+ */
+function AvisoCuentaExiste({ correo, alEntrar, alCerrar }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-7"
+      style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(2px)' }}
+      onClick={alCerrar}
+    >
+      <div
+        onClick={(ev) => ev.stopPropagation()}
+        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#141210]
+          px-6 py-7 text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+      >
+        <div className="w-12 h-12 rounded-full grid place-items-center mx-auto
+          border border-[rgba(133,183,235,0.4)] bg-[rgba(133,183,235,0.10)]">
+          <UserCheck className="w-5 h-5 text-[#85B7EB]" />
+        </div>
+
+        <p className="mt-4 text-[13px] text-[#EFE9DD]">Ese correo ya tiene cuenta</p>
+        <p className="mt-1.5 text-[11.5px] text-[#a49c8f] break-all">{correo}</p>
+        <p className="mt-3 text-[11.5px] text-[#6d655a]">
+          No hace falta que crees otra: entra con la que ya tienes.
+        </p>
+
+        <button
+          type="button"
+          onClick={alEntrar}
+          className="w-full mt-6 rounded-full px-5 py-3.5 flex items-center justify-center gap-2
+            border border-[rgba(231,118,34,0.5)] bg-white/[0.035] text-[12.5px]
+            uppercase tracking-[0.14em] text-[#E77622] active:scale-[0.985]
+            transition-all duration-100"
+        >
+          <LogIn className="w-4 h-4" />
+          Ir a iniciar sesión
+        </button>
+        <button
+          type="button"
+          onClick={alCerrar}
+          className="w-full mt-2 py-2.5 text-[11px] uppercase tracking-[0.14em] text-[#6d655a]"
+        >
+          Usar otro correo
+        </button>
+      </div>
     </div>
   );
 }
@@ -114,6 +182,18 @@ export default function LoginScreen() {
   const [f, setF] = useState(vacio);
   const set = (k) => (ev) => setF((p) => ({ ...p, [k]: ev.target.value }));
   const detalle = TIPOS.find((t) => t.id === f.tipo) || TIPOS[0];
+
+  // Se comprueba mientras se escribe, con una pausa: en cuanto el correo tiene
+  // forma de correo y la persona deja de teclear medio segundo, se pregunta. El
+  // aviso llega así antes de bajar al resto del formulario, que era el problema.
+  useEffect(() => {
+    const correo = f.email.trim();
+    if (modo !== 'registro' || paso !== 1) return undefined;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { setCorreoEnUso(false); return undefined; }
+
+    const t = setTimeout(() => { comprobarCorreo(correo); }, 500);
+    return () => clearTimeout(t);
+  }, [f.email, modo, paso]);
 
   const conSesion = haySesion();
   useEffect(() => {
@@ -538,23 +618,6 @@ export default function LoginScreen() {
               autoCapitalize="none" autoCorrect="off" spellCheck={false} className={campo}
             />
 
-            {correoEnUso && (
-              <div className="rounded-2xl px-4 py-3 border border-[rgba(133,183,235,0.35)]
-                bg-[rgba(133,183,235,0.08)] text-left">
-                <p className="text-[11.5px] text-[#85B7EB]">
-                  Ese correo ya tiene cuenta.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => { setEmail(f.email.trim()); ir('acceso'); }}
-                  className="mt-1.5 text-[11px] uppercase tracking-[0.14em] text-[#E77622]
-                    flex items-center gap-1.5"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  Entrar con ella
-                </button>
-              </div>
-            )}
             <Clave
               valor={f.password} alCambiar={set('password')}
               marcador="Contraseña (mínimo 8)" autocompletar="new-password"
@@ -564,20 +627,14 @@ export default function LoginScreen() {
             <label htmlFor="tipo-cuenta" className="text-[10px] uppercase tracking-[0.16em] text-[#6d655a] mt-2 text-left px-2">
               Tipo de cuenta
             </label>
-            <div className="relative">
-              <select
-                id="tipo-cuenta"
-                name="tipo-cuenta"
-                value={f.tipo}
-                onChange={(ev) => { setF((p) => ({ ...p, tipo: ev.target.value })); setError(''); }}
-                className={`${campo} appearance-none pr-11 text-left`}
-              >
-                {TIPOS.map((t) => (
-                  <option key={t.id} value={t.id} className="bg-[#141210]">{t.etiqueta}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#6d655a] absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+            <Picker
+              T={T_PUERTA}
+              title="Tipo de cuenta"
+              value={f.tipo}
+              onSelect={(v) => { setF((p) => ({ ...p, tipo: v })); setError(''); }}
+              options={TIPOS.map((t) => ({ value: t.id, label: t.etiqueta }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left`}
+            />
 
             {/* El detalle del tipo elegido: en un desplegable el pie de cada
                 opción no se ve hasta abrirlo, así que se enseña aquí. */}
@@ -618,8 +675,17 @@ export default function LoginScreen() {
 
             <input value={f.telefono} onChange={set('telefono')} placeholder="Teléfono"
               inputMode="tel" autoComplete="tel" className={campo} />
-            <input value={f.fecha_nacimiento} onChange={set('fecha_nacimiento')}
-              placeholder="Fecha de nacimiento" type="date" className={campo} />
+            {/* El `input type="date"` nativo trae su propio ancho y se salía
+                de la pantalla. El selector de la app abre una hoja inferior y
+                además es el mismo que ya usa el registro de voluntario. */}
+            <DateField
+              T={T_PUERTA}
+              title="Fecha de nacimiento"
+              value={f.fecha_nacimiento}
+              onChange={(v) => setF((p) => ({ ...p, fecha_nacimiento: v }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left
+                ${f.fecha_nacimiento ? '' : 'text-[#6d655a]'}`}
+            />
 
             <div className="flex gap-2">
               {SEXOS.map((s) => (
@@ -637,8 +703,16 @@ export default function LoginScreen() {
               ))}
             </div>
 
-            <input value={f.nacionalidad} onChange={set('nacionalidad')}
-              placeholder="Nacionalidad" autoComplete="country-name" className={campo} />
+            <Picker
+              T={T_PUERTA}
+              title="Nacionalidad"
+              placeholder="Nacionalidad"
+              value={f.nacionalidad}
+              onSelect={(v) => setF((p) => ({ ...p, nacionalidad: v }))}
+              options={COUNTRIES.map((c) => ({ value: c.name, label: c.name }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left
+                ${f.nacionalidad ? '' : 'text-[#6d655a]'}`}
+            />
             <input value={f.ciudad_residencia} onChange={set('ciudad_residencia')}
               placeholder="Ciudad de residencia" className={campo} />
 
@@ -684,6 +758,14 @@ export default function LoginScreen() {
           Backyard Ultra Santo Domingo
         </p>
       </div>
+
+      {correoEnUso && (
+        <AvisoCuentaExiste
+          correo={f.email.trim()}
+          alEntrar={() => { setEmail(f.email.trim()); ir('acceso'); }}
+          alCerrar={() => { setCorreoEnUso(false); setF((p) => ({ ...p, email: '' })); }}
+        />
+      )}
     </div>
   );
 }
