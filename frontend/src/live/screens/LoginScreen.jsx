@@ -109,6 +109,7 @@ export default function LoginScreen() {
   const [passwordNueva, setPasswordNueva] = useState('');
 
   // Registro
+  const [correoEnUso, setCorreoEnUso] = useState(false);
   const [paso, setPaso] = useState(1);
   const [f, setF] = useState(vacio);
   const set = (k) => (ev) => setF((p) => ({ ...p, [k]: ev.target.value }));
@@ -136,7 +137,7 @@ export default function LoginScreen() {
     setAviso('');
     setVerClave(false);
     setPasoCodigo('pedir');
-    if (siguiente === 'registro') { setPaso(1); setF({ ...vacio, email }); }
+    if (siguiente === 'registro') { setPaso(1); setF({ ...vacio, email }); setCorreoEnUso(false); }
   };
 
   const entrada = async (datos, correoBio) => {
@@ -227,12 +228,43 @@ export default function LoginScreen() {
 
   // ---------- Registro ----------
 
-  const siguientePaso = (ev) => {
+  /**
+   * ¿Ese correo ya tiene cuenta?
+   *
+   * Se pregunta al salir del campo y otra vez al enviar. Lo primero es para que
+   * el aviso llegue cuando todavía no cuesta nada; lo segundo, porque el blur
+   * puede no haber ocurrido —se envía con la tecla de ir— y esta es la puerta
+   * que de verdad tiene que cerrar.
+   */
+  const comprobarCorreo = async (correo) => {
+    if (!correo || !correo.includes('@')) return false;
+    try {
+      const r = await fetch(`${API}/api/cuentas/existe?email=${encodeURIComponent(correo)}`);
+      const d = await r.json().catch(() => ({}));
+      setCorreoEnUso(!!d.existe);
+      return !!d.existe;
+    } catch {
+      // Si no se puede comprobar no se bloquea el alta: el backend rechaza el
+      // duplicado igualmente, solo que más tarde.
+      return false;
+    }
+  };
+
+  const siguientePaso = async (ev) => {
     ev.preventDefault();
     if (!f.nombre.trim() || !f.apellidos.trim()) { setError('Faltan tu nombre y tus apellidos.'); return; }
     if (!f.email.trim()) { setError('Falta el correo.'); return; }
     if (f.password.length < 8) { setError('La contraseña necesita al menos 8 caracteres.'); return; }
     setError('');
+
+    // Staff no crea cuenta: su camino comprueba el registro de voluntarios y
+    // sirve igual para quien ya la tenga, así que no se le corta aquí.
+    if (f.tipo !== 'staff') {
+      setOcupado(true);
+      const usado = await comprobarCorreo(f.email.trim());
+      setOcupado(false);
+      if (usado) return undefined;
+    }
 
     if (f.tipo === 'espectador') return crearEspectador();
     if (f.tipo === 'staff') return comprobarStaff();
@@ -531,8 +563,30 @@ export default function LoginScreen() {
               autoComplete="given-name" className={campo} />
             <input value={f.apellidos} onChange={set('apellidos')} placeholder="Apellidos"
               autoComplete="family-name" className={campo} />
-            <input type="email" value={f.email} onChange={set('email')} placeholder="Correo"
-              autoComplete="email" className={campo} />
+            <input
+              type="email" value={f.email}
+              onChange={(ev) => { setF((p) => ({ ...p, email: ev.target.value })); setCorreoEnUso(false); }}
+              onBlur={(ev) => comprobarCorreo(ev.target.value.trim())}
+              placeholder="Correo" autoComplete="email" className={campo}
+            />
+
+            {correoEnUso && (
+              <div className="rounded-2xl px-4 py-3 border border-[rgba(133,183,235,0.35)]
+                bg-[rgba(133,183,235,0.08)] text-left">
+                <p className="text-[11.5px] text-[#85B7EB]">
+                  Ese correo ya tiene cuenta.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setEmail(f.email.trim()); ir('acceso'); }}
+                  className="mt-1.5 text-[11px] uppercase tracking-[0.14em] text-[#E77622]
+                    flex items-center gap-1.5"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  Entrar con ella
+                </button>
+              </div>
+            )}
             <Clave
               valor={f.password} alCambiar={set('password')}
               marcador="Contraseña (mínimo 8)" autocompletar="new-password"
@@ -581,7 +635,11 @@ export default function LoginScreen() {
               </p>
             )}
 
-            <button type="submit" disabled={ocupado} className={botonPrincipal}>
+            <button
+              type="submit"
+              disabled={ocupado || (correoEnUso && f.tipo !== 'staff')}
+              className={botonPrincipal}
+            >
               {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               {f.tipo === 'espectador' ? 'Crear cuenta' : 'Continuar'}
             </button>

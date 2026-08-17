@@ -179,6 +179,33 @@ def _sesion(cuenta: dict) -> dict:
 # ==================== Alta y acceso ====================
 
 
+@router.get("/existe")
+async def correo_en_uso(email: EmailStr, request: Request = None):
+    """Si ese correo ya tiene cuenta, para decirlo antes de rellenar nada.
+
+    Sin esto, quien va a darse de alta como corredor rellena siete campos mas
+    —telefono, fecha, nacionalidad, contacto de emergencia— y solo al final se
+    entera de que ya tenia cuenta. El aviso llega cuando todavia no cuesta nada.
+
+    Devuelve solo si existe, sin decir de que tipo es: saber que un correo es de
+    un corredor o del equipo no hace falta para esto y seria contar de mas.
+
+    Va con limite de peticiones porque, por su naturaleza, permite comprobar
+    correos uno a uno.
+    """
+    from server import db
+
+    rate_limit.comprobar(
+        "correo_en_uso",
+        rate_limit.ip_cliente(request),
+        limite=30,
+        ventana_segundos=300,
+        mensaje="Demasiadas comprobaciones. Espera un momento.",
+    )
+
+    return {"existe": await cuentas.por_email(db, email) is not None}
+
+
 @router.post("/registro")
 async def registro(datos: Registro, request: Request = None):
     """Crea la cuenta de espectador y devuelve la sesion en el acto.
