@@ -163,19 +163,26 @@ class ConfirmClaimRequest(BaseModel):
 
 # Helper functions
 def hash_password(password: str) -> str:
-    """Hash password with salt"""
-    salt = secrets.token_hex(16)
-    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
-    return f"{salt}:{pwd_hash.hex()}"
+    """Hash de contrasena, delegado en `services.cuentas`.
+
+    Antes esto era PBKDF2 y `verify_password` de abajo solo entendia ese
+    formato. Desde la cuenta unica hay un sitio donde `athletes.password_hash`
+    puede recibir un hash **bcrypt**: cuando alguien recupera su contrasena por
+    `/api/cuentas/nueva-password`, que sincroniza el cambio hacia aqui. Con dos
+    algoritmos y un solo verificador la cuenta quedaba en un estado raro —se
+    podia entrar con la contrasena nueva, pero cambiarla desde el perfil decia
+    que la actual era incorrecta—. Un solo hasheador y un solo verificador.
+    """
+    from services import cuentas as servicio_cuentas
+
+    return servicio_cuentas.hash_password(password)
+
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    """Verify password against stored hash"""
-    try:
-        salt, pwd_hash = stored_hash.split(':')
-        new_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
-        return secrets.compare_digest(new_hash.hex(), pwd_hash)
-    except:
-        return False
+    """Comprueba la contrasena contra bcrypt o contra el PBKDF2 heredado."""
+    from services import cuentas as servicio_cuentas
+
+    return servicio_cuentas.verificar_password(password, stored_hash)
 
 def generate_athlete_token(athlete_id: str, email: str) -> str:
     """Generate JWT token for athlete"""

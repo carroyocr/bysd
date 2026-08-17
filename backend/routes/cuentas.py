@@ -53,6 +53,7 @@ MAX_SEGUIDOS = 200
 class Registro(BaseModel):
     email: EmailStr
     nombre: str = Field(min_length=1, max_length=80)
+    apellidos: str = Field(default="", max_length=80)
     password: str = Field(min_length=cuentas.MIN_PASSWORD, max_length=200)
     acepta_comunicaciones: bool = False
 
@@ -221,6 +222,7 @@ async def registro(datos: Registro, request: Request = None):
         email=datos.email,
         password=datos.password,
         nombre=datos.nombre,
+        apellidos=datos.apellidos,
         acepta_comunicaciones=datos.acepta_comunicaciones,
     )
 
@@ -320,10 +322,11 @@ async def nueva_password(datos: NuevaPassword, request: Request = None):
 
     await _comprobar_codigo(db, cuenta, datos.code, "reset")
 
+    nuevo_hash = cuentas.hash_password(datos.password)
     await db[cuentas.COLECCION].update_one(
         {"_id": cuenta["_id"]},
         {"$set": {
-            "password_hash": cuentas.hash_password(datos.password),
+            "password_hash": nuevo_hash,
             "reset_code": None,
             # Quien prueba el correo con un codigo lo ha demostrado igual que
             # verificandolo: no tiene sentido pedirselo otra vez.
@@ -331,6 +334,22 @@ async def nueva_password(datos: NuevaPassword, request: Request = None):
             "updated_at": datetime.now(timezone.utc),
         }},
     )
+
+    # Y de vuelta al perfil del corredor, si lo tiene. `athletes` conserva su
+    # propio `password_hash` y hay endpoints que lo miran —cambiar la
+    # contrasena desde el perfil comprueba la actual contra ese campo—. Sin
+    # esto, quien recupera su contrasena por aqui despues no podria cambiarla
+    # desde su perfil: le diria que la actual es incorrecta siendo la buena.
+    if cuenta.get("athlete_profile_id"):
+        await db.athletes.update_one(
+            {"_id": cuenta["athlete_profile_id"]},
+            {"$set": {
+                "password_hash": nuevo_hash,
+                "email_verified": True,
+                "updated_at": datetime.now(timezone.utc),
+            }},
+        )
+
     cuenta["email_verified"] = True
     return _sesion(cuenta)
 
