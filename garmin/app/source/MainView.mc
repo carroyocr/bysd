@@ -2,7 +2,7 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
 
-// Las cuatro pantallas de carrera.
+// Las tres pantallas de carrera.
 //
 // Una sola cifra grande en cada una. A las veinte horas, de noche y con la
 // vista cansada, solo se lee lo que ocupa media esfera: todo lo demas es
@@ -12,14 +12,9 @@ class MainView extends Ui.View {
     enum {
         PAGINA_VUELTA = 0,
         PAGINA_MARGEN = 1,
-        PAGINA_TUYO   = 2,
-        PAGINA_EN_PIE = 3
+        PAGINA_TUYO   = 2
     }
-    static const PAGINAS = 4;
-
-    // Ventana del aro antes de la salida: en los ultimos diez minutos el aro
-    // se vacia, y antes de eso se queda lleno porque no dice nada util.
-    static const VENTANA_PREVIA = 600;
+    static const PAGINAS = 3;
 
     var _estado;
     var _pagina = PAGINA_VUELTA;
@@ -38,18 +33,12 @@ class MainView extends Ui.View {
         _s = {
             :lap => Ui.loadResource(Rez.Strings.lap),
             :nextStart => Ui.loadResource(Rez.Strings.nextStart),
-            :beforeStart => Ui.loadResource(Rez.Strings.beforeStart),
             :corral => Ui.loadResource(Rez.Strings.corral),
             :toTheLine => Ui.loadResource(Rez.Strings.toTheLine),
             :rest => Ui.loadResource(Rez.Strings.rest),
             :paceTooSlow => Ui.loadResource(Rez.Strings.paceTooSlow),
             :laps => Ui.loadResource(Rez.Strings.laps),
-            :stillIn => Ui.loadResource(Rez.Strings.stillIn),
-            :of => Ui.loadResource(Rez.Strings.of),
-            :notStarted => Ui.loadResource(Rez.Strings.notStarted),
-            :raceClosed => Ui.loadResource(Rez.Strings.raceClosed),
-            :syncing => Ui.loadResource(Rez.Strings.syncing),
-            :noBib => Ui.loadResource(Rez.Strings.noBib)
+            :noActivity => Ui.loadResource(Rez.Strings.noActivity)
         };
     }
 
@@ -67,55 +56,42 @@ class MainView extends Ui.View {
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
         dc.clear();
 
-        if (!_estado.sincronizado) {
-            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Gfx.COLOR_DK_GRAY, _s[:syncing]);
+        // Sin actividad grabando no hay cronometro del que colgar la carrera, y
+        // esta app no tiene otro. Se dice y ya: inventar una cuenta atras aqui
+        // seria mentir con mucha seguridad aparente.
+        //
+        // La proyeccion se pide una sola vez y se reparte. Preguntarla en cada
+        // pagina abriria un hueco entre la comprobacion y el dibujo: basta que
+        // el corredor pare la actividad en ese instante para que lo que aqui
+        // era un numero llegue como null a un toFloat().
+        //
+        // El cast no es adorno: _estado no lleva tipo, asi que lo que devuelve
+        // proyeccion() llega aqui como Any y el comprobador no sabe que p[0]
+        // es un acceso legitimo. Sin el, dos avisos en cada compilacion.
+        var p = _estado.proyeccion();
+        if (p == null) {
+            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Gfx.COLOR_DK_GRAY, _s[:noActivity]);
             return;
         }
-        if (_estado.terminada) {
-            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Gfx.COLOR_DK_GRAY, _s[:raceClosed]);
-            _punto(dc, cx, h);
-            return;
-        }
-        if (!_estado.empezada) {
-            _antesDeLaSalida(dc, cx, cy, h, radio);
-            _punto(dc, cx, h);
-            return;
-        }
+        var proy = p as Lang.Array<Lang.Number>;
+        var vuelta = proy[0];
+        var r = proy[1];
 
         if (_pagina == PAGINA_MARGEN) {
-            _paginaMargen(dc, cx, cy, h, radio);
+            _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
         } else if (_pagina == PAGINA_TUYO) {
-            _paginaTuyo(dc, cx, cy, h, radio);
-        } else if (_pagina == PAGINA_EN_PIE) {
-            _paginaEnPie(dc, cx, cy, h, radio);
+            _paginaTuyo(dc, cx, cy, h, radio, vuelta);
         } else {
-            _paginaVuelta(dc, cx, cy, h, radio);
+            _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
         }
 
-        _punto(dc, cx, h);
         _migas(dc, cx, h);
     }
 
     // --- pantallas ---
 
-    function _antesDeLaSalida(dc, cx, cy, h, radio) {
-        var r = _estado.restante();
-        // A mas de un dia de la salida no hay cuenta atras que dar: el numero
-        // no cabria y, sobre todo, no diria nada que el corredor no sepa.
-        if (r == null || r <= 0 || Fmt.esperaLarga(r)) {
-            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Gfx.COLOR_DK_GRAY, _s[:notStarted]);
-            return;
-        }
-        var fraccion = r >= VENTANA_PREVIA ? 1.0 : r.toFloat() / VENTANA_PREVIA;
-        _arco(dc, cx, cy, radio, fraccion, Gfx.COLOR_ORANGE, 7);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.espera(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:beforeStart]);
-    }
-
-    function _paginaVuelta(dc, cx, cy, h, radio) {
-        var vuelta = _estado.vuelta();
-        var r = _estado.restante();
-        var corral = _estado.enCorral();
+    function _paginaVuelta(dc, cx, cy, h, radio, vuelta, r) {
+        var corral = r <= RaceState.AVISOS_CORRAL[0];
 
         // El aro se vacia con la hora: lo que queda de aro es lo que queda de
         // vuelta. Es la misma cifra del centro, legible sin leer.
@@ -130,11 +106,10 @@ class MainView extends Ui.View {
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
              corral ? _s[:toTheLine] : _s[:nextStart]);
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia(_estado.kmAcumulados()) + " " + Fmt.unidad());
+             Fmt.distancia((vuelta - 1) * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
-    function _paginaMargen(dc, cx, cy, h, radio) {
-        var r = _estado.restante();
+    function _paginaMargen(dc, cx, cy, h, radio, vuelta, r) {
         var km = _estado.kmEnLaVuelta();
         var objetivo = _estado.kmObjetivo();
         var margen = _estado.margenSegundos();
@@ -151,7 +126,7 @@ class MainView extends Ui.View {
         }
 
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             _s[:lap] + " " + _estado.vuelta().format("%d"));
+             _s[:lap] + " " + vuelta.format("%d"));
 
         if (margen == null) {
             // El primer kilometro miente: con trescientos metros hechos el
@@ -171,27 +146,18 @@ class MainView extends Ui.View {
              Fmt.ritmo(_estado.ritmoSegPorKm()) + " /" + Fmt.unidad());
     }
 
-    function _paginaTuyo(dc, cx, cy, h, radio) {
+    // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
+    // en una backyard esa cifra es la que se cuenta luego, y no cabe confundirla
+    // con nada mas.
+    function _paginaTuyo(dc, cx, cy, h, radio, vuelta) {
+        var completadas = vuelta - 1;
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             _estado.dorsal != null ? "#" + _estado.dorsal : _s[:noBib]);
+             Fmt.espera(_estado.segundosDeCarrera()));
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
-             _estado.vueltasCompletadas().format("%d"));
+             completadas.format("%d"));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:laps]);
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia(_estado.kmAcumulados()) + " " + Fmt.unidad());
-    }
-
-    function _paginaEnPie(dc, cx, cy, h, radio) {
-        var fraccion = _estado.inscritos > 0
-            ? _estado.enCarrera.toFloat() / _estado.inscritos
-            : 0.0;
-        _arco(dc, cx, cy, radio, fraccion, Gfx.COLOR_GREEN, 7);
-
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, _s[:stillIn]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
-             _estado.enCarrera.format("%d"));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
-             _s[:of] + " " + _estado.inscritos.format("%d"));
+             Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
     // --- piezas de dibujo ---
@@ -229,20 +195,6 @@ class MainView extends Ui.View {
         dc.setPenWidth(grosor);
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.drawArc(cx, cy, radio, Gfx.ARC_CLOCKWISE, 90, fin);
-    }
-
-    // El punto de sincronia. Verde: los datos son de hace poco. Gris: el
-    // telefono no esta cerca, pero la cuenta atras del centro sigue siendo
-    // buena, porque la lleva el reloj y no la red.
-    function _punto(dc, cx, h) {
-        var edad = _estado.edadDatos();
-        var fresco = (edad != null && edad < _estado.segundosRefresco * 3);
-        dc.setColor(fresco ? Gfx.COLOR_GREEN : Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
-        dc.fillCircle(cx, h * 13 / 100, 3);
-        if (!fresco && edad != null) {
-            _txt(dc, cx, h * 20 / 100, Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-                 (edad / 60).format("%d") + " min");
-        }
     }
 
     function _migas(dc, cx, h) {

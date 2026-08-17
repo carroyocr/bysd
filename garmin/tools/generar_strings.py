@@ -25,40 +25,42 @@ IDIOMAS = ["eng", "spa", "fre", "deu", "ita", "por"]
 LARGO_COMODO = 18
 
 TABLA = {
-    #                    eng                      spa                   fre                    deu                     ita                    por
-    "appName":         ("BYSD Live",              "BYSD Live",          "BYSD Live",           "BYSD Live",            "BYSD Live",           "BYSD Live"),
+    #                     eng                       spa                    fre                     deu                      ita                     por
+    "appName":          ("Backyard",                "Backyard",            "Backyard",             "Backyard",              "Backyard",             "Backyard"),
     # El nombre del campo de datos, tal y como sale en la lista donde el
     # corredor elige que poner en cada hueco de su pantalla de carrera.
-    "fieldName":       ("BYSD Margin",            "BYSD Margen",        "BYSD Marge",          "BYSD Puffer",          "BYSD Margine",        "BYSD Margem"),
-    "lap":             ("Lap",                    "Vuelta",             "Tour",                "Runde",                "Giro",                "Volta"),
-    "nextStart":       ("Next start",             "Próxima salida",     "Prochain départ",     "Nächster Start",       "Prossima partenza",   "Próxima partida"),
-    "beforeStart":     ("For lap 1",              "Para la vuelta 1",   "Pour le tour 1",      "Für Runde 1",          "Per il giro 1",       "Para a volta 1"),
+    "fieldName":        ("Backyard Margin",         "Backyard Margen",     "Backyard Marge",       "Backyard Puffer",       "Backyard Margine",     "Backyard Margem"),
+    "lap":              ("Lap",                     "Vuelta",              "Tour",                 "Runde",                 "Giro",                 "Volta"),
+    "nextStart":        ("Next start",              "Próxima salida",      "Prochain départ",      "Nächster Start",        "Prossima partenza",    "Próxima partida"),
     # Corral, yard y DNF ya son las palabras del deporte en todos los idiomas.
     # Traducirlas confunde mas de lo que ayuda.
-    "corral":          ("Corral",                 "Corral",             "Corral",              "Corral",               "Corral",              "Corral"),
-    "toTheLine":       ("To the line",            "A la línea",         "Sur la ligne",        "An die Linie",         "In linea",            "Para a linha"),
-    "rest":            ("Rest",                   "De descanso",        "De repos",            "Pause",                "Di riposo",           "De descanso"),
-    "paceTooSlow":     ("Pace too slow",          "Ritmo insuficiente", "Rythme insuffisant",  "Tempo zu langsam",     "Ritmo insufficiente", "Ritmo insuficiente"),
-    "laps":            ("Laps",                   "Vueltas",            "Tours",               "Runden",               "Giri",                "Voltas"),
-    "stillIn":         ("Still in",               "En carrera",         "En course",           "Noch dabei",           "In gara",             "Em prova"),
-    "of":              ("of",                     "de",                 "sur",                 "von",                  "di",                  "de"),
-    "notStarted":      ("Not started",            "Sin empezar",        "Pas commencé",        "Nicht gestartet",      "Non iniziata",        "Não começou"),
-    "raceClosed":      ("Race closed",            "Carrera cerrada",    "Course terminée",     "Rennen beendet",       "Gara chiusa",         "Prova encerrada"),
-    "syncing":         ("Syncing",                "Sincronizando",      "Synchronisation",     "Synchronisiert",       "Sincronizzo",         "Sincronizando"),
-    "noBib":           ("No bib set",             "Sin dorsal",         "Sans dossard",        "Keine Nummer",         "Nessun pettorale",    "Sem dorsal"),
+    "corral":           ("Corral",                  "Corral",              "Corral",               "Corral",                "Corral",               "Corral"),
+    "toTheLine":        ("To the line",             "A la línea",          "Sur la ligne",         "An die Linie",          "In linea",             "Para a linha"),
+    "rest":             ("Rest",                    "De descanso",         "De repos",             "Pause",                 "Di riposo",            "De descanso"),
+    "paceTooSlow":      ("Pace too slow",           "Ritmo insuficiente",  "Rythme insuffisant",   "Tempo zu langsam",      "Ritmo insufficiente",  "Ritmo insuficiente"),
+    "laps":             ("Laps",                    "Vueltas",             "Tours",                "Runden",                "Giri",                 "Voltas"),
+    # Sin actividad grabando no hay cronometro del que colgar la carrera, y
+    # esta app no tiene otro: se dice y no se inventa una cuenta atras.
+    "noActivity":       ("No activity",             "Sin actividad",       "Pas d'activité",       "Keine Aktivität",       "Nessuna attività",     "Sem atividade"),
+
+    # La confirmacion de volver a sellar el cero de la carrera. Sale en un
+    # dialogo, que envuelve el texto solo: aqui el largo no aprieta.
+    "startNow":         ("Start lap 1 now?",        "¿Dar la salida ahora?","Donner le départ ?",  "Start jetzt setzen?",   "Dare il via ora?",     "Dar a partida agora?"),
 
     # Ajustes: se leen en el telefono, no en el reloj, asi que aqui el largo
     # no aprieta.
-    "settingBib":      ("Bib number",             "Dorsal",             "Dossard",             "Startnummer",          "Pettorale",           "Dorsal"),
-    "settingRace":     ("Race code",              "Código de carrera",  "Code de course",      "Rennkürzel",           "Codice gara",         "Código da prova"),
-    "settingCorral":   ("Corral alert",           "Aviso de corral",    "Alerte corral",       "Corral-Warnung",       "Avviso corral",       "Aviso de corral"),
-    "settingRefresh":  ("Refresh (seconds)",      "Refresco (segundos)","Rafraîchissement (s)","Aktualisierung (Sek.)","Aggiornamento (s)",   "Atualização (s)"),
+    "settingLapMinutes":("Lap duration (minutes)",  "Vuelta (minutos)",    "Tour (minutes)",       "Runde (Minuten)",       "Giro (minuti)",        "Volta (minutos)"),
+    # En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria con
+    # el dibujo, que si obedece a la unidad del reloj: un ajuste que cambiara
+    # de unidad no podria tener un valor por defecto correcto para todos.
+    "settingLapDistance":("Lap distance (km)",      "Vuelta (km)",         "Tour (km)",            "Rundenlänge (km)",      "Giro (km)",            "Volta (km)"),
+    "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
 }
 
 # Las que se dibujan en la esfera. No cuentan para el aviso de largo ni las de
 # ajustes, que se leen en el telefono, ni los dos nombres, que salen en listas
 # donde el reloj ya se encarga de recortar.
-FUERA_DE_LA_ESFERA = ["appName", "fieldName"]
+FUERA_DE_LA_ESFERA = ["appName", "fieldName", "startNow"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 

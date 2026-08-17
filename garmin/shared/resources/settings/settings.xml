@@ -1,16 +1,17 @@
 <?xml version="1.0"?>
 <settings>
-    <setting propertyKey="@Properties.bib" title="@Strings.settingBib">
-        <settingConfig type="alphaNumeric" maxLength="4"/>
+    <setting propertyKey="@Properties.lapMinutes" title="@Strings.settingLapMinutes">
+        <settingConfig type="numeric" min="1" max="1440"/>
     </setting>
-    <!-- Vacio significa "la carrera que el sitio tenga publicada". -->
-    <setting propertyKey="@Properties.raceCode" title="@Strings.settingRace">
-        <settingConfig type="alphaNumeric" maxLength="24"/>
+    <!-- En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria
+         con el dibujo, que si obedece a la unidad del reloj: un ajuste que
+         cambiara de unidad no podria tener un valor por defecto correcto para
+         todos, y el 6.7 de fabrica acabaria siendo 6.7 millas para quien
+         tuviera el reloj en imperial y no lo tocara. -->
+    <setting propertyKey="@Properties.lapDistance" title="@Strings.settingLapDistance">
+        <settingConfig type="numeric" min="0.1" max="200"/>
     </setting>
     <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
         <settingConfig type="boolean"/>
-    </setting>
-    <setting propertyKey="@Properties.refreshSeconds" title="@Strings.settingRefresh">
-        <settingConfig type="numeric" min="30" max="600"/>
     </setting>
 </settings>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  BYSD Live para Garmin Connect IQ.
+  Backyard para Garmin Connect IQ.
 
   La lista de productos es la parte que envejece: cada modelo nuevo de Garmin
   hay que anadirlo a mano. Para editarla, lo comodo es abrir este archivo con
@@ -12,7 +12,7 @@
         id="9848615369954b3ab47938f76d1e6ca5"
         type="watch-app"
         name="@Strings.appName"
-        entry="BysdApp"
+        entry="BackyardApp"
         launcherIcon="@Drawables.LauncherIcon"
         minApiLevel="3.1.0">
 
@@ -44,13 +44,11 @@
         </iq:products>
 
         <!--
-          Communications es lo unico que hace falta: el reloj pregunta por el
-          estado de la carrera a traves del telefono. No se pide posicion ni
-          sensores; la distancia sale de la actividad que ya esta grabando.
+          Ningun permiso. La app no sale a la red, no pide posicion y no toca
+          sensores: el tiempo y la distancia salen de la actividad que el
+          corredor ya esta grabando.
         -->
-        <iq:permissions>
-            <iq:uses-permission id="Communications"/>
-        </iq:permissions>
+        <iq:permissions/>
 
         <!--
           Idiomas que trae la app. Cada uno tiene su carpeta resources-<lang>.

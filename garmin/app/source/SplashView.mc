@@ -4,10 +4,10 @@ using Toybox.Timer as Timer;
 
 // El emblema, a pantalla completa, poco mas de un segundo.
 //
-// El logo de la carrera ya es un circulo sobre fondo negro, asi que entra en
-// la esfera sin recortar nada. De aqui se pasa directo a la vuelta: no hay
-// pantalla intermedia ni nombre de carrera. En la vuelta uno el emblema
-// emociona; en la vuelta veinte estorba, y por eso cualquier boton lo salta.
+// El logo ya es un circulo sobre fondo negro, asi que entra en la esfera sin
+// recortar nada. De aqui se pasa directo a la vuelta: no hay pantalla
+// intermedia ni nombre de carrera. En la vuelta uno el emblema emociona; en la
+// vuelta veinte estorba, y por eso cualquier boton lo salta.
 class SplashView extends Ui.View {
 
     static const MILISEGUNDOS = 1200;
@@ -75,7 +75,7 @@ class SplashView extends Ui.View {
     // boton, tienen que acabar en la misma vista.
     static function irALaVuelta(estado) {
         var vista = new MainView(estado);
-        Ui.switchToView(vista, new MainDelegate(vista), Ui.SLIDE_IMMEDIATE);
+        Ui.switchToView(vista, new MainDelegate(vista, estado), Ui.SLIDE_IMMEDIATE);
     }
 }
 

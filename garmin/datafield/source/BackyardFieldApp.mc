@@ -6,26 +6,23 @@ using Toybox.Application as App;
 // que la app de reloj, y esa AppBase le entrega la vista al sistema. Aqui esa
 // clase no hace mucho mas, porque en un campo de datos el latido de un segundo
 // lo pone el propio reloj llamando a compute(): no hace falta ningun Timer.
-class BysdFieldApp extends App.AppBase {
+class BackyardFieldApp extends App.AppBase {
 
     var estado;
-    var api;
 
     function initialize() {
         AppBase.initialize();
         // En initialize y no en onStart: getInitialView puede llegar antes, y
         // entonces la vista se construiria sin estado.
         estado = new RaceState();
-        api = new ApiClient(estado);
     }
 
     function getInitialView() {
-        return [ new BysdField(estado, api) ];
+        return [ new BackyardField(estado) ];
     }
 
-    // Cuando el corredor cambia el dorsal o la carrera desde el telefono.
+    // Cuando el corredor cambia la vuelta o el aviso desde el telefono.
     function onSettingsChanged() {
         estado.leerAjustes();
-        api.refrescar();
     }
 }

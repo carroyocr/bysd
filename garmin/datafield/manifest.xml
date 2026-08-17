@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  Campo de datos de BYSD Live.
+  Campo de datos de Backyard.
 
   Es una aplicacion aparte de la del reloj, con su propio id: en la tienda de
   Connect IQ una app y un campo de datos son dos fichas distintas, aunque
@@ -16,7 +16,7 @@
         id="c92e053656ab4fed92bc8df3229097c3"
         type="datafield"
         name="@Strings.fieldName"
-        entry="BysdFieldApp"
+        entry="BackyardFieldApp"
         launcherIcon="@Drawables.LauncherIcon"
         minApiLevel="3.1.0">
 
@@ -48,13 +48,11 @@
         </iq:products>
 
         <!--
-          Igual que la app: solo Communications. La distancia y el tiempo salen
-          de la actividad que ya esta grabando, que es justamente el motivo de
-          que esto sea un campo de datos y no otra pantalla.
+          Igual que la app: ninguno. La distancia y el tiempo salen de la
+          actividad que ya esta grabando, que es justamente el motivo de que
+          esto sea un campo de datos y no otra pantalla.
         -->
-        <iq:permissions>
-            <iq:uses-permission id="Communications"/>
-        </iq:permissions>
+        <iq:permissions/>
 
         <iq:languages>
             <iq:language>eng</iq:language>

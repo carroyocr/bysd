@@ -1,17 +1,20 @@
 using Toybox.WatchUi as Ui;
-using Toybox.Application as App;
 
 // Botones y gestos.
 //
-// Arriba y abajo cambian de pantalla; el boton de accion fuerza una consulta
-// al servidor, que es lo que uno quiere pulsar justo despues de pasar por meta.
+// Arriba y abajo cambian de pantalla. El boton de accion vuelve a poner el cero
+// de la carrera en este instante: es para quien arranco la actividad unos
+// minutos antes de que sonara la campana. Va con confirmacion porque un toque
+// sin querer a la vuelta veinte descuadraria toda la cuenta.
 class MainDelegate extends Ui.BehaviorDelegate {
 
     var _vista;
+    var _estado;
 
-    function initialize(vista) {
+    function initialize(vista, estado) {
         BehaviorDelegate.initialize();
         _vista = vista;
+        _estado = estado;
     }
 
     function onNextPage() {
@@ -27,10 +30,11 @@ class MainDelegate extends Ui.BehaviorDelegate {
     }
 
     function onSelect() {
-        var app = App.getApp();
-        if (app != null && app.api != null) {
-            app.api.refrescar();
-        }
+        if (!_estado.empezada()) { return true; }
+        var texto = Ui.loadResource(Rez.Strings.startNow);
+        Ui.pushView(new Ui.Confirmation(texto),
+                    new SalidaDelegate(_estado),
+                    Ui.SLIDE_IMMEDIATE);
         return true;
     }
 
@@ -45,5 +49,23 @@ class MainDelegate extends Ui.BehaviorDelegate {
             return onPreviousPage();
         }
         return false;
+    }
+}
+
+class SalidaDelegate extends Ui.ConfirmationDelegate {
+
+    var _estado;
+
+    function initialize(estado) {
+        ConfirmationDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onResponse(respuesta) {
+        if (respuesta == Ui.CONFIRM_YES) {
+            _estado.darLaSalida();
+            Ui.requestUpdate();
+        }
+        return true;
     }
 }

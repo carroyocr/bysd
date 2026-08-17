@@ -1,6 +1,5 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
-using Toybox.Time as Time;
 
 // El margen, dentro de la actividad.
 //
@@ -9,12 +8,16 @@ using Toybox.Time as Time;
 // natural es este: un campo de datos que el corredor pone en su pantalla de
 // carrera y ya no vuelve a tocar.
 //
-// El reloj de la carrera, los formatos y la unica llamada a la red son los
-// mismos de la app, en ../shared/source. Lo que cambia es el dibujo, y cambia
-// mucho: aqui la pantalla no es la esfera, es el trozo que el corredor le haya
-// dejado, y puede ser una franja de cuarenta pixeles. Por eso el campo se
-// dibuja en tres tallas y decide cual segun el sitio que tenga.
-class BysdField extends Ui.DataField {
+// El reloj de la carrera y los formatos son los mismos de la app, en
+// ../shared/source. Lo que cambia es el dibujo, y cambia mucho: aqui la
+// pantalla no es la esfera, es el trozo que el corredor le haya dejado, y puede
+// ser una franja de cuarenta pixeles. Por eso el campo se dibuja en tres tallas
+// y decide cual segun el sitio que tenga.
+//
+// Aqui no hay boton para volver a sellar el cero de la carrera: el campo de
+// datos no recibe pulsaciones. El cero es siempre el arranque de la actividad,
+// que en una backyard es justo lo que suena con la campana.
+class BackyardField extends Ui.DataField {
 
     // Alturas por debajo de las cuales no cabe la talla siguiente. Son las de
     // una esfera de 240: por encima sobra sitio, y por debajo (relojes de 208)
@@ -23,27 +26,22 @@ class BysdField extends Ui.DataField {
     static const ALTO_GRANDE = 110;
 
     var _estado;
-    var _api;
-    var _ultimoRefresco = 0;
 
-    // Las cadenas se cargan una vez, y solo las cuatro que se dibujan. En un
+    // Las cadenas se cargan una vez, y solo las tres que se dibujan. En un
     // campo de datos la memoria es mucho menor que en una app: cada recurso
     // que no se carga es memoria que le queda al resto de la actividad.
     var _rest;
     var _paceTooSlow;
-    var _syncing;
     var _corral;
 
-    function initialize(estado, api) {
+    function initialize(estado) {
         DataField.initialize();
         _estado = estado;
-        _api = api;
     }
 
     function onLayout(dc) {
         _rest = Ui.loadResource(Rez.Strings.rest);
         _paceTooSlow = Ui.loadResource(Rez.Strings.paceTooSlow);
-        _syncing = Ui.loadResource(Rez.Strings.syncing);
         _corral = Ui.loadResource(Rez.Strings.corral);
     }
 
@@ -51,11 +49,6 @@ class BysdField extends Ui.DataField {
     // Es el latido: aqui no hace falta el Timer que si necesita la app.
     function compute(info) {
         _estado.refrescarFoto();
-        var ahora = Time.now().value();
-        if (_ultimoRefresco == 0 || ahora - _ultimoRefresco >= _estado.segundosRefresco) {
-            _ultimoRefresco = ahora;
-            _api.refrescar();
-        }
     }
 
     function onUpdate(dc) {
@@ -68,11 +61,6 @@ class BysdField extends Ui.DataField {
         var tinta = (fondo == Gfx.COLOR_BLACK) ? Gfx.COLOR_WHITE : Gfx.COLOR_BLACK;
         dc.setColor(fondo, fondo);
         dc.clear();
-
-        if (!_estado.sincronizado) {
-            _txt(dc, w / 2, h / 2, Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, _syncing);
-            return;
-        }
 
         var margen = _estado.margenSegundos();
         var corral = _estado.enCorral();

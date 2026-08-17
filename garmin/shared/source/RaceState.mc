@@ -1,22 +1,26 @@
 using Toybox.Application as App;
 using Toybox.Activity as Activity;
-using Toybox.Time as Time;
 using Toybox.Lang as Lang;
 
 // La carrera tal y como la ve el reloj.
 //
-// El servidor solo hace falta de vez en cuando. De su respuesta se guarda una
-// sola cosa: "en la vuelta N le quedaban R segundos, y eso lo supe en el
-// instante M". A partir de ahi cuenta el cronometro del propio Garmin.
+// No hay servidor. Todo sale de dos sitios: los ajustes que el corredor puso
+// una vez desde el telefono (cuanto dura la vuelta y cuanto mide) y el reloj de
+// la propia actividad, que es el unico cronometro que hay.
 //
-// Que solo se usen diferencias de tiempo, nunca horas absolutas, tiene dos
-// consecuencias buenas: da igual que el reloj del corredor este mal puesto, y
-// da igual que el telefono se quede sin cobertura treinta horas. La cuenta
-// atras no se detiene ni miente; como mucho envejece.
+// La campana de la vuelta 1 es el momento en que arranco la actividad. Se usa
+// 'elapsedTime' y no 'timerTime' porque en una backyard el descanso entre
+// vueltas cuenta: la campana suena cada hora exacta aunque el corredor haya
+// pausado el reloj para sentarse. Si arranco la actividad antes de la campana,
+// desde la app puede volver a sellar el cero y la diferencia se guarda aqui.
+//
+// Que todo sean diferencias de tiempo, nunca horas absolutas, tiene una
+// consecuencia buena: da igual que el reloj del corredor este mal puesto.
 class RaceState {
 
-    // Valores de la Backyard Ultra Santo Domingo. Son solo el punto de
-    // partida: si el backend los manda en lap-status, mandan los suyos.
+    // El estandar de una backyard: una vuelta cada hora. La distancia es la del
+    // formato clasico, 6.7 km, y como todo lo demas se puede cambiar desde el
+    // telefono, porque cada carrera tiene su circuito.
     static const DURACION_VUELTA = 3600;
     static const KM_POR_VUELTA = 6.7;
 
@@ -27,23 +31,18 @@ class RaceState {
     // Los tres avisos del corral, en segundos antes de la campana.
     static const AVISOS_CORRAL = [180, 120, 60];
 
-    // --- ajustes, del telefono ---
-    var dorsal = null;
-    var raceCode = null;
-    var avisoCorral = true;
-    var segundosRefresco = 60;
+    // Donde se guarda el cero de la carrera para que sobreviva a cerrar la app.
+    static const CLAVE_DESFASE = "desfase";
+    static const CLAVE_SELLO = "selloDesfase";
 
-    // --- lo que dijo el servidor la ultima vez ---
-    var sincronizado = false;
-    var empezada = false;
-    var terminada = false;
-    var vueltaSemilla = 0;
-    var restanteSemilla = 0;
-    var momentoSemilla = 0;
-    var enCarrera = 0;
-    var inscritos = 0;
+    // --- ajustes, del telefono ---
     var duracionVuelta = DURACION_VUELTA;
     var kmPorVuelta = KM_POR_VUELTA;
+    var avisoCorral = true;
+
+    // Segundos de actividad que no cuentan como carrera: lo que corrio el reloj
+    // entre el play y la campana. Cero mientras el corredor no lo cambie.
+    var desfase = 0;
 
     // Calibracion: lo que midio el reloj en la ultima vuelta cerrada. El GPS
     // puede marcar 6.85 km en un circuito de 6.7, y sobre treinta vueltas esa
@@ -56,18 +55,27 @@ class RaceState {
 
     function initialize() {
         leerAjustes();
+        _leerDesfase();
     }
 
     function leerAjustes() {
-        dorsal = _ajuste("bib", null);
-        raceCode = _ajuste("raceCode", null);
-        avisoCorral = _ajuste("corralAlert", true);
-        segundosRefresco = _ajuste("refreshSeconds", 60);
-        if (segundosRefresco == null || segundosRefresco < 30) {
-            segundosRefresco = 30;
+        var minutos = _ajuste("lapMinutes", 60);
+        if (minutos != null && minutos > 0) {
+            duracionVuelta = minutos.toNumber() * 60;
         }
-        if (dorsal != null && dorsal.length() == 0) { dorsal = null; }
-        if (raceCode != null && raceCode.length() == 0) { raceCode = null; }
+
+        // La distancia se escribe siempre en kilometros, y por eso la etiqueta
+        // del ajuste lo dice. Es la unica asimetria con Fmt, que dibuja en la
+        // unidad del reloj, y es deliberada: un ajuste que cambia de unidad
+        // segun el reloj no tiene un valor por defecto correcto. Leyendolo en
+        // la unidad del reloj, el 6.7 de fabrica se convertia en 6.7 millas
+        // —10.8 km— para quien tuviera el reloj en imperial y no lo tocara.
+        var vuelta = _ajuste("lapDistance", KM_POR_VUELTA);
+        if (vuelta != null && vuelta > 0) {
+            kmPorVuelta = vuelta.toFloat();
+        }
+
+        avisoCorral = _ajuste("corralAlert", true);
     }
 
     function _ajuste(clave, porDefecto) {
@@ -79,52 +87,88 @@ class RaceState {
         }
     }
 
-    // --- sincronizacion ---
+    // --- el cero de la carrera ---
 
-    function sembrar(vuelta, restante, haEmpezado, haTerminado) {
-        vueltaSemilla = vuelta;
-        restanteSemilla = restante;
-        momentoSemilla = Time.now().value();
-        empezada = haEmpezado;
-        terminada = haTerminado;
-        sincronizado = true;
+    // Milisegundos desde que arranco la actividad, pausas incluidas. Es null
+    // cuando no hay ninguna actividad grabando, y entonces no hay carrera que
+    // contar: la app lo dice y no inventa nada.
+    //
+    // El cero cuenta como "todavia nada". Sin actividad, el simulador no
+    // devuelve null sino 0, y sin esta linea la app dibujaba una vuelta 1
+    // parada en 60:00 en vez de decir que no hay de donde contar. Lo unico que
+    // se pierde es el primer segundo de la carrera, que no lo mira nadie.
+    function _milisActividad() {
+        var info = Activity.getActivityInfo();
+        if (info == null || info.elapsedTime == null || info.elapsedTime <= 0) {
+            return null;
+        }
+        return info.elapsedTime;
     }
 
-    // Segundos desde la ultima respuesta del servidor. Es lo que decide si el
-    // punto de sincronia se enciende o se apaga.
-    function edadDatos() {
-        if (!sincronizado) { return null; }
-        return Time.now().value() - momentoSemilla;
+    // Segundos de carrera. Cero justo en la campana de salida.
+    function segundosDeCarrera() {
+        var ms = _milisActividad();
+        if (ms == null) { return null; }
+        var s = (ms / 1000) - desfase;
+        return s > 0 ? s : 0;
+    }
+
+    function empezada() {
+        return _milisActividad() != null;
+    }
+
+    // Vuelve a poner el cero aqui: el corredor arranco la actividad antes de la
+    // campana y ahora suena. Solo lo llama la app, que es la que tiene botones.
+    function darLaSalida() {
+        var ms = _milisActividad();
+        if (ms == null) { return false; }
+        desfase = ms / 1000;
+        _vueltaDeLaFoto = 0;
+        kmMedidosUltimaVuelta = null;
+        _guardarDesfase(ms);
+        return true;
+    }
+
+    // El desfase se guarda junto al 'elapsedTime' en que se sello. Si al abrir
+    // la app la actividad lleva menos tiempo que ese sello, es otra actividad
+    // distinta y el desfase viejo no vale para nada: se tira.
+    function _leerDesfase() {
+        try {
+            var d = App.Storage.getValue(CLAVE_DESFASE);
+            var sello = App.Storage.getValue(CLAVE_SELLO);
+            if (d == null || sello == null) { return; }
+            var ms = _milisActividad();
+            if (ms == null || ms < sello) { return; }
+            desfase = d;
+        } catch (e) {
+            desfase = 0;
+        }
+    }
+
+    function _guardarDesfase(ms) {
+        try {
+            App.Storage.setValue(CLAVE_DESFASE, desfase);
+            App.Storage.setValue(CLAVE_SELLO, ms);
+        } catch (e) {
+            // Sin Storage la app sigue funcionando: el cero solo dura lo que
+            // dure la sesion. No es motivo para romper nada.
+        }
     }
 
     // --- proyeccion ---
 
     // Devuelve [vuelta, segundosHastaLaProximaSalida], o null si todavia no
-    // hay nada que proyectar.
+    // hay actividad de la que contar.
     //
     // El tipo de vuelta va escrito: sin el, el comprobador no puede saber que
     // lo que se indexa en vuelta() y restante() es un array, y avisa en cada
     // compilacion.
     function proyeccion() as Lang.Array<Lang.Number> or Null {
-        if (!sincronizado || terminada || duracionVuelta <= 0) { return null; }
+        var s = segundosDeCarrera();
+        if (s == null || duracionVuelta <= 0) { return null; }
 
-        var transcurrido = Time.now().value() - momentoSemilla;
-        var restante = restanteSemilla - transcurrido;
-
-        // Antes de la salida no hay vueltas que contar: es una cuenta atras
-        // que se acaba, y cuando se acaba toca volver a preguntar.
-        if (!empezada) {
-            return [0, restante > 0 ? restante : 0];
-        }
-
-        var vuelta = vueltaSemilla;
-        if (restante <= 0) {
-            // Sin dividir, un reloj que lleve horas sin sincronizar daria mil
-            // vueltas al bucle. Con division es una cuenta y ya.
-            var saltos = (-restante / duracionVuelta) + 1;
-            restante += saltos * duracionVuelta;
-            vuelta += saltos;
-        }
+        var vuelta = (s / duracionVuelta) + 1;
+        var restante = duracionVuelta - (s % duracionVuelta);
         return [vuelta, restante];
     }
 
@@ -138,17 +182,9 @@ class RaceState {
         return p == null ? null : p[1];
     }
 
-    // Vueltas ya cerradas por quien sigue en carrera. En una backyard el que
-    // sigue dentro las ha hecho todas: esa es justamente la regla.
-    function vueltasCompletadas() {
-        var v = vuelta();
-        if (v == null || !empezada) { return 0; }
-        return v - 1;
-    }
-
-    function kmAcumulados() {
-        return vueltasCompletadas() * kmPorVuelta;
-    }
+    // Las vueltas ya cerradas son vuelta() - 1, y quien dibuja las cuenta a
+    // partir de la proyeccion que ya tiene en la mano: en una backyard el que
+    // sigue dentro las ha hecho todas, esa es justamente la regla.
 
     // --- distancia y ritmo de la vuelta en curso ---
 
@@ -162,7 +198,7 @@ class RaceState {
     // distancia y aprovecha para calibrar con lo que acaba de medir el reloj.
     function refrescarFoto() {
         var v = vuelta();
-        if (v == null || !empezada) { return; }
+        if (v == null) { return; }
         var metros = _metrosActividad();
         if (metros == null) { return; }
 
@@ -196,7 +232,7 @@ class RaceState {
 
     function segundosEnLaVuelta() {
         var r = restante();
-        if (r == null || !empezada) { return null; }
+        if (r == null) { return null; }
         var t = duracionVuelta - r;
         return t > 0 ? t : null;
     }
@@ -214,7 +250,7 @@ class RaceState {
         var r = restante();
         var km = kmEnLaVuelta();
         var ritmo = ritmoSegPorKm();
-        if (r == null || km == null || ritmo == null || !empezada) { return null; }
+        if (r == null || km == null || ritmo == null) { return null; }
 
         var faltan = kmObjetivo() - km;
         if (faltan < 0) { faltan = 0.0; }
@@ -223,6 +259,6 @@ class RaceState {
 
     function enCorral() {
         var r = restante();
-        return empezada && !terminada && r != null && r <= AVISOS_CORRAL[0];
+        return r != null && r <= AVISOS_CORRAL[0];
     }
 }
