@@ -218,7 +218,11 @@ export default function LoginScreen() {
     setAviso('');
     setVerClave(false);
     setPasoCodigo('pedir');
-    if (siguiente === 'registro') { setPaso(1); setF({ ...vacio, email }); setCorreoEnUso(false); }
+    // El aviso de correo repetido se baja SIEMPRE, no solo al ir al registro.
+    // Estaba dentro del `if` y por eso "Ir a iniciar sesión" cambiaba de
+    // pantalla con el emergente todavía encima, tapándola.
+    setCorreoEnUso(false);
+    if (siguiente === 'registro') { setPaso(1); setF({ ...vacio, email }); }
   };
 
   const entrada = async (datos, correoBio) => {
@@ -759,7 +763,7 @@ export default function LoginScreen() {
         </p>
       </div>
 
-      {correoEnUso && (
+      {correoEnUso && modo === 'registro' && paso === 1 && (
         <AvisoCuentaExiste
           correo={f.email.trim()}
           alEntrar={() => { setEmail(f.email.trim()); ir('acceso'); }}
