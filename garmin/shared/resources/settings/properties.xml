@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <properties>
     <!--
-      Los tres ajustes se ponen una vez desde Garmin Connect Mobile. En el
-      reloj no se pregunta nada: a las veinte horas de carrera nadie quiere
-      teclear en una esfera.
+      Los ajustes se ponen una vez desde Garmin Connect Mobile. En el reloj no
+      se pregunta nada: a las veinte horas de carrera nadie quiere teclear en
+      una esfera.
 
       Los valores por defecto son los de la backyard clasica: una vuelta cada
       hora, de 6.7 km. La distancia va en kilometros siempre, tenga el reloj la
@@ -12,4 +12,5 @@
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
+    <property id="autoLap" type="boolean">false</property>
 </properties>

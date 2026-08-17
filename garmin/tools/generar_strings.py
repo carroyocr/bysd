@@ -32,6 +32,7 @@ TABLA = {
     "fieldName":        ("Backyard Margin",         "Backyard Margen",     "Backyard Marge",       "Backyard Puffer",       "Backyard Margine",     "Backyard Margem"),
     "lap":              ("Lap",                     "Vuelta",              "Tour",                 "Runde",                 "Giro",                 "Volta"),
     "nextStart":        ("Next start",              "Próxima salida",      "Prochain départ",      "Nächster Start",        "Prossima partenza",    "Próxima partida"),
+    "beforeStart":      ("For lap 1",               "Para la vuelta 1",    "Pour le tour 1",       "Für Runde 1",           "Per il giro 1",        "Para a volta 1"),
     # Corral, yard y DNF ya son las palabras del deporte en todos los idiomas.
     # Traducirlas confunde mas de lo que ayuda.
     "corral":           ("Corral",                  "Corral",              "Corral",               "Corral",                "Corral",               "Corral"),
@@ -43,9 +44,17 @@ TABLA = {
     # esta app no tiene otro: se dice y no se inventa una cuenta atras.
     "noActivity":       ("No activity",             "Sin actividad",       "Pas d'activité",       "Keine Aktivität",       "Nessuna attività",     "Sem atividade"),
 
-    # La confirmacion de volver a sellar el cero de la carrera. Sale en un
-    # dialogo, que envuelve el texto solo: aqui el largo no aprieta.
-    "startNow":         ("Start lap 1 now?",        "¿Dar la salida ahora?","Donner le départ ?",  "Start jetzt setzen?",   "Dare il via ora?",     "Dar a partida agora?"),
+
+    # La linea de salida y el menu de terminar. Los del menu y el dialogo los
+    # envuelve el sistema; los de la esfera son cortos.
+    "pressStart":       ("START to begin",          "START para salir",    "START pour partir",    "START zum Start",       "START per partire",    "START para largar"),
+    "gpsReady":         ("GPS ready",               "GPS listo",           "GPS prêt",             "GPS bereit",            "GPS pronto",           "GPS pronto"),
+    "gpsWait":          ("Searching GPS",           "Buscando GPS",        "Recherche GPS",        "GPS-Suche",             "Ricerca GPS",          "Procurando GPS"),
+    "endTitle":         ("Finish?",                 "¿Terminar?",          "Terminer ?",           "Beenden?",              "Terminare?",           "Terminar?"),
+    "resume":           ("Resume",                  "Reanudar",            "Reprendre",            "Weiter",                "Riprendi",             "Retomar"),
+    "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
+    "discard":          ("Discard",                 "Descartar",           "Supprimer",            "Verwerfen",             "Scarta",               "Descartar"),
+    "discardSure":      ("Discard the race?",       "¿Descartar la carrera?","Supprimer la course ?","Rennen verwerfen?",   "Scartare la gara?",    "Descartar a prova?"),
 
     # Ajustes: se leen en el telefono, no en el reloj, asi que aqui el largo
     # no aprieta.
@@ -55,12 +64,15 @@ TABLA = {
     # de unidad no podria tener un valor por defecto correcto para todos.
     "settingLapDistance":("Lap distance (km)",      "Vuelta (km)",         "Tour (km)",            "Rundenlänge (km)",      "Giro (km)",            "Volta (km)"),
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
+    # La vuelta automatica: marcar al llegar al punto de salida, sin boton.
+    "settingAutoLap":   ("Auto lap at start point", "Vuelta auto en la salida","Tour auto au départ","Auto-Runde am Start",  "Giro auto alla partenza","Volta auto na largada"),
 }
 
 # Las que se dibujan en la esfera. No cuentan para el aviso de largo ni las de
-# ajustes, que se leen en el telefono, ni los dos nombres, que salen en listas
-# donde el reloj ya se encarga de recortar.
-FUERA_DE_LA_ESFERA = ["appName", "fieldName", "startNow"]
+# ajustes, que se leen en el telefono, ni los nombres, ni las del menu de
+# terminar y sus dialogos, que los envuelve el sistema.
+FUERA_DE_LA_ESFERA = ["appName", "fieldName",
+                      "endTitle", "resume", "save", "discard", "discardSure"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 

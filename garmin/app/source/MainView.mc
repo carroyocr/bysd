@@ -33,6 +33,7 @@ class MainView extends Ui.View {
         _s = {
             :lap => Ui.loadResource(Rez.Strings.lap),
             :nextStart => Ui.loadResource(Rez.Strings.nextStart),
+            :beforeStart => Ui.loadResource(Rez.Strings.beforeStart),
             :corral => Ui.loadResource(Rez.Strings.corral),
             :toTheLine => Ui.loadResource(Rez.Strings.toTheLine),
             :rest => Ui.loadResource(Rez.Strings.rest),
@@ -77,6 +78,14 @@ class MainView extends Ui.View {
         var vuelta = proy[0];
         var r = proy[1];
 
+        // La vuelta 0 es la cuenta atras a la campana de salida: el corredor
+        // pulso START antes de la hora y la campana sonara sola. No hay
+        // paginas que recorrer porque todavia no hay nada que contar.
+        if (vuelta == 0) {
+            _antesDeLaSalida(dc, cx, cy, h, radio, r);
+            return;
+        }
+
         if (_pagina == PAGINA_MARGEN) {
             _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
         } else if (_pagina == PAGINA_TUYO) {
@@ -90,8 +99,15 @@ class MainView extends Ui.View {
 
     // --- pantallas ---
 
+    function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
+        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_ORANGE, 7);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:beforeStart]);
+    }
+
     function _paginaVuelta(dc, cx, cy, h, radio, vuelta, r) {
         var corral = r <= RaceState.AVISOS_CORRAL[0];
+        var descansando = _estado.marcada();
 
         // El aro se vacia con la hora: lo que queda de aro es lo que queda de
         // vuelta. Es la misma cifra del centro, legible sin leer.
@@ -103,10 +119,12 @@ class MainView extends Ui.View {
              corral ? _s[:corral] : _s[:lap] + " " + vuelta.format("%d"));
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
              corral ? Gfx.COLOR_RED : Gfx.COLOR_WHITE, Fmt.reloj(r));
+        // Con la vuelta ya marcada, la misma cuenta atras es el descanso: lo
+        // que falta para la proxima campana es lo que queda de silla.
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
-             corral ? _s[:toTheLine] : _s[:nextStart]);
+             corral ? _s[:toTheLine] : (descansando ? _s[:rest] : _s[:nextStart]));
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia((vuelta - 1) * _estado.kmPorVuelta) + " " + Fmt.unidad());
+             Fmt.distancia(_completadas(vuelta) * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
     function _paginaMargen(dc, cx, cy, h, radio, vuelta, r) {
@@ -149,8 +167,14 @@ class MainView extends Ui.View {
     // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
     // en una backyard esa cifra es la que se cuenta luego, y no cabe confundirla
     // con nada mas.
+    // Con la vuelta en curso ya marcada, cuenta como completada: el corredor
+    // cruzo la meta aunque la hora no haya cerrado.
+    function _completadas(vuelta) {
+        return (vuelta - 1) + (_estado.marcada() ? 1 : 0);
+    }
+
     function _paginaTuyo(dc, cx, cy, h, radio, vuelta) {
-        var completadas = vuelta - 1;
+        var completadas = _completadas(vuelta);
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              Fmt.espera(_estado.segundosDeCarrera()));
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,

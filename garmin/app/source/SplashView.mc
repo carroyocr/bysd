@@ -64,18 +64,18 @@ class SplashView extends Ui.View {
         dc.drawBitmap((w - ancho) / 2, (h - alto) / 2, _emblema);
     }
 
-    // 'as Void' por lo mismo que en BysdApp: lo pide Timer.start.
+    // 'as Void' por lo mismo que en BackyardApp: lo pide Timer.start.
     function salir() as Void {
         if (_yaSalio) { return; }
         _yaSalio = true;
-        SplashView.irALaVuelta(_estado);
+        SplashView.irALaSalida(_estado);
     }
 
     // Compartido con el delegado: los dos caminos, el del reloj y el del
     // boton, tienen que acabar en la misma vista.
-    static function irALaVuelta(estado) {
-        var vista = new MainView(estado);
-        Ui.switchToView(vista, new MainDelegate(vista, estado), Ui.SLIDE_IMMEDIATE);
+    static function irALaSalida(estado) {
+        Ui.switchToView(new StartView(estado), new StartDelegate(estado),
+                        Ui.SLIDE_IMMEDIATE);
     }
 }
 
@@ -89,12 +89,12 @@ class SplashDelegate extends Ui.BehaviorDelegate {
     }
 
     function onSelect() {
-        SplashView.irALaVuelta(_estado);
+        SplashView.irALaSalida(_estado);
         return true;
     }
 
     function onNextPage() {
-        SplashView.irALaVuelta(_estado);
+        SplashView.irALaSalida(_estado);
         return true;
     }
 

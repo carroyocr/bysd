@@ -10,17 +10,20 @@ aquí solo está lo que falta.
 ## Qué cambió
 
 La app dejó de ser específica de la Backyard Ultra Santo Domingo y vale para
-cualquier backyard. Se fue el servidor entero: no hay `ApiClient`, no hay
-permiso de `Communications`, no hay dorsal ni código de carrera, y la página
-«En pie» —la única que dependía de `/api/race/stats`— ya no existe.
+cualquier backyard. Se fue el servidor entero —no hay `ApiClient` ni dorsal ni
+código de carrera— y con él la página «En pie».
 
-Quedan tres páginas —Vuelta, Margen, Tuyo— y tres ajustes: cuánto dura la
-vuelta, cuánto mide y si vibra en el corral. El emblema se queda.
+Y dejó de ser una espectadora: **la app es la actividad**. Graba su propia
+sesión (`ActivityRecording`, permisos `Fit` y `Positioning`), las campanas van
+ancladas a la hora en punto del reloj de pared (arrancar a las 8:03 no mueve
+la campana de las 9:00), LAP marca el término de la vuelta —solo vale el
+primero de cada hora— y la vuelta siguiente la abre la hora sola. Opcional:
+la marca cae sola al llegar al punto de salida (GPS). Al terminar, la
+actividad se guarda y sube a Garmin Connect como cualquier carrera.
 
-El cero de la carrera, que antes lo sembraba el backend, ahora es el arranque
-de la actividad. Con un matiz que cubre el caso real: en la app, el botón de
-acción vuelve a sellar el cero aquí y ahora, con confirmación, para quien le
-dio al play cinco minutos antes de la campana. Está todo explicado en el README.
+Quedan tres páginas —Vuelta, Margen, Tuyo— y cuatro ajustes: minutos y km de
+la vuelta, aviso de corral y vuelta automática. El emblema se queda. Está todo
+explicado en el README.
 
 ## Para retomar
 
@@ -49,23 +52,25 @@ vuelta en curso, la calibración del objetivo con lo que mide el GPS y los dos
 aros que se persiguen— **no ha pasado nunca por el simulador con números de
 verdad**.
 
-Ahora esto pesa más que antes, porque sin servidor el `elapsedTime` de la
-actividad es también de donde sale la vuelta y la cuenta atrás: si no hay
-actividad, la app no dibuja carrera ninguna, solo «Sin actividad». Esa rama sí
-está escrita y es la que se ve hoy en el simulador; la otra, la que importa, no.
+En la app la vuelta ya no depende de la actividad —la manda el reloj de pared—
+pero el margen sigue saliendo de la distancia grabada, y esa parte no ha visto
+nunca números reales. En el campo de datos, además, la vuelta sí sale del
+`elapsedTime` de la actividad nativa.
 
 Cómo: en el simulador, *Simulation → Activity Data → Play a FIT file* (o
 *Simulate Data*), y con la actividad corriendo comprobar en `RaceState`:
 
-- que la vuelta avanza sola y la cuenta atrás se reinicia en cada campana;
+- que la vuelta avanza sola con la hora y la cuenta atrás se reinicia en cada
+  campana, con su vibración larga y su `addLap`;
+- que LAP marca el término una sola vez y los repetidos se ignoran;
+- que la vuelta automática marca al llegar al punto de salida y no antes
+  (exige medio circuito recorrido y 30 m del punto);
 - que `kmEnLaVuelta()` avanza y se corta en cada campana;
 - que `kmMedidosUltimaVuelta` se queda con lo medido solo cuando se parece a
   una vuelta (el filtro del 0.8–1.2);
 - que el margen cambia de signo y de color al cruzar el ritmo necesario;
 - que por debajo de 1 km sigue saliendo el guion en vez de saltar minutos;
-- y lo nuevo: que el botón de acción sella el cero donde debe, que la
-  confirmación aparece, y que al parar y arrancar otra actividad el cero viejo
-  se descarta en vez de arrastrarse.
+- y que al guardar, el FIT queda con sus vueltas y sube a Garmin Connect.
 
 La aritmética en sí ya está verificada con un puerto a Python (la campana
 exacta, los saltos de treinta horas, el corral, el realineo y las vueltas de
@@ -112,11 +117,11 @@ que se quiere enseñar.
 
 - **La aritmética del reloj de la carrera**, con un puerto a Python que se
   quedó en el repo (`garmin/tools/verificar_aritmetica.py`, se ejecuta sin
-  SDK): el segundo 3600 es vuelta 2 con la hora entera por delante y no vuelta 2
-  con cero; las treinta horas se resuelven con una división y no con un bucle;
-  el corral entra a los tres minutos justos y no se queda pegado al pasar la
-  campana; el realineo del cero cuadra; y las vueltas de duración distinta de
-  una hora no suponen nada.
+  SDK): el redondeo del ancla al reloj de pared (salida tarde, temprana y
+  exacta), el segundo 3600 como vuelta 2 con la hora entera por delante, las
+  treinta horas con una división y no con un bucle, el corral que entra a los
+  tres minutos justos y no se queda pegado, la regla de un solo LAP válido por
+  vuelta y las vueltas de duración distinta de una hora.
 - **Que la app y el campo de datos arrancan** en el simulador sin ninguna
   excepción, y que la vista se repinta. Esto último se vio con una traza
   temporal en `onUpdate`, no por ausencia de errores, y menos mal: la traza

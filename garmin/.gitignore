@@ -7,3 +7,6 @@ bin/
 # La developer key NUNCA va al repo: es la firma de la app.
 *.der
 *.pem
+
+# Binarios y residuos de compilacion locales
+build/

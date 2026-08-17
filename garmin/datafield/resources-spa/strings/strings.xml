@@ -6,14 +6,23 @@
     <string id="fieldName">Backyard Margen</string>
     <string id="lap">Vuelta</string>
     <string id="nextStart">Próxima salida</string>
+    <string id="beforeStart">Para la vuelta 1</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">A la línea</string>
     <string id="rest">De descanso</string>
     <string id="paceTooSlow">Ritmo insuficiente</string>
     <string id="laps">Vueltas</string>
     <string id="noActivity">Sin actividad</string>
-    <string id="startNow">¿Dar la salida ahora?</string>
+    <string id="pressStart">START para salir</string>
+    <string id="gpsReady">GPS listo</string>
+    <string id="gpsWait">Buscando GPS</string>
+    <string id="endTitle">¿Terminar?</string>
+    <string id="resume">Reanudar</string>
+    <string id="save">Guardar</string>
+    <string id="discard">Descartar</string>
+    <string id="discardSure">¿Descartar la carrera?</string>
     <string id="settingLapMinutes">Vuelta (minutos)</string>
     <string id="settingLapDistance">Vuelta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
+    <string id="settingAutoLap">Vuelta auto en la salida</string>
 </strings>

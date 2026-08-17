@@ -7,14 +7,23 @@
     <string id="fieldName">Backyard Margin</string>
     <string id="lap">Lap</string>
     <string id="nextStart">Next start</string>
+    <string id="beforeStart">For lap 1</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">To the line</string>
     <string id="rest">Rest</string>
     <string id="paceTooSlow">Pace too slow</string>
     <string id="laps">Laps</string>
     <string id="noActivity">No activity</string>
-    <string id="startNow">Start lap 1 now?</string>
+    <string id="pressStart">START to begin</string>
+    <string id="gpsReady">GPS ready</string>
+    <string id="gpsWait">Searching GPS</string>
+    <string id="endTitle">Finish?</string>
+    <string id="resume">Resume</string>
+    <string id="save">Save</string>
+    <string id="discard">Discard</string>
+    <string id="discardSure">Discard the race?</string>
     <string id="settingLapMinutes">Lap duration (minutes)</string>
     <string id="settingLapDistance">Lap distance (km)</string>
     <string id="settingCorral">Corral alert</string>
+    <string id="settingAutoLap">Auto lap at start point</string>
 </strings>

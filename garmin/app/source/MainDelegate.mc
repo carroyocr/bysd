@@ -1,11 +1,12 @@
 using Toybox.WatchUi as Ui;
+using Toybox.Application as App;
 
-// Botones y gestos.
+// Botones y gestos durante la carrera.
 //
-// Arriba y abajo cambian de pantalla. El boton de accion vuelve a poner el cero
-// de la carrera en este instante: es para quien arranco la actividad unos
-// minutos antes de que sonara la campana. Va con confirmacion porque un toque
-// sin querer a la vuelta veinte descuadraria toda la cuenta.
+// Arriba y abajo cambian de pantalla. START es el LAP del corredor: marca que
+// la vuelta termino y empieza el descanso; solo vale el primero de cada
+// vuelta, los demas se ignoran. BACK abre el menu de terminar. Abrir vuelta
+// no lo hace ningun boton: lo hace la hora.
 class MainDelegate extends Ui.BehaviorDelegate {
 
     var _vista;
@@ -30,11 +31,21 @@ class MainDelegate extends Ui.BehaviorDelegate {
     }
 
     function onSelect() {
-        if (!_estado.empezada()) { return true; }
-        var texto = Ui.loadResource(Rez.Strings.startNow);
-        Ui.pushView(new Ui.Confirmation(texto),
-                    new SalidaDelegate(_estado),
-                    Ui.SLIDE_IMMEDIATE);
+        var app = App.getApp();
+        if (app != null) {
+            app.marcarVuelta();
+        }
+        return true;
+    }
+
+    // BACK no sale de la app sin preguntar: debajo hay una actividad grabando
+    // y una backyard no tiene segunda salida.
+    function onBack() {
+        var menu = new Ui.Menu2({ :title => Ui.loadResource(Rez.Strings.endTitle) });
+        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.resume), null, :seguir, null));
+        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.save), null, :guardar, null));
+        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.discard), null, :descartar, null));
+        Ui.pushView(menu, new MenuFinDelegate(), Ui.SLIDE_UP);
         return true;
     }
 
@@ -52,19 +63,42 @@ class MainDelegate extends Ui.BehaviorDelegate {
     }
 }
 
-class SalidaDelegate extends Ui.ConfirmationDelegate {
+class MenuFinDelegate extends Ui.Menu2InputDelegate {
 
-    var _estado;
+    function initialize() {
+        Menu2InputDelegate.initialize();
+    }
 
-    function initialize(estado) {
+    function onSelect(item) {
+        var id = item.getId();
+        if (id == :guardar) {
+            var app = App.getApp();
+            if (app != null) { app.terminar(true); }
+        } else if (id == :descartar) {
+            // Descartar treinta horas por un toque seria imperdonable: es la
+            // unica opcion del menu que pide confirmacion.
+            Ui.pushView(new Ui.Confirmation(Ui.loadResource(Rez.Strings.discardSure)),
+                        new DescartarDelegate(), Ui.SLIDE_IMMEDIATE);
+        } else {
+            Ui.popView(Ui.SLIDE_DOWN);
+        }
+    }
+
+    function onBack() {
+        Ui.popView(Ui.SLIDE_DOWN);
+    }
+}
+
+class DescartarDelegate extends Ui.ConfirmationDelegate {
+
+    function initialize() {
         ConfirmationDelegate.initialize();
-        _estado = estado;
     }
 
     function onResponse(respuesta) {
         if (respuesta == Ui.CONFIRM_YES) {
-            _estado.darLaSalida();
-            Ui.requestUpdate();
+            var app = App.getApp();
+            if (app != null) { app.terminar(false); }
         }
         return true;
     }

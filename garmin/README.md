@@ -13,52 +13,55 @@ va a llegar a tiempo.
 
 Una backyard es un metrónomo: la campana suena cada hora exacta desde la
 salida. Nada más hace falta para llevar la cuenta, y por eso esta app **no
-habla con ningún servidor**. No pide permisos, no necesita el teléfono cerca y
-funciona igual en una carrera de doscientos corredores que en una de seis.
+habla con ningún servidor**: funciona igual en una carrera de doscientos
+corredores que en una de seis.
 
-Todo sale de dos sitios:
+Y la app no es unas pantallas montadas encima de una actividad ajena: **la app
+es la actividad**. Graba su propia sesión con `ActivityRecording`, y las
+reglas son las de una backyard de verdad:
 
-- **El reloj de la actividad.** La campana de la vuelta 1 es el instante en que
-  el corredor arrancó la actividad. Se usa `elapsedTime` y no `timerTime`
-  porque en una backyard el descanso entre vueltas cuenta: la campana suena
-  cada hora aunque el corredor haya pausado el reloj para sentarse.
-- **Tres ajustes**, puestos una vez desde el teléfono: cuánto dura la vuelta,
-  cuánto mide y si vibra en el corral.
+- **Las campanas van con el reloj de pared.** Al pulsar START, el cero se
+  ancla a la marca de hora más cercana: quien arranca a las 8:03 —o a las
+  7:58— corre igual su vuelta 1 de 8:00 a 9:00. Cualquier retraso en la
+  salida queda corregido de raíz, y como el ancla se guarda en epoch, un
+  cambio de hora a mitad de carrera no mueve ninguna campana.
+- **Las vueltas las abre la hora, no un botón.** LAP (el botón START durante
+  la carrera) marca que la vuelta *terminó* —el corredor llegó a meta y
+  empieza su descanso— y solo vale el primero de cada vuelta: los demás se
+  ignoran. Opcionalmente, la marca puede caer sola al llegar al punto de
+  salida (ajuste «Vuelta auto», con el punto fijado al dar la salida).
+- **Campana siempre**: en cada apertura de vuelta el reloj vibra largo y se
+  marca la vuelta en el FIT. Los avisos de 3, 2 y 1 minuto sí se pueden
+  apagar.
+- **Al terminar, la actividad se guarda** como cualquier carrera y sube a
+  Garmin Connect (y de ahí a Strava) por el camino normal, con una vuelta por
+  hora en el FIT y el tramo de meta a campana separado si se marcó el LAP.
 
-Que todo sean diferencias de tiempo, y nunca horas absolutas, tiene una
-consecuencia buena: da igual que el reloj del corredor esté mal puesto.
-
-### Si la actividad arrancó antes que la campana
-
-Es el caso real: uno se pone en la línea con cinco minutos de margen y le da al
-play. Por eso el botón de acción de la app vuelve a poner el cero **aquí y
-ahora**, con confirmación —un toque sin querer a la vuelta veinte descuadraría
-toda la cuenta—. Ese ajuste se guarda, así que sobrevive a cerrar y abrir la
-app.
-
-Se guarda junto al `elapsedTime` en que se selló. Si al abrir la app la
-actividad lleva menos tiempo que ese sello es que es **otra** actividad, y el
-cero viejo se tira en vez de arrastrar un error silencioso.
-
-El campo de datos no tiene botones y no puede recibir esa corrección: ahí el
-cero es siempre el arranque de la actividad.
+El resto sale de cuatro ajustes puestos una vez desde el teléfono: cuánto dura
+la vuelta, cuánto mide, si vibra el corral y si la vuelta se marca sola. No
+hay botón de pausa: la campana no espera a nadie.
 
 ## Las pantallas
 
-El emblema a pantalla completa poco más de un segundo, y de ahí directo a la
-vuelta. Cualquier botón lo salta. Después, tres páginas que se recorren con
-arriba y abajo (o deslizando, en los táctiles):
+El emblema a pantalla completa poco más de un segundo, y de ahí a la **línea
+de salida**: qué vuelta se va a correr (distancia y minutos) y si el GPS ya
+fijó. START da la salida sin pedir confirmación, porque con la cuenta atrás
+del director de carrera sonando un diálogo estorba; si se pulsó antes de la
+hora, la app muestra la cuenta atrás «Para la vuelta 1» y la campana suena
+sola. Después, tres páginas que se recorren con arriba y abajo (o deslizando,
+en los táctiles) — y añadir una página nueva es añadir un caso al enumerado de
+`MainView`:
 
 | Página | Cifra grande | Debajo |
 |---|---|---|
-| **Vuelta** | Cuenta atrás a la próxima salida | Vuelta actual y km acumulados |
+| **Vuelta** | Cuenta atrás a la próxima campana | «Próxima salida» corriendo, «De descanso» tras el LAP |
 | **Margen** | Minutos a favor o en contra | Distancia, objetivo y ritmo |
-| **Tuyo** | Vueltas completadas | Tiempo en carrera y km |
+| **Tuyo** | Vueltas completadas (el LAP suma la actual) | Tiempo en carrera y km |
 
-Sin ninguna actividad grabando no hay cronómetro del que colgar la carrera, y
-esta app no tiene otro: las tres páginas dejan paso a un «Sin actividad». Es a
-propósito. Dibujar una cuenta atrás inventada sería mentir con mucha seguridad
-aparente.
+**BACK durante la carrera** no sale de la app sin preguntar —debajo hay una
+actividad grabando—: abre el menú de terminar, con Reanudar, Guardar y
+Descartar. Descartar pide confirmación aparte, porque tirar treinta horas por
+un toque sería imperdonable.
 
 **El corral** no es una página: entra sola en los últimos tres minutos, tiñe de
 rojo la pantalla de vuelta y vibra a los 3, 2 y 1 minuto. Se puede apagar
@@ -91,10 +94,11 @@ ritmo sale de la distancia que va midiendo el reloj. Su sitio natural no es una
 app aparte que hay que abrir: es un campo de datos dentro de la actividad, que
 el corredor coloca una vez en su pantalla de carrera y no vuelve a tocar.
 
-Comparte con la app el reloj local y los formatos — es el mismo problema
-resuelto una vez. Lo que no comparte es el dibujo, porque aquí la pantalla no
-es la esfera sino el trozo que le haya tocado, y eso lo decide el corredor al
-repartir sus campos. Por eso se dibuja en tres tallas:
+Aquí la actividad sí es la nativa del reloj —el campo vive dentro de ella— y
+el cero es su arranque. Comparte con la app el reloj de la carrera y los
+formatos; lo que no comparte es el dibujo, porque la pantalla no es la esfera
+sino el trozo que le haya tocado, y eso lo decide el corredor al repartir sus
+campos. Se dibuja en tres tallas:
 
 | Sitio | Qué se ve |
 |---|---|
@@ -126,13 +130,14 @@ shared/
     drawables/          el icono del lanzador
 
 app/                    la app de reloj
-  manifest.xml          productos e idiomas. Sin permisos: no hace falta ninguno
+  manifest.xml          productos, idiomas y permisos (Fit y Positioning)
   monkey.jungle         qué carpeta de recursos usa cada familia de relojes
   source/
-    BackyardApp.mc      el latido de un segundo: avisar y repintar
+    BackyardApp.mc      la sesión que graba, la campana y el latido de 1 s
     SplashView.mc       el emblema
+    StartView.mc        la línea de salida: la vuelta, el GPS y START
     MainView.mc         las tres páginas
-    MainDelegate.mc     botones, gestos y el sellado del cero
+    MainDelegate.mc     botones, gestos y el menú de terminar
   resources/            emblema de 240 px
   resources-small/      emblema de 196 px
   resources-large/      emblema de 380 px
@@ -247,6 +252,7 @@ millas aunque tenga el reloj en español.
 | Vuelta (minutos) | Cuánto dura una vuelta | 60 |
 | Vuelta (km) | Cuánto mide, **siempre en kilómetros** | 6.7 |
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
+| Vuelta auto | Marcar el LAP solo al llegar al punto de salida | no |
 
 Los valores por defecto son los de la backyard clásica.
 
@@ -263,11 +269,13 @@ teclear en una esfera.
 ## Lo que sí está comprobado
 
 La aritmética del reloj de la carrera se verificó con un puerto de la lógica a
-Python, en `tools/verificar_aritmetica.py`: la campana exacta (el segundo 3600
-es vuelta 2 con la hora entera por delante, no vuelta 2 con cero), los saltos
-largos —treinta horas se resuelven con una división, no recorriendo un bucle
-hora a hora—, la entrada y salida del corral, el realineo del cero y las vueltas
-de duración distinta de una hora. Se ejecuta solo, sin SDK:
+Python, en `tools/verificar_aritmetica.py`: el redondeo del ancla al dar la
+salida (tarde, temprano y clavado en la campana), la campana exacta (el
+segundo 3600 es vuelta 2 con la hora entera por delante, no vuelta 2 con
+cero), los saltos largos —treinta horas se resuelven con una división, no
+recorriendo un bucle hora a hora—, la entrada y salida del corral, la regla de
+un solo LAP válido por vuelta y las vueltas de duración distinta de una hora.
+Se ejecuta solo, sin SDK:
 
 ```
 python3 tools/verificar_aritmetica.py

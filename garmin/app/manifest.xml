@@ -14,7 +14,7 @@
         name="@Strings.appName"
         entry="BackyardApp"
         launcherIcon="@Drawables.LauncherIcon"
-        minApiLevel="3.1.0">
+        minApiLevel="3.2.0">
 
         <iq:products>
             <iq:product id="fenix6"/>
@@ -44,11 +44,14 @@
         </iq:products>
 
         <!--
-          Ningun permiso. La app no sale a la red, no pide posicion y no toca
-          sensores: el tiempo y la distancia salen de la actividad que el
-          corredor ya esta grabando.
+          Fit para grabar la actividad (la app es la actividad, no una pantalla
+          encima de otra) y Positioning para el GPS que alimenta esa grabacion.
+          Red, ninguna.
         -->
-        <iq:permissions/>
+        <iq:permissions>
+            <iq:uses-permission id="Fit"/>
+            <iq:uses-permission id="Positioning"/>
+        </iq:permissions>
 
         <!--
           Idiomas que trae la app. Cada uno tiene su carpeta resources-<lang>.

@@ -14,4 +14,9 @@
     <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
         <settingConfig type="boolean"/>
     </setting>
+    <!-- Marcar la vuelta al llegar al punto de salida, sin pulsar nada. El
+         punto se fija solo al dar la salida. -->
+    <setting propertyKey="@Properties.autoLap" title="@Strings.settingAutoLap">
+        <settingConfig type="boolean"/>
+    </setting>
 </settings>
