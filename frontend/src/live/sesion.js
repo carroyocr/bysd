@@ -151,8 +151,12 @@ export function permisosStaff() {
  * Con qué papel entró la persona: corredor, staff o espectador.
  *
  * No es una sesión ni da permisos —eso son los roles del token—: es solo el
- * camino que eligió en la primera pantalla, para saber a dónde llevarla cuando
- * ya haya escogido carrera.
+ * camino que eligió en la primera pantalla.
+ *
+ * Ahora mismo se guarda pero nadie lo lee: quien lo usaba era la portada de la
+ * carrera, que se retiró. Se conserva a propósito, porque el dato es barato y
+ * la pregunta que responde —"¿a qué vino esta persona?"— sigue teniendo
+ * sentido para cuando haga falta.
  */
 const ROL_KEY = 'bysd_live_rol';
 export const ESPECTADOR = 'espectador';
