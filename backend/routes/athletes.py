@@ -326,7 +326,37 @@ async def register_athlete(data: AthleteRegisterRequest, request: Request = None
         "updated_at": datetime.now(timezone.utc)
     }
     
-    await database.athletes.insert_one(athlete_doc)
+    resultado = await database.athletes.insert_one(athlete_doc)
+
+    # Y su cuenta unificada, en el mismo gesto.
+    #
+    # La migracion de la fase 3 fue un script de una vez, asi que sin esto cada
+    # persona que se registra a partir de entonces se queda solo en `athletes`:
+    # puede entrar por `/api/athletes/login`, que cae a la coleccion vieja, pero
+    # no por la puerta unica de la app, no aparece en `accounts` y la
+    # comprobacion de "ese correo ya existe" dice que no existe. Nada falla a la
+    # vista, que es lo peor de este tipo de hueco. Ya paso con una persona real.
+    from services import cuentas as servicio_cuentas
+
+    try:
+        cuenta = await servicio_cuentas.crear(
+            database,
+            email=data.email,
+            password=data.password,
+            nombre=data.nombre,
+            apellidos=data.apellidos,
+            roles=[servicio_cuentas.ATLETA],
+            email_verified=False,
+            athlete_profile_id=resultado.inserted_id,
+        )
+        await database.athletes.update_one(
+            {"_id": resultado.inserted_id}, {"$set": {"account_id": cuenta["_id"]}}
+        )
+    except Exception as e:
+        # Que falle esto no puede tumbar un alta que por lo demas fue bien: la
+        # persona queda como quedaban todas antes de la cuenta unica y el script
+        # de migracion la recoge despues.
+        logging.error("No se pudo crear la cuenta unificada de %s: %s", data.email, e)
     
     # Auto-claim 2026 result if email matches a BIB from that race
     auto_claimed_bib = None
