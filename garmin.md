@@ -47,6 +47,34 @@ El de Homebrew compila igual, pero su simulador arranca sin abrir el puerto y
 
 ---
 
+## 0. Dos fallos confirmados en el simulador, sin arreglar
+
+Sesion del 17-18 de agosto, manejando el simulador con teclado. Lo que se
+comprobo que SI funciona: las flechas cambian de pagina en carrera, LAP marca
+una sola vez y los repetidos se ignoran, el ancla del reloj de pared clava la
+campana (a las 8:59 dio cuenta atras de 0:29 hasta las 9:00), y las unidades
+salen bien (6.7 km -> 4.2 mi con el reloj en imperial). Lo que NO:
+
+- **BACK no abre el menu de terminar.** Ni con Escape, ni con Backspace, ni
+  pulsando el boton del bisel: `onBack` parece no dispararse nunca (o el push
+  del Menu2 muere en silencio), asi que no hay forma sana de cerrar la
+  carrera. Es el fallo que el usuario vio como "al descartar se reinicio el
+  reloj". Estaba a mitad de diagnostico con una linea de depuracion visible
+  en pantalla (la consola de monkeydo no se dejo capturar en background);
+  las trazas se revirtieron antes del commit, hay que reponerlas para seguir.
+- **Antes de la campana no se puede cambiar de pagina.** El pre-salida
+  (vuelta 0) corta el onUpdate antes del enrutado de paginas, y con vueltas
+  de 60 minutos ese bloqueo puede durar media hora. Decidir: o se permite
+  navegar (con las paginas protegidas contra vuelta 0: "Lap 0", completadas
+  -1, tiempo negativo), o al menos se deja pasar a la pagina del reloj.
+
+Y una nota para probar las pantallas que "no se ven" en el simulador: el
+margen en verde/rojo necesita distancia (Simulation -> Activity Data ->
+Simulate Data), el corral solo entra en los ultimos 3 minutos de la hora de
+pared, y la espera solo aparece si se pulsa START antes de la marca. Con el
+ajuste de vuelta en 5 minutos se ve todo en una pasada; con 3 o menos el
+corral seria permanente, porque su umbral son 180 s fijos.
+
 ## 1. El margen, con datos reales
 
 **Es el hueco más importante, y sigue abierto.** En el simulador no había
