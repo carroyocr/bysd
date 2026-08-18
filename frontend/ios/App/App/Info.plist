@@ -45,6 +45,10 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!-- Pantalla completa en iPad: sin esto, App Store exige soportar
+	     las cuatro orientaciones para la multitarea de iPad -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>
