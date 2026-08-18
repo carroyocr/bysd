@@ -21,9 +21,13 @@ primero de cada hora— y la vuelta siguiente la abre la hora sola. Opcional:
 la marca cae sola al llegar al punto de salida (GPS). Al terminar, la
 actividad se guarda y sube a Garmin Connect como cualquier carrera.
 
-Quedan tres páginas —Vuelta, Margen, Tuyo— y cuatro ajustes: minutos y km de
-la vuelta, aviso de corral y vuelta automática. El emblema se queda. Está todo
-explicado en el README.
+Quedan cuatro páginas —Vuelta, Margen, Tuyo y Reloj (hora y batería)— y
+cuatro ajustes: minutos y km de la vuelta, aviso de corral y vuelta
+automática. El emblema se queda. Está todo explicado en el README.
+
+Contra el boceto original (el artifact «BYSD en tu muñeca»), las únicas
+vistas que no están son «Quedan en pie» y el punto de sincronía: necesitaban
+red y se descartaron a propósito con el servidor. Decisión del 17 de agosto.
 
 ## Para retomar
 

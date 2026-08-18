@@ -13,6 +13,7 @@
     <string id="paceTooSlow">Ritmo insuficiente</string>
     <string id="laps">Vueltas</string>
     <string id="noActivity">Sin actividad</string>
+    <string id="battery">Batería</string>
     <string id="pressStart">START para salir</string>
     <string id="gpsReady">GPS listo</string>
     <string id="gpsWait">Buscando GPS</string>

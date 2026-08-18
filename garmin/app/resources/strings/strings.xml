@@ -14,6 +14,7 @@
     <string id="paceTooSlow">Pace too slow</string>
     <string id="laps">Laps</string>
     <string id="noActivity">No activity</string>
+    <string id="battery">Battery</string>
     <string id="pressStart">START to begin</string>
     <string id="gpsReady">GPS ready</string>
     <string id="gpsWait">Searching GPS</string>

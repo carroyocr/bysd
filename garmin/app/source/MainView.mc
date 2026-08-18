@@ -1,8 +1,9 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
+using Toybox.System as Sys;
 
-// Las tres pantallas de carrera.
+// Las cuatro pantallas de carrera.
 //
 // Una sola cifra grande en cada una. A las veinte horas, de noche y con la
 // vista cansada, solo se lee lo que ocupa media esfera: todo lo demas es
@@ -12,9 +13,10 @@ class MainView extends Ui.View {
     enum {
         PAGINA_VUELTA = 0,
         PAGINA_MARGEN = 1,
-        PAGINA_TUYO   = 2
+        PAGINA_TUYO   = 2,
+        PAGINA_RELOJ  = 3
     }
-    static const PAGINAS = 3;
+    static const PAGINAS = 4;
 
     var _estado;
     var _pagina = PAGINA_VUELTA;
@@ -39,6 +41,7 @@ class MainView extends Ui.View {
             :rest => Ui.loadResource(Rez.Strings.rest),
             :paceTooSlow => Ui.loadResource(Rez.Strings.paceTooSlow),
             :laps => Ui.loadResource(Rez.Strings.laps),
+            :battery => Ui.loadResource(Rez.Strings.battery),
             :noActivity => Ui.loadResource(Rez.Strings.noActivity)
         };
     }
@@ -90,6 +93,8 @@ class MainView extends Ui.View {
             _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
         } else if (_pagina == PAGINA_TUYO) {
             _paginaTuyo(dc, cx, cy, h, radio, vuelta);
+        } else if (_pagina == PAGINA_RELOJ) {
+            _paginaReloj(dc, cx, cy, h, radio);
         } else {
             _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
         }
@@ -182,6 +187,34 @@ class MainView extends Ui.View {
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:laps]);
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
              Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
+    }
+
+    // La hora del dia y la bateria. En una carrera de treinta horas, saber si
+    // la bateria aguanta la noche es informacion de carrera, no un lujo. La
+    // hora obedece al formato del reloj; el am/pm va arriba, pequeno, porque
+    // las fuentes numericas grandes no tienen letras.
+    function _paginaReloj(dc, cx, cy, h, radio) {
+        var reloj = Sys.getClockTime();
+        var hora = reloj.hour;
+        var marca = null;
+        if (!Sys.getDeviceSettings().is24Hour) {
+            marca = hora < 12 ? "AM" : "PM";
+            hora = hora % 12;
+            if (hora == 0) { hora = 12; }
+        }
+
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, marca);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
+             hora.format("%d") + ":" + reloj.min.format("%02d"));
+
+        // La bateria en rojo por debajo del 20 %: a esa altura ya es un dato
+        // que decide si se cambia el modo de energia o se busca el cargador.
+        var bateria = Sys.getSystemStats().battery;
+        var poca = bateria != null && bateria <= 20;
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY,
+             poca ? Gfx.COLOR_RED : Gfx.COLOR_WHITE,
+             bateria == null ? _s[:battery]
+                             : _s[:battery] + " " + bateria.format("%d") + "%");
     }
 
     // --- piezas de dibujo ---

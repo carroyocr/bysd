@@ -48,15 +48,22 @@ de salida**: qué vuelta se va a correr (distancia y minutos) y si el GPS ya
 fijó. START da la salida sin pedir confirmación, porque con la cuenta atrás
 del director de carrera sonando un diálogo estorba; si se pulsó antes de la
 hora, la app muestra la cuenta atrás «Para la vuelta 1» y la campana suena
-sola. Después, tres páginas que se recorren con arriba y abajo (o deslizando,
-en los táctiles) — y añadir una página nueva es añadir un caso al enumerado de
-`MainView`:
+sola. Después, cuatro páginas que se recorren con arriba y abajo (o
+deslizando, en los táctiles) — y añadir una página nueva es añadir un caso al
+enumerado de `MainView`:
 
 | Página | Cifra grande | Debajo |
 |---|---|---|
 | **Vuelta** | Cuenta atrás a la próxima campana | «Próxima salida» corriendo, «De descanso» tras el LAP |
 | **Margen** | Minutos a favor o en contra | Distancia, objetivo y ritmo |
 | **Tuyo** | Vueltas completadas (el LAP suma la actual) | Tiempo en carrera y km |
+| **Reloj** | Hora del día (12 o 24 h, según el reloj) | Batería, en rojo del 20 % para abajo |
+
+Las páginas cubren el boceto original («BYSD en tu muñeca») completo, con dos
+excepciones deliberadas: «Quedan en pie» y el punto de sincronía necesitaban
+un servidor que contara la carrera, y esta app no tiene red a propósito. La
+página del reloj es nueva: en treinta horas, saber si la batería aguanta la
+noche es información de carrera.
 
 **BACK durante la carrera** no sale de la app sin preguntar —debajo hay una
 actividad grabando—: abre el menú de terminar, con Reanudar, Guardar y

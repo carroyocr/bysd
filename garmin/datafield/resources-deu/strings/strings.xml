@@ -13,6 +13,7 @@
     <string id="paceTooSlow">Tempo zu langsam</string>
     <string id="laps">Runden</string>
     <string id="noActivity">Keine Aktivität</string>
+    <string id="battery">Akku</string>
     <string id="pressStart">START zum Start</string>
     <string id="gpsReady">GPS bereit</string>
     <string id="gpsWait">GPS-Suche</string>

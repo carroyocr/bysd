@@ -43,6 +43,7 @@ TABLA = {
     # Sin actividad grabando no hay cronometro del que colgar la carrera, y
     # esta app no tiene otro: se dice y no se inventa una cuenta atras.
     "noActivity":       ("No activity",             "Sin actividad",       "Pas d'activité",       "Keine Aktivität",       "Nessuna attività",     "Sem atividade"),
+    "battery":          ("Battery",                 "Batería",             "Batterie",             "Akku",                  "Batteria",             "Bateria"),
 
 
     # La linea de salida y el menu de terminar. Los del menu y el dialogo los
