@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>es</string>
+	<!-- La app solo usa HTTPS, que es cifrado exento: sin esta clave App Store
+	     Connect pregunta por el cifrado en cada build que se sube. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDisplayName</key>
         <string>BYSD Live</string>
 	<key>CFBundleExecutable</key>
