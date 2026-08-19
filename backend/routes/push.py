@@ -374,24 +374,32 @@ async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:
     else:
         if filtro.audiencia == "atletas":
             correos = await _correos_atletas(database, filtro)
-            campo = "athlete_email"
         elif filtro.audiencia == "staff":
             correos = await _correos_staff(database, filtro)
-            campo = "staff_email"
         elif filtro.audiencia == "manual":
             correos = [c.strip().lower() for c in filtro.correos if c and c.strip()]
-            # A mano no se sabe si el correo es de un corredor o del equipo: se
-            # busca por los dos lados.
-            if not correos:
-                return []
-            query = {"$or": [{"athlete_email": {"$in": correos}}, {"staff_email": {"$in": correos}}]}
-            return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
         else:
             raise HTTPException(status_code=400, detail="Audiencia desconocida")
 
         if not correos:
             return []
-        query = {campo: {"$in": correos}}
+
+        # Del correo al telefono hay dos caminos y hacen falta los dos. El
+        # telefono que entro con la cuenta unica quedo vinculado por
+        # `account_id` y ya no lleva correo encima; los registrados por
+        # versiones anteriores de la app llevan `athlete_email` o
+        # `staff_email` y pueden no tener cuenta. Buscar solo por los campos
+        # de correo mandaba los avisos al token viejo y muerto de quien
+        # reinstalo la app, y FCM ni siquiera lo rechaza: decia "enviado" y
+        # no llegaba nada.
+        cuentas = await database[
+            "accounts"
+        ].find({"email": {"$in": correos}}, {"_id": 1}).to_list(len(correos))
+        query = {"$or": [
+            {"account_id": {"$in": [c["_id"] for c in cuentas]}},
+            {"athlete_email": {"$in": correos}},
+            {"staff_email": {"$in": correos}},
+        ]}
 
     return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
 
