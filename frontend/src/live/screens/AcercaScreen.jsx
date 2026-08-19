@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Globe, Phone, Info } from 'lucide-react';
+import { Mail, Globe, Phone, Info, ShieldCheck } from 'lucide-react';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
@@ -65,13 +65,27 @@ export default function AcercaScreen() {
             </div>
           </button>
 
-          <a href={`tel:${CONTACTO.telefonoLlamada}`} className="flex items-center gap-3.5 px-4 py-3.5">
+          <a
+            href={`tel:${CONTACTO.telefonoLlamada}`}
+            className={`flex items-center gap-3.5 px-4 py-3.5 border-b ${T.divider}`}
+          >
             <Phone className="w-5 h-5 text-[#E77622] shrink-0" />
             <div className="min-w-0">
               <p className={`text-[10px] uppercase tracking-wide ${T.subtle}`}>Teléfono</p>
               <p className="text-[13px] font-semibold whitespace-nowrap">{CONTACTO.telefono}</p>
             </div>
           </a>
+
+          <button
+            onClick={() => openExternal(`${CONTACTO.web}/privacidad`)}
+            className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left"
+          >
+            <ShieldCheck className="w-5 h-5 text-[#E77622] shrink-0" />
+            <div className="min-w-0">
+              <p className={`text-[10px] uppercase tracking-wide ${T.subtle}`}>Legal</p>
+              <p className="text-[13px] font-semibold whitespace-nowrap">Política de privacidad</p>
+            </div>
+          </button>
         </div>
 
         <p className={`text-[10px] flex items-center justify-center gap-1.5 text-center ${T.subtle}`}>

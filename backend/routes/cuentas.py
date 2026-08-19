@@ -459,39 +459,124 @@ async def importar_local(datos: EstadoLocal, payload: dict = Depends(require_cue
     return {"success": True, "followed": actualizada.get("followed") or []}
 
 
+# Lo que se limpia de una inscripcion cuando su dueno borra la cuenta. Queda el
+# resultado deportivo —nombre, dorsal, vueltas—, como en cualquier clasificacion
+# publicada; se va lo que identifica y localiza a la persona fuera de ese
+# resultado: contacto, ficha medica y las llaves de acceso.
+DATOS_PERSONALES_INSCRIPCION = [
+    "email", "edit_token", "athlete_id", "telefono", "photo_url",
+    "tipo_sangre", "condicion_medica", "condicion_medica_detalle",
+    "alergias", "alergias_detalle",
+    "contacto_emergencia_nombre", "contacto_emergencia_relacion",
+    "contacto_emergencia_telefono",
+]
+
+
 @router.delete("/perfil")
 async def borrar_cuenta(payload: dict = Depends(require_cuenta)):
-    """Borra la cuenta del espectador.
+    """Borra la cuenta desde la app, sea del rol que sea.
 
-    Solo se deja borrar la cuenta que es *solo* de espectador. Si lleva rol de
-    corredor o de equipo, detras hay inscripciones, vueltas y turnos que no se
-    pueden quedar sin dueno desde un boton de la app: eso lo lleva la
-    organizacion a mano.
+    La App Store lo exige (guideline 5.1.1(v)): toda cuenta que se puede crear
+    en la app se tiene que poder borrar en la app, y de corredor y de staff
+    tambien se crean ahi. Solo quedan dos puertas cerradas: la cuenta que
+    administra el panel —quedarse sin administradores no se arregla desde un
+    boton— y el corredor inscrito en una carrera que aun no termina, porque su
+    dorsal, su pago y su ficha medica estan en uso; para esos dos casos sigue
+    valiendo escribir a la organizacion.
 
-    Los animos que haya escrito se quedan, pero pierden el vinculo con la cuenta:
-    son parte del hilo publico de la carrera, y borrarlos dejaria huecos en
-    conversaciones de otras personas.
+    Que se borra y que se queda: se va la persona —login, perfil de corredor,
+    contacto, ficha medica—; se queda el resultado deportivo. Inscripciones y
+    vueltas son el historial publico de la carrera y conservan nombre y dorsal,
+    pero se les limpia todo lo demas. Los animos que haya escrito se quedan
+    tambien, sin el vinculo con la cuenta: son parte del hilo publico, y
+    borrarlos dejaria huecos en conversaciones de otras personas.
     """
     from server import db
 
+    # Las sesiones de versiones anteriores traen en `sub` el id del perfil de
+    # corredor, no el de la cuenta: se cae al correo. Y el corredor de antes de
+    # la migracion puede no tener documento en `accounts` y aun asi ser una
+    # cuenta real que vive en `athletes`: se le borra igual, guiandose por lo
+    # que dice su token.
     cuenta = await cuentas.por_id(db, payload.get("sub"))
-    if not cuenta:
+    if not cuenta and payload.get("email"):
+        cuenta = await cuentas.por_email(db, payload["email"])
+
+    email = (cuenta or {}).get("email") or cuentas.normalizar_email(payload.get("email") or "")
+    if not cuenta and not email:
         raise HTTPException(status_code=404, detail="Cuenta no encontrada")
 
-    roles = set(cuenta.get("roles") or [])
-    if roles - {cuentas.FAN}:
+    if (cuenta or payload).get("is_admin"):
         raise HTTPException(
             status_code=409,
-            detail="Esta cuenta tiene perfil de corredor o de equipo. Escribe a la organizacion para darla de baja.",
+            detail="Esta cuenta administra el panel. Escribe a la organizacion para darla de baja.",
         )
 
-    await db.cheer_messages.update_many(
-        {"account_id": cuenta["_id"]}, {"$unset": {"account_id": ""}}
-    )
-    await db.push_devices.update_many(
-        {"account_id": cuenta["_id"]}, {"$unset": {"account_id": ""}}
-    )
-    await db[cuentas.COLECCION].delete_one({"_id": cuenta["_id"]})
+    roles = set((cuenta or {}).get("roles") or payload.get("roles") or [])
+
+    atleta_id = None
+    if cuenta and cuenta.get("athlete_profile_id"):
+        atleta_id = str(cuenta["athlete_profile_id"])
+    elif payload.get("athlete_id"):
+        atleta_id = str(payload["athlete_id"])
+
+    inscripciones = []
+    if cuentas.ATLETA in roles:
+        vinculos = [{"email": email}]
+        if atleta_id:
+            vinculos.append({"athlete_id": atleta_id})
+
+        inscripciones = await db.registrations.find(
+            {"$or": vinculos, "status": {"$ne": "cancelled"}},
+            {"race_code": 1},
+        ).to_list(500)
+
+        codigos = list({i["race_code"] for i in inscripciones if i.get("race_code")})
+        if codigos:
+            # Carrera "en uso": ni cerrada (`finished_at` se sella al cerrarla)
+            # ni archivada. Con una inscripcion ahi no se borra en frio.
+            abiertas = await db.race_configurations.count_documents({
+                "code": {"$in": codigos},
+                "finished_at": None,
+                "archived_at": None,
+                "data_archived": {"$ne": True},
+            })
+            if abiertas:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Tienes una inscripcion en una carrera que aun no termina. Escribe a la organizacion para darte de baja de la carrera y poder borrar la cuenta.",
+                )
+
+    if inscripciones:
+        await db.registrations.update_many(
+            {"_id": {"$in": [i["_id"] for i in inscripciones]}},
+            {
+                "$unset": {campo: "" for campo in DATOS_PERSONALES_INSCRIPCION},
+                "$set": {"account_deleted_at": datetime.now(timezone.utc)},
+            },
+        )
+
+    # El perfil de corredor es datos personales de arriba abajo: fuera entero.
+    # Por id y por correo, porque las cuentas anteriores a la migracion pueden
+    # no llevar el enlace.
+    if cuentas.ATLETA in roles:
+        if atleta_id:
+            try:
+                from bson import ObjectId
+
+                await db.athletes.delete_one({"_id": ObjectId(atleta_id)})
+            except Exception:
+                pass
+        await db.athletes.delete_many({"email": email})
+
+    if cuenta:
+        await db.cheer_messages.update_many(
+            {"account_id": cuenta["_id"]}, {"$unset": {"account_id": ""}}
+        )
+        await db.push_devices.update_many(
+            {"account_id": cuenta["_id"]}, {"$unset": {"account_id": ""}}
+        )
+        await db[cuentas.COLECCION].delete_one({"_id": cuenta["_id"]})
 
     return {"success": True}
 
