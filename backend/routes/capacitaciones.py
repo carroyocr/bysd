@@ -28,13 +28,18 @@ def _verify_admin(authorization: Optional[str]):
 
 
 def _athlete_payload(authorization: Optional[str]):
-    from routes.athletes import verify_athlete_token
+    """Cuenta con perfil de corredor, con token de cuenta unica o el heredado.
+
+    `verify_athlete_token` solo entendia el token viejo (`type: "athlete"`,
+    firma derivada): toda sesion iniciada tras la cuenta unica daba 401 aqui.
+    """
+    from services.auth import require_athlete
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Debes iniciar sesión")
-    try:
-        return verify_athlete_token(authorization.replace("Bearer ", ""))
-    except Exception:
-        raise HTTPException(status_code=401, detail="Sesión inválida")
+    payload = require_athlete(authorization)
+    if not payload.get("athlete_id"):
+        raise HTTPException(status_code=403, detail="Esta cuenta no tiene perfil de corredor")
+    return payload
 
 
 # Tipos de actividad. Los documentos antiguos no lo traen y son capacitaciones,
@@ -263,8 +268,7 @@ async def list_for_athlete(authorization: Optional[str] = Header(None)):
     my_ids = set()
     if authorization and authorization.startswith("Bearer "):
         try:
-            from routes.athletes import verify_athlete_token
-            payload = verify_athlete_token(authorization.replace("Bearer ", ""))
+            payload = _athlete_payload(authorization)
             regs = await database.capacitacion_registrations.find(
                 {"athlete_id": payload["athlete_id"]}, {"capacitacion_id": 1}
             ).to_list(500)
