@@ -87,3 +87,7 @@ class CheerMessageRequest(BaseModel):
     athlete_bib: str
     fan_name: str
     message: str
+    # La carrera que la app tiene abierta. Opcional porque las versiones ya
+    # instaladas no lo mandan: esas caen en la carrera publica, que era el
+    # comportamiento de siempre.
+    race_code: Optional[str] = None

@@ -5,6 +5,9 @@ export const FOLLOWED_KEY = 'backyard_ultra_followed_athletes';
 export const FAN_NAME_KEY = 'bysd_live_fan_name';
 export const SOS_CONTACT_KEY = 'bysd_live_sos_contact';
 export const NOTIF_KEY = 'bysd_live_notifications';
+// Autores cuyos mensajes de ánimo este teléfono no quiere ver más (bloqueo
+// local). Vive aquí y no en CheerScreen porque Configuración lo restablece.
+export const BLOQUEADOS_KEY = 'bysd_live_cheer_bloqueados';
 
 export async function getJson(path) {
   const res = await fetch(`${API}${path}`);

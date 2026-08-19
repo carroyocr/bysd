@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Bell, Star, Trash2, UserX, Loader2 } from 'lucide-react';
-import { NOTIF_KEY, FOLLOWED_KEY, authJson } from '../liveApi';
+import { Sun, Moon, Bell, Star, Trash2, UserX, Loader2, Eye } from 'lucide-react';
+import { NOTIF_KEY, FOLLOWED_KEY, BLOQUEADOS_KEY, authJson } from '../liveApi';
 import { pushDisponible, activarPush, desactivarPush, sincronizarSeguidos } from '../push';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
@@ -120,6 +120,14 @@ export default function SettingsScreen() {
     }
   };
 
+  // Deshace el "Ocultar mensajes de…" del muro de ánimos. Sin esto, quien
+  // ocultaba a alguien por error solo lo arreglaba reinstalando la app.
+  const [msgOcultos, setMsgOcultos] = useState(null);
+  const restablecerOcultos = () => {
+    localStorage.removeItem(BLOQUEADOS_KEY);
+    setMsgOcultos('Listo: el muro vuelve a mostrar los mensajes de todos los autores.');
+  };
+
   return (
     <Screen title="Configuración">
       <div className="px-4 py-4">
@@ -155,7 +163,10 @@ export default function SettingsScreen() {
         {notifMsg && <p className={`text-xs mt-2 px-1 ${T.muted}`}>{notifMsg}</p>}
 
         <div className={`rounded-2xl mt-4 ${T.card}`}>
-          <button onClick={clearFavorites} className="w-full flex items-center gap-3.5 px-4 py-4 text-left">
+          <button
+            onClick={clearFavorites}
+            className={`w-full flex items-center gap-3.5 px-4 py-4 text-left border-b ${T.divider}`}
+          >
             <Star className="w-5 h-5 text-[#E77622] shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-bold">Borrar favoritos</p>
@@ -163,7 +174,17 @@ export default function SettingsScreen() {
             </div>
             <Trash2 className={`w-4 h-4 ${T.subtle}`} />
           </button>
+          <button onClick={restablecerOcultos} className="w-full flex items-center gap-3.5 px-4 py-4 text-left">
+            <Eye className="w-5 h-5 text-[#E77622] shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-bold">Restablecer autores ocultos</p>
+              <p className={`text-[11px] mt-0.5 ${T.muted}`}>
+                Vuelve a mostrar los mensajes de ánimo que ocultaste
+              </p>
+            </div>
+          </button>
         </div>
+        {msgOcultos && <p className={`text-xs mt-2 px-1 ${T.muted}`}>{msgOcultos}</p>}
 
         {haySesion() && (
           <div className={`rounded-2xl mt-4 ${T.card}`}>
