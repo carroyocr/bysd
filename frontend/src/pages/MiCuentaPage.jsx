@@ -301,10 +301,12 @@ export default function MiCuentaPage() {
             ) : (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200 space-y-3">
                 <p className="text-sm text-red-800">
-                  Se borran tu correo, tu nombre y la lista de a quién sigues. Los mensajes
-                  de ánimo que escribiste se quedan en el hilo público firmados con tu
-                  nombre, porque forman parte de conversaciones de otras personas. Esto no
-                  se puede deshacer.
+                  Se borran tu correo, tu nombre, tu perfil y la lista de a quién sigues.
+                  Los resultados de carrera ya publicados (nombre, dorsal y vueltas) se
+                  conservan como parte del historial del evento, y los mensajes de ánimo
+                  que escribiste se quedan en el hilo público firmados con tu nombre,
+                  porque forman parte de conversaciones de otras personas. Esto no se
+                  puede deshacer.
                 </p>
                 <div className="flex gap-2">
                   <Button variant="destructive" onClick={borrar} disabled={borrando} className="flex-1">

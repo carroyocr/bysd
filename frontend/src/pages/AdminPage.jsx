@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone,
-  Bell, Radio, Eye
+  Bell, Radio, Eye, ShieldAlert
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -31,6 +31,7 @@ import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import PushComposer from '../components/PushComposer';
+import CheerModerationPanel from '../components/CheerModerationPanel';
 import EspectadoresManagement from '../components/EspectadoresManagement';
 import ChangePasswordDialog from '../components/ChangePasswordDialog';
 // El selector de carrera no va aquí arriba, sino dentro de En Vivo: es lo único
@@ -54,6 +55,9 @@ const TAB_PERMISSIONS = {
   // Tambien lo abre quien lleva las comunicaciones: es el mismo trabajo
   // que el envio de correos, con otro canal.
   'app-avisos': ['app-avisos', 'control', 'emails'],
+  // Los reportados los revisa quien esta en el control de la carrera: el
+  // backend los protege con el permiso "control" y sus permisos por tab.
+  'animos': ['race-control', 'laps', 'app-avisos', 'control'],
   'registrations': ['registrations', 'athletes'],
   'finances': ['finances'],
   'volunteers': ['shifts', 'volunteers'],
@@ -91,6 +95,7 @@ const ADMIN_SECTIONS = [
     icon: Radio,
     items: [
       { id: 'control', label: 'Control de Carrera', icon: Radio },
+      { id: 'animos', label: 'Ánimos Reportados', icon: ShieldAlert },
     ],
   },
   {
@@ -172,6 +177,7 @@ const TAB_VIEWS = {
     />
   ),
   'app-avisos': () => <PushComposer />,
+  'animos': () => <CheerModerationPanel />,
   'espectadores': () => <EspectadoresManagement />,
   'registrations': () => <PreRegistrationManagement />,
   'athlete-profiles': () => <AthleteProfilesManagement />,

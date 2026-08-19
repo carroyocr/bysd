@@ -1568,10 +1568,13 @@ async def submit_cheer_message(
     return response
 
 
-# Un mensaje borrado por el corredor no se enseña en ninguna parte, pero el
-# documento se conserva: lo normal es que se borre por ofensivo, y ahi la
-# organizacion necesita poder verlo.
-SIN_BORRADOS = {"deleted_by_athlete": {"$ne": True}}
+# Un mensaje borrado por el corredor o reportado por cualquiera no se enseña en
+# ninguna parte, pero el documento se conserva: lo normal es que se quite por
+# ofensivo, y ahi la organizacion necesita poder verlo y decidir si vuelve.
+SIN_BORRADOS = {
+    "deleted_by_athlete": {"$ne": True},
+    "hidden_by_report": {"$ne": True},
+}
 
 
 @router.get("/cheers")
@@ -1727,6 +1730,103 @@ async def like_cheer_message(cheer_id: str, quitar: bool = False):
         nuevos = max(0, actuales - 1) if quitar else actuales + 1
         await coleccion.update_one({"_id": oid}, {"$set": {"likes": nuevos}})
         return {"id": cheer_id, "likes": nuevos}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+
+class CheerReportRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/cheers/{cheer_id}/report")
+async def report_cheer_message(
+    cheer_id: str, datos: CheerReportRequest = None, request: Request = None
+):
+    """Reporta un mensaje de animo y lo esconde en el acto.
+
+    El muro lo escribe cualquiera sin cuenta, asi que la moderacion tiene que
+    poder ejercerla cualquiera igual: un reporte basta para que el mensaje
+    desaparezca del muro mientras la organizacion lo revisa. Es la politica que
+    cabe en un muro de apoyo —esconder de mas un rato es barato; dejar un insulto
+    colgado durante una carrera de 24 horas no—. El documento no se toca mas que
+    para marcarlo: la organizacion lo ve, y decide si vuelve o se queda fuera.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    # Reportar tambien esconde, asi que sin limite seria una forma de vaciar el
+    # muro a mano. Con limite, vaciarlo requiere mas telefonos que mensajes.
+    rate_limit.comprobar(
+        "reportar-animo",
+        rate_limit.ip_cliente(request),
+        limite=10,
+        ventana_segundos=600,
+        mensaje="Demasiados reportes seguidos. Espera unos minutos.",
+    )
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    reporte = {
+        "reason": ((datos.reason if datos else None) or "").strip()[:280] or None,
+        "at": datetime.now(timezone.utc),
+    }
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        resultado = await coleccion.update_one(
+            {"_id": oid},
+            {
+                "$set": {"hidden_by_report": True},
+                "$push": {"reports": reporte},
+            },
+        )
+        if resultado.matched_count:
+            return {"id": cheer_id, "message": "Mensaje reportado. Queda oculto mientras la organización lo revisa."}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+
+@router.get("/cheers/reported", dependencies=[Depends(require_permission("control"))])
+async def get_reported_cheers(race_code: Optional[str] = None):
+    """Los mensajes escondidos por reporte, para que la organizacion los revise."""
+    from server import db as database
+
+    filtro = {"hidden_by_report": True}
+    if race_code:
+        filtro["race_code"] = race_code
+
+    mensajes = []
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        docs = await coleccion.find(filtro).sort("created_at", -1).to_list(200)
+        for doc in docs:
+            doc["id"] = str(doc.pop("_id"))
+            doc.pop("account_id", None)
+            mensajes.append(doc)
+
+    return {"messages": mensajes}
+
+
+@router.post("/cheers/{cheer_id}/restore", dependencies=[Depends(require_permission("control"))])
+async def restore_cheer_message(cheer_id: str):
+    """Devuelve al muro un mensaje reportado que resulto estar bien."""
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        resultado = await coleccion.update_one(
+            {"_id": oid}, {"$unset": {"hidden_by_report": "", "reports": ""}}
+        )
+        if resultado.matched_count:
+            return {"id": cheer_id, "restored": True}
 
     raise HTTPException(status_code=404, detail="Mensaje no encontrado")
 

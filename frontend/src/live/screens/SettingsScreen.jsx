@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Sun, Moon, Bell, Star, Trash2 } from 'lucide-react';
-import { NOTIF_KEY, FOLLOWED_KEY } from '../liveApi';
+import { useNavigate } from 'react-router-dom';
+import { Sun, Moon, Bell, Star, Trash2, UserX, Loader2 } from 'lucide-react';
+import { NOTIF_KEY, FOLLOWED_KEY, authJson } from '../liveApi';
 import { pushDisponible, activarPush, desactivarPush, sincronizarSeguidos } from '../push';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import { haySesion, token, cerrarSesion } from '../sesion';
 
 function Toggle({ on, onChange }) {
   return (
@@ -26,6 +28,12 @@ function Toggle({ on, onChange }) {
 export default function SettingsScreen() {
   const { theme, toggleTheme, T } = useLiveTheme();
   const { raceCode } = useRace() || {};
+  const navigate = useNavigate();
+  // Eliminar la cuenta desde la app: lo exige la App Store (5.1.1(v)).
+  // Dos toques a propósito: el primero solo despliega la advertencia.
+  const [confirmaBorrado, setConfirmaBorrado] = useState(false);
+  const [borrando, setBorrando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState(null);
   // En la app vienen activadas de fábrica, así que sin preferencia guardada el
   // interruptor tiene que salir encendido; en el navegador no hay push y se
   // queda apagado hasta que se pida.
@@ -90,6 +98,20 @@ export default function SettingsScreen() {
     }
   };
 
+  const eliminarCuenta = async () => {
+    if (borrando) return;
+    setBorrando(true);
+    setErrorBorrado(null);
+    const { ok, data } = await authJson('DELETE', '/api/cuentas/perfil', { token: token() });
+    if (ok) {
+      await cerrarSesion();
+      navigate('/live/carreras', { replace: true });
+      return;
+    }
+    setErrorBorrado(data.detail || 'No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.');
+    setBorrando(false);
+  };
+
   const clearFavorites = () => {
     if (window.confirm('¿Borrar tu lista de corredores favoritos?')) {
       localStorage.setItem(FOLLOWED_KEY, JSON.stringify([]));
@@ -142,6 +164,51 @@ export default function SettingsScreen() {
             <Trash2 className={`w-4 h-4 ${T.subtle}`} />
           </button>
         </div>
+
+        {haySesion() && (
+          <div className={`rounded-2xl mt-4 ${T.card}`}>
+            {!confirmaBorrado ? (
+              <button
+                onClick={() => setConfirmaBorrado(true)}
+                className="w-full flex items-center gap-3.5 px-4 py-4 text-left"
+              >
+                <UserX className="w-5 h-5 text-red-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-red-500">Eliminar cuenta</p>
+                  <p className={`text-[11px] mt-0.5 ${T.muted}`}>
+                    Borra tu cuenta y tus datos personales para siempre
+                  </p>
+                </div>
+              </button>
+            ) : (
+              <div className="px-4 py-4">
+                <p className="text-sm font-bold text-red-500 mb-1">¿Eliminar tu cuenta?</p>
+                <p className={`text-[11px] leading-relaxed mb-3 ${T.muted}`}>
+                  Se borran tu cuenta, tu perfil y tus datos personales de forma permanente.
+                  Los resultados de carrera ya publicados (nombre, dorsal y vueltas) se
+                  conservan como parte del historial del evento. Esta acción no se puede deshacer.
+                </p>
+                {errorBorrado && <p className="text-xs text-red-500 mb-3">{errorBorrado}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setConfirmaBorrado(false); setErrorBorrado(null); }}
+                    className={`flex-1 rounded-xl py-2.5 text-sm font-bold ${T.chip}`}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={eliminarCuenta}
+                    disabled={borrando}
+                    className="flex-1 rounded-xl py-2.5 text-sm font-bold bg-red-600 text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {borrando ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                    Sí, eliminar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <p className={`text-[10px] text-center mt-8 ${T.subtle}`}>
           BYSD Live · Backyard Ultra Santo Domingo
