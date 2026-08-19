@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
-import { zonasAbiertas, cerrarSesion } from '../sesion';
+import { zonasAbiertas, cerrarSesion, haySesion } from '../sesion';
 import { VERSION_CORTA } from '../version';
 
 /**
@@ -76,10 +76,12 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { label: 'Cambiar de carrera', Icon: RefreshCcw, action: () => go('/live/carreras') },
     { label: 'Configuración', Icon: Settings, action: () => go(`${base}/config`) },
     // Sin sesión, la única entrada es "Iniciar sesión" y ahí dentro se elige
-    // quién eres. El menú es para seguir la carrera.
-    ...(accesos.length === 0
-      ? [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]
-      : [{ label: 'Cerrar sesión', Icon: LogOut, action: salir }]),
+    // quién eres. Lo que decide es la sesión, no los accesos: el espectador no
+    // tiene zona propia en el menú, pero su sesión es tan real como las demás
+    // y también se cierra desde aquí.
+    ...(haySesion()
+      ? [{ label: 'Cerrar sesión', Icon: LogOut, action: salir }]
+      : [{ label: 'Iniciar sesión', Icon: LogIn, action: () => go('/live/login') }]),
     { label: 'Acerca de', Icon: BadgeInfo, action: () => go('/live/acerca') },
   ].filter(Boolean);
 

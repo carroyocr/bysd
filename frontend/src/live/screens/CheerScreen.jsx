@@ -1,15 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import { Send, MessageCircle, Loader2, Search, X, Heart, Lock, MoreHorizontal, Flag, EyeOff } from 'lucide-react';
-import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
+import { getJson, postJson, FAN_NAME_KEY, BLOQUEADOS_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
 const LIKES_KEY = 'bysd_live_cheer_likes';
-// Autores cuyos mensajes este teléfono no quiere ver más. Es un bloqueo local:
-// quien anima no tiene cuenta, así que el nombre firmado es lo único que hay
-// para reconocerlo, y con esconderlo aquí basta —el muro es de lectura—.
-const BLOQUEADOS_KEY = 'bysd_live_cheer_bloqueados';
 
 /**
  * Enviar mensaje de apoyo.
@@ -156,10 +152,14 @@ export default function CheerScreen() {
     }
     setSending(true);
     setResult(null);
+    // Con el race_code el ánimo cae en la carrera que se está viendo; sin él,
+    // el backend lo anotaba siempre en la activa y el dorsal 001 del campeonato
+    // recibía los mensajes del 001 de enero.
     const { ok, data } = await postJson('/api/race/cheer', {
       athlete_bib: bib,
       fan_name: fanName.trim(),
       message: message.trim(),
+      race_code: raceCode,
     });
     if (ok) {
       localStorage.setItem(FAN_NAME_KEY, fanName.trim());

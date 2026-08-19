@@ -1458,17 +1458,19 @@ async def submit_cheer_message(
     """
     from server import db as database
     from services.twitter_service import post_cheer_to_twitter
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
+    from services import races as servicio_carreras
+
+    # La carrera sobre la que se anima es la que la app tiene abierta, no la
+    # activa: con dos carreras conviviendo, el dorsal 001 del campeonato y el
+    # de enero son personas distintas. Sin `race_code` (las versiones de la app
+    # ya instaladas no lo mandan) se cae en la publica, que era lo de siempre.
+    carrera = await servicio_carreras.resolver_carrera(database, request.race_code)
+    active_race_code = carrera.get("code")
 
     # El hilo de animos se cierra un mes despues de la carrera. Se comprueba
     # aqui y no solo en la pantalla: la app vieja que siga instalada, o
     # cualquiera que llame al endpoint, tiene que encontrarse la puerta cerrada
     # igual.
-    from services import races as servicio_carreras
-
-    carrera = await database.race_configurations.find_one({"code": active_race_code}) if active_race_code else None
     if servicio_carreras.animos_cerrados(carrera):
         cierre = servicio_carreras.cierre_de_animos(carrera)
         raise HTTPException(
