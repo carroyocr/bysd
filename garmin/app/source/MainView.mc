@@ -36,11 +36,14 @@ class MainView extends Ui.View {
             :lap => Ui.loadResource(Rez.Strings.lap),
             :nextStart => Ui.loadResource(Rez.Strings.nextStart),
             :beforeStart => Ui.loadResource(Rez.Strings.beforeStart),
-            :corral => Ui.loadResource(Rez.Strings.corral),
             :toTheLine => Ui.loadResource(Rez.Strings.toTheLine),
             :rest => Ui.loadResource(Rez.Strings.rest),
-            :paceTooSlow => Ui.loadResource(Rez.Strings.paceTooSlow),
-            :laps => Ui.loadResource(Rez.Strings.laps),
+            :running => Ui.loadResource(Rez.Strings.running),
+            :margin => Ui.loadResource(Rez.Strings.margin),
+            :toGo => Ui.loadResource(Rez.Strings.toGo),
+            :total => Ui.loadResource(Rez.Strings.total),
+            :lapsDone => Ui.loadResource(Rez.Strings.lapsDone),
+            :clock => Ui.loadResource(Rez.Strings.clock),
             :battery => Ui.loadResource(Rez.Strings.battery),
             :noActivity => Ui.loadResource(Rez.Strings.noActivity)
         };
@@ -104,31 +107,42 @@ class MainView extends Ui.View {
     // --- pantallas ---
 
     function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
-        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_ORANGE, 7);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
+        // El semaforo del corral tambien rige antes de la vuelta 1: los
+        // ultimos tres minutos para la primera campana se ven igual que los
+        // de cualquier otra.
+        var aviso = Fmt.colorCorral(r);
+        _arco(dc, cx, cy, radio, 1.0,
+              aviso == null ? Gfx.COLOR_ORANGE : aviso, 7);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
+             aviso == null ? Gfx.COLOR_WHITE : aviso, Fmt.reloj(r));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:beforeStart]);
     }
 
+    // Como en el boceto: el rotulo de arriba presenta la cifra ("Proxima
+    // salida"), y debajo va que se esta haciendo ("Vuelta 7 · corriendo" o
+    // "· De descanso"). En el corral, el rotulo es "A la linea" y debajo va
+    // la vuelta que abre la campana, que es la que importa ya.
     function _paginaVuelta(dc, cx, cy, h, radio, vuelta, r) {
-        var corral = r <= RaceState.AVISOS_CORRAL[0];
+        // El semaforo del corral: amarillo a 3 minutos de la campana,
+        // naranja a 2, rojo en el ultimo. Fuera del corral, aviso es null.
+        var aviso = Fmt.colorCorral(r);
+        var corral = aviso != null;
         var descansando = _estado.marcada();
 
         // El aro se vacia con la hora: lo que queda de aro es lo que queda de
         // vuelta. Es la misma cifra del centro, legible sin leer.
         _arco(dc, cx, cy, radio, r.toFloat() / _estado.duracionVuelta,
-              corral ? Gfx.COLOR_RED : Gfx.COLOR_ORANGE, 7);
+              corral ? aviso : Gfx.COLOR_ORANGE, 7);
 
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY,
-             corral ? Gfx.COLOR_RED : Gfx.COLOR_LT_GRAY,
-             corral ? _s[:corral] : _s[:lap] + " " + vuelta.format("%d"));
+             corral ? aviso : Gfx.COLOR_LT_GRAY,
+             corral ? _s[:toTheLine] : _s[:nextStart]);
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
-             corral ? Gfx.COLOR_RED : Gfx.COLOR_WHITE, Fmt.reloj(r));
-        // Con la vuelta ya marcada, la misma cuenta atras es el descanso: lo
-        // que falta para la proxima campana es lo que queda de silla.
+             corral ? aviso : Gfx.COLOR_WHITE, Fmt.reloj(r));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
-             corral ? _s[:toTheLine] : (descansando ? _s[:rest] : _s[:nextStart]));
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia(_completadas(vuelta) * _estado.kmPorVuelta) + " " + Fmt.unidad());
+             corral ? _s[:lap] + " " + (vuelta + 1).format("%d")
+                    : _s[:lap] + " " + vuelta.format("%d") + " · "
+                      + (descansando ? _s[:rest] : _s[:running]));
     }
 
     function _paginaMargen(dc, cx, cy, h, radio, vuelta, r) {
@@ -151,8 +165,7 @@ class MainView extends Ui.View {
         }
 
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             vuelta < 1 ? _s[:beforeStart]
-                        : _s[:lap] + " " + vuelta.format("%d"));
+             vuelta < 1 ? _s[:beforeStart] : _s[:margin]);
 
         if (margen == null) {
             // El primer kilometro miente: con trescientos metros hechos el
@@ -162,14 +175,25 @@ class MainView extends Ui.View {
         } else {
             _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
                  vaSobrado ? Gfx.COLOR_GREEN : Gfx.COLOR_RED, Fmt.margen(margen));
-            _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
-                 vaSobrado ? _s[:rest] : _s[:paceTooSlow]);
         }
 
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " " + Fmt.unidad());
-        _txt(dc, cx, _yPie2(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.ritmo(_estado.ritmoSegPorKm()) + " /" + Fmt.unidad());
+        // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
+        // con el ritmo, y lo que falta con el tiempo que costara al ritmo que
+        // se lleva. El "≈" solo aparece cuando hay ritmo del que fiarse.
+        var ritmo = _estado.ritmoSegPorKm();
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+             Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
+             + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + " /" + Fmt.unidad());
+        var faltan = null;
+        if (km != null && objetivo > 0) {
+            faltan = objetivo - km;
+            if (faltan < 0) { faltan = 0.0; }
+        }
+        var linea = _s[:toGo] + " " + Fmt.distancia(faltan) + " " + Fmt.unidad();
+        if (faltan != null && ritmo != null) {
+            linea = linea + " ≈ " + Fmt.reloj((faltan * ritmo).toNumber());
+        }
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
     }
 
     // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
@@ -190,17 +214,20 @@ class MainView extends Ui.View {
         var s = _estado.segundosDeCarrera();
         if (s != null && s < 0) { s = 0; }
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             Fmt.espera(s));
+             _s[:total]);
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
              completadas.format("%d"));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:laps]);
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
+             _s[:lapsDone]);
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
-             Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
+             Fmt.espera(s) + " · "
+             + Fmt.distancia(completadas * _estado.kmPorVuelta) + " "
+             + Fmt.unidad());
     }
 
     // La hora del dia y la bateria. En una carrera de treinta horas, saber si
     // la bateria aguanta la noche es informacion de carrera, no un lujo. La
-    // hora obedece al formato del reloj; el am/pm va arriba, pequeno, porque
+    // hora obedece al formato del reloj; el am/pm va abajo, pequeno, porque
     // las fuentes numericas grandes no tienen letras.
     function _paginaReloj(dc, cx, cy, h, radio) {
         var reloj = Sys.getClockTime();
@@ -212,7 +239,8 @@ class MainView extends Ui.View {
             if (hora == 0) { hora = 12; }
         }
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, marca);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+             _s[:clock]);
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
              hora.format("%d") + ":" + reloj.min.format("%02d"));
 
@@ -224,6 +252,7 @@ class MainView extends Ui.View {
              poca ? Gfx.COLOR_RED : Gfx.COLOR_WHITE,
              bateria == null ? _s[:battery]
                              : _s[:battery] + " " + bateria.format("%d") + "%");
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, marca);
     }
 
     // --- piezas de dibujo ---

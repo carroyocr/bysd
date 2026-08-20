@@ -14,6 +14,12 @@
     <string id="laps">Giri</string>
     <string id="noActivity">Nessuna attività</string>
     <string id="battery">Batteria</string>
+    <string id="running">in corsa</string>
+    <string id="margin">Margine</string>
+    <string id="toGo">Mancano</string>
+    <string id="total">Totale</string>
+    <string id="lapsDone">giri completati</string>
+    <string id="clock">Ora</string>
     <string id="pressStart">START per partire</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Ricerca GPS</string>

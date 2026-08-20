@@ -15,6 +15,12 @@
     <string id="laps">Laps</string>
     <string id="noActivity">No activity</string>
     <string id="battery">Battery</string>
+    <string id="running">running</string>
+    <string id="margin">Margin</string>
+    <string id="toGo">To go</string>
+    <string id="total">Total</string>
+    <string id="lapsDone">laps done</string>
+    <string id="clock">Clock</string>
     <string id="pressStart">START to begin</string>
     <string id="gpsReady">GPS ready</string>
     <string id="gpsWait">Searching GPS</string>

@@ -45,6 +45,17 @@ TABLA = {
     "noActivity":       ("No activity",             "Sin actividad",       "Pas d'activité",       "Keine Aktivität",       "Nessuna attività",     "Sem atividade"),
     "battery":          ("Battery",                 "Batería",             "Batterie",             "Akku",                  "Batteria",             "Bateria"),
 
+    # Los rotulos de cabecera y las lineas de contexto de los bocetos del 20
+    # de agosto: cada pagina se presenta, y la de vuelta dice que se esta
+    # haciendo ("Vuelta 7 · corriendo" / "· De descanso").
+    "running":          ("running",                 "corriendo",           "en course",            "läuft",                 "in corsa",             "correndo"),
+    "margin":           ("Margin",                  "Margen",              "Marge",                "Puffer",                "Margine",              "Margem"),
+    # "Faltan 2.4 km ≈ 14:36": la palabra va delante en los seis idiomas.
+    "toGo":             ("To go",                   "Faltan",              "Reste",                "Noch",                  "Mancano",              "Faltam"),
+    "total":            ("Total",                   "Total",               "Total",                "Gesamt",                "Totale",               "Total"),
+    "lapsDone":         ("laps done",               "vueltas completadas", "tours bouclés",        "Runden geschafft",      "giri completati",      "voltas completas"),
+    "clock":            ("Clock",                   "Reloj",               "Heure",                "Uhr",                   "Ora",                  "Hora"),
+
 
     # La linea de salida y el menu de terminar. Los del menu y el dialogo los
     # envuelve el sistema; los de la esfera son cortos.

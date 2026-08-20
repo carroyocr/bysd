@@ -63,8 +63,9 @@ class BackyardField extends Ui.DataField {
         dc.clear();
 
         var margen = _estado.margenSegundos();
-        var corral = _estado.enCorral();
-        var color = _color(margen, corral, tinta);
+        var aviso = Fmt.colorCorral(_estado.restante());
+        var corral = aviso != null;
+        var color = _color(margen, aviso, tinta);
 
         if (h >= ALTO_GRANDE && w >= ALTO_GRANDE) {
             _grande(dc, w, h, margen, color, corral, tinta);
@@ -76,10 +77,11 @@ class BackyardField extends Ui.DataField {
     }
 
     // El margen manda el color: verde si sobra tiempo, rojo si a ese ritmo no
-    // se llega, y rojo tambien en el corral aunque el margen sea bueno, porque
-    // ahi lo urgente es la campana y no el ritmo.
-    function _color(margen, corral, tinta) {
-        if (corral) { return Gfx.COLOR_RED; }
+    // se llega. En el corral manda el semaforo de la campana (amarillo,
+    // naranja, rojo) aunque el margen sea bueno, porque ahi lo urgente es la
+    // campana y no el ritmo.
+    function _color(margen, aviso, tinta) {
+        if (aviso != null) { return aviso; }
         if (margen == null) { return Gfx.COLOR_DK_GRAY; }
         return margen >= 0 ? Gfx.COLOR_GREEN : Gfx.COLOR_RED;
     }

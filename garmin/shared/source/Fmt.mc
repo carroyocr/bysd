@@ -1,4 +1,5 @@
 using Toybox.System as Sys;
+using Toybox.Graphics as Gfx;
 
 // Como se escriben los numeros en la esfera.
 //
@@ -63,6 +64,19 @@ module Fmt {
         if (segundos == null) { return "--:--"; }
         var s = segundos.toNumber();
         return (s >= 0 ? "+" : "") + reloj(s);
+    }
+
+    // El semaforo del corral, compartido por la app y el campo de datos: la
+    // cuenta atras se tine de amarillo a los 3 minutos, naranja a los 2 y
+    // rojo en el ultimo. Fuera del corral devuelve null y cada pantalla usa
+    // sus colores de siempre.
+    function colorCorral(restante) {
+        if (restante == null || restante > RaceState.AVISOS_CORRAL[0]) {
+            return null;
+        }
+        if (restante > RaceState.AVISOS_CORRAL[1]) { return Gfx.COLOR_YELLOW; }
+        if (restante > RaceState.AVISOS_CORRAL[2]) { return Gfx.COLOR_ORANGE; }
+        return Gfx.COLOR_RED;
     }
 
     function distancia(km) {

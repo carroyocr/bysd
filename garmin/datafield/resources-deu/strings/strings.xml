@@ -14,6 +14,12 @@
     <string id="laps">Runden</string>
     <string id="noActivity">Keine Aktivität</string>
     <string id="battery">Akku</string>
+    <string id="running">läuft</string>
+    <string id="margin">Puffer</string>
+    <string id="toGo">Noch</string>
+    <string id="total">Gesamt</string>
+    <string id="lapsDone">Runden geschafft</string>
+    <string id="clock">Uhr</string>
     <string id="pressStart">START zum Start</string>
     <string id="gpsReady">GPS bereit</string>
     <string id="gpsWait">GPS-Suche</string>

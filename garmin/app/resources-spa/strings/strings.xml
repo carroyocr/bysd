@@ -14,6 +14,12 @@
     <string id="laps">Vueltas</string>
     <string id="noActivity">Sin actividad</string>
     <string id="battery">Batería</string>
+    <string id="running">corriendo</string>
+    <string id="margin">Margen</string>
+    <string id="toGo">Faltan</string>
+    <string id="total">Total</string>
+    <string id="lapsDone">vueltas completadas</string>
+    <string id="clock">Reloj</string>
     <string id="pressStart">START para salir</string>
     <string id="gpsReady">GPS listo</string>
     <string id="gpsWait">Buscando GPS</string>

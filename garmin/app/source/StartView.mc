@@ -20,6 +20,7 @@ class StartView extends Ui.View {
 
     function onLayout(dc) {
         _s = {
+            :lap => Ui.loadResource(Rez.Strings.lap),
             :pressStart => Ui.loadResource(Rez.Strings.pressStart),
             :gpsReady => Ui.loadResource(Rez.Strings.gpsReady),
             :gpsWait => Ui.loadResource(Rez.Strings.gpsWait)
@@ -37,6 +38,8 @@ class StartView extends Ui.View {
 
         // La vuelta que se va a correr, en la unidad del reloj y con los
         // minutos que dura. Si esta mal, es ahora cuando hay que verlo.
+        _txt(dc, cx, cy - (h * 31 / 100), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
+             _s[:lap] + " 1");
         _txt(dc, cx, cy - (h * 22 / 100), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad() + " / "
              + (_estado.duracionVuelta / 60).format("%d") + " min");
