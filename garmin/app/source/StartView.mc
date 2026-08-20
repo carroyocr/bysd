@@ -89,6 +89,12 @@ class StartDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
-    // onBack se deja sin tocar: antes de la salida, salir de la app es salir
-    // de la app.
+    // En la linea de salida, con el corredor esperando la campana del
+    // director, un toque de BACK no puede tirar la app: se lo traga. Para
+    // salir de verdad -si abrio la app por error- esta el mantener pulsado del
+    // sistema, que no pasa por aqui. Sin esto, un roce antes de la salida
+    // sacaba a la cara del reloj y parecia que la app se habia reiniciado.
+    function onBack() {
+        return true;
+    }
 }

@@ -3,10 +3,14 @@ using Toybox.Application as App;
 
 // Botones y gestos durante la carrera.
 //
-// Arriba y abajo cambian de pantalla. START es el LAP del corredor: marca que
-// la vuelta termino y empieza el descanso; solo vale el primero de cada
-// vuelta, los demas se ignoran. BACK abre el menu de terminar. Abrir vuelta
-// no lo hace ningun boton: lo hace la hora.
+// Se respeta la costumbre de cualquier reloj Garmin de correr, que el corredor
+// ya tiene en el dedo: arriba y abajo cambian de pantalla; el boton de abajo a
+// la derecha -LAP- marca que la vuelta termino; el de arriba a la derecha
+// -START/STOP- para y abre el menu de guardar. Abrir vuelta no lo hace ningun
+// boton: lo hace la hora.
+//
+// En Connect IQ ese LAP llega como onBack y ese START como onSelect, asi que
+// lo que aqui parece del reves es justo lo natural en la muneca.
 class MainDelegate extends Ui.BehaviorDelegate {
 
     var _vista;
@@ -30,26 +34,31 @@ class MainDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // START/STOP para y abre el menu de guardar, como en cualquier actividad
+    // de Garmin. No sale de la app sin preguntar: debajo hay una actividad
+    // grabando y una backyard no tiene segunda salida.
     function onSelect() {
-        var app = App.getApp();
-        if (app != null) {
-            app.marcarVuelta();
-        }
-        return true;
-    }
-
-    // BACK no sale de la app sin preguntar: debajo hay una actividad grabando
-    // y una backyard no tiene segunda salida.
-    function onBack() {
         // Los rotulos van como id de recurso, sin loadResource: cargados a
         // mano en este contexto, el Menu2 del fenix 8 los dibujaba en blanco
-        // (el menu salia vacio y BACK parecia no hacer nada). Con el id, el
-        // menu los resuelve el solo y se ve en los seis idiomas.
+        // (el menu salia vacio y parecia no hacer nada). Con el id, el menu
+        // los resuelve el solo y se ve en los seis idiomas.
         var menu = new Ui.Menu2({ :title => Rez.Strings.endTitle });
         menu.addItem(new Ui.MenuItem(Rez.Strings.resume, null, :seguir, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.save, null, :guardar, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.discard, null, :descartar, null));
         Ui.pushView(menu, new MenuFinDelegate(), Ui.SLIDE_UP);
+        return true;
+    }
+
+    // LAP marca que la vuelta termino y empieza el descanso; solo vale el
+    // primero de cada vuelta, los demas se ignoran. La vuelta siguiente la
+    // abre la hora, no este boton. Devolver true se traga el BACK: durante la
+    // carrera no hay retroceso, la unica salida es el menu de START.
+    function onBack() {
+        var app = App.getApp();
+        if (app != null) {
+            app.marcarVuelta();
+        }
         return true;
     }
 

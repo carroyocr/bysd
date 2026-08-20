@@ -98,6 +98,11 @@ class SplashDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
-    // onBack se deja sin tocar a proposito: si alguien quiere salir de la app
-    // durante el segundo del emblema, que pueda salir.
+    // Cualquier toque durante el emblema salta a la linea de salida, BACK
+    // incluido: en el segundo del logo, un roce no debe sacar de la app. La
+    // salida real, si se abrio por error, es el mantener pulsado del sistema.
+    function onBack() {
+        SplashView.irALaSalida(_estado);
+        return true;
+    }
 }
