@@ -1,5 +1,6 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Application as App;
+using Toybox.System as Sys;
 
 // Botones y gestos durante la carrera.
 //
@@ -41,11 +42,17 @@ class MainDelegate extends Ui.BehaviorDelegate {
     // BACK no sale de la app sin preguntar: debajo hay una actividad grabando
     // y una backyard no tiene segunda salida.
     function onBack() {
-        var menu = new Ui.Menu2({ :title => Ui.loadResource(Rez.Strings.endTitle) });
-        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.resume), null, :seguir, null));
-        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.save), null, :guardar, null));
-        menu.addItem(new Ui.MenuItem(Ui.loadResource(Rez.Strings.discard), null, :descartar, null));
+        Sys.println("MainDelegate.onBack");
+        // Los rotulos van como id de recurso, sin loadResource: cargados a
+        // mano en este contexto, el Menu2 del fenix 8 los dibujaba en blanco
+        // (el menu salia vacio y BACK parecia no hacer nada). Con el id, el
+        // menu los resuelve el solo y se ve en los seis idiomas.
+        var menu = new Ui.Menu2({ :title => Rez.Strings.endTitle });
+        menu.addItem(new Ui.MenuItem(Rez.Strings.resume, null, :seguir, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.save, null, :guardar, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.discard, null, :descartar, null));
         Ui.pushView(menu, new MenuFinDelegate(), Ui.SLIDE_UP);
+        Sys.println("MainDelegate.onBack: menu arriba");
         return true;
     }
 

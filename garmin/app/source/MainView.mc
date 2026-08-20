@@ -81,20 +81,19 @@ class MainView extends Ui.View {
         var vuelta = proy[0];
         var r = proy[1];
 
-        // La vuelta 0 es la cuenta atras a la campana de salida: el corredor
-        // pulso START antes de la hora y la campana sonara sola. No hay
-        // paginas que recorrer porque todavia no hay nada que contar.
-        if (vuelta == 0) {
-            _antesDeLaSalida(dc, cx, cy, h, radio, r);
-            return;
-        }
-
+        // El enrutado va primero y no lo corta ningun estado: en la vuelta 0
+        // (el corredor pulso START antes de la hora) la pagina de vuelta
+        // muestra la cuenta atras a la campana y las demas se protegen solas.
+        // La primera version cortaba aqui con un return, y con vueltas de una
+        // hora eso bloqueaba el cambio de pantalla hasta media hora seguida.
         if (_pagina == PAGINA_MARGEN) {
             _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
         } else if (_pagina == PAGINA_TUYO) {
             _paginaTuyo(dc, cx, cy, h, radio, vuelta);
         } else if (_pagina == PAGINA_RELOJ) {
             _paginaReloj(dc, cx, cy, h, radio);
+        } else if (vuelta == 0) {
+            _antesDeLaSalida(dc, cx, cy, h, radio, r);
         } else {
             _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
         }
@@ -140,16 +139,20 @@ class MainView extends Ui.View {
 
         // Dos aros. Fuera, gris, el tiempo consumido. Dentro, en color, la
         // distancia recorrida. Si el de dentro adelanta al de fuera se llega
-        // antes de la campana, y eso se ve sin leer un solo digito.
-        _arco(dc, cx, cy, radio, 1.0 - (r.toFloat() / _estado.duracionVuelta),
-              Gfx.COLOR_LT_GRAY, 7);
-        if (km != null && objetivo > 0) {
-            _arco(dc, cx, cy, radio - 11, km / objetivo,
-                  vaSobrado ? Gfx.COLOR_GREEN : Gfx.COLOR_RED, 5);
+        // antes de la campana, y eso se ve sin leer un solo digito. En la
+        // vuelta 0 no hay tiempo consumido ni distancia: ningun aro.
+        if (vuelta >= 1) {
+            _arco(dc, cx, cy, radio, 1.0 - (r.toFloat() / _estado.duracionVuelta),
+                  Gfx.COLOR_LT_GRAY, 7);
+            if (km != null && objetivo > 0) {
+                _arco(dc, cx, cy, radio - 11, km / objetivo,
+                      vaSobrado ? Gfx.COLOR_GREEN : Gfx.COLOR_RED, 5);
+            }
         }
 
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             _s[:lap] + " " + vuelta.format("%d"));
+             vuelta < 1 ? _s[:beforeStart]
+                        : _s[:lap] + " " + vuelta.format("%d"));
 
         if (margen == null) {
             // El primer kilometro miente: con trescientos metros hechos el
@@ -173,15 +176,21 @@ class MainView extends Ui.View {
     // en una backyard esa cifra es la que se cuenta luego, y no cabe confundirla
     // con nada mas.
     // Con la vuelta en curso ya marcada, cuenta como completada: el corredor
-    // cruzo la meta aunque la hora no haya cerrado.
+    // cruzo la meta aunque la hora no haya cerrado. En la vuelta 0 no hay
+    // nada completado; sin el tope, la cuenta daba -1.
     function _completadas(vuelta) {
+        if (vuelta < 1) { return 0; }
         return (vuelta - 1) + (_estado.marcada() ? 1 : 0);
     }
 
     function _paginaTuyo(dc, cx, cy, h, radio, vuelta) {
         var completadas = _completadas(vuelta);
+        // Antes de la campana de salida el tiempo de carrera es negativo; en
+        // esta pagina eso se escribe como cero, no como una cuenta atras.
+        var s = _estado.segundosDeCarrera();
+        if (s != null && s < 0) { s = 0; }
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             Fmt.espera(_estado.segundosDeCarrera()));
+             Fmt.espera(s));
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
              completadas.format("%d"));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:laps]);
