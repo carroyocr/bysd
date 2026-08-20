@@ -22,7 +22,11 @@ const teamMembers = [
 ];
 
 const reserveMembers = [
-
+  { name: 'Bernardo De Jesús', laps: 12 },
+  { name: 'Esteban Gabriel Senna', laps: 7 },
+  { name: 'Randy Alexander Minaya Cubilete', laps: null },
+  { name: 'Ramón Torentino', laps: null },
+  { name: 'Cristhian Arroyo', laps: null },
 ];
 
 export default function SateliteChampionship() {
@@ -150,7 +154,43 @@ export default function SateliteChampionship() {
               </CardContent>
             </Card>
 
- 
+            {/* Reserve Team */}
+            <Card className="shadow-soft">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield className="w-5 h-5 text-muted-foreground" />
+                  <h4 className="font-display text-lg text-foreground">Equipo de Reserva</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="team-reserve-table">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
+                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reserveMembers.map((m, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + teamMembers.length + 1).padStart(2, '0')}</td>
+                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            {m.laps != null ? (
+                              <Badge variant="outline" className="font-mono text-muted-foreground">
+                                <Timer className="w-3 h-3 mr-1" />{m.laps}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Deadline Note */}
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800" data-testid="deadline-note">
