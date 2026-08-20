@@ -84,6 +84,20 @@ class MainView extends Ui.View {
         var vuelta = proy[0];
         var r = proy[1];
 
+        // El corral no es una pagina: se impone. En los ultimos tres minutos
+        // de cualquier cuenta atras -la de salida incluida- salta a pantalla
+        // completa por encima de la pagina que se este mirando, porque ahi lo
+        // urgente es llegar a la linea y no el ritmo. Se tine con el semaforo
+        // (amarillo a 3, naranja a 2, rojo en el ultimo) y vuelve solo cuando
+        // suena la campana. No rompe la regla de "navegacion siempre viva":
+        // el candado que la rompia duraba hasta media hora; este, tres
+        // minutos, y es lo que el corredor tiene que ver.
+        var aviso = Fmt.colorCorral(r);
+        if (aviso != null) {
+            _corral(dc, cx, cy, h, radio, vuelta, r, aviso);
+            return;
+        }
+
         // El enrutado va primero y no lo corta ningun estado: en la vuelta 0
         // (el corredor pulso START antes de la hora) la pagina de vuelta
         // muestra la cuenta atras a la campana y las demas se protegen solas.
@@ -106,43 +120,49 @@ class MainView extends Ui.View {
 
     // --- pantallas ---
 
+    // El corral, la pantalla que se impone en los ultimos tres minutos. El
+    // color lo pone el semaforo -amarillo, naranja, rojo- y lo llena todo: en
+    // una carpa a oscuras, un cuadro de color de esquina a esquina se ve
+    // antes de leer un solo digito. Sobre amarillo la tinta es negra, que es
+    // lo unico que se lee ahi; sobre naranja y rojo, blanca.
+    //
+    // La cuenta grande es el tiempo a la campana; arriba, "A la linea"; abajo,
+    // la vuelta que esa campana abre (la actual mas uno, y "1" en la salida).
+    function _corral(dc, cx, cy, h, radio, vuelta, r, aviso) {
+        dc.setColor(aviso, aviso);
+        dc.clear();
+        var tinta = (aviso == Gfx.COLOR_YELLOW)
+                  ? Gfx.COLOR_BLACK : Gfx.COLOR_WHITE;
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, tinta, _s[:toTheLine]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, tinta, Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, tinta,
+             _s[:lap] + " " + (vuelta + 1).format("%d"));
+    }
+
     function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
-        // El semaforo del corral tambien rige antes de la vuelta 1: los
-        // ultimos tres minutos para la primera campana se ven igual que los
-        // de cualquier otra.
-        var aviso = Fmt.colorCorral(r);
-        _arco(dc, cx, cy, radio, 1.0,
-              aviso == null ? Gfx.COLOR_ORANGE : aviso, 7);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
-             aviso == null ? Gfx.COLOR_WHITE : aviso, Fmt.reloj(r));
+        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_ORANGE, 7);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:beforeStart]);
     }
 
-    // Como en el boceto: el rotulo de arriba presenta la cifra ("Proxima
-    // salida"), y debajo va que se esta haciendo ("Vuelta 7 · corriendo" o
-    // "· De descanso"). En el corral, el rotulo es "A la linea" y debajo va
-    // la vuelta que abre la campana, que es la que importa ya.
+    // El rotulo de arriba presenta la cifra ("Proxima salida") y debajo va que
+    // se esta haciendo ("Vuelta 7 · corriendo" o "· De descanso"). El corral
+    // ya no llega aqui: se intercepta en onUpdate y se impone a pantalla
+    // completa antes de dibujar ninguna pagina.
     function _paginaVuelta(dc, cx, cy, h, radio, vuelta, r) {
-        // El semaforo del corral: amarillo a 3 minutos de la campana,
-        // naranja a 2, rojo en el ultimo. Fuera del corral, aviso es null.
-        var aviso = Fmt.colorCorral(r);
-        var corral = aviso != null;
         var descansando = _estado.marcada();
 
         // El aro se vacia con la hora: lo que queda de aro es lo que queda de
         // vuelta. Es la misma cifra del centro, legible sin leer.
         _arco(dc, cx, cy, radio, r.toFloat() / _estado.duracionVuelta,
-              corral ? aviso : Gfx.COLOR_ORANGE, 7);
+              Gfx.COLOR_ORANGE, 7);
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY,
-             corral ? aviso : Gfx.COLOR_LT_GRAY,
-             corral ? _s[:toTheLine] : _s[:nextStart]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
-             corral ? aviso : Gfx.COLOR_WHITE, Fmt.reloj(r));
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+             _s[:nextStart]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
-             corral ? _s[:lap] + " " + (vuelta + 1).format("%d")
-                    : _s[:lap] + " " + vuelta.format("%d") + " · "
-                      + (descansando ? _s[:rest] : _s[:running]));
+             _s[:lap] + " " + vuelta.format("%d") + " · "
+             + (descansando ? _s[:rest] : _s[:running]));
     }
 
     function _paginaMargen(dc, cx, cy, h, radio, vuelta, r) {
