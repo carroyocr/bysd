@@ -43,6 +43,7 @@ class MainView extends Ui.View {
             :toGo => Ui.loadResource(Rez.Strings.toGo),
             :total => Ui.loadResource(Rez.Strings.total),
             :lapsDone => Ui.loadResource(Rez.Strings.lapsDone),
+            :laps => Ui.loadResource(Rez.Strings.laps),
             :clock => Ui.loadResource(Rez.Strings.clock),
             :battery => Ui.loadResource(Rez.Strings.battery),
             :noActivity => Ui.loadResource(Rez.Strings.noActivity)
@@ -98,6 +99,16 @@ class MainView extends Ui.View {
             return;
         }
 
+        // Vuelta cerrada con LAP: el corredor llego a meta y descansa. La
+        // pantalla se pone verde de esquina a esquina -llegaste, descansa- con
+        // el tiempo que falta para la proxima campana y lo acumulado debajo.
+        // Se impone igual que el corral, y le cede el sitio cuando faltan tres
+        // minutos (el corral se comprueba antes, arriba).
+        if (vuelta >= 1 && _estado.marcada()) {
+            _descanso(dc, cx, cy, h, radio, vuelta, r);
+            return;
+        }
+
         // El enrutado va primero y no lo corta ningun estado: en la vuelta 0
         // (el corredor pulso START antes de la hora) la pagina de vuelta
         // muestra la cuenta atras a la campana y las demas se protegen solas.
@@ -137,6 +148,23 @@ class MainView extends Ui.View {
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, tinta, Fmt.reloj(r));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, tinta,
              _s[:lap] + " " + (vuelta + 1).format("%d"));
+    }
+
+    // El descanso, la contraparte verde del corral. Mismo molde -pantalla de
+    // color, cifra grande, tinta negra que es la unica que se lee sobre un
+    // verde brillante- pero aqui la noticia es buena: la vuelta esta hecha.
+    // Arriba, "De descanso"; en grande, el tiempo a la proxima campana; abajo,
+    // lo acumulado: vueltas cerradas y kilometros.
+    function _descanso(dc, cx, cy, h, radio, vuelta, r) {
+        dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_GREEN);
+        dc.clear();
+        var completadas = _completadas(vuelta);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK, _s[:rest]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_BLACK, Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK,
+             completadas.format("%d") + " " + _s[:laps]);
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK,
+             Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
     function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
