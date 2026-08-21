@@ -28,6 +28,7 @@
     <string id="save">Enregistrer</string>
     <string id="discard">Supprimer</string>
     <string id="discardSure">Supprimer la course ?</string>
+    <string id="resumeRace">Reprendre la course ?</string>
     <string id="saving">Enregistrement</string>
     <string id="saved">Activité enregistrée</string>
     <string id="discarding">Suppression</string>

@@ -28,6 +28,7 @@
     <string id="save">Guardar</string>
     <string id="discard">Descartar</string>
     <string id="discardSure">¿Descartar la carrera?</string>
+    <string id="resumeRace">¿Reanudar carrera?</string>
     <string id="saving">Guardando</string>
     <string id="saved">Actividad guardada</string>
     <string id="discarding">Descartando</string>

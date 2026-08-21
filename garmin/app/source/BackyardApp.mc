@@ -89,9 +89,29 @@ class BackyardApp extends App.AppBase {
         });
         _session.start();
         estado.darLaSalida();
+        estado.guardar();
         var v = estado.vuelta();
         _vueltaVista = v == null ? 0 : v;
         _vibrar(1500);
+    }
+
+    // Reanudar una carrera que se cerro a mitad (bateria, reinicio). El estado
+    // -sobre todo el ancla del reloj de pared- ya se restauro desde Storage;
+    // aqui se abre una sesion de grabacion nueva (Connect IQ no deja continuar
+    // la anterior, asi que el FIT sale en dos tramos, pero la CUENTA de la
+    // carrera sigue clavada porque manda la hora) y se sincroniza la vuelta
+    // vista para no volver a tocar campanas ya pasadas.
+    function reanudar() {
+        if (_session != null) { return; }
+        _session = Rec.createSession({
+            :name => "Backyard",
+            :sport => Activity.SPORT_RUNNING
+        });
+        _session.start();
+        var v = estado.vuelta();
+        _vueltaVista = v == null ? 0 : v;
+        _vueltaDelAviso = 0;
+        _avisoDado = -1;
     }
 
     // El LAP del corredor: la vuelta termino, empieza el descanso. Solo vale
@@ -101,6 +121,7 @@ class BackyardApp extends App.AppBase {
         if (_session == null) { return; }
         if (!estado.marcarVuelta()) { return; }
         _session.addLap();
+        estado.guardar();
         _vibrar(500);
     }
 
@@ -126,6 +147,9 @@ class BackyardApp extends App.AppBase {
             _session.discard();
         }
         _session = null;
+        // La carrera termino: se borra el guardado para no ofrecer reanudarla
+        // la proxima vez que se abra la app.
+        estado.limpiar();
         // La pantalla de cierre se muestra con un pequeno retraso, no aqui
         // mismo. Descartar llega desde el dialogo de confirmacion, y el
         // sistema cierra ese dialogo -con su popView- JUSTO DESPUES de que
@@ -170,6 +194,9 @@ class BackyardApp extends App.AppBase {
         if (v == null || v <= _vueltaVista) { return; }
         _vueltaVista = v;
         _session.addLap();
+        // Cada campana cierra una vuelta y puede recalibrar el objetivo: se
+        // guarda para que un cierre justo despues no pierda la cuenta.
+        estado.guardar();
         _vibrar(1500);
     }
 

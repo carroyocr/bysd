@@ -104,6 +104,69 @@ class RaceState {
         }
     }
 
+    // --- persistencia: sobrevivir a un cierre a mitad de carrera ---
+    //
+    // En una carrera de 80-120 horas la app puede cerrarse -bateria agotada y
+    // recargada, un reinicio del reloj- y sin esto se perderia toda la cuenta.
+    // Se guarda el minimo -el ancla del reloj de pared y lo que no se puede
+    // recalcular- SOLO cuando cambia (salida, LAP, campana), nunca cada
+    // segundo: son escrituras esporadicas, una por vuelta. Al reabrir, el
+    // ancla basta para recalcular la vuelta exacta, porque manda la hora.
+    static const K_CAMPANA = "carrera_campana0";
+    static const K_MARCADA = "carrera_vueltaMarcada";
+    static const K_KM_ULT = "carrera_kmUltima";
+    static const K_LAT_S = "carrera_latSalida";
+    static const K_LON_S = "carrera_lonSalida";
+
+    function guardar() {
+        if (campana0 == null) { return; }
+        try {
+            App.Storage.setValue(K_CAMPANA, campana0);
+            App.Storage.setValue(K_MARCADA, vueltaMarcada);
+            App.Storage.setValue(K_KM_ULT, kmMedidosUltimaVuelta);
+            App.Storage.setValue(K_LAT_S, _latSalida);
+            App.Storage.setValue(K_LON_S, _lonSalida);
+        } catch (e) {
+        }
+    }
+
+    // True si hay una carrera viva guardada de una sesion anterior.
+    function hayGuardada() {
+        try {
+            return App.Storage.getValue(K_CAMPANA) != null;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Restaura el estado de la carrera guardada. Devuelve true si habia una.
+    function recuperar() {
+        try {
+            var c = App.Storage.getValue(K_CAMPANA);
+            if (c == null) { return false; }
+            campana0 = c;
+            var m = App.Storage.getValue(K_MARCADA);
+            vueltaMarcada = m == null ? 0 : m;
+            kmMedidosUltimaVuelta = App.Storage.getValue(K_KM_ULT);
+            _latSalida = App.Storage.getValue(K_LAT_S);
+            _lonSalida = App.Storage.getValue(K_LON_S);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function limpiar() {
+        try {
+            App.Storage.deleteValue(K_CAMPANA);
+            App.Storage.deleteValue(K_MARCADA);
+            App.Storage.deleteValue(K_KM_ULT);
+            App.Storage.deleteValue(K_LAT_S);
+            App.Storage.deleteValue(K_LON_S);
+        } catch (e) {
+        }
+    }
+
     // --- la salida y el ancla ---
 
     // Ancla el cero a la marca de duracionVuelta mas cercana del reloj de

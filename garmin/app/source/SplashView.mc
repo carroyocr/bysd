@@ -1,6 +1,7 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Timer as Timer;
+using Toybox.Application as App;
 
 // El emblema, a pantalla completa, cinco segundos.
 //
@@ -73,10 +74,47 @@ class SplashView extends Ui.View {
     }
 
     // Compartido con el delegado: los dos caminos, el del reloj y el del
-    // boton, tienen que acabar en la misma vista.
+    // boton, tienen que acabar en la misma vista. Si quedo una carrera viva de
+    // una sesion anterior -la app se cerro a mitad-, se ofrece reanudarla
+    // antes de la linea de salida.
     static function irALaSalida(estado) {
-        Ui.switchToView(new StartView(estado), new StartDelegate(estado),
-                        Ui.SLIDE_IMMEDIATE);
+        if (estado.hayGuardada()) {
+            Ui.switchToView(
+                new Ui.Confirmation(Ui.loadResource(Rez.Strings.resumeRace)),
+                new ReanudarDelegate(estado), Ui.SLIDE_IMMEDIATE);
+        } else {
+            Ui.switchToView(new StartView(estado), new StartDelegate(estado),
+                            Ui.SLIDE_IMMEDIATE);
+        }
+    }
+}
+
+// La pregunta de reanudar, al abrir con una carrera guardada. Si: restaura el
+// estado y sigue la carrera donde estaba. No: la descarta y va a la linea de
+// salida para una carrera nueva.
+class ReanudarDelegate extends Ui.ConfirmationDelegate {
+
+    var _estado;
+
+    function initialize(estado) {
+        ConfirmationDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onResponse(respuesta) {
+        if (respuesta == Ui.CONFIRM_YES) {
+            _estado.recuperar();
+            var app = App.getApp();
+            if (app != null) { app.reanudar(); }
+            var vista = new MainView(_estado);
+            Ui.switchToView(vista, new MainDelegate(vista, _estado),
+                            Ui.SLIDE_IMMEDIATE);
+        } else {
+            _estado.limpiar();
+            Ui.switchToView(new StartView(_estado), new StartDelegate(_estado),
+                            Ui.SLIDE_IMMEDIATE);
+        }
+        return true;
     }
 }
 

@@ -69,6 +69,9 @@ TABLA = {
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
     "discard":          ("Discard",                 "Descartar",           "Supprimer",            "Verwerfen",             "Scarta",               "Descartar"),
     "discardSure":      ("Discard the race?",       "¿Descartar la carrera?","Supprimer la course ?","Rennen verwerfen?",   "Scartare la gara?",    "Descartar a prova?"),
+    # Al abrir con una carrera viva guardada (se cerro la app a mitad): se
+    # ofrece reanudarla. El reloj de pared manda, asi que la cuenta sigue exacta.
+    "resumeRace":       ("Resume race?",            "¿Reanudar carrera?",  "Reprendre la course ?","Rennen fortsetzen?",    "Riprendere la gara?",  "Retomar a prova?"),
     # La pantalla de cierre, al estilo de la actividad nativa: mientras procesa
     # y cuando termina. El texto de "hecho" son dos palabras y se parte en dos
     # lineas al dibujarlo.
@@ -94,7 +97,7 @@ TABLA = {
 # terminar y sus dialogos, que los envuelve el sistema.
 FUERA_DE_LA_ESFERA = ["appName", "fieldName",
                       "endTitle", "resume", "save", "discard", "discardSure",
-                      "saving", "saved", "discarding", "discarded"]
+                      "saving", "saved", "discarding", "discarded", "resumeRace"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 
