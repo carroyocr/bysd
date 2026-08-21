@@ -2,15 +2,16 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Timer as Timer;
 
-// El emblema, a pantalla completa, poco mas de un segundo.
+// El emblema, a pantalla completa, cinco segundos.
 //
 // El logo ya es un circulo sobre fondo negro, asi que entra en la esfera sin
 // recortar nada. De aqui se pasa directo a la vuelta: no hay pantalla
 // intermedia ni nombre de carrera. En la vuelta uno el emblema emociona; en la
-// vuelta veinte estorba, y por eso cualquier boton lo salta.
+// vuelta veinte estorba, y por eso cualquier boton lo salta: los cinco
+// segundos son el maximo, no una espera obligada.
 class SplashView extends Ui.View {
 
-    static const MILISEGUNDOS = 1200;
+    static const MILISEGUNDOS = 5000;
 
     var _estado;
     var _timer;
