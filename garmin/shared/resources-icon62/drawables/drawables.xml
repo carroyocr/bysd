@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!-- Icono del lanzador de 62x62 px, generado por talla para no depender del
+     escalado de Garmin. Aro fino y lagartija sobre fondo transparente. -->
+<drawables>
+    <bitmap id="LauncherIcon" filename="launcher_icon.png"/>
+</drawables>

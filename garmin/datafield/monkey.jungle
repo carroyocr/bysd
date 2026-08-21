@@ -13,3 +13,28 @@ project.manifest = manifest.xml
 base.sourcePath = source;../shared/source
 base.resourcePath = resources;../shared/resources
 
+# --- Iconos del lanzador por talla ---
+# Mismo criterio que la app, pero aqui no hay emblema: solo el icono por
+# dispositivo. Los de 65 px (fenix847mm, fr965) usan el de shared/resources.
+vivoactive4.resourcePath = $(base.resourcePath);../shared/resources-icon35
+fenix6.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix6pro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix6s.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix6spro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix6xpro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7s.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+enduro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+enduro3.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr255.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr955.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr255s.resourcePath = $(base.resourcePath);../shared/resources-icon40
+vivoactive5.resourcePath = $(base.resourcePath);../shared/resources-icon56
+fenix843mm.resourcePath = $(base.resourcePath);../shared/resources-icon60
+epix2.resourcePath = $(base.resourcePath);../shared/resources-icon60
+fr265.resourcePath = $(base.resourcePath);../shared/resources-icon60
+fr265s.resourcePath = $(base.resourcePath);../shared/resources-icon60
+instinct2.resourcePath = $(base.resourcePath);../shared/resources-icon62
+venu2.resourcePath = $(base.resourcePath);../shared/resources-icon70
+venu3.resourcePath = $(base.resourcePath);../shared/resources-icon70
