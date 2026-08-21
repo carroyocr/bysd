@@ -1,5 +1,6 @@
 using Toybox.Application as App;
 using Toybox.WatchUi as Ui;
+using Toybox.Graphics as Gfx;
 using Toybox.Timer as Timer;
 using Toybox.Attention as Attention;
 using Toybox.ActivityRecording as Rec;
@@ -102,8 +103,18 @@ class BackyardApp extends App.AppBase {
     // Fin de carrera. Guardar cierra el FIT y lo deja listo para subir;
     // descartar lo tira. En los dos casos la app se cierra: una backyard no
     // tiene segunda salida.
+    //
+    // Antes de salir se deja una pantalla negra. Sin ella, la animacion de
+    // salida del reloj encoge el ultimo frame de la carrera sobre la lista de
+    // actividades, y si ese frame era el corral se veia un cuadro rojo. El
+    // latido se para primero (no mas dibujos de la carrera) y un respiro de
+    // timer le da a la pantalla negra tiempo de pintarse antes del Sys.exit.
     function terminar(guardar) {
         if (_session == null) { return; }
+        if (_timer != null) {
+            _timer.stop();
+            _timer = null;
+        }
         _session.stop();
         if (guardar) {
             _session.save();
@@ -111,6 +122,15 @@ class BackyardApp extends App.AppBase {
             _session.discard();
         }
         _session = null;
+        Ui.switchToView(new SalidaView(), new Ui.BehaviorDelegate(),
+                        Ui.SLIDE_IMMEDIATE);
+        var t = new Timer.Timer();
+        t.start(method(:cerrar), 150, false);
+    }
+
+    // 'as Void' por lo mismo que en tic(): Timer.start exige que el metodo no
+    // devuelva nada.
+    function cerrar() as Void {
         Sys.exit();
     }
 
@@ -174,5 +194,18 @@ class BackyardApp extends App.AppBase {
         if (Attention has :vibrate) {
             Attention.vibrate([ new Attention.VibeProfile(75, milis) ]);
         }
+    }
+}
+
+// La pantalla negra del cierre. No dibuja nada mas: su unico trabajo es ser el
+// frame que la animacion de salida encoge sobre la lista de actividades, en
+// lugar del ultimo frame de la carrera.
+class SalidaView extends Ui.View {
+    function initialize() {
+        View.initialize();
+    }
+    function onUpdate(dc) {
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.clear();
     }
 }
