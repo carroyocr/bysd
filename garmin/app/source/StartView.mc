@@ -107,6 +107,10 @@ class StartDelegate extends Ui.BehaviorDelegate {
             (_estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
             _estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
+        // La vuelta automatica es un interruptor: marcar sola al llegar al
+        // punto de salida, o no. El check muestra si esta puesto.
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
+            :autoLap, _estado.autoLap, null));
         Ui.pushView(menu, new AjustesMenuDelegate(_estado), Ui.SLIDE_UP);
         return true;
     }
