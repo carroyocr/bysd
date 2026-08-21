@@ -29,6 +29,10 @@
     <string id="save">Save</string>
     <string id="discard">Discard</string>
     <string id="discardSure">Discard the race?</string>
+    <string id="saving">Saving</string>
+    <string id="saved">Activity saved</string>
+    <string id="discarding">Discarding</string>
+    <string id="discarded">Activity discarded</string>
     <string id="settingLapMinutes">Lap duration (minutes)</string>
     <string id="settingLapDistance">Lap distance (km)</string>
     <string id="settingCorral">Corral alert</string>

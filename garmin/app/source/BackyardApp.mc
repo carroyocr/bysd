@@ -122,16 +122,11 @@ class BackyardApp extends App.AppBase {
             _session.discard();
         }
         _session = null;
-        Ui.switchToView(new SalidaView(), new Ui.BehaviorDelegate(),
+        // La pantalla de cierre, al estilo de la actividad nativa: primero el
+        // aro que se llena mientras procesa, luego el aro verde y "Actividad
+        // guardada/descartada", y ella misma cierra la app al terminar.
+        Ui.switchToView(new SalidaView(guardar), new Ui.BehaviorDelegate(),
                         Ui.SLIDE_IMMEDIATE);
-        var t = new Timer.Timer();
-        t.start(method(:cerrar), 150, false);
-    }
-
-    // 'as Void' por lo mismo que en tic(): Timer.start exige que el metodo no
-    // devuelva nada.
-    function cerrar() as Void {
-        Sys.exit();
     }
 
     // 'as Void' no es adorno: Timer.start exige un metodo que no devuelva
@@ -197,15 +192,116 @@ class BackyardApp extends App.AppBase {
     }
 }
 
-// La pantalla negra del cierre. No dibuja nada mas: su unico trabajo es ser el
-// frame que la animacion de salida encoge sobre la lista de actividades, en
-// lugar del ultimo frame de la carrera.
+// La pantalla de cierre, calcada de la actividad nativa de Garmin. Dos fases:
+// mientras procesa, un aro se llena -rojo si se descarta, verde si se guarda-
+// con la palabra en el centro ("Descartando"/"Guardando"); al llenarse, el
+// aro queda verde entero y el centro dice "Actividad descartada/guardada" un
+// momento antes de cerrar la app ella misma. Asi la salida se ve como la del
+// reloj y no como el cuadro rojo que encogia la animacion de salida.
 class SalidaView extends Ui.View {
-    function initialize() {
+
+    // Milisegundos por tic y cuanto sube el aro en cada uno: se llena en algo
+    // menos de un segundo. Luego el mensaje de "hecho" se queda unos tics.
+    static const TIC_MS = 40;
+    static const PASO = 0.06;
+    static const TICS_HECHO = 28;
+
+    var _guardar;
+    var _txtProc;
+    var _txtHecho;
+    var _fase = 0;      // 0 = procesando, 1 = hecho
+    var _prog = 0.0;
+    var _tics = 0;
+    var _timer;
+
+    function initialize(guardar) {
         View.initialize();
+        _guardar = guardar;
     }
+
+    function onLayout(dc) {
+        _txtProc = Ui.loadResource(
+            _guardar ? Rez.Strings.saving : Rez.Strings.discarding);
+        _txtHecho = Ui.loadResource(
+            _guardar ? Rez.Strings.saved : Rez.Strings.discarded);
+    }
+
+    function onShow() {
+        _timer = new Timer.Timer();
+        _timer.start(method(:tic), TIC_MS, true);
+    }
+
+    function onHide() {
+        if (_timer != null) {
+            _timer.stop();
+            _timer = null;
+        }
+    }
+
+    function tic() as Void {
+        if (_fase == 0) {
+            _prog += PASO;
+            if (_prog >= 1.0) {
+                _prog = 1.0;
+                _fase = 1;
+                _tics = 0;
+            }
+        } else {
+            _tics++;
+            if (_tics >= TICS_HECHO) {
+                if (_timer != null) { _timer.stop(); _timer = null; }
+                Sys.exit();
+            }
+        }
+        Ui.requestUpdate();
+    }
+
     function onUpdate(dc) {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var cx = w / 2;
+        var cy = h / 2;
+        var radio = ((w < h ? w : h) / 2) - 10;
+
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
         dc.clear();
+        dc.setPenWidth(14);
+
+        if (_fase == 0) {
+            // El aro se llena desde las doce y hacia la derecha, como se lee un
+            // reloj. Rojo al descartar, verde al guardar.
+            var color = _guardar ? Gfx.COLOR_GREEN : Gfx.COLOR_RED;
+            var grados = (360 * _prog).toNumber();
+            if (grados > 0) {
+                if (grados > 359) { grados = 359; }
+                var fin = 90 - grados;
+                while (fin < 0) { fin += 360; }
+                dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+                dc.drawArc(cx, cy, radio, Gfx.ARC_CLOCKWISE, 90, fin);
+            }
+            _texto(dc, cx, cy, h, _txtProc);
+        } else {
+            dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_TRANSPARENT);
+            dc.drawCircle(cx, cy, radio);
+            _texto(dc, cx, cy, h, _txtHecho);
+        }
+    }
+
+    // Una palabra va en el centro; dos palabras se parten en dos lineas, como
+    // "Actividad / descartada" en la pantalla nativa.
+    function _texto(dc, cx, cy, h, texto) {
+        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_TRANSPARENT);
+        var i = texto.find(" ");
+        if (i != null) {
+            var l1 = texto.substring(0, i);
+            var l2 = texto.substring(i + 1, texto.length());
+            dc.drawText(cx, cy - (h * 9 / 100), Gfx.FONT_SMALL, l1,
+                        Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+            dc.drawText(cx, cy + (h * 9 / 100), Gfx.FONT_SMALL, l2,
+                        Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        } else {
+            dc.drawText(cx, cy, Gfx.FONT_MEDIUM, texto,
+                        Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        }
     }
 }

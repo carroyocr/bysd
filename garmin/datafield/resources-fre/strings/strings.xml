@@ -28,6 +28,10 @@
     <string id="save">Enregistrer</string>
     <string id="discard">Supprimer</string>
     <string id="discardSure">Supprimer la course ?</string>
+    <string id="saving">Enregistrement</string>
+    <string id="saved">Activité enregistrée</string>
+    <string id="discarding">Suppression</string>
+    <string id="discarded">Activité supprimée</string>
     <string id="settingLapMinutes">Tour (minutes)</string>
     <string id="settingLapDistance">Tour (km)</string>
     <string id="settingCorral">Alerte corral</string>

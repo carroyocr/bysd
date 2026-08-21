@@ -28,6 +28,10 @@
     <string id="save">Speichern</string>
     <string id="discard">Verwerfen</string>
     <string id="discardSure">Rennen verwerfen?</string>
+    <string id="saving">Speichern</string>
+    <string id="saved">Aktivität gespeichert</string>
+    <string id="discarding">Verwerfen</string>
+    <string id="discarded">Aktivität verworfen</string>
     <string id="settingLapMinutes">Runde (Minuten)</string>
     <string id="settingLapDistance">Rundenlänge (km)</string>
     <string id="settingCorral">Corral-Warnung</string>

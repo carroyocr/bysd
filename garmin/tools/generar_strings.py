@@ -69,6 +69,13 @@ TABLA = {
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
     "discard":          ("Discard",                 "Descartar",           "Supprimer",            "Verwerfen",             "Scarta",               "Descartar"),
     "discardSure":      ("Discard the race?",       "¿Descartar la carrera?","Supprimer la course ?","Rennen verwerfen?",   "Scartare la gara?",    "Descartar a prova?"),
+    # La pantalla de cierre, al estilo de la actividad nativa: mientras procesa
+    # y cuando termina. El texto de "hecho" son dos palabras y se parte en dos
+    # lineas al dibujarlo.
+    "saving":           ("Saving",                  "Guardando",           "Enregistrement",       "Speichern",             "Salvataggio",          "Guardando"),
+    "saved":            ("Activity saved",          "Actividad guardada",  "Activité enregistrée", "Aktivität gespeichert", "Attività salvata",     "Atividade guardada"),
+    "discarding":       ("Discarding",              "Descartando",         "Suppression",          "Verwerfen",             "Scarto",               "Descartando"),
+    "discarded":        ("Activity discarded",      "Actividad descartada","Activité supprimée",   "Aktivität verworfen",   "Attività scartata",    "Atividade descartada"),
 
     # Ajustes: se leen en el telefono, no en el reloj, asi que aqui el largo
     # no aprieta.
@@ -86,7 +93,8 @@ TABLA = {
 # ajustes, que se leen en el telefono, ni los nombres, ni las del menu de
 # terminar y sus dialogos, que los envuelve el sistema.
 FUERA_DE_LA_ESFERA = ["appName", "fieldName",
-                      "endTitle", "resume", "save", "discard", "discardSure"]
+                      "endTitle", "resume", "save", "discard", "discardSure",
+                      "saving", "saved", "discarding", "discarded"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 

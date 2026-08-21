@@ -28,6 +28,10 @@
     <string id="save">Salva</string>
     <string id="discard">Scarta</string>
     <string id="discardSure">Scartare la gara?</string>
+    <string id="saving">Salvataggio</string>
+    <string id="saved">Attività salvata</string>
+    <string id="discarding">Scarto</string>
+    <string id="discarded">Attività scartata</string>
     <string id="settingLapMinutes">Giro (minuti)</string>
     <string id="settingLapDistance">Giro (km)</string>
     <string id="settingCorral">Avviso corral</string>

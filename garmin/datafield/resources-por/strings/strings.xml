@@ -28,6 +28,10 @@
     <string id="save">Guardar</string>
     <string id="discard">Descartar</string>
     <string id="discardSure">Descartar a prova?</string>
+    <string id="saving">Guardando</string>
+    <string id="saved">Atividade guardada</string>
+    <string id="discarding">Descartando</string>
+    <string id="discarded">Atividade descartada</string>
     <string id="settingLapMinutes">Volta (minutos)</string>
     <string id="settingLapDistance">Volta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
