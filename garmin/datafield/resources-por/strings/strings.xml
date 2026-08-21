@@ -20,6 +20,10 @@
     <string id="total">Total</string>
     <string id="lapsDone">voltas completas</string>
     <string id="clock">Hora</string>
+    <string id="distance">Distância</string>
+    <string id="pace">Ritmo</string>
+    <string id="heartRate">FC</string>
+    <string id="remaining">Restante</string>
     <string id="pressStart">START para largar</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Procurando GPS</string>
@@ -28,6 +32,9 @@
     <string id="save">Guardar</string>
     <string id="discard">Descartar</string>
     <string id="discardSure">Descartar a prova?</string>
+    <string id="discardYes">Sim, descartar</string>
+    <string id="discardNo">Não</string>
+    <string id="resumeNew">Nova prova</string>
     <string id="resumeRace">Retomar a prova?</string>
     <string id="saving">Guardando</string>
     <string id="saved">Atividade guardada</string>
@@ -38,4 +45,11 @@
     <string id="settingLapDistance">Volta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
     <string id="settingAutoLap">Volta auto na largada</string>
+    <string id="settingScreens">Ecrãs de prova</string>
+    <string id="screenData">Dados</string>
+    <string id="settingPageLap">Ecrã Volta: posição (0 oculta)</string>
+    <string id="settingPageMargin">Ecrã Margem: posição (0 oculta)</string>
+    <string id="settingPageData">Ecrã Dados: posição (0 oculta)</string>
+    <string id="settingPageTotal">Ecrã Total: posição (0 oculta)</string>
+    <string id="settingPageClock">Ecrã Hora: posição (0 oculta)</string>
 </strings>

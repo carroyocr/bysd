@@ -218,8 +218,11 @@ la compilación**, solo suelta un `WARNING` y deja al reloj fuera en silencio.
 Para el simulador: arranca `connectiq` una vez y luego `monkeydo <prg> fenix7`.
 Desde VS Code, `Ctrl+Shift+P` → *Monkey C: Run App*.
 
-Para cargarlo en un reloj de verdad: conéctalo por USB y copia el `.prg` a
-`GARMIN/APPS/` de la unidad que monta.
+Para cargarlo en un reloj de verdad: compila **en release y optimizado**,
+añadiendo `-r -O 2` al comando de arriba (y `-d fenix847mm` para el fenix 8 de
+51 mm), y copia el `.prg` a `GARMIN/APPS/` de la unidad que monta. El `-r -O 2`
+no es cosmético: la build debug sin optimizar se nota en el reloj real, con
+los botones respondiendo tarde al pasar de pantalla.
 
 ## Idiomas
 

@@ -46,6 +46,12 @@ class RaceState {
     var avisoCorral = true;
     var autoLap = false;
 
+    // El orden de las pantallas de carrera de la app, como ids 0..4 en el
+    // orden en que se recorren (0 vuelta, 1 margen, 2 datos, 3 total,
+    // 4 reloj). Lo montan los ajustes pageLap..pageClock; el campo de datos
+    // no lo usa. MainView tiene el mismo orden de fabrica en su enum.
+    var ordenPaginas = [0, 1, 2, 3, 4];
+
     // El ancla: epoch de la campana de la vuelta 1. Solo la app lo pone, al
     // dar la salida; en el campo de datos se queda en null y manda la
     // actividad nativa.
@@ -93,6 +99,49 @@ class RaceState {
 
         avisoCorral = _ajuste("corralAlert", true);
         autoLap = _ajuste("autoLap", false);
+        _leerOrdenPaginas();
+    }
+
+    // Cada pantalla tiene su ajuste de posicion: 1..5 la ordena, 0 la oculta.
+    // Los empates y los huecos no importan -se ordena por posicion y, a
+    // igualdad, por el orden de fabrica-, asi que cualquier cosa que escriba
+    // el corredor en el telefono produce un orden valido. Si las oculta
+    // todas, queda la de vuelta: la app no se queda sin pantalla.
+    static const AJUSTES_PAGINAS = ["pageLap", "pageMargin", "pageData",
+                                    "pageTotal", "pageClock"];
+
+    function _leerOrdenPaginas() {
+        var posiciones = [];
+        var ids = [];
+        for (var i = 0; i < AJUSTES_PAGINAS.size(); i++) {
+            var pos = _ajuste(AJUSTES_PAGINAS[i], i + 1);
+            if (pos != null && pos.toNumber() > 0) {
+                posiciones = posiciones.add(pos.toNumber());
+                ids = ids.add(i);
+            }
+        }
+        var ps = posiciones as Lang.Array<Lang.Number>;
+        var vs = ids as Lang.Array<Lang.Number>;
+        var n = ps.size();
+        if (n == 0) {
+            ordenPaginas = [0];
+            return;
+        }
+        // Seleccion directa y estable: con cinco elementos no hace falta mas.
+        var usado = new [n];
+        var orden = [];
+        for (var k = 0; k < n; k++) {
+            var mejor = -1;
+            for (var i = 0; i < n; i++) {
+                if (usado[i] != true
+                    && (mejor < 0 || ps[i] < ps[mejor])) {
+                    mejor = i;
+                }
+            }
+            usado[mejor] = true;
+            orden = orden.add(vs[mejor]);
+        }
+        ordenPaginas = orden;
     }
 
     function _ajuste(clave, porDefecto) {

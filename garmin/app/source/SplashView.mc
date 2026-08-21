@@ -77,11 +77,19 @@ class SplashView extends Ui.View {
     // boton, tienen que acabar en la misma vista. Si quedo una carrera viva de
     // una sesion anterior -la app se cerro a mitad-, se ofrece reanudarla
     // antes de la linea de salida.
+    //
+    // La pregunta es un Menu2 propio y no un Ui.Confirmation, por lo mismo
+    // que el menu de terminar: al dialogo nativo lo cierra el sistema con un
+    // popView por su cuenta, y cambiar de vista al responder era una carrera
+    // de tiempos que en el fenix 8 dejaba el dialogo fantasma dibujandose
+    // sobre lo que viniera despues (se veia tras cada actualizacion de la
+    // app, que es cuando queda carrera guardada de la prueba anterior).
     static function irALaSalida(estado) {
         if (estado.hayGuardada()) {
-            Ui.switchToView(
-                new Ui.Confirmation(Ui.loadResource(Rez.Strings.resumeRace)),
-                new ReanudarDelegate(estado), Ui.SLIDE_IMMEDIATE);
+            var menu = new Ui.Menu2({ :title => Rez.Strings.resumeRace });
+            menu.addItem(new Ui.MenuItem(Rez.Strings.resume, null, :si, null));
+            menu.addItem(new Ui.MenuItem(Rez.Strings.resumeNew, null, :no, null));
+            Ui.pushView(menu, new ReanudarDelegate(estado), Ui.SLIDE_IMMEDIATE);
         } else {
             Ui.switchToView(new StartView(estado), new StartDelegate(estado),
                             Ui.SLIDE_IMMEDIATE);
@@ -89,20 +97,21 @@ class SplashView extends Ui.View {
     }
 }
 
-// La pregunta de reanudar, al abrir con una carrera guardada. Si: restaura el
-// estado y sigue la carrera donde estaba. No: la descarta y va a la linea de
-// salida para una carrera nueva.
-class ReanudarDelegate extends Ui.ConfirmationDelegate {
+// La pregunta de reanudar, al abrir con una carrera guardada. Reanudar:
+// restaura el estado y sigue la carrera donde estaba. Carrera nueva: descarta
+// la guardada y va a la linea de salida. No hay tercera salida: BACK no hace
+// nada, porque debajo solo queda el emblema y la decision hay que tomarla.
+class ReanudarDelegate extends Ui.Menu2InputDelegate {
 
     var _estado;
 
     function initialize(estado) {
-        ConfirmationDelegate.initialize();
+        Menu2InputDelegate.initialize();
         _estado = estado;
     }
 
-    function onResponse(respuesta) {
-        if (respuesta == Ui.CONFIRM_YES) {
+    function onSelect(item) {
+        if (item.getId() == :si) {
             _estado.recuperar();
             var app = App.getApp();
             if (app != null) { app.reanudar(); }
@@ -114,7 +123,9 @@ class ReanudarDelegate extends Ui.ConfirmationDelegate {
             Ui.switchToView(new StartView(_estado), new StartDelegate(_estado),
                             Ui.SLIDE_IMMEDIATE);
         }
-        return true;
+    }
+
+    function onBack() {
     }
 }
 

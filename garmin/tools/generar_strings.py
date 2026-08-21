@@ -58,6 +58,13 @@ TABLA = {
     "lapsDone":         ("laps done",               "vueltas completadas", "tours bouclés",        "Runden geschafft",      "giri completati",      "voltas completas"),
     "clock":            ("Clock",                   "Reloj",               "Heure",                "Uhr",                   "Ora",                  "Hora"),
 
+    # La pagina de datos: cuadricula de cuatro, con la vuelta en curso.
+    # Rotulos cortos porque encima de cada cifra no cabe una frase.
+    "distance":         ("Distance",                "Distancia",           "Distance",             "Distanz",               "Distanza",             "Distância"),
+    "pace":             ("Pace",                    "Ritmo",               "Allure",               "Pace",                  "Passo",                "Ritmo"),
+    "heartRate":        ("HR",                      "Pulso",               "FC",                   "Puls",                  "FC",                   "FC"),
+    "remaining":        ("Remaining",               "Restante",            "Restant",              "Verbleibend",           "Rimanente",            "Restante"),
+
 
     # La linea de salida y el menu de terminar. Los del menu y el dialogo los
     # envuelve el sistema; los de la esfera son cortos.
@@ -69,6 +76,14 @@ TABLA = {
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
     "discard":          ("Discard",                 "Descartar",           "Supprimer",            "Verwerfen",             "Scarta",               "Descartar"),
     "discardSure":      ("Discard the race?",       "¿Descartar la carrera?","Supprimer la course ?","Rennen verwerfen?",   "Scartare la gara?",    "Descartar a prova?"),
+    # Las dos opciones del menu de confirmar el descarte. Es un Menu2 propio y
+    # no un Ui.Confirmation: el dialogo nativo se cierra solo y hacia carrera
+    # de tiempos con nuestro cambio de vista.
+    "discardYes":       ("Yes, discard",            "Sí, descartar",       "Oui, supprimer",       "Ja, verwerfen",         "Sì, scarta",           "Sim, descartar"),
+    "discardNo":        ("No",                      "No",                  "Non",                  "Nein",                  "No",                   "Não"),
+    # La opcion de "no reanudar" al abrir con una carrera guardada: empezar
+    # de cero. Tambien Menu2 propio, por la misma carrera de tiempos.
+    "resumeNew":        ("New race",                "Carrera nueva",       "Nouvelle course",      "Neues Rennen",          "Nuova gara",           "Nova prova"),
     # Al abrir con una carrera viva guardada (se cerro la app a mitad): se
     # ofrece reanudarla. El reloj de pared manda, asi que la cuenta sigue exacta.
     "resumeRace":       ("Resume race?",            "¿Reanudar carrera?",  "Reprendre la course ?","Rennen fortsetzen?",    "Riprendere la gara?",  "Retomar a prova?"),
@@ -93,6 +108,18 @@ TABLA = {
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
     # La vuelta automatica: marcar al llegar al punto de salida, sin boton.
     "settingAutoLap":   ("Auto lap at start point", "Vuelta auto en la salida","Tour auto au départ","Auto-Runde am Start",  "Giro auto alla partenza","Volta auto na largada"),
+
+    # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
+    # cada una tiene su posicion (0 la oculta); en el reloj, un interruptor
+    # por pantalla. "screenData" es el nombre de la pagina de datos en esos
+    # menus; las demas reusan lap/margin/total/clock.
+    "settingScreens":   ("Race screens",            "Pantallas de carrera", "Écrans de course",     "Rennseiten",            "Schermate di gara",    "Ecrãs de prova"),
+    "screenData":       ("Data",                    "Datos",               "Données",              "Daten",                 "Dati",                 "Dados"),
+    "settingPageLap":   ("Lap screen: position (0 hides it)",      "Pantalla Vuelta: posición (0 la oculta)",   "Écran Tour : position (0 le masque)",      "Seite Runde: Position (0 blendet aus)",   "Schermata Giro: posizione (0 la nasconde)",   "Ecrã Volta: posição (0 oculta)"),
+    "settingPageMargin":("Margin screen: position (0 hides it)",   "Pantalla Margen: posición (0 la oculta)",   "Écran Marge : position (0 le masque)",     "Seite Puffer: Position (0 blendet aus)",  "Schermata Margine: posizione (0 la nasconde)","Ecrã Margem: posição (0 oculta)"),
+    "settingPageData":  ("Data screen: position (0 hides it)",     "Pantalla Datos: posición (0 la oculta)",    "Écran Données : position (0 le masque)",   "Seite Daten: Position (0 blendet aus)",   "Schermata Dati: posizione (0 la nasconde)",   "Ecrã Dados: posição (0 oculta)"),
+    "settingPageTotal": ("Total screen: position (0 hides it)",    "Pantalla Total: posición (0 la oculta)",    "Écran Total : position (0 le masque)",     "Seite Gesamt: Position (0 blendet aus)",  "Schermata Totale: posizione (0 la nasconde)", "Ecrã Total: posição (0 oculta)"),
+    "settingPageClock": ("Clock screen: position (0 hides it)",    "Pantalla Reloj: posición (0 la oculta)",    "Écran Heure : position (0 le masque)",     "Seite Uhr: Position (0 blendet aus)",     "Schermata Ora: posizione (0 la nasconde)",    "Ecrã Hora: posição (0 oculta)"),
 }
 
 # Las que se dibujan en la esfera. No cuentan para el aviso de largo ni las de

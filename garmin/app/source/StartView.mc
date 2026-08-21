@@ -111,6 +111,10 @@ class StartDelegate extends Ui.BehaviorDelegate {
         // punto de salida, o no. El check muestra si esta puesto.
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
             :autoLap, _estado.autoLap, null));
+        // Las pantallas de carrera: cuales se ven. El orden se cambia desde
+        // el telefono; aqui, en la linea de salida, solo mostrar u ocultar.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
+            :pantallas, null));
         Ui.pushView(menu, new AjustesMenuDelegate(_estado), Ui.SLIDE_UP);
         return true;
     }

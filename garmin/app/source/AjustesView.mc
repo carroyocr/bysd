@@ -39,6 +39,8 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             var ti = item as Ui.ToggleMenuItem;
             App.Properties.setValue("autoLap", ti.isEnabled());
             _estado.leerAjustes();
+        } else if (id == :pantallas) {
+            PantallasMenuDelegate.abrir(_estado);
         }
     }
 
@@ -163,5 +165,70 @@ class NumeroPickerDelegate extends Ui.PickerDelegate {
         Ui.popView(Ui.SLIDE_DOWN);
         Ui.popView(Ui.SLIDE_DOWN);
         return true;
+    }
+}
+
+// Las pantallas de carrera: un interruptor por pantalla, para elegir cuales
+// se ven. Escribe en las mismas propiedades pageLap..pageClock que el
+// telefono; apagar pone 0 (oculta) y encender devuelve la posicion de
+// fabrica, asi que un orden personalizado desde el telefono se rehace ahi.
+// El orden -que pantalla va primera- se cambia solo desde el telefono: una
+// esfera no es sitio para arrastrar listas.
+//
+// Si el corredor las apaga todas, RaceState deja la de vuelta: la app no se
+// queda sin pantalla.
+class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
+
+    // El rotulo de cada pantalla, su propiedad y su posicion de fabrica, en
+    // el mismo orden que RaceState.AJUSTES_PAGINAS.
+    static function abrir(estado) {
+        var menu = new Ui.Menu2({ :title => Rez.Strings.settingScreens });
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.lap, null,
+            :pagLap, _visible("pageLap", 1), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.margin, null,
+            :pagMargin, _visible("pageMargin", 2), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenData, null,
+            :pagData, _visible("pageData", 3), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.total, null,
+            :pagTotal, _visible("pageTotal", 4), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.clock, null,
+            :pagClock, _visible("pageClock", 5), null));
+        Ui.pushView(menu, new PantallasMenuDelegate(estado), Ui.SLIDE_LEFT);
+    }
+
+    static function _visible(clave, porDefecto) {
+        try {
+            var v = App.Properties.getValue(clave);
+            var pos = v == null ? porDefecto : v.toNumber();
+            return pos > 0;
+        } catch (e) {
+            return true;
+        }
+    }
+
+    var _estado;
+
+    function initialize(estado) {
+        Menu2InputDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onSelect(item) {
+        var id = item.getId();
+        var clave = null;
+        var porDefecto = 0;
+        if (id == :pagLap) { clave = "pageLap"; porDefecto = 1; }
+        else if (id == :pagMargin) { clave = "pageMargin"; porDefecto = 2; }
+        else if (id == :pagData) { clave = "pageData"; porDefecto = 3; }
+        else if (id == :pagTotal) { clave = "pageTotal"; porDefecto = 4; }
+        else if (id == :pagClock) { clave = "pageClock"; porDefecto = 5; }
+        if (clave == null) { return; }
+        var ti = item as Ui.ToggleMenuItem;
+        App.Properties.setValue(clave, ti.isEnabled() ? porDefecto : 0);
+        _estado.leerAjustes();
+    }
+
+    function onBack() {
+        Ui.popView(Ui.SLIDE_DOWN);
     }
 }

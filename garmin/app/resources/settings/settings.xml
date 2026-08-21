@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<settings>
+    <setting propertyKey="@Properties.lapMinutes" title="@Strings.settingLapMinutes">
+        <settingConfig type="numeric" min="1" max="1440"/>
+    </setting>
+    <!-- En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria
+         con el dibujo, que si obedece a la unidad del reloj: un ajuste que
+         cambiara de unidad no podria tener un valor por defecto correcto para
+         todos, y el 6.7 de fabrica acabaria siendo 6.7 millas para quien
+         tuviera el reloj en imperial y no lo tocara. -->
+    <setting propertyKey="@Properties.lapDistance" title="@Strings.settingLapDistance">
+        <settingConfig type="numeric" min="0.1" max="200"/>
+    </setting>
+    <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
+        <settingConfig type="boolean"/>
+    </setting>
+    <!-- Marcar la vuelta al llegar al punto de salida, sin pulsar nada. El
+         punto se fija solo al dar la salida. -->
+    <setting propertyKey="@Properties.autoLap" title="@Strings.settingAutoLap">
+        <settingConfig type="boolean"/>
+    </setting>
+
+    <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0
+         como "oculta". La etiqueta de cada ajuste lo explica; los empates los
+         resuelve la app por el orden de fabrica. -->
+    <setting propertyKey="@Properties.pageLap" title="@Strings.settingPageLap">
+        <settingConfig type="numeric" min="0" max="5"/>
+    </setting>
+    <setting propertyKey="@Properties.pageMargin" title="@Strings.settingPageMargin">
+        <settingConfig type="numeric" min="0" max="5"/>
+    </setting>
+    <setting propertyKey="@Properties.pageData" title="@Strings.settingPageData">
+        <settingConfig type="numeric" min="0" max="5"/>
+    </setting>
+    <setting propertyKey="@Properties.pageTotal" title="@Strings.settingPageTotal">
+        <settingConfig type="numeric" min="0" max="5"/>
+    </setting>
+    <setting propertyKey="@Properties.pageClock" title="@Strings.settingPageClock">
+        <settingConfig type="numeric" min="0" max="5"/>
+    </setting>
+</settings>

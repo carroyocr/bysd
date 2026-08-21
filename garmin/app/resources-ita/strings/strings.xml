@@ -20,6 +20,10 @@
     <string id="total">Totale</string>
     <string id="lapsDone">giri completati</string>
     <string id="clock">Ora</string>
+    <string id="distance">Distanza</string>
+    <string id="pace">Passo</string>
+    <string id="heartRate">FC</string>
+    <string id="remaining">Rimanente</string>
     <string id="pressStart">START per partire</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Ricerca GPS</string>
@@ -28,6 +32,9 @@
     <string id="save">Salva</string>
     <string id="discard">Scarta</string>
     <string id="discardSure">Scartare la gara?</string>
+    <string id="discardYes">Sì, scarta</string>
+    <string id="discardNo">No</string>
+    <string id="resumeNew">Nuova gara</string>
     <string id="resumeRace">Riprendere la gara?</string>
     <string id="saving">Salvataggio</string>
     <string id="saved">Attività salvata</string>
@@ -38,4 +45,11 @@
     <string id="settingLapDistance">Giro (km)</string>
     <string id="settingCorral">Avviso corral</string>
     <string id="settingAutoLap">Giro auto alla partenza</string>
+    <string id="settingScreens">Schermate di gara</string>
+    <string id="screenData">Dati</string>
+    <string id="settingPageLap">Schermata Giro: posizione (0 la nasconde)</string>
+    <string id="settingPageMargin">Schermata Margine: posizione (0 la nasconde)</string>
+    <string id="settingPageData">Schermata Dati: posizione (0 la nasconde)</string>
+    <string id="settingPageTotal">Schermata Totale: posizione (0 la nasconde)</string>
+    <string id="settingPageClock">Schermata Ora: posizione (0 la nasconde)</string>
 </strings>

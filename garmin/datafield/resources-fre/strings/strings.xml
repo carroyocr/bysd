@@ -20,6 +20,10 @@
     <string id="total">Total</string>
     <string id="lapsDone">tours bouclés</string>
     <string id="clock">Heure</string>
+    <string id="distance">Distance</string>
+    <string id="pace">Allure</string>
+    <string id="heartRate">FC</string>
+    <string id="remaining">Restant</string>
     <string id="pressStart">START pour partir</string>
     <string id="gpsReady">GPS prêt</string>
     <string id="gpsWait">Recherche GPS</string>
@@ -28,6 +32,9 @@
     <string id="save">Enregistrer</string>
     <string id="discard">Supprimer</string>
     <string id="discardSure">Supprimer la course ?</string>
+    <string id="discardYes">Oui, supprimer</string>
+    <string id="discardNo">Non</string>
+    <string id="resumeNew">Nouvelle course</string>
     <string id="resumeRace">Reprendre la course ?</string>
     <string id="saving">Enregistrement</string>
     <string id="saved">Activité enregistrée</string>
@@ -38,4 +45,11 @@
     <string id="settingLapDistance">Tour (km)</string>
     <string id="settingCorral">Alerte corral</string>
     <string id="settingAutoLap">Tour auto au départ</string>
+    <string id="settingScreens">Écrans de course</string>
+    <string id="screenData">Données</string>
+    <string id="settingPageLap">Écran Tour : position (0 le masque)</string>
+    <string id="settingPageMargin">Écran Marge : position (0 le masque)</string>
+    <string id="settingPageData">Écran Données : position (0 le masque)</string>
+    <string id="settingPageTotal">Écran Total : position (0 le masque)</string>
+    <string id="settingPageClock">Écran Heure : position (0 le masque)</string>
 </strings>

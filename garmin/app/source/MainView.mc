@@ -2,24 +2,29 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
+using Toybox.Activity as Activity;
 
-// Las cuatro pantallas de carrera.
+// Las cinco pantallas de carrera.
 //
-// Una sola cifra grande en cada una. A las veinte horas, de noche y con la
-// vista cansada, solo se lee lo que ocupa media esfera: todo lo demas es
-// contexto que se mira cuando sobra tiempo, y en una backyard nunca sobra.
+// Una sola cifra grande en cada una -salvo la de datos, que es la cuadricula
+// clasica de correr-. A las veinte horas, de noche y con la vista cansada,
+// solo se lee lo que ocupa media esfera: todo lo demas es contexto que se
+// mira cuando sobra tiempo, y en una backyard nunca sobra.
 class MainView extends Ui.View {
 
+    // Los ids de pantalla, en el orden de fabrica. El orden real -y cuales se
+    // ven- lo deciden los ajustes: estado.ordenPaginas trae los ids visibles
+    // ya ordenados, y _pagina es el indice DENTRO de esa lista, no un id.
     enum {
         PAGINA_VUELTA = 0,
         PAGINA_MARGEN = 1,
-        PAGINA_TUYO   = 2,
-        PAGINA_RELOJ  = 3
+        PAGINA_DATOS  = 2,
+        PAGINA_TUYO   = 3,
+        PAGINA_RELOJ  = 4
     }
-    static const PAGINAS = 4;
 
     var _estado;
-    var _pagina = PAGINA_VUELTA;
+    var _pagina = 0;
     // Escrito como diccionario para que el comprobador sepa que _s[:clave] es
     // un acceso legitimo y no avise en cada compilacion.
     var _s as Lang.Dictionary = {};
@@ -41,6 +46,10 @@ class MainView extends Ui.View {
             :running => Ui.loadResource(Rez.Strings.running),
             :margin => Ui.loadResource(Rez.Strings.margin),
             :toGo => Ui.loadResource(Rez.Strings.toGo),
+            :distance => Ui.loadResource(Rez.Strings.distance),
+            :pace => Ui.loadResource(Rez.Strings.pace),
+            :heartRate => Ui.loadResource(Rez.Strings.heartRate),
+            :remaining => Ui.loadResource(Rez.Strings.remaining),
             :total => Ui.loadResource(Rez.Strings.total),
             :lapsDone => Ui.loadResource(Rez.Strings.lapsDone),
             :laps => Ui.loadResource(Rez.Strings.laps),
@@ -51,7 +60,8 @@ class MainView extends Ui.View {
     }
 
     function avanzar(paso) {
-        _pagina = (_pagina + paso + PAGINAS) % PAGINAS;
+        var n = (_estado.ordenPaginas as Lang.Array<Lang.Number>).size();
+        _pagina = (_pagina + paso + n) % n;
     }
 
     function onUpdate(dc) {
@@ -114,11 +124,20 @@ class MainView extends Ui.View {
         // muestra la cuenta atras a la campana y las demas se protegen solas.
         // La primera version cortaba aqui con un return, y con vueltas de una
         // hora eso bloqueaba el cambio de pantalla hasta media hora seguida.
-        if (_pagina == PAGINA_MARGEN) {
+        //
+        // El indice se protege antes de indexar: si un cambio de ajustes desde
+        // el telefono acorta la lista a mitad de carrera, se vuelve a la
+        // primera pagina en vez de leer fuera.
+        var orden = _estado.ordenPaginas as Lang.Array<Lang.Number>;
+        if (_pagina >= orden.size()) { _pagina = 0; }
+        var id = orden[_pagina];
+        if (id == PAGINA_MARGEN) {
             _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
-        } else if (_pagina == PAGINA_TUYO) {
+        } else if (id == PAGINA_DATOS) {
+            _paginaDatos(dc, cx, cy, h, vuelta, r);
+        } else if (id == PAGINA_TUYO) {
             _paginaTuyo(dc, cx, cy, h, radio, vuelta);
-        } else if (_pagina == PAGINA_RELOJ) {
+        } else if (id == PAGINA_RELOJ) {
             _paginaReloj(dc, cx, cy, h, radio);
         } else if (vuelta == 0) {
             _antesDeLaSalida(dc, cx, cy, h, radio, r);
@@ -126,7 +145,7 @@ class MainView extends Ui.View {
             _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
         }
 
-        _migas(dc, cx, h);
+        _migas(dc, cx, h, orden.size());
     }
 
     // --- pantallas ---
@@ -178,9 +197,10 @@ class MainView extends Ui.View {
     // El aro ancho compartido por el descanso y el corral de tres y dos
     // minutos: un anillo grueso del color pegado al borde, con el centro
     // negro. Se dibuja algo mas adentro que los aros finos para que el grosor
-    // no se salga de la esfera.
+    // no se salga de la esfera. (Empezo en 14, subio a 21 y en el reloj real
+    // se veia demasiado: quedo un cuarto mas fino, en 16.)
     function _aroAncho(dc, cx, cy, radio, color) {
-        _arco(dc, cx, cy, radio - 8, 1.0, color, 21);
+        _arco(dc, cx, cy, radio - 6, 1.0, color, 16);
     }
 
     // El calentamiento: el tramo previo a la primera campana, cuando el
@@ -262,6 +282,54 @@ class MainView extends Ui.View {
             linea = linea + " ≈ " + Fmt.reloj((faltan * ritmo).toNumber());
         }
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+    }
+
+    // La pagina de datos: cuatro cifras de un vistazo, en el reparto clasico
+    // de Garmin para cuatro campos en esfera redonda: uno arriba a lo ancho,
+    // dos en el centro -que es donde la esfera es mas ancha y caben lado a
+    // lado sin pisarse-, y uno abajo a lo ancho. La primera version era una
+    // cuadricula 2x2 y los numeros montaban sobre las lineas.
+    //
+    // Arriba la distancia de toda la carrera -la que mide el reloj, con la
+    // vuelta en curso incluida-; en el centro el ritmo de la vuelta y el
+    // pulso; abajo el tiempo a la campana. Es la excepcion a la regla de una
+    // cifra por pantalla: quien la mira quiere el estado completo, y ya tiene
+    // las otras cuatro pantallas para leer grande.
+    function _paginaDatos(dc, cx, cy, h, vuelta, r) {
+        var w = dc.getWidth();
+        var yArriba = cy - (h * 15 / 100);
+        var yAbajo = cy + (h * 15 / 100);
+
+        // Las lineas del marco, tenues: son mueble, no dato.
+        dc.setPenWidth(1);
+        dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.drawLine(cx - (w * 42 / 100), yArriba, cx + (w * 42 / 100), yArriba);
+        dc.drawLine(cx - (w * 42 / 100), yAbajo, cx + (w * 42 / 100), yAbajo);
+        dc.drawLine(cx, yArriba, cx, yAbajo);
+
+        var info = Activity.getActivityInfo();
+        var metros = info == null ? null : info.elapsedDistance;
+        var pulso = info == null ? null : info.currentHeartRate;
+
+        // En la vuelta 0 (calentamiento) todavia no hay vuelta que medir: el
+        // ritmo va con guion. La distancia y el pulso si son de verdad, y el
+        // restante es la cuenta atras a la salida.
+        var ritmo = vuelta >= 1 ? _estado.ritmoSegPorKm() : null;
+
+        _campo(dc, cx, cy - (h * 33 / 100), h, _s[:distance],
+               Fmt.distancia(metros == null ? null : metros / 1000.0));
+        _campo(dc, cx - (w * 22 / 100), cy - (h * 9 / 100), h,
+               _s[:pace], Fmt.ritmo(ritmo));
+        _campo(dc, cx + (w * 22 / 100), cy - (h * 9 / 100), h,
+               _s[:heartRate], pulso == null ? "--" : pulso.format("%d"));
+        _campo(dc, cx, cy + (h * 20 / 100), h, _s[:remaining], Fmt.reloj(r));
+    }
+
+    // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo.
+    function _campo(dc, x, yRotulo, h, rotulo, valor) {
+        _txt(dc, x, yRotulo, Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, rotulo);
+        _txt(dc, x, yRotulo + (h * 11 / 100), Gfx.FONT_NUMBER_MILD,
+             Gfx.COLOR_WHITE, valor);
     }
 
     // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
@@ -360,11 +428,13 @@ class MainView extends Ui.View {
         dc.drawArc(cx, cy, radio, Gfx.ARC_CLOCKWISE, 90, fin);
     }
 
-    function _migas(dc, cx, h) {
+    // Con una sola pagina visible no hay nada que navegar y las migas sobran.
+    function _migas(dc, cx, h, n) {
+        if (n < 2) { return; }
         var y = h - (h * 7 / 100);
         var paso = 9;
-        var x0 = cx - (paso * (PAGINAS - 1) / 2);
-        for (var i = 0; i < PAGINAS; i++) {
+        var x0 = cx - (paso * (n - 1) / 2);
+        for (var i = 0; i < n; i++) {
             dc.setColor(i == _pagina ? Gfx.COLOR_WHITE : Gfx.COLOR_DK_GRAY,
                         Gfx.COLOR_TRANSPARENT);
             dc.fillCircle(x0 + (i * paso), y, 2);

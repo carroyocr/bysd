@@ -20,6 +20,10 @@
     <string id="total">Total</string>
     <string id="lapsDone">vueltas completadas</string>
     <string id="clock">Reloj</string>
+    <string id="distance">Distancia</string>
+    <string id="pace">Ritmo</string>
+    <string id="heartRate">Pulso</string>
+    <string id="remaining">Restante</string>
     <string id="pressStart">START para salir</string>
     <string id="gpsReady">GPS listo</string>
     <string id="gpsWait">Buscando GPS</string>
@@ -28,6 +32,9 @@
     <string id="save">Guardar</string>
     <string id="discard">Descartar</string>
     <string id="discardSure">¿Descartar la carrera?</string>
+    <string id="discardYes">Sí, descartar</string>
+    <string id="discardNo">No</string>
+    <string id="resumeNew">Carrera nueva</string>
     <string id="resumeRace">¿Reanudar carrera?</string>
     <string id="saving">Guardando</string>
     <string id="saved">Actividad guardada</string>
@@ -38,4 +45,11 @@
     <string id="settingLapDistance">Vuelta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
     <string id="settingAutoLap">Vuelta auto en la salida</string>
+    <string id="settingScreens">Pantallas de carrera</string>
+    <string id="screenData">Datos</string>
+    <string id="settingPageLap">Pantalla Vuelta: posición (0 la oculta)</string>
+    <string id="settingPageMargin">Pantalla Margen: posición (0 la oculta)</string>
+    <string id="settingPageData">Pantalla Datos: posición (0 la oculta)</string>
+    <string id="settingPageTotal">Pantalla Total: posición (0 la oculta)</string>
+    <string id="settingPageClock">Pantalla Reloj: posición (0 la oculta)</string>
 </strings>

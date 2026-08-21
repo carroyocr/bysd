@@ -38,6 +38,11 @@ class MainDelegate extends Ui.BehaviorDelegate {
     // de Garmin. No sale de la app sin preguntar: debajo hay una actividad
     // grabando y una backyard no tiene segunda salida.
     function onSelect() {
+        // Sin sesion grabando no hay nada que guardar ni descartar: el menu
+        // solo confundiria. No deberia pasar, pero si pasa, mejor un boton
+        // muerto que un menu que no hace nada.
+        var app = App.getApp();
+        if (app == null || !app.grabando()) { return true; }
         // Los rotulos van como id de recurso, sin loadResource: cargados a
         // mano en este contexto, el Menu2 del fenix 8 los dibujaba en blanco
         // (el menu salia vacio y parecia no hacer nada). Con el id, el menu
@@ -56,9 +61,13 @@ class MainDelegate extends Ui.BehaviorDelegate {
     // carrera no hay retroceso, la unica salida es el menu de START.
     function onBack() {
         var app = App.getApp();
-        if (app != null) {
-            app.marcarVuelta();
-        }
+        // La regla de "no hay retroceso" protege la actividad que se esta
+        // grabando. Si no hay ninguna -un cierre que se torcio a medias-,
+        // tragarse el BACK dejaria al corredor atrapado en una pantalla
+        // muerta, sin mas salida que apagar el reloj. Devolver false deja que
+        // el sistema haga el BACK de siempre: salir de la app.
+        if (app == null || !app.grabando()) { return false; }
+        app.marcarVuelta();
         return true;
     }
 
@@ -76,6 +85,15 @@ class MainDelegate extends Ui.BehaviorDelegate {
     }
 }
 
+// En este menu y en el de confirmar no hay ni Ui.Confirmation ni timers, y es
+// a proposito: el dialogo nativo lo cierra el sistema por su cuenta JUSTO
+// DESPUES de que respondemos, y cambiar de vista en ese instante era una
+// carrera de tiempos. En el fenix 8 se perdia: el dialogo y la pantalla de
+// cierre quedaban dibujando a la vez, alternando en los dos buferes del
+// AMOLED, y se veian superpuestos (los aros de guardar y descartar mezclados
+// con el cuadro rojo del dialogo). Aqui cada transicion la hacemos nosotros
+// y no hay nada que pueda cruzarse: la pantalla de cierre se muestra primero
+// y el trabajo de verdad lo hace ella en su onShow.
 class MenuFinDelegate extends Ui.Menu2InputDelegate {
 
     function initialize() {
@@ -85,13 +103,15 @@ class MenuFinDelegate extends Ui.Menu2InputDelegate {
     function onSelect(item) {
         var id = item.getId();
         if (id == :guardar) {
-            var app = App.getApp();
-            if (app != null) { app.terminar(true); }
+            Ui.switchToView(new SalidaView(true), new SalidaDelegate(),
+                            Ui.SLIDE_IMMEDIATE);
         } else if (id == :descartar) {
             // Descartar treinta horas por un toque seria imperdonable: es la
             // unica opcion del menu que pide confirmacion.
-            Ui.pushView(new Ui.Confirmation(Ui.loadResource(Rez.Strings.discardSure)),
-                        new DescartarDelegate(), Ui.SLIDE_IMMEDIATE);
+            var menu = new Ui.Menu2({ :title => Rez.Strings.discardSure });
+            menu.addItem(new Ui.MenuItem(Rez.Strings.discardYes, null, :si, null));
+            menu.addItem(new Ui.MenuItem(Rez.Strings.discardNo, null, :no, null));
+            Ui.pushView(menu, new ConfirmarDescarteDelegate(), Ui.SLIDE_UP);
         } else {
             Ui.popView(Ui.SLIDE_DOWN);
         }
@@ -102,17 +122,22 @@ class MenuFinDelegate extends Ui.Menu2InputDelegate {
     }
 }
 
-class DescartarDelegate extends Ui.ConfirmationDelegate {
+class ConfirmarDescarteDelegate extends Ui.Menu2InputDelegate {
 
     function initialize() {
-        ConfirmationDelegate.initialize();
+        Menu2InputDelegate.initialize();
     }
 
-    function onResponse(respuesta) {
-        if (respuesta == Ui.CONFIRM_YES) {
-            var app = App.getApp();
-            if (app != null) { app.terminar(false); }
+    function onSelect(item) {
+        if (item.getId() == :si) {
+            Ui.switchToView(new SalidaView(false), new SalidaDelegate(),
+                            Ui.SLIDE_IMMEDIATE);
+        } else {
+            Ui.popView(Ui.SLIDE_IMMEDIATE);
         }
-        return true;
+    }
+
+    function onBack() {
+        Ui.popView(Ui.SLIDE_IMMEDIATE);
     }
 }
