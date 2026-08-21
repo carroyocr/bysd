@@ -100,12 +100,13 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ---
 
-## El icono del lanzador
+## El icono del lanzador — resuelto
 
-El icono actual es de 65×65 (el tamaño del fénix 8). Cada dispositivo pide el
-suyo (35, 40, 56, 60, 62, 65, 70 px), y al compilar Garmin lo **escala** — de
-ahí los avisos. **No impide publicar**: el escalado se ve bien en los grandes
-y aceptable en los pequeños.
+Cada dispositivo pide su tamaño de icono (35, 40, 56, 60, 62, 65, 70 px). Ya
+se generó el icono en los **siete tamaños** (en `shared/resources-icon<N>/`) y
+cada reloj mapea al suyo en los `monkey.jungle`. Los `.iq` compilan **sin
+ningún aviso de icono** — máxima calidad en todos los relojes, sin depender del
+escalado de Garmin.
 
 Grupos por tamaño de icono:
 
@@ -119,10 +120,4 @@ Grupos por tamaño de icono:
 | 65 | fenix847mm, fr965 |
 | 70 | venu2, venu3 |
 
-**Opción A (recomendada para empezar):** publicar con el icono actual; Garmin
-escala. Hacer los iconos por talla en una actualización v1.1 —es un cambio
-pequeño de subir.
-
-**Opción B:** generar el icono en los siete tamaños y mapear cada dispositivo
-a su carpeta en los `monkey.jungle`. Elimina los avisos y da la mejor calidad
-desde el día 1, a cambio de más trabajo de configuración.
+Hecho el 21 de agosto de 2026 (commit `837c51f`).
