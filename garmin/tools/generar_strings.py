@@ -32,7 +32,9 @@ TABLA = {
     "fieldName":        ("Backyard Margin",         "Backyard Margen",     "Backyard Marge",       "Backyard Puffer",       "Backyard Margine",     "Backyard Margem"),
     "lap":              ("Lap",                     "Vuelta",              "Tour",                 "Runde",                 "Giro",                 "Volta"),
     "nextStart":        ("Next start",              "Próxima salida",      "Prochain départ",      "Nächster Start",        "Prossima partenza",    "Próxima partida"),
-    "beforeStart":      ("For lap 1",               "Para la vuelta 1",    "Pour le tour 1",       "Für Runde 1",           "Per il giro 1",        "Para a volta 1"),
+    # El tramo previo a la primera campana es calentamiento, no vuelta 1: en el
+    # FIT queda como su propio tramo y en la esfera se llama por su nombre.
+    "warmup":           ("Warm-up",                 "Calentamiento",       "Échauffement",         "Aufwärmen",             "Riscaldamento",        "Aquecimento"),
     # Corral, yard y DNF ya son las palabras del deporte en todos los idiomas.
     # Traducirlas confunde mas de lo que ayuda.
     "corral":           ("Corral",                  "Corral",              "Corral",               "Corral",                "Corral",               "Corral"),

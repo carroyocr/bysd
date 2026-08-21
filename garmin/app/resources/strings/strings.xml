@@ -7,7 +7,7 @@
     <string id="fieldName">Backyard Margin</string>
     <string id="lap">Lap</string>
     <string id="nextStart">Next start</string>
-    <string id="beforeStart">For lap 1</string>
+    <string id="warmup">Warm-up</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">To the line</string>
     <string id="rest">Rest</string>

@@ -6,7 +6,7 @@
     <string id="fieldName">Backyard Marge</string>
     <string id="lap">Tour</string>
     <string id="nextStart">Prochain départ</string>
-    <string id="beforeStart">Pour le tour 1</string>
+    <string id="warmup">Échauffement</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">Sur la ligne</string>
     <string id="rest">De repos</string>

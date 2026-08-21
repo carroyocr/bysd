@@ -129,16 +129,16 @@ class BackyardApp extends App.AppBase {
 
     // La campana: suena siempre que el reloj de pared abre vuelta, incluida la
     // de salida si el corredor pulso START antes de la hora. En el FIT cierra
-    // el tramo anterior, salvo en la primera, donde no hay nada que cerrar.
+    // el tramo anterior y abre uno nuevo, sin excepciones. La primera campana
+    // cierra el CALENTAMIENTO -lo que se corrio o se espero antes de la hora-,
+    // que asi queda en su propio tramo y no se suma a la vuelta 1. Antes se
+    // saltaba ese primer cierre y el calentamiento se pegaba a la vuelta.
     function _quizaCampana() {
         if (_session == null) { return; }
         var v = estado.vuelta();
         if (v == null || v <= _vueltaVista) { return; }
-        var primera = (_vueltaVista == 0);
         _vueltaVista = v;
-        if (!primera) {
-            _session.addLap();
-        }
+        _session.addLap();
         _vibrar(1500);
     }
 

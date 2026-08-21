@@ -6,7 +6,7 @@
     <string id="fieldName">Backyard Margen</string>
     <string id="lap">Vuelta</string>
     <string id="nextStart">Próxima salida</string>
-    <string id="beforeStart">Para la vuelta 1</string>
+    <string id="warmup">Calentamiento</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">A la línea</string>
     <string id="rest">De descanso</string>

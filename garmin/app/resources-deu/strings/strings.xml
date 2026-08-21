@@ -6,7 +6,7 @@
     <string id="fieldName">Backyard Puffer</string>
     <string id="lap">Runde</string>
     <string id="nextStart">Nächster Start</string>
-    <string id="beforeStart">Für Runde 1</string>
+    <string id="warmup">Aufwärmen</string>
     <string id="corral">Corral</string>
     <string id="toTheLine">An die Linie</string>
     <string id="rest">Pause</string>

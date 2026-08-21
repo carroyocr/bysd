@@ -35,7 +35,7 @@ class MainView extends Ui.View {
         _s = {
             :lap => Ui.loadResource(Rez.Strings.lap),
             :nextStart => Ui.loadResource(Rez.Strings.nextStart),
-            :beforeStart => Ui.loadResource(Rez.Strings.beforeStart),
+            :warmup => Ui.loadResource(Rez.Strings.warmup),
             :toTheLine => Ui.loadResource(Rez.Strings.toTheLine),
             :rest => Ui.loadResource(Rez.Strings.rest),
             :running => Ui.loadResource(Rez.Strings.running),
@@ -131,46 +131,66 @@ class MainView extends Ui.View {
 
     // --- pantallas ---
 
-    // El corral, la pantalla que se impone en los ultimos tres minutos. El
-    // color lo pone el semaforo -amarillo, naranja, rojo- y lo llena todo: en
-    // una carpa a oscuras, un cuadro de color de esquina a esquina se ve
-    // antes de leer un solo digito. Sobre amarillo la tinta es negra, que es
-    // lo unico que se lee ahi; sobre naranja y rojo, blanca.
+    // El corral, la pantalla que se impone en los ultimos tres minutos. A tres
+    // y dos minutos -amarillo y naranja- es un aro ancho del color sobre fondo
+    // negro: se ve el color de un vistazo con casi toda la pantalla apagada,
+    // que en AMOLED es la esquina de la que sale la bateria. Solo el ultimo
+    // minuto se llena de rojo de esquina a esquina: es el aviso mas urgente y
+    // el mas breve, y ahi el gasto se justifica.
     //
-    // La cuenta grande es el tiempo a la campana; arriba, "A la linea"; abajo,
-    // la vuelta que esa campana abre (la actual mas uno, y "1" en la salida).
+    // La cuenta grande es el tiempo a la campana, en la fuente mas gruesa;
+    // arriba, "A la linea"; abajo, la vuelta que esa campana abre.
     function _corral(dc, cx, cy, h, radio, vuelta, r, aviso) {
-        dc.setColor(aviso, aviso);
+        var etiqueta = _s[:lap] + " " + (vuelta + 1).format("%d");
+        if (aviso == Gfx.COLOR_RED) {
+            dc.setColor(aviso, aviso);
+            dc.clear();
+            _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:toTheLine]);
+            _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE, Fmt.reloj(r));
+            _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, etiqueta);
+            return;
+        }
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
         dc.clear();
-        var tinta = (aviso == Gfx.COLOR_YELLOW)
-                  ? Gfx.COLOR_BLACK : Gfx.COLOR_WHITE;
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, tinta, _s[:toTheLine]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, tinta, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, tinta,
-             _s[:lap] + " " + (vuelta + 1).format("%d"));
+        _aroAncho(dc, cx, cy, radio, aviso);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, aviso, _s[:toTheLine]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, aviso, Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, etiqueta);
     }
 
-    // El descanso, la contraparte verde del corral. Mismo molde -pantalla de
-    // color, cifra grande, tinta negra que es la unica que se lee sobre un
-    // verde brillante- pero aqui la noticia es buena: la vuelta esta hecha.
-    // Arriba, "De descanso"; en grande, el tiempo a la proxima campana; abajo,
-    // lo acumulado: vueltas cerradas y kilometros.
+    // El descanso, la contraparte del corral: la vuelta esta hecha. Un aro
+    // ancho verde sobre fondo negro -misma economia de bateria que el corral
+    // de tres y dos minutos-, con el tiempo a la proxima campana en grueso y,
+    // debajo, lo acumulado: vueltas cerradas y kilometros.
     function _descanso(dc, cx, cy, h, radio, vuelta, r) {
-        dc.setColor(Gfx.COLOR_GREEN, Gfx.COLOR_GREEN);
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
         dc.clear();
+        _aroAncho(dc, cx, cy, radio, Gfx.COLOR_GREEN);
         var completadas = _completadas(vuelta);
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK, _s[:rest]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_BLACK, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_GREEN, _s[:rest]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_GREEN, Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              completadas.format("%d") + " " + _s[:laps]);
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK,
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
+    // El aro ancho compartido por el descanso y el corral de tres y dos
+    // minutos: un anillo grueso del color pegado al borde, con el centro
+    // negro. Se dibuja algo mas adentro que los aros finos para que el grosor
+    // no se salga de la esfera.
+    function _aroAncho(dc, cx, cy, radio, color) {
+        _arco(dc, cx, cy, radio - 4, 1.0, color, 14);
+    }
+
+    // El calentamiento: el tramo previo a la primera campana, cuando el
+    // corredor pulso START antes de la hora. No es la vuelta 1 -en el FIT queda
+    // en su propio tramo- y por eso la esfera lo dice. Fondo negro, un aro
+    // tenue y la cuenta a la salida en grueso.
     function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
-        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_ORANGE, 7);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:beforeStart]);
+        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_DK_GRAY, 6);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, _s[:warmup]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE, Fmt.reloj(r));
     }
 
     // El rotulo de arriba presenta la cifra ("Proxima salida") y debajo va que
@@ -213,7 +233,7 @@ class MainView extends Ui.View {
         }
 
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
-             vuelta < 1 ? _s[:beforeStart] : _s[:margin]);
+             vuelta < 1 ? _s[:warmup] : _s[:margin]);
 
         if (margen == null) {
             // El primer kilometro miente: con trescientos metros hechos el
