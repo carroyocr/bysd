@@ -99,11 +99,11 @@ class SplashDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
-    // Cualquier toque durante el emblema salta a la linea de salida, BACK
-    // incluido: en el segundo del logo, un roce no debe sacar de la app. La
-    // salida real, si se abrio por error, es el mantener pulsado del sistema.
+    // START y las flechas saltan el emblema a la linea de salida; BACK, en
+    // cambio, sale de la app: antes de dar la salida no se graba nada, asi que
+    // el BACK de siempre -volver a la lista de actividades- es lo correcto.
+    // Devolver false deja que el sistema lo haga.
     function onBack() {
-        SplashView.irALaSalida(_estado);
-        return true;
+        return false;
     }
 }
