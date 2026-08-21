@@ -23,6 +23,10 @@ class BackyardApp extends App.AppBase {
     var _session = null;
     var _timer;
 
+    // Si el cierre en curso es guardar o descartar, para el switch diferido a
+    // la pantalla de cierre.
+    var _guardado = false;
+
     // La ultima vuelta vista, para detectar la campana. Cero significa que la
     // carrera no ha empezado.
     var _vueltaVista = 0;
@@ -122,10 +126,22 @@ class BackyardApp extends App.AppBase {
             _session.discard();
         }
         _session = null;
-        // La pantalla de cierre, al estilo de la actividad nativa: primero el
-        // aro que se llena mientras procesa, luego el aro verde y "Actividad
-        // guardada/descartada", y ella misma cierra la app al terminar.
-        Ui.switchToView(new SalidaView(guardar), new Ui.BehaviorDelegate(),
+        // La pantalla de cierre se muestra con un pequeno retraso, no aqui
+        // mismo. Descartar llega desde el dialogo de confirmacion, y el
+        // sistema cierra ese dialogo -con su popView- JUSTO DESPUES de que
+        // respondemos: si cambiaramos de vista ahora, ese popView se llevaria
+        // por delante la pantalla de cierre y volveria al menu (el corredor
+        // veia "Descartar" otra vez). El timer deja que el dialogo y el menu
+        // se cierren primero, y entonces cambia a la pantalla de cierre.
+        _guardado = guardar;
+        var t = new Timer.Timer();
+        t.start(method(:mostrarCierre), 100, false);
+    }
+
+    // 'as Void' por lo mismo que en tic(): Timer.start exige que el metodo no
+    // devuelva nada.
+    function mostrarCierre() as Void {
+        Ui.switchToView(new SalidaView(_guardado), new Ui.BehaviorDelegate(),
                         Ui.SLIDE_IMMEDIATE);
     }
 
