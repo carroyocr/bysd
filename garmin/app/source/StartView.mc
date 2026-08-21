@@ -96,4 +96,18 @@ class StartDelegate extends Ui.BehaviorDelegate {
     function onBack() {
         return false;
     }
+
+    // El boton de menu (UP largo) abre los ajustes de la vuelta -duracion y
+    // distancia-, para fijarlos en el reloj sin sacar el telefono. Solo aqui,
+    // antes de la salida: cambiar la duracion a mitad de carrera moveria las
+    // campanas. El sub-rotulo de cada opcion es el valor actual.
+    function onMenu() {
+        var menu = new Ui.Menu2({ :title => Rez.Strings.settingsTitle });
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapMinutes,
+            (_estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
+            _estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
+        Ui.pushView(menu, new AjustesMenuDelegate(_estado), Ui.SLIDE_UP);
+        return true;
+    }
 }

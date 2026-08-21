@@ -33,6 +33,7 @@
     <string id="saved">Aktivität gespeichert</string>
     <string id="discarding">Verwerfen</string>
     <string id="discarded">Aktivität verworfen</string>
+    <string id="settingsTitle">Runden-Einstellungen</string>
     <string id="settingLapMinutes">Runde (Minuten)</string>
     <string id="settingLapDistance">Rundenlänge (km)</string>
     <string id="settingCorral">Corral-Warnung</string>

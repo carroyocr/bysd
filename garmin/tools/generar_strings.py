@@ -82,6 +82,9 @@ TABLA = {
 
     # Ajustes: se leen en el telefono, no en el reloj, asi que aqui el largo
     # no aprieta.
+    # Titulo del menu de ajustes que se abre en la linea de salida con el
+    # boton de menu (UP largo), para fijar la vuelta sin sacar el telefono.
+    "settingsTitle":    ("Lap settings",            "Ajustes de vuelta",   "Réglages du tour",     "Runden-Einstellungen",  "Impostazioni giro",    "Ajustes da volta"),
     "settingLapMinutes":("Lap duration (minutes)",  "Vuelta (minutos)",    "Tour (minutes)",       "Runde (Minuten)",       "Giro (minuti)",        "Volta (minutos)"),
     # En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria con
     # el dibujo, que si obedece a la unidad del reloj: un ajuste que cambiara
@@ -97,7 +100,7 @@ TABLA = {
 # terminar y sus dialogos, que los envuelve el sistema.
 FUERA_DE_LA_ESFERA = ["appName", "fieldName",
                       "endTitle", "resume", "save", "discard", "discardSure",
-                      "saving", "saved", "discarding", "discarded", "resumeRace"]
+                      "saving", "saved", "discarding", "discarded", "resumeRace", "settingsTitle"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
 

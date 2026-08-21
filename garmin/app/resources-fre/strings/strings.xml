@@ -33,6 +33,7 @@
     <string id="saved">Activité enregistrée</string>
     <string id="discarding">Suppression</string>
     <string id="discarded">Activité supprimée</string>
+    <string id="settingsTitle">Réglages du tour</string>
     <string id="settingLapMinutes">Tour (minutes)</string>
     <string id="settingLapDistance">Tour (km)</string>
     <string id="settingCorral">Alerte corral</string>

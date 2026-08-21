@@ -33,6 +33,7 @@
     <string id="saved">Atividade guardada</string>
     <string id="discarding">Descartando</string>
     <string id="discarded">Atividade descartada</string>
+    <string id="settingsTitle">Ajustes da volta</string>
     <string id="settingLapMinutes">Volta (minutos)</string>
     <string id="settingLapDistance">Volta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
