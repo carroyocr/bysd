@@ -180,7 +180,7 @@ class MainView extends Ui.View {
     // negro. Se dibuja algo mas adentro que los aros finos para que el grosor
     // no se salga de la esfera.
     function _aroAncho(dc, cx, cy, radio, color) {
-        _arco(dc, cx, cy, radio - 4, 1.0, color, 14);
+        _arco(dc, cx, cy, radio - 8, 1.0, color, 21);
     }
 
     // El calentamiento: el tramo previo a la primera campana, cuando el
