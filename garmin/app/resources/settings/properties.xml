@@ -12,12 +12,14 @@
 
       Este archivo era compartido con el campo de datos; se separo cuando la
       app gano los ajustes de pantallas, que alli no significan nada. Los
-      cuatro primeros deben seguir iguales en los dos proyectos.
+      cuatro primeros deben seguir iguales en los dos proyectos; autoLapKm es
+      solo de la app, porque un campo de datos no puede marcar vueltas.
     -->
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
     <property id="autoLap" type="boolean">false</property>
+    <property id="autoLapKm" type="boolean">false</property>
 
     <!--
       Las pantallas de carrera: la posicion de cada una en el recorrido de

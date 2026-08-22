@@ -19,6 +19,11 @@
     <setting propertyKey="@Properties.autoLap" title="@Strings.settingAutoLap">
         <settingConfig type="boolean"/>
     </setting>
+    <!-- Marcar la vuelta al completar su distancia. Puede convivir con la
+         del punto de salida: marca la que llegue primero, una sola vez. -->
+    <setting propertyKey="@Properties.autoLapKm" title="@Strings.settingAutoLapKm">
+        <settingConfig type="boolean"/>
+    </setting>
 
     <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0
          como "oculta". La etiqueta de cada ajuste lo explica; los empates los

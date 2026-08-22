@@ -45,6 +45,7 @@
     <string id="settingLapDistance">Giro (km)</string>
     <string id="settingCorral">Avviso corral</string>
     <string id="settingAutoLap">Giro auto alla partenza</string>
+    <string id="settingAutoLapKm">Giro auto per distanza</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati</string>
     <string id="settingPageLap">Schermata Giro: posizione (0 la nasconde)</string>

@@ -45,6 +45,7 @@
     <string id="settingLapDistance">Rundenlänge (km)</string>
     <string id="settingCorral">Corral-Warnung</string>
     <string id="settingAutoLap">Auto-Runde am Start</string>
+    <string id="settingAutoLapKm">Auto-Runde nach Distanz</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Daten</string>
     <string id="settingPageLap">Seite Runde: Position (0 blendet aus)</string>

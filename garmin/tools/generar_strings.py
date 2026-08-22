@@ -108,6 +108,10 @@ TABLA = {
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
     # La vuelta automatica: marcar al llegar al punto de salida, sin boton.
     "settingAutoLap":   ("Auto lap at start point", "Vuelta auto en la salida","Tour auto au départ","Auto-Runde am Start",  "Giro auto alla partenza","Volta auto na largada"),
+    # La otra vuelta automatica: marcar al completar la distancia de la
+    # vuelta. Pueden estar las dos puestas: marca la que llegue primero, y
+    # solo una vez por vuelta.
+    "settingAutoLapKm": ("Auto lap by distance",    "Vuelta auto por distancia","Tour auto à la distance","Auto-Runde nach Distanz","Giro auto per distanza","Volta auto por distância"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
     # cada una tiene su posicion (0 la oculta); en el reloj, un interruptor

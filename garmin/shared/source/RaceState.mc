@@ -45,6 +45,7 @@ class RaceState {
     var kmPorVuelta = KM_POR_VUELTA;
     var avisoCorral = true;
     var autoLap = false;
+    var autoLapKm = false;
 
     // El orden de las pantallas de carrera de la app, como ids 0..4 en el
     // orden en que se recorren (0 vuelta, 1 margen, 2 datos, 3 total,
@@ -99,6 +100,7 @@ class RaceState {
 
         avisoCorral = _ajuste("corralAlert", true);
         autoLap = _ajuste("autoLap", false);
+        autoLapKm = _ajuste("autoLapKm", false);
         _leerOrdenPaginas();
     }
 
@@ -262,15 +264,26 @@ class RaceState {
         return v != null && v > 0 && v == vueltaMarcada;
     }
 
-    // Si la vuelta automatica esta activa: cerca del punto de salida y con la
-    // mayor parte de la vuelta recorrida, la marca cae sola. El requisito de
-    // distancia evita marcarla al salir, que tambien es "cerca de la salida".
+    // La vuelta automatica, si esta activa: la marca cae sola al llegar al
+    // punto de salida o al completar la distancia de la vuelta. Pueden estar
+    // las dos puestas y manda la que llegue primero; la misma vuelta no se
+    // marca dos veces porque marcada() corta aqui y marcarVuelta() ignora
+    // cualquier segunda marca de la misma vuelta.
     function tocaMarcarSola() {
-        if (!autoLap || marcada() || _latSalida == null || _lat == null) {
-            return false;
-        }
+        if (marcada()) { return false; }
         var km = kmEnLaVuelta();
-        if (km == null || km < kmObjetivo() * 0.5) { return false; }
+        if (km == null) { return false; }
+
+        // Por distancia: el reloj ya midio la vuelta entera. El objetivo es
+        // el calibrado -lo que este reloj midio en la ultima vuelta-, el
+        // mismo que usa el margen.
+        if (autoLapKm && km >= kmObjetivo()) { return true; }
+
+        // Por ubicacion: cerca del punto de salida y con la mayor parte de
+        // la vuelta recorrida. El requisito de distancia evita marcarla al
+        // salir, que tambien es "cerca de la salida".
+        if (!autoLap || _latSalida == null || _lat == null) { return false; }
+        if (km < kmObjetivo() * 0.5) { return false; }
         return _metrosASalida() < RADIO_SALIDA_M;
     }
 

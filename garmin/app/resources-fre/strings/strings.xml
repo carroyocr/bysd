@@ -45,6 +45,7 @@
     <string id="settingLapDistance">Tour (km)</string>
     <string id="settingCorral">Alerte corral</string>
     <string id="settingAutoLap">Tour auto au départ</string>
+    <string id="settingAutoLapKm">Tour auto à la distance</string>
     <string id="settingScreens">Écrans de course</string>
     <string id="screenData">Données</string>
     <string id="settingPageLap">Écran Tour : position (0 le masque)</string>

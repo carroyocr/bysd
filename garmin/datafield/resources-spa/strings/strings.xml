@@ -45,6 +45,7 @@
     <string id="settingLapDistance">Vuelta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
     <string id="settingAutoLap">Vuelta auto en la salida</string>
+    <string id="settingAutoLapKm">Vuelta auto por distancia</string>
     <string id="settingScreens">Pantallas de carrera</string>
     <string id="screenData">Datos</string>
     <string id="settingPageLap">Pantalla Vuelta: posición (0 la oculta)</string>

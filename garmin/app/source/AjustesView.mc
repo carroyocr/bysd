@@ -32,12 +32,13 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             _abrirRueda(:minutos);
         } else if (id == :distancia) {
             _abrirRueda(:km);
-        } else if (id == :autoLap) {
+        } else if (id == :autoLap || id == :autoLapKm) {
             // El ToggleMenuItem ya cambio su check al tocarlo; se guarda en la
             // misma propiedad que lee el telefono. No cierra el menu: el
             // corredor ve el nuevo estado y sigue.
             var ti = item as Ui.ToggleMenuItem;
-            App.Properties.setValue("autoLap", ti.isEnabled());
+            App.Properties.setValue(id == :autoLap ? "autoLap" : "autoLapKm",
+                                    ti.isEnabled());
             _estado.leerAjustes();
         } else if (id == :pantallas) {
             PantallasMenuDelegate.abrir(_estado);

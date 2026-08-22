@@ -45,6 +45,7 @@
     <string id="settingLapDistance">Volta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
     <string id="settingAutoLap">Volta auto na largada</string>
+    <string id="settingAutoLapKm">Volta auto por distância</string>
     <string id="settingScreens">Ecrãs de prova</string>
     <string id="screenData">Dados</string>
     <string id="settingPageLap">Ecrã Volta: posição (0 oculta)</string>

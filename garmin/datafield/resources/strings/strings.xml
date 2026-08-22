@@ -46,6 +46,7 @@
     <string id="settingLapDistance">Lap distance (km)</string>
     <string id="settingCorral">Corral alert</string>
     <string id="settingAutoLap">Auto lap at start point</string>
+    <string id="settingAutoLapKm">Auto lap by distance</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Data</string>
     <string id="settingPageLap">Lap screen: position (0 hides it)</string>

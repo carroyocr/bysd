@@ -107,15 +107,32 @@ class StartDelegate extends Ui.BehaviorDelegate {
             (_estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
             _estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
-        // La vuelta automatica es un interruptor: marcar sola al llegar al
-        // punto de salida, o no. El check muestra si esta puesto.
+        // Las vueltas automaticas son interruptores: marcar sola al llegar al
+        // punto de salida y/o al completar la distancia. Pueden estar las dos
+        // puestas y marca la que llegue primero. El check muestra el estado.
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
             :autoLap, _estado.autoLap, null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLapKm, null,
+            :autoLapKm, _estado.autoLapKm, null));
         // Las pantallas de carrera: cuales se ven. El orden se cambia desde
         // el telefono; aqui, en la linea de salida, solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
             :pantallas, null));
         Ui.pushView(menu, new AjustesMenuDelegate(_estado), Ui.SLIDE_UP);
         return true;
+    }
+
+    // En el fenix 8 no hay boton de menu dedicado: el menu es UP largo, y en
+    // el reloj real esa pulsacion no siempre llega como onMenu (en el
+    // simulador si). Por eso el mismo menu se abre por tres caminos: el
+    // comportamiento de menu, la tecla KEY_MENU cruda por si el firmware la
+    // entrega asi, y el toque sostenido en la pantalla tactil.
+    function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
+        return false;
+    }
+
+    function onHold(evento) {
+        return onMenu();
     }
 }
