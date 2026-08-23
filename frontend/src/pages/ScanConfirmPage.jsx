@@ -7,6 +7,7 @@ import {
 import { toast } from 'sonner';
 import { scanHeaders } from '../lib/adminApi';
 import { pack, modoActivo, evaluarEscaneo, encolar } from '../lib/scanOffline';
+import { carreraGuardada } from '../live/carrera';
 import ScanKeyGate from '../components/ScanKeyGate';
 import { getJson, statusLabel } from '../live/liveApi';
 import { LiveThemeProvider, useLiveTheme } from '../live/liveTheme';
@@ -62,7 +63,8 @@ function ScanConfirmInner() {
   const navigate = useNavigate();
   
   const bib = searchParams.get('bib');
-  const raceCode = searchParams.get('race');
+  // La carrera del QR manda; sin ella (un BIB pelado), la elegida en la app.
+  const raceCode = searchParams.get('race') || carreraGuardada();
   
   const [loading, setLoading] = useState(true);
   const [athlete, setAthlete] = useState(null);

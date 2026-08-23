@@ -10,6 +10,18 @@ import { adminToken, scanKey } from '../lib/adminApi';
 import {
   pack, descargarPack, modoActivo, activarModo, pendientes, sincronizar, descartar,
 } from '../lib/scanOffline';
+import { carreraGuardada } from '../live/carrera';
+
+/**
+ * Sobre qué carrera trabaja el escáner: la de la URL (?race=CODIGO) o, dentro
+ * de la app, la que la persona eligió en el menú Evento (queda guardada en el
+ * teléfono). Solo sin ninguna de las dos se cae en la carrera publicada, que
+ * no tiene por qué ser la que se está corriendo: con el mundial en curso y la
+ * de enero publicada en el sitio, el reloj, la entrada manual y la descarga
+ * fuera de línea habrían apuntado a enero.
+ */
+const carreraDelEscaner = () =>
+  new URLSearchParams(window.location.search).get('race') || carreraGuardada();
 import ScanKeyGate from '../components/ScanKeyGate';
 import { getJson } from '../live/liveApi';
 import { LiveThemeProvider, useLiveTheme } from '../live/liveTheme';
@@ -85,9 +97,7 @@ function ScannerInner() {
 
   const loadRaceStatus = async () => {
     try {
-      // La carrera del reloj sale de la URL (?race=CODIGO). Sin ella se
-      // usa la publicada, que es lo que se hacia siempre.
-      const carrera = new URLSearchParams(window.location.search).get('race');
+      const carrera = carreraDelEscaner();
       const response = await fetch(
         `${API_URL}/api/qr-scan/race-status${carrera ? `?race_code=${carrera}` : ''}`
       );
@@ -116,8 +126,7 @@ function ScannerInner() {
   const descargarDatos = async () => {
     setDescargando(true);
     try {
-      const carrera = new URLSearchParams(window.location.search).get('race');
-      const datos = await descargarPack(carrera || raceStatus?.race_code);
+      const datos = await descargarPack(carreraDelEscaner() || raceStatus?.race_code);
       setDatosOffline(datos);
       toast.success(`Datos descargados: ${datos.participants.length} corredores de ${datos.race.name}`);
     } catch {
@@ -168,8 +177,7 @@ function ScannerInner() {
     // La carrera del escáner viaja con el BIB tecleado. En el QR va dentro
     // del propio código; aquí hay que arrastrarla, o el backend caería en la
     // carrera activa del sitio, que no tiene por qué ser la que se corre.
-    const carrera = new URLSearchParams(window.location.search).get('race')
-      || raceStatus?.race_code;
+    const carrera = carreraDelEscaner() || raceStatus?.race_code;
     navigate(`/scan/confirmar?bib=${manualBib.trim()}${carrera ? `&race=${carrera}` : ''}`);
   };
 
