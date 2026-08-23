@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check, UserCheck,
 } from 'lucide-react';
@@ -157,9 +157,12 @@ const vacio = {
  */
 export default function LoginScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // 'puerta' | 'acceso' | 'recuperar' | 'registro'
-  const [modo, setModo] = useState('puerta');
+  // Se puede llegar directo al registro (p. ej. desde el aviso de favoritos);
+  // el tipo por defecto ya es espectador, que es el que ahí se ofrece.
+  const [modo, setModo] = useState(location.state?.modo === 'registro' ? 'registro' : 'puerta');
   const [bio, setBio] = useState({ activada: false, disponible: false, nombre: '', usuario: '' });
   const [verClave, setVerClave] = useState(false);
   const [ocupado, setOcupado] = useState(false);
