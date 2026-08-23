@@ -97,28 +97,13 @@ class StartDelegate extends Ui.BehaviorDelegate {
         return false;
     }
 
-    // El boton de menu (UP largo) abre los ajustes de la vuelta -duracion y
-    // distancia-, para fijarlos en el reloj sin sacar el telefono. Solo aqui,
-    // antes de la salida: cambiar la duracion a mitad de carrera moveria las
-    // campanas. El sub-rotulo de cada opcion es el valor actual.
+    // El boton de menu (UP largo) abre los ajustes de la vuelta, para
+    // fijarlos en el reloj sin sacar el telefono. Solo aqui y durante el
+    // calentamiento: con la vuelta 1 ya abierta, cambiar la duracion
+    // moveria las campanas. El menu lo arma AjustesMenuDelegate, que es el
+    // mismo para los dos momentos.
     function onMenu() {
-        var menu = new Ui.Menu2({ :title => Rez.Strings.settingsTitle });
-        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapMinutes,
-            (_estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
-        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
-            _estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
-        // Las vueltas automaticas son interruptores: marcar sola al llegar al
-        // punto de salida y/o al completar la distancia. Pueden estar las dos
-        // puestas y marca la que llegue primero. El check muestra el estado.
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
-            :autoLap, _estado.autoLap, null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLapKm, null,
-            :autoLapKm, _estado.autoLapKm, null));
-        // Las pantallas de carrera: cuales se ven. El orden se cambia desde
-        // el telefono; aqui, en la linea de salida, solo mostrar u ocultar.
-        menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
-            :pantallas, null));
-        Ui.pushView(menu, new AjustesMenuDelegate(_estado), Ui.SLIDE_UP);
+        AjustesMenuDelegate.abrir(_estado);
         return true;
     }
 

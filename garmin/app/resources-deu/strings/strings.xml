@@ -24,6 +24,9 @@
     <string id="pace">Pace</string>
     <string id="heartRate">Puls</string>
     <string id="remaining">Verbleibend</string>
+    <string id="time">Zeit</string>
+    <string id="start">Start</string>
+    <string id="lapStarts">Beginnt</string>
     <string id="pressStart">START zum Start</string>
     <string id="gpsReady">GPS bereit</string>
     <string id="gpsWait">GPS-Suche</string>
@@ -44,13 +47,16 @@
     <string id="settingLapMinutes">Runde (Minuten)</string>
     <string id="settingLapDistance">Rundenlänge (km)</string>
     <string id="settingCorral">Corral-Warnung</string>
-    <string id="settingAutoLap">Auto-Runde am Start</string>
+    <string id="settingAutoLap">Auto-Runde im Ziel</string>
     <string id="settingAutoLapKm">Auto-Runde nach Distanz</string>
+    <string id="settingLapOff">LAP-Taste aus</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Daten</string>
+    <string id="screenDataLap">Rundendaten</string>
     <string id="settingPageLap">Seite Runde: Position (0 blendet aus)</string>
     <string id="settingPageMargin">Seite Puffer: Position (0 blendet aus)</string>
     <string id="settingPageData">Seite Daten: Position (0 blendet aus)</string>
+    <string id="settingPageDataLap">Seite Rundendaten: Position (0 blendet aus)</string>
     <string id="settingPageTotal">Seite Gesamt: Position (0 blendet aus)</string>
     <string id="settingPageClock">Seite Uhr: Position (0 blendet aus)</string>
 </strings>

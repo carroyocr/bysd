@@ -25,6 +25,9 @@
     <string id="pace">Pace</string>
     <string id="heartRate">HR</string>
     <string id="remaining">Remaining</string>
+    <string id="time">Time</string>
+    <string id="start">Start</string>
+    <string id="lapStarts">Starting</string>
     <string id="pressStart">START to begin</string>
     <string id="gpsReady">GPS ready</string>
     <string id="gpsWait">Searching GPS</string>
@@ -45,13 +48,16 @@
     <string id="settingLapMinutes">Lap duration (minutes)</string>
     <string id="settingLapDistance">Lap distance (km)</string>
     <string id="settingCorral">Corral alert</string>
-    <string id="settingAutoLap">Auto lap at start point</string>
+    <string id="settingAutoLap">Auto lap at finish line</string>
     <string id="settingAutoLapKm">Auto lap by distance</string>
+    <string id="settingLapOff">LAP button off</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Data</string>
+    <string id="screenDataLap">Lap data</string>
     <string id="settingPageLap">Lap screen: position (0 hides it)</string>
     <string id="settingPageMargin">Margin screen: position (0 hides it)</string>
     <string id="settingPageData">Data screen: position (0 hides it)</string>
+    <string id="settingPageDataLap">Lap data screen: position (0 hides it)</string>
     <string id="settingPageTotal">Total screen: position (0 hides it)</string>
     <string id="settingPageClock">Clock screen: position (0 hides it)</string>
 </strings>

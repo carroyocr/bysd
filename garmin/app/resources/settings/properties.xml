@@ -20,6 +20,7 @@
     <property id="corralAlert" type="boolean">true</property>
     <property id="autoLap" type="boolean">false</property>
     <property id="autoLapKm" type="boolean">false</property>
+    <property id="lapOff" type="boolean">false</property>
 
     <!--
       Las pantallas de carrera: la posicion de cada una en el recorrido de
@@ -30,6 +31,7 @@
     <property id="pageLap" type="number">1</property>
     <property id="pageMargin" type="number">2</property>
     <property id="pageData" type="number">3</property>
-    <property id="pageTotal" type="number">4</property>
-    <property id="pageClock" type="number">5</property>
+    <property id="pageDataLap" type="number">4</property>
+    <property id="pageTotal" type="number">5</property>
+    <property id="pageClock" type="number">6</property>
 </properties>

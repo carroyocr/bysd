@@ -24,6 +24,9 @@
     <string id="pace">Ritmo</string>
     <string id="heartRate">FC</string>
     <string id="remaining">Restante</string>
+    <string id="time">Tempo</string>
+    <string id="start">Largada</string>
+    <string id="lapStarts">Começa</string>
     <string id="pressStart">START para largar</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Procurando GPS</string>
@@ -44,13 +47,16 @@
     <string id="settingLapMinutes">Volta (minutos)</string>
     <string id="settingLapDistance">Volta (km)</string>
     <string id="settingCorral">Aviso de corral</string>
-    <string id="settingAutoLap">Volta auto na largada</string>
+    <string id="settingAutoLap">Volta auto na meta</string>
     <string id="settingAutoLapKm">Volta auto por distância</string>
+    <string id="settingLapOff">Botão LAP desligado</string>
     <string id="settingScreens">Ecrãs de prova</string>
     <string id="screenData">Dados</string>
+    <string id="screenDataLap">Dados da volta</string>
     <string id="settingPageLap">Ecrã Volta: posição (0 oculta)</string>
     <string id="settingPageMargin">Ecrã Margem: posição (0 oculta)</string>
     <string id="settingPageData">Ecrã Dados: posição (0 oculta)</string>
+    <string id="settingPageDataLap">Ecrã Dados da volta: posição (0 oculta)</string>
     <string id="settingPageTotal">Ecrã Total: posição (0 oculta)</string>
     <string id="settingPageClock">Ecrã Hora: posição (0 oculta)</string>
 </strings>

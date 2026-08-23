@@ -34,6 +34,29 @@ class MainDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // Durante el calentamiento el menu de ajustes sigue abierto: la campana
+    // de la vuelta 1 no ha sonado y todavia se puede corregir la vuelta.
+    // Despues, nada: cambiar la duracion en carrera moveria las campanas.
+    // Los tres caminos (onMenu, KEY_MENU cruda, toque sostenido) son los
+    // mismos de la linea de salida, por la misma manía del fenix 8.
+    function onMenu() {
+        var v = _estado.vuelta();
+        if (v != null && v == 0) {
+            AjustesMenuDelegate.abrir(_estado);
+            return true;
+        }
+        return false;
+    }
+
+    function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
+        return false;
+    }
+
+    function onHold(evento) {
+        return onMenu();
+    }
+
     // START/STOP para y abre el menu de guardar, como en cualquier actividad
     // de Garmin. No sale de la app sin preguntar: debajo hay una actividad
     // grabando y una backyard no tiene segunda salida.
@@ -67,7 +90,11 @@ class MainDelegate extends Ui.BehaviorDelegate {
         // muerta, sin mas salida que apagar el reloj. Devolver false deja que
         // el sistema haga el BACK de siempre: salir de la app.
         if (app == null || !app.grabando()) { return false; }
-        app.marcarVuelta();
+        // Con el LAP apagado (modo totalmente automatico) el boton no marca,
+        // pero se lo traga igual: el retroceso sigue sin existir en carrera.
+        if (!_estado.lapApagado) {
+            app.marcarVuelta();
+        }
         return true;
     }
 

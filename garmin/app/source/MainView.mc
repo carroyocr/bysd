@@ -3,8 +3,9 @@ using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
 using Toybox.Activity as Activity;
+using Toybox.Time as Time;
 
-// Las cinco pantallas de carrera.
+// Las pantallas de carrera.
 //
 // Una sola cifra grande en cada una -salvo la de datos, que es la cuadricula
 // clasica de correr-. A las veinte horas, de noche y con la vista cansada,
@@ -20,11 +21,19 @@ class MainView extends Ui.View {
         PAGINA_MARGEN = 1,
         PAGINA_DATOS  = 2,
         PAGINA_TUYO   = 3,
-        PAGINA_RELOJ  = 4
+        PAGINA_RELOJ  = 4,
+        PAGINA_DATOS_VUELTA = 5
     }
+
+    // Cuanto dura el aviso de inicio de vuelta que se impone en la campana.
+    static const AVISO_MS = 5000;
 
     var _estado;
     var _pagina = 0;
+    // El aviso de inicio de vuelta: hasta cuando se muestra (reloj de
+    // sistema, en ms) y que vuelta ya se aviso, para avisar una sola vez.
+    var _avisoHasta = 0;
+    var _vueltaAvisada = 0;
     // Escrito como diccionario para que el comprobador sepa que _s[:clave] es
     // un acceso legitimo y no avise en cada compilacion.
     var _s as Lang.Dictionary = {};
@@ -55,11 +64,16 @@ class MainView extends Ui.View {
             :laps => Ui.loadResource(Rez.Strings.laps),
             :clock => Ui.loadResource(Rez.Strings.clock),
             :battery => Ui.loadResource(Rez.Strings.battery),
-            :noActivity => Ui.loadResource(Rez.Strings.noActivity)
+            :noActivity => Ui.loadResource(Rez.Strings.noActivity),
+            :time => Ui.loadResource(Rez.Strings.time),
+            :start => Ui.loadResource(Rez.Strings.start),
+            :lapStarts => Ui.loadResource(Rez.Strings.lapStarts)
         };
     }
 
     function avanzar(paso) {
+        // Cualquier cambio de pagina salta el aviso de inicio de vuelta.
+        _avisoHasta = 0;
         var n = (_estado.ordenPaginas as Lang.Array<Lang.Number>).size();
         _pagina = (_pagina + paso + n) % n;
     }
@@ -109,22 +123,39 @@ class MainView extends Ui.View {
             return;
         }
 
+        // El calentamiento es una sola pantalla: antes de la primera campana
+        // no hay nada que navegar y solo importa cuando se sale. El corral
+        // de los tres minutos finales se impone igual (arriba).
+        if (vuelta == 0) {
+            _calentamiento(dc, cx, cy, h, radio, r);
+            return;
+        }
+
+        // El aviso de inicio de vuelta: en cada campana se impone cinco
+        // segundos con la vuelta que arranca y se retira solo. Cualquier
+        // cambio de pagina lo salta (avanzar lo apaga).
+        if (vuelta != _vueltaAvisada) {
+            _vueltaAvisada = vuelta;
+            _avisoHasta = Sys.getTimer() + AVISO_MS;
+        }
+        if (_avisoHasta > 0) {
+            if (Sys.getTimer() < _avisoHasta) {
+                _avisoInicio(dc, cx, cy, h, radio, vuelta);
+                return;
+            }
+            _avisoHasta = 0;
+        }
+
         // Vuelta cerrada con LAP: el corredor llego a meta y descansa. La
         // pantalla se pone verde de esquina a esquina -llegaste, descansa- con
         // el tiempo que falta para la proxima campana y lo acumulado debajo.
         // Se impone igual que el corral, y le cede el sitio cuando faltan tres
         // minutos (el corral se comprueba antes, arriba).
-        if (vuelta >= 1 && _estado.marcada()) {
+        if (_estado.marcada()) {
             _descanso(dc, cx, cy, h, radio, vuelta, r);
             return;
         }
 
-        // El enrutado va primero y no lo corta ningun estado: en la vuelta 0
-        // (el corredor pulso START antes de la hora) la pagina de vuelta
-        // muestra la cuenta atras a la campana y las demas se protegen solas.
-        // La primera version cortaba aqui con un return, y con vueltas de una
-        // hora eso bloqueaba el cambio de pantalla hasta media hora seguida.
-        //
         // El indice se protege antes de indexar: si un cambio de ajustes desde
         // el telefono acorta la lista a mitad de carrera, se vuelve a la
         // primera pagina en vez de leer fuera.
@@ -134,13 +165,13 @@ class MainView extends Ui.View {
         if (id == PAGINA_MARGEN) {
             _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
         } else if (id == PAGINA_DATOS) {
-            _paginaDatos(dc, cx, cy, h, vuelta, r);
+            _paginaDatos(dc, cx, cy, w, h);
+        } else if (id == PAGINA_DATOS_VUELTA) {
+            _paginaDatosVuelta(dc, cx, cy, w, h, vuelta, r);
         } else if (id == PAGINA_TUYO) {
             _paginaTuyo(dc, cx, cy, h, radio, vuelta);
         } else if (id == PAGINA_RELOJ) {
             _paginaReloj(dc, cx, cy, h, radio);
-        } else if (vuelta == 0) {
-            _antesDeLaSalida(dc, cx, cy, h, radio, r);
         } else {
             _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
         }
@@ -162,11 +193,14 @@ class MainView extends Ui.View {
     function _corral(dc, cx, cy, h, radio, vuelta, r, aviso) {
         var etiqueta = _s[:lap] + " " + (vuelta + 1).format("%d");
         if (aviso == Gfx.COLOR_RED) {
+            // El ultimo minuto: la cuenta en la fuente mas grande y gruesa
+            // que da el reloj, y todo en negro, que sobre el rojo pleno
+            // contrasta mas que el blanco.
             dc.setColor(aviso, aviso);
             dc.clear();
-            _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, _s[:toTheLine]);
-            _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE, Fmt.reloj(r));
-            _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE, etiqueta);
+            _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK, _s[:toTheLine]);
+            _txt(dc, cx, cy, Gfx.FONT_NUMBER_THAI_HOT, Gfx.COLOR_BLACK, Fmt.reloj(r));
+            _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK, etiqueta);
             return;
         }
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
@@ -203,14 +237,57 @@ class MainView extends Ui.View {
         _arco(dc, cx, cy, radio - 6, 1.0, color, 16);
     }
 
-    // El calentamiento: el tramo previo a la primera campana, cuando el
-    // corredor pulso START antes de la hora. No es la vuelta 1 -en el FIT queda
-    // en su propio tramo- y por eso la esfera lo dice. Fondo negro, un aro
-    // tenue y la cuenta a la salida en grueso.
-    function _antesDeLaSalida(dc, cx, cy, h, radio, r) {
-        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_DK_GRAY, 6);
+    // El calentamiento: el tramo previo a la primera campana, como pantalla
+    // unica. No es la vuelta 1 -en el FIT queda en su propio tramo- y por
+    // eso la esfera lo dice. La cuenta a la salida en grueso, la hora de la
+    // campana debajo, y al pie la hora del dia con la bateria.
+    function _calentamiento(dc, cx, cy, h, radio, r) {
+        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_DK_GRAY, 4);
         _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, _s[:warmup]);
         _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE, Fmt.reloj(r));
+
+        if (_estado.campana0 != null) {
+            var g = Time.Gregorian.info(new Time.Moment(_estado.campana0),
+                                        Time.FORMAT_SHORT);
+            _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_ORANGE,
+                 _s[:start] + " " + _horaTexto(g.hour, g.min));
+        }
+
+        var reloj = Sys.getClockTime();
+        var linea = _horaTexto(reloj.hour, reloj.min);
+        var bateria = Sys.getSystemStats().battery;
+        if (bateria != null) {
+            linea = linea + " · " + _s[:battery] + " "
+                  + bateria.format("%d") + "%";
+        }
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+    }
+
+    // La hora del dia como la quiere el reloj: "6:34 AM" o "18:34".
+    function _horaTexto(hora, minuto) {
+        if (Sys.getDeviceSettings().is24Hour) {
+            return hora.format("%d") + ":" + minuto.format("%02d");
+        }
+        var marca = hora < 12 ? "AM" : "PM";
+        var h12 = hora % 12;
+        if (h12 == 0) { h12 = 12; }
+        return h12.format("%d") + ":" + minuto.format("%02d") + " " + marca;
+    }
+
+    // El aviso de inicio de vuelta: cinco segundos en cada campana, con el
+    // numero de la vuelta que arranca. Aro naranja ancho, como el resto de
+    // los estados que se imponen.
+    function _avisoInicio(dc, cx, cy, h, radio, vuelta) {
+        _aroAncho(dc, cx, cy, radio, Gfx.COLOR_ORANGE);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+             _s[:lapStarts]);
+        _txt(dc, cx, cy - (h * 12 / 100), Gfx.FONT_XTINY, Gfx.COLOR_ORANGE,
+             _s[:lap]);
+        _txt(dc, cx, cy + (h * 6 / 100), Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE,
+             vuelta.format("%d"));
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
+             (_estado.duracionVuelta / 60).format("%d") + " min · "
+             + Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
     // El rotulo de arriba presenta la cifra ("Proxima salida") y debajo va que
@@ -284,45 +361,74 @@ class MainView extends Ui.View {
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
     }
 
-    // La pagina de datos: cuatro cifras de un vistazo, en el reparto clasico
-    // de Garmin para cuatro campos en esfera redonda: uno arriba a lo ancho,
-    // dos en el centro -que es donde la esfera es mas ancha y caben lado a
-    // lado sin pisarse-, y uno abajo a lo ancho. La primera version era una
-    // cuadricula 2x2 y los numeros montaban sobre las lineas.
-    //
-    // Arriba la distancia de toda la carrera -la que mide el reloj, con la
-    // vuelta en curso incluida-; en el centro el ritmo de la vuelta y el
-    // pulso; abajo el tiempo a la campana. Es la excepcion a la regla de una
-    // cifra por pantalla: quien la mira quiere el estado completo, y ya tiene
-    // las otras cuatro pantallas para leer grande.
-    function _paginaDatos(dc, cx, cy, h, vuelta, r) {
-        var w = dc.getWidth();
-        var yArriba = cy - (h * 15 / 100);
-        var yAbajo = cy + (h * 15 / 100);
+    // La pagina de datos globales: lo de toda la carrera SIN los descansos
+    // -distancia, ritmo y pulso son solo de las vueltas- salvo el tiempo,
+    // que si lo suma todo, vueltas y descansos. Aro azul con su nombre en
+    // la pildora: el azul es el color de lo global, para no confundirla con
+    // la gemela de la vuelta.
+    function _paginaDatos(dc, cx, cy, w, h) {
+        var s = _estado.segundosDeCarrera();
+        if (s != null && s < 0) { s = 0; }
+        var pulso = _estado.pulsoMedioVueltas();
+        _cuadricula(dc, cx, cy, w, h, Gfx.COLOR_BLUE, _s[:total],
+            _s[:distance], Fmt.distancia(_estado.kmTotalesDeVueltas()),
+            _s[:pace], Fmt.ritmo(_estado.ritmoMedioVueltas()),
+            _s[:heartRate], pulso == null ? "--" : pulso.format("%d"),
+            _s[:time], Fmt.espera(s));
+    }
+
+    // La gemela de la vuelta en curso: lo recorrido, el ritmo medio de la
+    // vuelta -el mismo que alimenta el margen-, el pulso actual y lo que
+    // queda a la campana. Aro naranja, el color de la vuelta en toda la app.
+    function _paginaDatosVuelta(dc, cx, cy, w, h, vuelta, r) {
+        var info = Activity.getActivityInfo();
+        var pulso = info == null ? null : info.currentHeartRate;
+        _cuadricula(dc, cx, cy, w, h, Gfx.COLOR_ORANGE,
+            _s[:lap] + " " + vuelta.format("%d"),
+            _s[:distance], Fmt.distancia(_estado.kmEnLaVuelta()),
+            _s[:pace], Fmt.ritmo(_estado.ritmoSegPorKm()),
+            _s[:heartRate], pulso == null ? "--" : pulso.format("%d"),
+            _s[:remaining], Fmt.reloj(r));
+    }
+
+    // La cuadricula que comparten las dos paginas de datos: cuatro cifras de
+    // un vistazo en el reparto clasico de Garmin para esfera redonda -uno
+    // arriba a lo ancho, dos en el centro, que es donde la esfera es mas
+    // ancha y caben lado a lado sin pisarse, y uno abajo-, mas el aro del
+    // color de la pagina con su nombre en una pildora montada sobre el aro.
+    function _cuadricula(dc, cx, cy, w, h, color, nombre,
+                         r1, v1, r2, v2, r3, v3, r4, v4) {
+        var radio = (w < h ? w : h) / 2 - 6;
+
+        dc.setPenWidth(4);
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.drawCircle(cx, cy, radio);
+
+        // La pildora: el fondo negro corta el aro por detras del texto.
+        var dim = dc.getTextDimensions(nombre, Gfx.FONT_XTINY) as Lang.Array<Lang.Number>;
+        var pw = dim[0] + 18;
+        var ph = dim[1] + 2;
+        var py = cy - radio + (h * 8 / 100);
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+        dc.fillRoundedRectangle(cx - pw / 2, py - ph / 2, pw, ph, ph / 2);
+        dc.setPenWidth(2);
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.drawRoundedRectangle(cx - pw / 2, py - ph / 2, pw, ph, ph / 2);
+        _txt(dc, cx, py, Gfx.FONT_XTINY, color, nombre);
 
         // Las lineas del marco, tenues: son mueble, no dato.
+        var yArriba = cy - (h * 8 / 100);
+        var yAbajo = cy + (h * 15 / 100);
         dc.setPenWidth(1);
         dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
-        dc.drawLine(cx - (w * 42 / 100), yArriba, cx + (w * 42 / 100), yArriba);
-        dc.drawLine(cx - (w * 42 / 100), yAbajo, cx + (w * 42 / 100), yAbajo);
+        dc.drawLine(cx - (w * 36 / 100), yArriba, cx + (w * 36 / 100), yArriba);
+        dc.drawLine(cx - (w * 36 / 100), yAbajo, cx + (w * 36 / 100), yAbajo);
         dc.drawLine(cx, yArriba, cx, yAbajo);
 
-        var info = Activity.getActivityInfo();
-        var metros = info == null ? null : info.elapsedDistance;
-        var pulso = info == null ? null : info.currentHeartRate;
-
-        // En la vuelta 0 (calentamiento) todavia no hay vuelta que medir: el
-        // ritmo va con guion. La distancia y el pulso si son de verdad, y el
-        // restante es la cuenta atras a la salida.
-        var ritmo = vuelta >= 1 ? _estado.ritmoSegPorKm() : null;
-
-        _campo(dc, cx, cy - (h * 33 / 100), h, _s[:distance],
-               Fmt.distancia(metros == null ? null : metros / 1000.0));
-        _campo(dc, cx - (w * 22 / 100), cy - (h * 9 / 100), h,
-               _s[:pace], Fmt.ritmo(ritmo));
-        _campo(dc, cx + (w * 22 / 100), cy - (h * 9 / 100), h,
-               _s[:heartRate], pulso == null ? "--" : pulso.format("%d"));
-        _campo(dc, cx, cy + (h * 20 / 100), h, _s[:remaining], Fmt.reloj(r));
+        _campo(dc, cx, cy - (h * 30 / 100), h, r1, v1);
+        _campo(dc, cx - (w * 22 / 100), cy - (h * 5 / 100), h, r2, v2);
+        _campo(dc, cx + (w * 22 / 100), cy - (h * 5 / 100), h, r3, v3);
+        _campo(dc, cx, cy + (h * 18 / 100), h, r4, v4);
     }
 
     // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo.

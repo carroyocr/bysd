@@ -46,12 +46,18 @@ class RaceState {
     var avisoCorral = true;
     var autoLap = false;
     var autoLapKm = false;
+    // LAP apagado: para quien va totalmente automatico y no quiere marcar
+    // por error con un roce del boton. Solo silencia el boton del corredor;
+    // las vueltas automaticas siguen marcando igual.
+    var lapApagado = false;
 
-    // El orden de las pantallas de carrera de la app, como ids 0..4 en el
-    // orden en que se recorren (0 vuelta, 1 margen, 2 datos, 3 total,
-    // 4 reloj). Lo montan los ajustes pageLap..pageClock; el campo de datos
-    // no lo usa. MainView tiene el mismo orden de fabrica en su enum.
-    var ordenPaginas = [0, 1, 2, 3, 4];
+    // El orden de las pantallas de carrera de la app, como ids en el orden
+    // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
+    // 4 reloj, 5 datos de vuelta). Lo montan los ajustes pageLap..pageClock;
+    // el campo de datos no lo usa. MainView tiene los mismos ids en su enum.
+    // El id 5 va despues de 2 en el orden de fabrica: lo deciden las
+    // posiciones por defecto de properties.xml, no este literal.
+    var ordenPaginas = [0, 1, 2, 5, 3, 4];
 
     // El ancla: epoch de la campana de la vuelta 1. Solo la app lo pone, al
     // dar la salida; en el campo de datos se queda en null y manda la
@@ -68,14 +74,29 @@ class RaceState {
     var _latSalida = null;
     var _lonSalida = null;
 
-    // Calibracion: lo que midio el reloj en la ultima vuelta cerrada. El GPS
-    // puede marcar 6.85 km en un circuito de 6.7, y sobre treinta vueltas esa
-    // diferencia descuadra el margen.
+    // Calibracion: lo que llevaba medido el reloj al MARCAR la ultima vuelta.
+    // El GPS puede marcar 6.85 km en un circuito de 6.7, y sobre treinta
+    // vueltas esa diferencia descuadra el margen. Se toma en la marca -el
+    // corredor esta en la linea- y no de campana a campana: aquello sumaba lo
+    // corrido o caminado despues de marcar, y una vuelta que ni se completo
+    // tambien calibraba (visto en la calle el 22-08: 7.88 km de "circuito"
+    // por seguir corriendo, y luego 6.16 por una vuelta incompleta).
     var kmMedidosUltimaVuelta = null;
 
     // Instantanea de la distancia de la actividad al empezar la vuelta actual.
     var _vueltaDeLaFoto = 0;
     var _metrosEnLaFoto = 0.0;
+
+    // Los acumulados de la pantalla global de datos: solo lo corrido DENTRO
+    // de las vueltas (de la campana a la marca), sin los descansos. Una
+    // vuelta que no se marca cuenta entera, de campana a campana: no hay
+    // forma de saber donde se detuvo. El pulso se muestrea una vez por
+    // segundo mientras la vuelta esta en curso. Todo son escalares que se
+    // sobreescriben: nada crece con las vueltas.
+    var kmDeVueltas = 0.0;
+    var segDeVueltas = 0;
+    var sumaPulso = 0.0;
+    var muestrasPulso = 0;
 
     function initialize() {
         leerAjustes();
@@ -101,6 +122,7 @@ class RaceState {
         avisoCorral = _ajuste("corralAlert", true);
         autoLap = _ajuste("autoLap", false);
         autoLapKm = _ajuste("autoLapKm", false);
+        lapApagado = _ajuste("lapOff", false);
         _leerOrdenPaginas();
     }
 
@@ -109,8 +131,10 @@ class RaceState {
     // igualdad, por el orden de fabrica-, asi que cualquier cosa que escriba
     // el corredor en el telefono produce un orden valido. Si las oculta
     // todas, queda la de vuelta: la app no se queda sin pantalla.
+    // El indice en esta lista es el id de pantalla; pageDataLap se agrego al
+    // final (id 5) para no mover los ids que ya existian.
     static const AJUSTES_PAGINAS = ["pageLap", "pageMargin", "pageData",
-                                    "pageTotal", "pageClock"];
+                                    "pageTotal", "pageClock", "pageDataLap"];
 
     function _leerOrdenPaginas() {
         var posiciones = [];
@@ -168,6 +192,10 @@ class RaceState {
     static const K_KM_ULT = "carrera_kmUltima";
     static const K_LAT_S = "carrera_latSalida";
     static const K_LON_S = "carrera_lonSalida";
+    static const K_KM_V = "carrera_kmVueltas";
+    static const K_SEG_V = "carrera_segVueltas";
+    static const K_PUL_S = "carrera_sumaPulso";
+    static const K_PUL_N = "carrera_muestrasPulso";
 
     function guardar() {
         if (campana0 == null) { return; }
@@ -177,6 +205,10 @@ class RaceState {
             App.Storage.setValue(K_KM_ULT, kmMedidosUltimaVuelta);
             App.Storage.setValue(K_LAT_S, _latSalida);
             App.Storage.setValue(K_LON_S, _lonSalida);
+            App.Storage.setValue(K_KM_V, kmDeVueltas);
+            App.Storage.setValue(K_SEG_V, segDeVueltas);
+            App.Storage.setValue(K_PUL_S, sumaPulso);
+            App.Storage.setValue(K_PUL_N, muestrasPulso);
         } catch (e) {
         }
     }
@@ -201,6 +233,14 @@ class RaceState {
             kmMedidosUltimaVuelta = App.Storage.getValue(K_KM_ULT);
             _latSalida = App.Storage.getValue(K_LAT_S);
             _lonSalida = App.Storage.getValue(K_LON_S);
+            var kv = App.Storage.getValue(K_KM_V);
+            kmDeVueltas = kv == null ? 0.0 : kv;
+            var sv = App.Storage.getValue(K_SEG_V);
+            segDeVueltas = sv == null ? 0 : sv;
+            var ps = App.Storage.getValue(K_PUL_S);
+            sumaPulso = ps == null ? 0.0 : ps;
+            var pn = App.Storage.getValue(K_PUL_N);
+            muestrasPulso = pn == null ? 0 : pn;
             return true;
         } catch (e) {
             return false;
@@ -214,6 +254,10 @@ class RaceState {
             App.Storage.deleteValue(K_KM_ULT);
             App.Storage.deleteValue(K_LAT_S);
             App.Storage.deleteValue(K_LON_S);
+            App.Storage.deleteValue(K_KM_V);
+            App.Storage.deleteValue(K_SEG_V);
+            App.Storage.deleteValue(K_PUL_S);
+            App.Storage.deleteValue(K_PUL_N);
         } catch (e) {
         }
     }
@@ -237,6 +281,10 @@ class RaceState {
         vueltaMarcada = 0;
         _latSalida = _lat;
         _lonSalida = _lon;
+        kmDeVueltas = 0.0;
+        segDeVueltas = 0;
+        sumaPulso = 0.0;
+        muestrasPulso = 0;
     }
 
     // La ultima posicion conocida, del GPS de la app. La guarda quien recibe
@@ -256,6 +304,21 @@ class RaceState {
         var v = vuelta();
         if (v == null || v < 1 || v == vueltaMarcada) { return false; }
         vueltaMarcada = v;
+        // La calibracion se toma aqui: al marcar, el corredor esta en la
+        // linea, asi que lo que lleva medida la vuelta es el circuito como lo
+        // mide este reloj. El filtro descarta marcas que no se parecen a una
+        // vuelta. Cuando la marca la puso el disparador de distancia, el
+        // valor es el propio objetivo y esto no cambia nada: la correccion
+        // real la aportan el LAP del corredor y el punto de salida.
+        var km = kmEnLaVuelta();
+        if (km != null && km > kmPorVuelta * 0.8 && km < kmPorVuelta * 1.2) {
+            kmMedidosUltimaVuelta = km;
+        }
+        // Los acumulados de vueltas cierran aqui: lo corrido y el tiempo
+        // hasta la marca. Lo que venga despues es descanso y no cuenta.
+        var t = segundosEnLaVuelta();
+        if (km != null) { kmDeVueltas += km; }
+        if (t != null) { segDeVueltas += t; }
         return true;
     }
 
@@ -373,7 +436,9 @@ class RaceState {
     }
 
     // Se llama en cada tic. Cuando cambia la vuelta, guarda el corte de
-    // distancia y aprovecha para calibrar con lo que acaba de medir el reloj.
+    // distancia desde el que se mide la vuelta nueva. La calibracion ya no se
+    // hace aqui: se hace al marcar, que es cuando el corredor esta en la
+    // linea (ver marcarVuelta).
     function refrescarFoto() {
         var v = vuelta();
         if (v == null) { return; }
@@ -381,13 +446,11 @@ class RaceState {
         if (metros == null) { return; }
 
         if (_vueltaDeLaFoto != v) {
-            if (_vueltaDeLaFoto > 0) {
-                var medidos = (metros - _metrosEnLaFoto) / 1000.0;
-                // Solo vale si se parece a una vuelta. Si el GPS se fue media
-                // hora, o la vuelta corto en otro sitio, el numero es basura.
-                if (medidos > kmPorVuelta * 0.8 && medidos < kmPorVuelta * 1.2) {
-                    kmMedidosUltimaVuelta = medidos;
-                }
+            // Si la vuelta que termina no se marco, cuenta entera para los
+            // acumulados: de campana a campana. Marcada, ya sumo en la marca.
+            if (_vueltaDeLaFoto > 0 && vueltaMarcada < _vueltaDeLaFoto) {
+                kmDeVueltas += (metros - _metrosEnLaFoto) / 1000.0;
+                segDeVueltas += duracionVuelta;
             }
             _vueltaDeLaFoto = v;
             _metrosEnLaFoto = metros;
@@ -438,5 +501,51 @@ class RaceState {
     function enCorral() {
         var r = restante();
         return r != null && r <= AVISOS_CORRAL[0];
+    }
+
+    // --- los totales de la pantalla global (solo vueltas, sin descansos) ---
+
+    // Una muestra de pulso por segundo, solo mientras la vuelta esta en
+    // curso (de la campana a la marca). La llama el tic de la app.
+    function muestrearPulso() {
+        var v = vuelta();
+        if (v == null || v < 1 || marcada()) { return; }
+        var info = Activity.getActivityInfo();
+        if (info == null || info.currentHeartRate == null) { return; }
+        sumaPulso += info.currentHeartRate;
+        muestrasPulso += 1;
+    }
+
+    // Los cerrados mas la vuelta en curso si todavia no se marco.
+    function kmTotalesDeVueltas() {
+        var km = kmDeVueltas;
+        if (!marcada()) {
+            var k = kmEnLaVuelta();
+            if (k != null) { km += k; }
+        }
+        return km;
+    }
+
+    function segTotalesDeVueltas() {
+        var s = segDeVueltas;
+        if (!marcada()) {
+            var t = segundosEnLaVuelta();
+            if (t != null) { s += t; }
+        }
+        return s;
+    }
+
+    // El ritmo medio de todas las vueltas, con el mismo minimo que el margen
+    // para no ensenar un promedio que da tumbos.
+    function ritmoMedioVueltas() {
+        var km = kmTotalesDeVueltas();
+        var s = segTotalesDeVueltas();
+        if (km < KM_MINIMOS_PARA_MARGEN || s <= 0) { return null; }
+        return s.toFloat() / km;
+    }
+
+    function pulsoMedioVueltas() {
+        if (muestrasPulso < 1) { return null; }
+        return (sumaPulso / muestrasPulso).toNumber();
     }
 }

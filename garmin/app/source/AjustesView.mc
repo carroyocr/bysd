@@ -19,6 +19,30 @@ using Toybox.Lang as Lang;
 // dejaba el Menu2 en blanco en el fenix 8-; el valor actual va de sub-rotulo.
 class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
 
+    // Arma y abre el menu completo. Lo usan la linea de salida (UP largo) y
+    // el calentamiento, que es el otro momento en que aun se puede ajustar:
+    // la campana de la vuelta 1 todavia no sono.
+    static function abrir(estado) {
+        var menu = new Ui.Menu2({ :title => Rez.Strings.settingsTitle });
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapMinutes,
+            (estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
+            estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
+        // Las vueltas automaticas y el LAP apagado son interruptores; el
+        // check muestra el estado.
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
+            :autoLap, estado.autoLap, null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLapKm, null,
+            :autoLapKm, estado.autoLapKm, null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingLapOff, null,
+            :lapOff, estado.lapApagado, null));
+        // Las pantallas de carrera: cuales se ven. El orden se cambia desde
+        // el telefono; aqui solo mostrar u ocultar.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
+            :pantallas, null));
+        Ui.pushView(menu, new AjustesMenuDelegate(estado), Ui.SLIDE_UP);
+    }
+
     var _estado;
 
     function initialize(estado) {
@@ -32,13 +56,14 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             _abrirRueda(:minutos);
         } else if (id == :distancia) {
             _abrirRueda(:km);
-        } else if (id == :autoLap || id == :autoLapKm) {
+        } else if (id == :autoLap || id == :autoLapKm || id == :lapOff) {
             // El ToggleMenuItem ya cambio su check al tocarlo; se guarda en la
             // misma propiedad que lee el telefono. No cierra el menu: el
             // corredor ve el nuevo estado y sigue.
             var ti = item as Ui.ToggleMenuItem;
-            App.Properties.setValue(id == :autoLap ? "autoLap" : "autoLapKm",
-                                    ti.isEnabled());
+            var clave = id == :autoLap ? "autoLap"
+                      : id == :autoLapKm ? "autoLapKm" : "lapOff";
+            App.Properties.setValue(clave, ti.isEnabled());
             _estado.leerAjustes();
         } else if (id == :pantallas) {
             PantallasMenuDelegate.abrir(_estado);
@@ -162,7 +187,18 @@ class NumeroPickerDelegate extends Ui.PickerDelegate {
             App.Properties.setValue("lapDistance", v.toFloat());
         }
         _estado.leerAjustes();
-        // Cierra la rueda y el menu, de vuelta a la linea de salida.
+        // Si la duracion cambia durante el calentamiento, el ancla se sella
+        // de nuevo con la duracion nueva: la campana de la vuelta 1 todavia
+        // no sono, asi que mover el cero es legitimo. En carrera este menu
+        // no se abre, y ahi el ancla no se toca jamas.
+        if (_cual == :minutos && _estado.campana0 != null) {
+            var vuelta = _estado.vuelta();
+            if (vuelta != null && vuelta == 0) {
+                _estado.darLaSalida();
+                _estado.guardar();
+            }
+        }
+        // Cierra la rueda y el menu, de vuelta a donde se estaba.
         Ui.popView(Ui.SLIDE_DOWN);
         Ui.popView(Ui.SLIDE_DOWN);
         return true;
@@ -190,10 +226,12 @@ class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
             :pagMargin, _visible("pageMargin", 2), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenData, null,
             :pagData, _visible("pageData", 3), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenDataLap, null,
+            :pagDataLap, _visible("pageDataLap", 4), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.total, null,
-            :pagTotal, _visible("pageTotal", 4), null));
+            :pagTotal, _visible("pageTotal", 5), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.clock, null,
-            :pagClock, _visible("pageClock", 5), null));
+            :pagClock, _visible("pageClock", 6), null));
         Ui.pushView(menu, new PantallasMenuDelegate(estado), Ui.SLIDE_LEFT);
     }
 
@@ -221,8 +259,9 @@ class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
         if (id == :pagLap) { clave = "pageLap"; porDefecto = 1; }
         else if (id == :pagMargin) { clave = "pageMargin"; porDefecto = 2; }
         else if (id == :pagData) { clave = "pageData"; porDefecto = 3; }
-        else if (id == :pagTotal) { clave = "pageTotal"; porDefecto = 4; }
-        else if (id == :pagClock) { clave = "pageClock"; porDefecto = 5; }
+        else if (id == :pagDataLap) { clave = "pageDataLap"; porDefecto = 4; }
+        else if (id == :pagTotal) { clave = "pageTotal"; porDefecto = 5; }
+        else if (id == :pagClock) { clave = "pageClock"; porDefecto = 6; }
         if (clave == null) { return; }
         var ti = item as Ui.ToggleMenuItem;
         App.Properties.setValue(clave, ti.isEnabled() ? porDefecto : 0);

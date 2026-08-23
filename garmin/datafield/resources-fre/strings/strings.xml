@@ -24,6 +24,9 @@
     <string id="pace">Allure</string>
     <string id="heartRate">FC</string>
     <string id="remaining">Restant</string>
+    <string id="time">Temps</string>
+    <string id="start">Départ</string>
+    <string id="lapStarts">Début</string>
     <string id="pressStart">START pour partir</string>
     <string id="gpsReady">GPS prêt</string>
     <string id="gpsWait">Recherche GPS</string>
@@ -44,13 +47,16 @@
     <string id="settingLapMinutes">Tour (minutes)</string>
     <string id="settingLapDistance">Tour (km)</string>
     <string id="settingCorral">Alerte corral</string>
-    <string id="settingAutoLap">Tour auto au départ</string>
+    <string id="settingAutoLap">Tour auto à l'arrivée</string>
     <string id="settingAutoLapKm">Tour auto à la distance</string>
+    <string id="settingLapOff">Bouton LAP désactivé</string>
     <string id="settingScreens">Écrans de course</string>
     <string id="screenData">Données</string>
+    <string id="screenDataLap">Données du tour</string>
     <string id="settingPageLap">Écran Tour : position (0 le masque)</string>
     <string id="settingPageMargin">Écran Marge : position (0 le masque)</string>
     <string id="settingPageData">Écran Données : position (0 le masque)</string>
+    <string id="settingPageDataLap">Écran Données du tour : position (0 le masque)</string>
     <string id="settingPageTotal">Écran Total : position (0 le masque)</string>
     <string id="settingPageClock">Écran Heure : position (0 le masque)</string>
 </strings>

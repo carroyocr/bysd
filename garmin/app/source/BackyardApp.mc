@@ -187,6 +187,7 @@ class BackyardApp extends App.AppBase {
             }
         }
         estado.refrescarFoto();
+        estado.muestrearPulso();
         _quizaCampana();
         // La vuelta automatica: llegar al punto de salida marca igual que LAP.
         if (estado.tocaMarcarSola()) {
@@ -208,8 +209,9 @@ class BackyardApp extends App.AppBase {
         if (v == null || v <= _vueltaVista) { return; }
         _vueltaVista = v;
         _session.addLap();
-        // Cada campana cierra una vuelta y puede recalibrar el objetivo: se
-        // guarda para que un cierre justo despues no pierda la cuenta.
+        // Se guarda en cada campana para que un cierre justo despues no
+        // pierda la cuenta. (La calibracion ya no ocurre aqui: se toma al
+        // marcar la vuelta, y esa marca guarda por su lado.)
         estado.guardar();
         _vibrar(1500);
     }

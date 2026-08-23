@@ -24,23 +24,31 @@
     <setting propertyKey="@Properties.autoLapKm" title="@Strings.settingAutoLapKm">
         <settingConfig type="boolean"/>
     </setting>
+    <!-- Apagar el boton LAP, para el que va totalmente automatico. Apagado
+         el ajuste (por defecto), LAP funciona como siempre. -->
+    <setting propertyKey="@Properties.lapOff" title="@Strings.settingLapOff">
+        <settingConfig type="boolean"/>
+    </setting>
 
     <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0
          como "oculta". La etiqueta de cada ajuste lo explica; los empates los
          resuelve la app por el orden de fabrica. -->
     <setting propertyKey="@Properties.pageLap" title="@Strings.settingPageLap">
-        <settingConfig type="numeric" min="0" max="5"/>
+        <settingConfig type="numeric" min="0" max="6"/>
     </setting>
     <setting propertyKey="@Properties.pageMargin" title="@Strings.settingPageMargin">
-        <settingConfig type="numeric" min="0" max="5"/>
+        <settingConfig type="numeric" min="0" max="6"/>
     </setting>
     <setting propertyKey="@Properties.pageData" title="@Strings.settingPageData">
-        <settingConfig type="numeric" min="0" max="5"/>
+        <settingConfig type="numeric" min="0" max="6"/>
+    </setting>
+    <setting propertyKey="@Properties.pageDataLap" title="@Strings.settingPageDataLap">
+        <settingConfig type="numeric" min="0" max="6"/>
     </setting>
     <setting propertyKey="@Properties.pageTotal" title="@Strings.settingPageTotal">
-        <settingConfig type="numeric" min="0" max="5"/>
+        <settingConfig type="numeric" min="0" max="6"/>
     </setting>
     <setting propertyKey="@Properties.pageClock" title="@Strings.settingPageClock">
-        <settingConfig type="numeric" min="0" max="5"/>
+        <settingConfig type="numeric" min="0" max="6"/>
     </setting>
 </settings>

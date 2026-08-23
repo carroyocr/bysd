@@ -64,6 +64,12 @@ TABLA = {
     "pace":             ("Pace",                    "Ritmo",               "Allure",               "Pace",                  "Passo",                "Ritmo"),
     "heartRate":        ("HR",                      "Pulso",               "FC",                   "Puls",                  "FC",                   "FC"),
     "remaining":        ("Remaining",               "Restante",            "Restant",              "Verbleibend",           "Rimanente",            "Restante"),
+    # El tiempo total de carrera, en la pantalla global de datos.
+    "time":             ("Time",                    "Tiempo",              "Temps",                "Zeit",                  "Tempo",                "Tempo"),
+
+    # El calentamiento como pantalla unica y el aviso de inicio de vuelta.
+    "start":            ("Start",                   "Salida",              "Départ",               "Start",                 "Partenza",             "Largada"),
+    "lapStarts":        ("Starting",                "Comienza",            "Début",                "Beginnt",               "Inizia",               "Começa"),
 
 
     # La linea de salida y el menu de terminar. Los del menu y el dialogo los
@@ -106,12 +112,16 @@ TABLA = {
     # de unidad no podria tener un valor por defecto correcto para todos.
     "settingLapDistance":("Lap distance (km)",      "Vuelta (km)",         "Tour (km)",            "Rundenlänge (km)",      "Giro (km)",            "Volta (km)"),
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
-    # La vuelta automatica: marcar al llegar al punto de salida, sin boton.
-    "settingAutoLap":   ("Auto lap at start point", "Vuelta auto en la salida","Tour auto au départ","Auto-Runde am Start",  "Giro auto alla partenza","Volta auto na largada"),
+    # La vuelta automatica: marcar al llegar a la meta (el punto de salida,
+    # que en una backyard es la misma linea), sin boton.
+    "settingAutoLap":   ("Auto lap at finish line","Vuelta auto Meta",     "Tour auto à l'arrivée","Auto-Runde im Ziel",    "Giro auto al traguardo","Volta auto na meta"),
     # La otra vuelta automatica: marcar al completar la distancia de la
     # vuelta. Pueden estar las dos puestas: marca la que llegue primero, y
     # solo una vez por vuelta.
     "settingAutoLapKm": ("Auto lap by distance",    "Vuelta auto por distancia","Tour auto à la distance","Auto-Runde nach Distanz","Giro auto per distanza","Volta auto por distância"),
+    # Apagar el boton LAP, para quien va totalmente automatico y no quiere
+    # marcar por error con un roce. Apagado el ajuste = LAP funciona.
+    "settingLapOff":    ("LAP button off",          "Apagar botón LAP",    "Bouton LAP désactivé", "LAP-Taste aus",         "Pulsante LAP spento",  "Botão LAP desligado"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
     # cada una tiene su posicion (0 la oculta); en el reloj, un interruptor
@@ -119,9 +129,11 @@ TABLA = {
     # menus; las demas reusan lap/margin/total/clock.
     "settingScreens":   ("Race screens",            "Pantallas de carrera", "Écrans de course",     "Rennseiten",            "Schermate di gara",    "Ecrãs de prova"),
     "screenData":       ("Data",                    "Datos",               "Données",              "Daten",                 "Dati",                 "Dados"),
+    "screenDataLap":    ("Lap data",                "Datos de vuelta",     "Données du tour",      "Rundendaten",           "Dati del giro",        "Dados da volta"),
     "settingPageLap":   ("Lap screen: position (0 hides it)",      "Pantalla Vuelta: posición (0 la oculta)",   "Écran Tour : position (0 le masque)",      "Seite Runde: Position (0 blendet aus)",   "Schermata Giro: posizione (0 la nasconde)",   "Ecrã Volta: posição (0 oculta)"),
     "settingPageMargin":("Margin screen: position (0 hides it)",   "Pantalla Margen: posición (0 la oculta)",   "Écran Marge : position (0 le masque)",     "Seite Puffer: Position (0 blendet aus)",  "Schermata Margine: posizione (0 la nasconde)","Ecrã Margem: posição (0 oculta)"),
     "settingPageData":  ("Data screen: position (0 hides it)",     "Pantalla Datos: posición (0 la oculta)",    "Écran Données : position (0 le masque)",   "Seite Daten: Position (0 blendet aus)",   "Schermata Dati: posizione (0 la nasconde)",   "Ecrã Dados: posição (0 oculta)"),
+    "settingPageDataLap":("Lap data screen: position (0 hides it)", "Pantalla Datos de vuelta: posición (0 la oculta)", "Écran Données du tour : position (0 le masque)", "Seite Rundendaten: Position (0 blendet aus)", "Schermata Dati giro: posizione (0 la nasconde)", "Ecrã Dados da volta: posição (0 oculta)"),
     "settingPageTotal": ("Total screen: position (0 hides it)",    "Pantalla Total: posición (0 la oculta)",    "Écran Total : position (0 le masque)",     "Seite Gesamt: Position (0 blendet aus)",  "Schermata Totale: posizione (0 la nasconde)", "Ecrã Total: posição (0 oculta)"),
     "settingPageClock": ("Clock screen: position (0 hides it)",    "Pantalla Reloj: posición (0 la oculta)",    "Écran Heure : position (0 le masque)",     "Seite Uhr: Position (0 blendet aus)",     "Schermata Ora: posizione (0 la nasconde)",    "Ecrã Hora: posição (0 oculta)"),
 }

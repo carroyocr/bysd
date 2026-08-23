@@ -24,6 +24,9 @@
     <string id="pace">Passo</string>
     <string id="heartRate">FC</string>
     <string id="remaining">Rimanente</string>
+    <string id="time">Tempo</string>
+    <string id="start">Partenza</string>
+    <string id="lapStarts">Inizia</string>
     <string id="pressStart">START per partire</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Ricerca GPS</string>
@@ -44,13 +47,16 @@
     <string id="settingLapMinutes">Giro (minuti)</string>
     <string id="settingLapDistance">Giro (km)</string>
     <string id="settingCorral">Avviso corral</string>
-    <string id="settingAutoLap">Giro auto alla partenza</string>
+    <string id="settingAutoLap">Giro auto al traguardo</string>
     <string id="settingAutoLapKm">Giro auto per distanza</string>
+    <string id="settingLapOff">Pulsante LAP spento</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati</string>
+    <string id="screenDataLap">Dati del giro</string>
     <string id="settingPageLap">Schermata Giro: posizione (0 la nasconde)</string>
     <string id="settingPageMargin">Schermata Margine: posizione (0 la nasconde)</string>
     <string id="settingPageData">Schermata Dati: posizione (0 la nasconde)</string>
+    <string id="settingPageDataLap">Schermata Dati giro: posizione (0 la nasconde)</string>
     <string id="settingPageTotal">Schermata Totale: posizione (0 la nasconde)</string>
     <string id="settingPageClock">Schermata Ora: posizione (0 la nasconde)</string>
 </strings>
