@@ -9,6 +9,7 @@ import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
 import AdFooter from './components/AdFooter';
 import WelcomeScreen from './screens/WelcomeScreen';
+import EntradaScreen from './screens/EntradaScreen';
 import RaceSelectScreen from './screens/RaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
@@ -250,6 +251,9 @@ export default function LiveApp() {
     <LiveThemeProvider>
       <Routes>
         <Route index element={<WelcomeScreen />} />
+        {/* Decide con qué carrera abrir (la guardada o la más próxima). El
+            selector clásico queda solo como respaldo cuando no hay carreras. */}
+        <Route path="ir" element={<EntradaScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
         {/* La carrera elegida, antes de entrar en ella. Va antes de
             :raceCode para que "portada" no se lea como un código. */}

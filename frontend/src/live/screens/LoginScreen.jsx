@@ -230,7 +230,7 @@ export default function LoginScreen() {
     if (conBio && bio.disponible && !bio.activada && datos.token) {
       await activarBiometria(correoBio, datos.token);
     }
-    navigate('/live/carreras');
+    navigate('/live/ir');
   };
 
   // ---------- Acceso ----------
@@ -246,7 +246,7 @@ export default function LoginScreen() {
     }
     guardarSesion({ token });
     marcarAcceso();
-    navigate('/live/carreras');
+    navigate('/live/ir');
   };
 
   const entrar = async (ev) => {
@@ -484,13 +484,13 @@ export default function LoginScreen() {
           <>
             <div className="w-full flex flex-col gap-3">
               <button
-                onClick={() => { clic(); guardarRol(ESPECTADOR); navigate('/live/carreras'); }}
+                onClick={() => { clic(); guardarRol(ESPECTADOR); navigate('/live/ir'); }}
                 data-testid="ver-sin-cuenta"
                 className={`${botonPlano} border-[rgba(231,118,34,0.5)] shadow-[0_0_26px_rgba(231,118,34,0.16)]`}
               >
                 <Eye className="w-[18px] h-[18px] shrink-0 text-[#E77622]" />
                 <span className="text-[12.5px] uppercase tracking-[0.14em] text-[#E77622]">
-                  Ver la carrera
+                  Seguimiento sin registro
                 </span>
               </button>
 

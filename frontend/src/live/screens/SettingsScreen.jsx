@@ -105,7 +105,7 @@ export default function SettingsScreen() {
     const { ok, data } = await authJson('DELETE', '/api/cuentas/perfil', { token: token() });
     if (ok) {
       await cerrarSesion();
-      navigate('/live/carreras', { replace: true });
+      navigate('/live/login', { replace: true });
       return;
     }
     setErrorBorrado(data.detail || 'No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.');

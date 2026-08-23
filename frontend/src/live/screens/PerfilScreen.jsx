@@ -633,9 +633,9 @@ export default function PerfilScreen() {
           setMsg({ type: 'ok', text: `Listo: la próxima vez entra con ${bio.nombre}.` });
         }
       }
-      // Login hecho: lo siguiente es qué carrera quiere consultar.
+      // Login hecho: a la carrera de entrada (la elegida o la más próxima).
       await fetchAll();
-      navigate('/live/carreras');
+      navigate('/live/ir');
     } else if (status === 403) {
       setPendingEmail(email.trim());
       setCode('');
@@ -656,7 +656,7 @@ export default function PerfilScreen() {
       localStorage.setItem(TOKEN_KEY, guardado);
       marcarAcceso();
       if (!(await fetchAll())) await sesionBiometricaCaducada();
-      else navigate('/live/carreras');
+      else navigate('/live/ir');
     } else {
       setMsg({ type: 'error', text: 'No se pudo verificar. Entra con tu contraseña.' });
     }
@@ -740,7 +740,7 @@ export default function PerfilScreen() {
       localStorage.setItem(TOKEN_KEY, data.token);
       marcarAcceso();
       await fetchAll();
-      navigate('/live/carreras');
+      navigate('/live/ir');
     } else {
       setMsg({ type: 'error', text: data.detail || 'Código incorrecto' });
     }

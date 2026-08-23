@@ -172,13 +172,13 @@ export function rolElegido() {
 /**
  * A dónde va la app al abrirse, pasada la bienvenida.
  *
- * Con sesión abierta se entra directo al inicio, igual que el espectador:
- * preguntar "¿cómo quieres entrar?" a quien ya entró es un paso de más en cada
- * arranque, y quien abre la app viene a ver la carrera, no su perfil. El
- * perfil queda a un toque en el menú lateral.
+ * Con sesión abierta se entra directo a la carrera —la elegida o la más
+ * próxima, eso lo resuelve /live/ir—: preguntar "¿cómo quieres entrar?" a
+ * quien ya entró es un paso de más en cada arranque, y quien abre la app viene
+ * a ver la carrera, no su perfil. El perfil queda a un toque en el menú.
  */
 export function rutaDeEntrada() {
-  return haySesion() ? '/live/carreras' : '/live/login';
+  return haySesion() ? '/live/ir' : '/live/login';
 }
 
 /** Se llama una vez al arrancar la app. */

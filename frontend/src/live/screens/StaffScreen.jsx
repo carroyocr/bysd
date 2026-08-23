@@ -69,7 +69,7 @@ export default function StaffScreen() {
     if (token) {
       guardarSesion({ token });
       setLogged(true);
-      navigate('/live/carreras');
+      navigate('/live/ir');
     } else {
       setError('No se pudo verificar. Entra con tu usuario y contraseña.');
     }
@@ -163,7 +163,7 @@ export default function StaffScreen() {
     }
     setClave({ modo: 'login', email: '', code: '', password: '', password2: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
-    navigate('/live/carreras');
+    navigate('/live/ir');
   };
 
   /** El mismo submit sirve para los tres estados del formulario. */
@@ -208,8 +208,8 @@ export default function StaffScreen() {
     }
     setPassword('');
     setLogged(true);
-    // Entró: lo siguiente es qué carrera quiere consultar.
-    navigate('/live/carreras');
+    // Entró: a la carrera de entrada (la elegida o la más próxima).
+    navigate('/live/ir');
   };
 
   const logout = async () => {
