@@ -32,9 +32,9 @@ export default function FichaEmergencia({ titulo, endpoint, campoLista, encabeza
   const [abierto, setAbierto] = useState(null);
 
   const cargar = useCallback(async () => {
-    const token = token();
-    if (!token) { navigate('/live/login'); return; }
-    const { ok, status, data } = await authJson('GET', endpoint, { token });
+    const t = token();
+    if (!t) { navigate('/live/login'); return; }
+    const { ok, status, data } = await authJson('GET', endpoint, { token: t });
     if (ok) {
       setGente(data[campoLista] || []);
     } else {
