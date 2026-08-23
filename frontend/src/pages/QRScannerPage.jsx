@@ -165,7 +165,12 @@ function ScannerInner() {
       toast.error('Ingresa un número de BIB');
       return;
     }
-    navigate(`/scan/confirmar?bib=${manualBib.trim()}`);
+    // La carrera del escáner viaja con el BIB tecleado. En el QR va dentro
+    // del propio código; aquí hay que arrastrarla, o el backend caería en la
+    // carrera activa del sitio, que no tiene por qué ser la que se corre.
+    const carrera = new URLSearchParams(window.location.search).get('race')
+      || raceStatus?.race_code;
+    navigate(`/scan/confirmar?bib=${manualBib.trim()}${carrera ? `&race=${carrera}` : ''}`);
   };
 
   const startCamera = async () => {
