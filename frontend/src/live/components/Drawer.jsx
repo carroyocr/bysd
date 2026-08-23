@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, Radio, Info, User, Building2, Settings, Trophy, X, ShieldCheck, LogIn,
-  LogOut, BadgeInfo, ChevronDown, Loader2,
+  LogOut, BadgeInfo, ChevronDown, Loader2, CalendarDays,
 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -50,10 +50,11 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     return () => { cancel = true; };
   }, [open, raceCode]);
 
-  // Seguimiento es un acordeón: dentro van las carreras en dos grupos,
-  // próximas y pasadas, y elegir una desde aquí es LA forma de cambiar de
-  // carrera (la entrada "Cambiar de carrera" se retiró). La elección se guarda
-  // en el teléfono y es con la que la app abre la próxima vez.
+  // Evento es un acordeón: dentro van las carreras en dos grupos, próximas y
+  // pasadas, y elegir una desde aquí es LA forma de cambiar de carrera (la
+  // entrada "Cambiar de carrera" se retiró). La elección abre el home de ese
+  // evento, se guarda en el teléfono y es con la que la app abre la próxima
+  // vez.
   const [segAbierto, setSegAbierto] = useState(false);
   const [grupo, setGrupo] = useState('proximas');
   const [carreras, setCarreras] = useState(null);
@@ -76,7 +77,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
   const irACarrera = (code) => {
     guardarCarrera(code);
     onClose();
-    navigate(`/live/${code}/seguimiento`);
+    navigate(`/live/${code}`);
   };
 
   // Cada acceso se muestra solo si su sesión está abierta: el corredor no ve
@@ -98,8 +99,12 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
 
   const items = [
     { label: 'Home', Icon: Home, action: () => go(base) },
+    // "Evento" es el acordeón de carreras: elegir una abre su home y queda
+    // guardada. "Seguimiento" va directo a los corredores de la actual, igual
+    // que el botón de la parte baja del home.
+    { evento: true },
+    { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
-    { seguimiento: true },
     ...accesos,
     hayPatrocinadores && { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     hayGanador && { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
@@ -134,14 +139,14 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
           <p className={`px-4 pb-3 text-xs ${T.muted}`}>{raceName}</p>
         )}
         <nav className="flex-1 overflow-y-auto">
-          {items.map((item) => (item.seguimiento ? (
-            <div key="seguimiento">
+          {items.map((item) => (item.evento ? (
+            <div key="evento">
               <button
                 onClick={() => setSegAbierto((v) => !v)}
                 className={`w-full flex items-center gap-3.5 px-4 py-4 text-left text-sm font-semibold ${T.drawerItem}`}
               >
-                <Radio className="w-5 h-5 text-[#E77622] shrink-0" strokeWidth={2} />
-                Seguimiento
+                <CalendarDays className="w-5 h-5 text-[#E77622] shrink-0" strokeWidth={2} />
+                Evento
                 <ChevronDown
                   className={`w-4 h-4 ml-auto shrink-0 transition-transform ${T.muted} ${segAbierto ? 'rotate-180' : ''}`}
                 />
