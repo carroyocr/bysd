@@ -15,7 +15,7 @@ desde el libro mayor, para que una correccion no deje los dos valores peleados.
 Nada se borra. Corregir una vuelta es **anularla** dejando quien y por que; asi
 el dia despues de la carrera se puede explicar cada numero.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException
@@ -95,8 +95,19 @@ async def _anotar(
     autor: Optional[str],
     info_vuelta: Optional[dict] = None,
     extra: Optional[dict] = None,
+    momento: Optional[datetime] = None,
 ) -> dict:
+    # `momento` es la hora real del paso por el arco cuando la anotacion llega
+    # despues (escaneos hechos sin senal). `created_at` conserva cuando se
+    # escribio en el libro: son dos hechos distintos y el dia de una revision
+    # conviene poder ver los dos.
     ahora = races.ahora_en_carrera(carrera)
+    if momento is not None:
+        if momento.tzinfo is None:
+            momento = momento.replace(tzinfo=timezone.utc)
+        cuando = momento.astimezone(races.zona_horaria(carrera))
+    else:
+        cuando = ahora
     inicio_vuelta = (info_vuelta or {}).get("lap_start_time")
 
     registro = {
@@ -108,8 +119,8 @@ async def _anotar(
         "source": origen,
         "lap_start_time": inicio_vuelta,
         "lap_start_time_local": inicio_vuelta.strftime("%H:%M") if inicio_vuelta else None,
-        "scan_time": ahora,
-        "scan_time_local": races.hora_local_str(carrera),
+        "scan_time": cuando,
+        "scan_time_local": cuando.strftime("%H:%M:%S"),
         "scanned_by": autor or "desconocido",
         "anulada": False,
         "created_at": ahora,
@@ -130,11 +141,12 @@ async def registrar_vuelta(
     autor: Optional[str] = None,
     info_vuelta: Optional[dict] = None,
     extra: Optional[dict] = None,
+    momento: Optional[datetime] = None,
 ) -> dict:
     """Anota una vuelta completada y deja al dia el contador del corredor."""
     await _anotar(
         database, carrera, atleta, VUELTA_COMPLETADA, vuelta, origen, autor,
-        info_vuelta, extra,
+        info_vuelta, extra, momento,
     )
     return await recalcular(database, carrera, atleta.get("bib"))
 
@@ -150,6 +162,7 @@ async def registrar_retiro(
     motivo: Optional[str] = None,
     info_vuelta: Optional[dict] = None,
     extra: Optional[dict] = None,
+    momento: Optional[datetime] = None,
 ) -> dict:
     """Marca el retiro en el libro y en la ficha del corredor.
 
@@ -161,7 +174,7 @@ async def registrar_retiro(
 
     await _anotar(
         database, carrera, atleta, accion, vuelta, origen, autor, info_vuelta,
-        {"reason": motivo, **(extra or {})},
+        {"reason": motivo, **(extra or {})}, momento,
     )
 
     ahora = races.ahora_en_carrera(carrera)

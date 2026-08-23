@@ -227,17 +227,29 @@ def animos_cerrados(carrera: dict) -> bool:
     return ahora_en_carrera(carrera) > cierre
 
 
-def vuelta_actual(carrera: dict) -> dict:
+def vuelta_actual(carrera: dict, en: Optional[datetime] = None) -> dict:
     """En que vuelta va la carrera segun el reloj, y cuanto queda de ella.
 
     Una carrera terminada deja de contar. Sin esto el reloj seguia corriendo
     para siempre: la edicion de enero de 2026 aparecia en la vuelta 4782, una
     por cada hora transcurrida desde aquel dia.
+
+    `en` evalua el reloj en un momento pasado en vez de ahora: es lo que
+    permite sincronizar un escaneo hecho sin senal con la vuelta que de verdad
+    corria cuando el corredor cruzo el arco, no la de la hora en que volvio la
+    conexion. Un momento posterior al cierre se recorta al cierre, igual que
+    el presente.
     """
     duracion = minutos_por_vuelta(carrera)
     salida = hora_de_salida(carrera)
     llegada = hora_de_llegada(carrera)
-    ahora = llegada or ahora_en_carrera(carrera)
+    if en is not None:
+        if en.tzinfo is None:
+            en = en.replace(tzinfo=timezone.utc)
+        en = en.astimezone(zona_horaria(carrera))
+        ahora = min(en, llegada) if llegada else en
+    else:
+        ahora = llegada or ahora_en_carrera(carrera)
 
     if salida is None:
         # Sin fecha no hay reloj que valga: la carrera no ha empezado.

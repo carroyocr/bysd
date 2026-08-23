@@ -635,6 +635,158 @@ async def confirm_lap(
     }
 
 
+# ============= ESCANEO FUERA DE LINEA =============
+#
+# En el anillo la senal se cae, y la fila de corredores no espera. El telefono
+# descarga antes la lista de corredores y el reloj de la carrera, escanea y
+# guarda cada paso con su hora, y cuando vuelve la senal lo manda todo aqui.
+#
+# La regla que no se puede romper: cada escaneo se evalua con el reloj de la
+# carrera EN LA HORA EN QUE OCURRIO (`scanned_at`), no en la hora en que llega.
+# Si se evaluara al llegar, cualquier vuelta sincronizada una hora tarde
+# pareceria fuera de tiempo y el corredor acabaria DNF por una averia de red.
+
+
+class EscaneoFueraDeLinea(BaseModel):
+    bib: str
+    lap_number: int
+    action: str  # "lap_completed" o "dnf" (retiro manual confirmado en el telefono)
+    scanned_at: datetime
+    scanned_by: Optional[str] = None
+
+
+class SincronizarRequest(BaseModel):
+    race_code: str
+    scans: List[EscaneoFueraDeLinea]
+
+
+@router.post("/sync-offline")
+async def sincronizar_escaneos(
+    request: SincronizarRequest,
+    _acceso=Depends(require_scan_access),
+):
+    """Recibe los escaneos hechos sin senal y los anota en el libro mayor.
+
+    Devuelve el resultado de cada uno: `ok` (anotado), `already_registered`
+    (otro escaner ya la habia anotado: no es un error), `dnf` (el retiro quedo
+    registrado) o `conflicto` (no se pudo aplicar sola; queda en el telefono
+    para que la organizacion la resuelva por el panel con la vuelta manual).
+    """
+    from server import db as database
+
+    carrera = await races.obtener_carrera(database, request.race_code)
+    race_code = carrera.get("code")
+
+    if _acceso.get("scan_key") and _acceso.get("race_code") != race_code:
+        raise HTTPException(
+            status_code=403,
+            detail="Esa clave de escaneo no es de esta carrera",
+        )
+
+    resultados = []
+    # En orden de ocurrencia: las vueltas de un mismo corredor deben aplicarse
+    # como pasaron, o la segunda chocaria con el contador.
+    for scan in sorted(request.scans, key=lambda s: s.scanned_at):
+        registro = {"bib": scan.bib, "lap_number": scan.lap_number,
+                    "scanned_at": scan.scanned_at.isoformat()}
+
+        atleta = await laps.buscar_atleta(database, race_code, scan.bib)
+        if not atleta:
+            resultados.append({**registro, "status": "conflicto",
+                               "message": f"No hay ningun corredor con el dorsal {scan.bib}"})
+            continue
+
+        autor = scan.scanned_by
+        info = races.vuelta_actual(carrera, en=scan.scanned_at)
+
+        # ----- Retiro manual confirmado en el telefono -----
+        if scan.action == "dnf":
+            if atleta.get("status") == "retired":
+                resultados.append({**registro, "status": "already_registered",
+                                   "message": "Ya estaba marcado como DNF"})
+                continue
+            estado = await laps.registrar_retiro(
+                database, carrera, atleta, laps.RETIRO_MANUAL,
+                atleta.get("laps_completed", 0), laps.ORIGEN_QR, autor,
+                "DNF manual (escaneo fuera de linea)", info,
+                {"offline": True}, momento=scan.scanned_at,
+            )
+            resultados.append({**registro, "status": "dnf",
+                               "message": "Retiro registrado",
+                               "laps_completed": estado["laps_completed"]})
+            continue
+
+        if scan.action != "lap_completed":
+            resultados.append({**registro, "status": "conflicto",
+                               "message": f"Accion desconocida: {scan.action}"})
+            continue
+
+        # ----- Vuelta completada -----
+        repetida = await laps.vuelta_ya_registrada(
+            database, race_code, atleta.get("bib"), scan.lap_number
+        )
+        if repetida:
+            resultados.append({**registro, "status": "already_registered",
+                               "message": f"La vuelta {scan.lap_number} ya estaba registrada",
+                               "laps_completed": atleta.get("laps_completed", 0)})
+            continue
+
+        esperada = atleta.get("laps_completed", 0) + 1
+        if scan.lap_number != esperada:
+            resultados.append({**registro, "status": "conflicto",
+                               "message": f"El servidor lleva {atleta.get('laps_completed', 0)} vueltas; "
+                                          f"la esperada era la {esperada}, no la {scan.lap_number}. "
+                                          "Revisar en el panel."})
+            continue
+
+        if not info["race_started"] or scan.lap_number > info["current_lap"]:
+            resultados.append({**registro, "status": "conflicto",
+                               "message": f"A esa hora la vuelta {scan.lap_number} no habia iniciado "
+                                          f"(iba la {info['current_lap']})"})
+            continue
+
+        # Las mismas reglas del escaneo en linea, con el reloj a la hora del paso.
+        if (info["minutes_into_lap"] < MIN_LAP_TIME_MINUTES
+                and scan.lap_number == info["current_lap"]):
+            estado = await laps.registrar_retiro(
+                database, carrera, atleta, laps.RETIRO_TEMPRANO, scan.lap_number,
+                laps.ORIGEN_QR, autor,
+                f"Regreso antes de tiempo ({info['minutes_into_lap']} min < {MIN_LAP_TIME_MINUTES} min)",
+                info, {"minutes_into_lap": info["minutes_into_lap"], "offline": True},
+                momento=scan.scanned_at,
+            )
+            resultados.append({**registro, "status": "dnf",
+                               "message": f"Regreso muy temprano ({info['minutes_into_lap']} min): DNF",
+                               "laps_completed": estado["laps_completed"]})
+            continue
+
+        if scan.lap_number < info["current_lap"]:
+            estado = await laps.registrar_retiro(
+                database, carrera, atleta, laps.RETIRO_POR_TIEMPO, scan.lap_number,
+                laps.ORIGEN_QR, autor,
+                f"Tiempo agotado. La vuelta {scan.lap_number} debio completarse antes.",
+                info, {"offline": True}, momento=scan.scanned_at,
+            )
+            resultados.append({**registro, "status": "dnf",
+                               "message": "Tiempo agotado: DNF",
+                               "laps_completed": estado["laps_completed"]})
+            continue
+
+        estado = await laps.registrar_vuelta(
+            database, carrera, atleta, scan.lap_number, laps.ORIGEN_QR, autor,
+            info, {"minutes_into_lap": info["minutes_into_lap"], "offline": True},
+            momento=scan.scanned_at,
+        )
+        # Sin aviso push: la vuelta ocurrio hace rato y avisarla ahora
+        # confundiria mas de lo que informa.
+        resultados.append({**registro, "status": "ok",
+                           "message": f"Vuelta {scan.lap_number} anotada",
+                           "laps_completed": estado["laps_completed"],
+                           "total_km": estado["total_km"]})
+
+    return {"race_code": race_code, "results": resultados}
+
+
 @router.get("/race-status")
 async def get_race_status(race_code: Optional[str] = None):
     """Get current race timing status for the scanner UI"""

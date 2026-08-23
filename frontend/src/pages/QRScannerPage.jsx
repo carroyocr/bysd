@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Camera, AlertTriangle, Loader2, RefreshCw, ChevronRight, Timer, X, Hash,
+  CloudOff, Download, UploadCloud, ChevronDown, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Html5Qrcode } from 'html5-qrcode';
 import { adminToken, scanKey } from '../lib/adminApi';
+import {
+  pack, descargarPack, modoActivo, activarModo, pendientes, sincronizar, descartar,
+} from '../lib/scanOffline';
 import ScanKeyGate from '../components/ScanKeyGate';
 import { getJson } from '../live/liveApi';
 import { LiveThemeProvider, useLiveTheme } from '../live/liveTheme';
@@ -35,6 +39,14 @@ function ScannerInner() {
   // se pide aqui, al entrar, en vez de fallar al confirmar la vuelta.
   const [hasScanAccess, setHasScanAccess] = useState(() => !!adminToken() || !!scanKey());
   const [timeRemaining, setTimeRemaining] = useState(0);
+
+  // Fuera de línea: los datos descargados, el interruptor y la cola local.
+  const [datosOffline, setDatosOffline] = useState(() => pack());
+  const [modoOffline, setModoOffline] = useState(() => modoActivo());
+  const [colaOffline, setColaOffline] = useState(() => pendientes());
+  const [verCola, setVerCola] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   // Load race status
   useEffect(() => {
@@ -95,6 +107,56 @@ function ScannerInner() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Al volver a esta pantalla tras confirmar una vuelta sin señal, la cola
+  // cambió: se relee para que el contador de pendientes no mienta.
+  useEffect(() => { setColaOffline(pendientes()); }, []);
+
+  const descargarDatos = async () => {
+    setDescargando(true);
+    try {
+      const carrera = new URLSearchParams(window.location.search).get('race');
+      const datos = await descargarPack(carrera || raceStatus?.race_code);
+      setDatosOffline(datos);
+      toast.success(`Datos descargados: ${datos.participants.length} corredores de ${datos.race.name}`);
+    } catch {
+      toast.error('No se pudieron descargar los datos. ¿Hay señal?');
+    }
+    setDescargando(false);
+  };
+
+  const cambiarModo = () => {
+    const nuevo = !modoOffline;
+    if (nuevo && !datosOffline) {
+      toast.error('Primero descarga los datos de la carrera.');
+      return;
+    }
+    activarModo(nuevo);
+    setModoOffline(nuevo);
+  };
+
+  const sincronizarAhora = async () => {
+    setSincronizando(true);
+    try {
+      const { aplicadas, conflictos } = await sincronizar();
+      setColaOffline(pendientes());
+      setDatosOffline(pack());
+      if (conflictos > 0) {
+        toast.warning(`${aplicadas} sincronizadas · ${conflictos} en conflicto (revisar en el panel)`);
+      } else {
+        toast.success(aplicadas > 0 ? `${aplicadas} vueltas sincronizadas` : 'Nada pendiente de sincronizar');
+      }
+    } catch (e) {
+      toast.error(e.message || 'No se pudo sincronizar. ¿Hay señal?');
+    }
+    setSincronizando(false);
+  };
+
+  const descartarEscaneo = (item) => {
+    if (!window.confirm(`¿Descartar la vuelta ${item.lap_number} de #${item.bib}? No se anotará en el sistema.`)) return;
+    descartar(item.id);
+    setColaOffline(pendientes());
   };
 
   const handleManualEntry = (e) => {
@@ -301,6 +363,101 @@ function ScannerInner() {
                   Buscar atleta <ChevronRight className="w-4 h-4" />
                 </button>
               </form>
+            </div>
+
+            {/* Fuera de línea: preparar los datos, activar el modo y la cola */}
+            <div className={`rounded-2xl px-4 py-4 mb-4 ${modoOffline ? 'border border-[#E77622]' : ''} ${T.card}`}>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-sm font-bold flex items-center gap-2">
+                  <CloudOff className="w-4 h-4 text-[#E77622]" /> Fuera de línea
+                </h3>
+                {/* Interruptor del modo */}
+                <button
+                  onClick={cambiarModo}
+                  aria-label="Modo fuera de línea"
+                  data-testid="offline-toggle"
+                  className={`w-12 h-7 rounded-full relative transition-colors ${modoOffline ? 'bg-[#E77622]' : 'bg-gray-500/40'}`}
+                >
+                  <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${modoOffline ? 'left-6' : 'left-1'}`} />
+                </button>
+              </div>
+              <p className={`text-[11px] leading-relaxed mb-3 ${T.muted}`}>
+                {modoOffline
+                  ? 'Activado: los escaneos se validan con los datos descargados y se guardan en este teléfono.'
+                  : 'Descarga los datos antes de perder la señal. Los escaneos guardados se envían al sincronizar.'}
+              </p>
+
+              <button
+                onClick={descargarDatos}
+                disabled={descargando}
+                data-testid="offline-download"
+                className={`w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold border ${T.divider} disabled:opacity-50`}
+              >
+                {descargando
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Download className="w-4 h-4 text-[#E77622]" />}
+                {datosOffline ? 'Actualizar datos descargados' : 'Descargar datos de la carrera'}
+              </button>
+              {datosOffline && (
+                <p className={`text-[11px] text-center mt-1.5 ${T.subtle}`}>
+                  {datosOffline.race.name} · {datosOffline.participants.length} corredores ·{' '}
+                  {new Date(datosOffline.descargado_en).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' })}
+                </p>
+              )}
+
+              {colaOffline.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setVerCola((v) => !v)}
+                    className="w-full flex items-center justify-between mt-3 py-1.5"
+                    data-testid="offline-queue-toggle"
+                  >
+                    <span className="text-xs font-bold">
+                      {colaOffline.length} escaneo{colaOffline.length === 1 ? '' : 's'} sin sincronizar
+                      {colaOffline.some((s) => s.estado === 'conflicto') && (
+                        <span className="text-red-500"> · conflictos</span>
+                      )}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${T.muted} ${verCola ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {verCola && colaOffline.map((s) => (
+                    <div key={s.id} className={`flex items-center gap-2.5 py-2 border-b last:border-b-0 ${T.divider}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate">
+                          #{s.bib} · {s.nombre}
+                        </p>
+                        <p className={`text-[10px] mt-0.5 ${s.estado === 'conflicto' ? 'text-red-500' : T.muted}`}>
+                          {s.action === 'dnf' ? 'DNF' : s.auto_dnf ? `DNF automático (vuelta ${s.lap_number})` : `Vuelta ${s.lap_number}`}
+                          {' · '}
+                          {new Date(s.scanned_at).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' })}
+                          {s.estado === 'conflicto' ? ` · ${s.mensaje}` : ''}
+                        </p>
+                      </div>
+                      {s.estado === 'conflicto' && (
+                        <button
+                          onClick={() => descartarEscaneo(s)}
+                          aria-label="Descartar"
+                          className="w-8 h-8 flex items-center justify-center shrink-0 text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  <button
+                    onClick={sincronizarAhora}
+                    disabled={sincronizando}
+                    data-testid="offline-sync"
+                    className="w-full h-11 mt-3 bg-[#E77622] hover:bg-[#d96a1a] text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {sincronizando
+                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Sincronizando…</>
+                      : <><UploadCloud className="w-4 h-4" /> Sincronizar ahora</>}
+                  </button>
+                </>
+              )}
             </div>
 
             <p className={`text-xs text-center px-2 ${T.muted}`}>
