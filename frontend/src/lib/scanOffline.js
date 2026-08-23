@@ -12,13 +12,14 @@
  * Los conflictos (el servidor iba por otra vuelta, un dorsal desconocido) no
  * se pierden: quedan marcados en la cola para resolverlos por el panel.
  */
-import { scanHeaders } from './adminApi';
+import { adminToken, scanHeaders } from './adminApi';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const PACK_KEY = 'bysd_scan_offline_pack';
 const QUEUE_KEY = 'bysd_scan_offline_queue';
 const MODO_KEY = 'bysd_scan_offline_modo';
+const FICHAS_PREFIX = 'bysd_fichas_offline:';
 
 const leer = (clave, porDefecto) => {
   try {
@@ -72,7 +73,55 @@ export async function descargarPack(raceCode) {
     descargado_en: new Date().toISOString(),
   };
   escribir(PACK_KEY, datos);
+
+  // Quien entró al panel se lleva también las fichas de emergencia: la
+  // descarga es una sola y deja el teléfono listo para escanear Y para
+  // atender. Si no hay token (entró solo con la clave de escaneo), no pasa
+  // nada: el backend no las daría igual.
+  await descargarFichas();
+
   return datos;
+}
+
+// ---------------- Fichas de emergencia ----------------
+//
+// La ficha médica es la información que más falta hace justo cuando no hay
+// señal: alguien se descompone en el anillo a las tres de la mañana y hay que
+// ver su tipo de sangre y a quién llamar. Cada lista se guarda en el teléfono
+// al consultarla, y también se puede descargar de golpe junto a los datos del
+// escáner. Solo la ve quien entró con el permiso `scanner`: la descarga usa su
+// token, y sin él el backend no la entrega.
+
+export const FICHAS_ENDPOINTS = [
+  '/api/athletes/staff/emergency-info',
+  '/api/staff/equipo/emergency-info',
+];
+
+export function guardarFichas(endpoint, data) {
+  escribir(`${FICHAS_PREFIX}${endpoint}`, { data, guardado_en: new Date().toISOString() });
+}
+
+export function fichasGuardadas(endpoint) {
+  return leer(`${FICHAS_PREFIX}${endpoint}`, null);
+}
+
+/** Baja las dos listas (atletas y equipo). Necesita token con permiso scanner. */
+export async function descargarFichas() {
+  const t = adminToken();
+  if (!t) return 0;
+  let guardadas = 0;
+  for (const endpoint of FICHAS_ENDPOINTS) {
+    try {
+      const r = await fetch(`${API_URL}${endpoint}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (r.ok) {
+        guardarFichas(endpoint, await r.json());
+        guardadas += 1;
+      }
+    } catch { /* sin señal o sin permiso: se queda lo que hubiera */ }
+  }
+  return guardadas;
 }
 
 // ---------------- El reloj local ----------------

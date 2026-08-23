@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Loader2, Phone, Droplet, HeartPulse, TriangleAlert, UserRound, Lock,
+  CloudOff,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { token } from '../sesion';
+import { fichasGuardadas, guardarFichas } from '../../lib/scanOffline';
 
 const esSi = (v) => /^s[ií]$/i.test(v || '');
 
@@ -30,6 +32,8 @@ export default function FichaEmergencia({ titulo, endpoint, campoLista, encabeza
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [abierto, setAbierto] = useState(null);
+  // Cuándo se descargó lo que se está enseñando, si no vino de la red.
+  const [descargadoEn, setDescargadoEn] = useState(null);
 
   const cargar = useCallback(async () => {
     const t = token();
@@ -37,10 +41,27 @@ export default function FichaEmergencia({ titulo, endpoint, campoLista, encabeza
     const { ok, status, data } = await authJson('GET', endpoint, { token: t });
     if (ok) {
       setGente(data[campoLista] || []);
+      setDescargadoEn(null);
+      // Cada consulta con señal deja el teléfono listo para la siguiente sin
+      // ella: es esta copia la que responde cuando la cobertura se cae.
+      guardarFichas(endpoint, data);
+      return;
+    }
+    if (status === 403) {
+      setGente([]);
+      setError('Tu usuario no tiene permiso para ver estos datos.');
+      return;
+    }
+    // Sin red (status 0) o el backend caído: la copia descargada es
+    // exactamente para este momento.
+    const copia = fichasGuardadas(endpoint);
+    if (copia) {
+      setGente(copia.data?.[campoLista] || []);
+      setDescargadoEn(copia.guardado_en);
     } else {
       setGente([]);
-      setError(status === 403
-        ? 'Tu usuario no tiene permiso para ver estos datos.'
+      setError(status === 0
+        ? 'Sin conexión y sin datos descargados. Descárgalos desde el escáner cuando haya señal.'
         : (data.detail || 'No se pudo cargar la lista.'));
     }
   }, [navigate, endpoint, campoLista]);
@@ -74,6 +95,18 @@ export default function FichaEmergencia({ titulo, endpoint, campoLista, encabeza
         </div>
 
         {error && <p className="text-xs text-red-500 px-1 mb-2">{error}</p>}
+
+        {descargadoEn && (
+          <div className="rounded-xl px-3 py-2.5 mb-3 bg-[#E77622]/10 border border-[#E77622] flex items-start gap-2">
+            <CloudOff className="w-4 h-4 text-[#E77622] shrink-0 mt-px" />
+            <p className="text-[11px] leading-relaxed text-[#E77622]">
+              Sin conexión: estás viendo los datos descargados el{' '}
+              {new Date(descargadoEn).toLocaleString('es-DO', {
+                day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+              })}.
+            </p>
+          </div>
+        )}
 
         {gente === null && (
           <div className={`flex justify-center py-16 ${T.muted}`}>

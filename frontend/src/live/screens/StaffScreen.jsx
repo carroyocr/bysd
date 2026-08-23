@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
-  HeartPulse, ScanFace, Loader2, Users, UserRound, Check,
+  HeartPulse, ScanFace, Loader2, Users, UserRound, Check, CloudOff, Download,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
 import { useLiveTheme, THEMES } from '../liveTheme';
@@ -11,6 +11,7 @@ import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
 import { cerrarSesion, guardarSesion, token as tokenSesion } from '../sesion';
 import InputClave from '../components/InputClave';
+import { descargarPack, pack } from '../../lib/scanOffline';
 
 /**
  * Acceso del staff dentro de BYSD Live: inicia sesión con las credenciales
@@ -27,6 +28,25 @@ export default function StaffScreen() {
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Datos para trabajar sin señal: corredores para el escáner y fichas de
+  // emergencia. La descarga es la misma que la del escáner; desde aquí queda a
+  // mano de todo el que atiende, no solo de quien escanea.
+  const [datosOffline, setDatosOffline] = useState(() => pack());
+  const [descargando, setDescargando] = useState(false);
+  const [avisoDescarga, setAvisoDescarga] = useState('');
+
+  const descargarDatos = async () => {
+    setDescargando(true);
+    setAvisoDescarga('');
+    try {
+      const datos = await descargarPack();
+      setDatosOffline(datos);
+    } catch {
+      setAvisoDescarga('No se pudieron descargar los datos. ¿Hay señal?');
+    }
+    setDescargando(false);
+  };
 
   // Biometría del staff: guarda su propio token, aparte del de corredor.
   const [bio, setBio] = useState({ disponible: false, nombre: '', activada: false });
@@ -465,6 +485,43 @@ export default function StaffScreen() {
             </button>
           ))}
         </div>
+
+        {/* Descargar para trabajar sin señal: solo para quien puede ver las
+            fichas (permiso scanner); sin él, el backend no entrega nada. */}
+        {can('scanner') && (
+          <div className={`rounded-2xl mt-4 px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <CloudOff className="w-4 h-4 text-[#E77622]" /> Usar sin señal
+            </h3>
+            <p className={`text-[11px] mt-1 mb-3 leading-relaxed ${T.muted}`}>
+              Descarga los corredores y las fichas de emergencia de atletas y
+              equipo. Si la señal se cae, el escáner y las fichas siguen
+              funcionando con lo descargado.
+            </p>
+            <button
+              onClick={descargarDatos}
+              disabled={descargando}
+              data-testid="staff-offline-download"
+              className={`w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold border ${T.divider} disabled:opacity-50`}
+            >
+              {descargando
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Download className="w-4 h-4 text-[#E77622]" />}
+              {datosOffline ? 'Actualizar datos descargados' : 'Descargar datos'}
+            </button>
+            {avisoDescarga && (
+              <p className="text-[11px] text-center mt-1.5 text-red-500">{avisoDescarga}</p>
+            )}
+            {datosOffline && !avisoDescarga && (
+              <p className={`text-[11px] text-center mt-1.5 ${T.subtle}`}>
+                {datosOffline.race.name} · {datosOffline.participants.length} corredores ·{' '}
+                {new Date(datosOffline.descargado_en).toLocaleString('es-DO', {
+                  day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+                })}
+              </p>
+            )}
+          </div>
+        )}
 
         {bio.disponible && (
           <div className={`rounded-2xl mt-4 px-4 py-4 flex items-center gap-3.5 ${T.card}`}>
