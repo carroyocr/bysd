@@ -45,6 +45,55 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ---
 
+## Novedades de la versión 1.1.0 (para el campo "What's New")
+
+El paquete es `build/backyard.iq` (export de los 52 builds). La versión que
+declara la app en "Acerca de" es la constante de `AcercaView.mc`: subir de
+versión = actualizarla ahí y regenerar el `.iq`.
+
+**ES**
+
+> - La vuelta ahora se llama Yard, como en el evento, en los seis idiomas.
+> - Yard automático: por distancia, por llegada a la meta, o ambos — marca el
+>   que ocurra primero. Y para el modo totalmente automático, el botón LAP se
+>   puede desactivar.
+> - Dos pantallas de datos nuevas: Datos por yard (distancia, ritmo y pulso de
+>   la vuelta) y Datos totales (solo lo corrido en yards, sin descansos), con
+>   aros de color y nombre para distinguirlas de un vistazo.
+> - Catálogo de pantallas: cada una se muestra completa antes de decidir si se
+>   activa u oculta, desde el propio reloj.
+> - Calentamiento como pantalla única: cuenta atrás a la salida, hora de la
+>   campana y check de GPS en verde cuando el reloj fija posición.
+> - Aviso de inicio: en cada campana, 5 segundos con el número del yard que
+>   arranca.
+> - Avisos del corral que se sienten a ciegas: 3 vibraciones a 3 minutos, 2 a
+>   2, una larga en el último — y ahora también con tonos. Interruptores de
+>   vibración y sonido para apagarlos.
+> - El último minuto, en negro gigante sobre rojo.
+> - Margen más fiel: el circuito se calibra en el momento de marcar el yard.
+> - Acerca de, con la versión y un QR al sitio del evento.
+
+**EN**
+
+> - Laps are now called Yards, as at the event, in all six languages.
+> - Auto yard: by distance, by reaching the finish line, or both — whichever
+>   comes first. For fully automatic use, the LAP button can be disabled.
+> - Two new data screens: Yard data (current lap distance, pace, HR) and Total
+>   data (yards only, rest time excluded), with colored rings and labels.
+> - Screen catalog: preview every screen right on the watch before choosing to
+>   show or hide it.
+> - Warm-up as a single screen: countdown to the start, bell time, and a GPS
+>   check that turns green when position is fixed.
+> - Yard start notice: 5 seconds at every bell with the starting yard number.
+> - Corral alerts you can feel blind: 3 short buzzes at 3 minutes, 2 at 2, one
+>   long in the final minute — now with tones too. Vibration and sound
+>   switches to turn them off.
+> - The final minute: giant black digits on red.
+> - Truer margin: the course calibrates at the moment the yard is marked.
+> - About screen with the version and a QR code to the event site.
+
+---
+
 ## Textos de la ficha
 
 ### App — «Backyard» (watch-app)

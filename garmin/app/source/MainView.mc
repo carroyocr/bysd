@@ -396,10 +396,11 @@ class MainView extends Ui.View {
         if (s != null && s < 0) { s = 0; }
         var pulso = _estado.pulsoMedioVueltas();
         _cuadricula(dc, cx, cy, w, h, Gfx.COLOR_BLUE, _s[:total],
-            _s[:distance], Fmt.distancia(_estado.kmTotalesDeVueltas()),
-            _s[:pace], Fmt.ritmo(_estado.ritmoMedioVueltas()),
-            _s[:heartRate], pulso == null ? "--" : pulso.format("%d"),
-            _s[:time], Fmt.espera(s));
+            [_s[:distance], _s[:pace], _s[:heartRate], _s[:time]],
+            [Fmt.distancia(_estado.kmTotalesDeVueltas()),
+             Fmt.ritmo(_estado.ritmoMedioVueltas()),
+             pulso == null ? "--" : pulso.format("%d"),
+             Fmt.espera(s)]);
     }
 
     // La gemela de la vuelta en curso: lo recorrido, el ritmo medio de la
@@ -410,10 +411,11 @@ class MainView extends Ui.View {
         var pulso = info == null ? null : info.currentHeartRate;
         _cuadricula(dc, cx, cy, w, h, Gfx.COLOR_ORANGE,
             _s[:lap] + " " + vuelta.format("%d"),
-            _s[:distance], Fmt.distancia(_estado.kmEnLaVuelta()),
-            _s[:pace], Fmt.ritmo(_estado.ritmoSegPorKm()),
-            _s[:heartRate], pulso == null ? "--" : pulso.format("%d"),
-            _s[:remaining], Fmt.reloj(r));
+            [_s[:distance], _s[:pace], _s[:heartRate], _s[:remaining]],
+            [Fmt.distancia(_estado.kmEnLaVuelta()),
+             Fmt.ritmo(_estado.ritmoSegPorKm()),
+             pulso == null ? "--" : pulso.format("%d"),
+             Fmt.reloj(r)]);
     }
 
     // La cuadricula que comparten las dos paginas de datos: cuatro cifras de
@@ -421,8 +423,11 @@ class MainView extends Ui.View {
     // arriba a lo ancho, dos en el centro, que es donde la esfera es mas
     // ancha y caben lado a lado sin pisarse, y uno abajo-, mas el aro del
     // color de la pagina con su nombre en una pildora montada sobre el aro.
-    function _cuadricula(dc, cx, cy, w, h, color, nombre,
-                         r1, v1, r2, v2, r3, v3, r4, v4) {
+    // Los rotulos y valores van en arrays de cuatro: las VM viejas (enduro)
+    // no aceptan metodos de mas de nueve argumentos.
+    function _cuadricula(dc, cx, cy, w, h, color, nombre, rotulos, valores) {
+        var rs = rotulos as Lang.Array<Lang.String>;
+        var vs = valores as Lang.Array<Lang.String>;
         var radio = (w < h ? w : h) / 2 - 6;
 
         dc.setPenWidth(4);
@@ -450,10 +455,10 @@ class MainView extends Ui.View {
         dc.drawLine(cx - (w * 36 / 100), yAbajo, cx + (w * 36 / 100), yAbajo);
         dc.drawLine(cx, yArriba, cx, yAbajo);
 
-        _campo(dc, cx, cy - (h * 30 / 100), h, r1, v1);
-        _campo(dc, cx - (w * 22 / 100), cy - (h * 5 / 100), h, r2, v2);
-        _campo(dc, cx + (w * 22 / 100), cy - (h * 5 / 100), h, r3, v3);
-        _campo(dc, cx, cy + (h * 18 / 100), h, r4, v4);
+        _campo(dc, cx, cy - (h * 30 / 100), h, rs[0], vs[0]);
+        _campo(dc, cx - (w * 22 / 100), cy - (h * 5 / 100), h, rs[1], vs[1]);
+        _campo(dc, cx + (w * 22 / 100), cy - (h * 5 / 100), h, rs[2], vs[2]);
+        _campo(dc, cx, cy + (h * 18 / 100), h, rs[3], vs[3]);
     }
 
     // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo.
