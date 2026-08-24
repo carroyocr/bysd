@@ -98,11 +98,18 @@ async def obtener_scan_key(database, race_code: Optional[str] = None) -> tuple:
 
 
 async def require_scan_access(
-    race_code: Optional[str] = None,
     x_scan_key: Optional[str] = Header(None),
     authorization: Optional[str] = Header(None),
 ):
-    """Deja pasar con la clave de escaneo de la carrera o con token del panel."""
+    """Deja pasar con la clave de escaneo de la carrera o con token del panel.
+
+    La clave IDENTIFICA a su carrera: se busca la carrera dueña de la clave y
+    esa es la unica sobre la que este acceso puede escribir (los endpoints
+    comprueban que coincida). Antes la clave se validaba contra la carrera
+    publica del sitio, asi que la clave de una carrera no publicada no podia
+    confirmar vueltas: el dia del mundial, con la de enero publicada, ningun
+    telefono con clave habria podido anotar.
+    """
     from server import db as database
 
     if authorization:
@@ -117,14 +124,12 @@ async def require_scan_access(
             detail="Falta la clave de escaneo. Pidesela a la organizacion.",
         )
 
-    carrera, clave = await obtener_scan_key(database, race_code)
-    if not secrets.compare_digest(x_scan_key.strip().upper(), clave):
+    carrera = await database.race_configurations.find_one(
+        {"scan_key": x_scan_key.strip().upper()}
+    )
+    if not carrera:
         raise HTTPException(status_code=401, detail="Clave de escaneo incorrecta")
 
-    # De que carrera es la clave que acaba de pasar. Ahora que se puede escanear
-    # sobre carreras distintas, el endpoint tiene que comprobar que sea la misma
-    # sobre la que va a escribir: si no, la clave del personal de una carrera
-    # valdria para anotar vueltas en la otra.
     return {"scan_key": True, "race_code": carrera.get("code")}
 
 
@@ -363,6 +368,13 @@ async def get_athlete_for_scan(
 
     active_race = await races.resolver_carrera(database, race_code)
     race_code = active_race.get("code")
+
+    # La clave solo abre su propia carrera, tambien para consultar.
+    if _acceso.get("scan_key") and _acceso.get("race_code") != race_code:
+        raise HTTPException(
+            status_code=403,
+            detail="Esa clave de escaneo no es de esta carrera",
+        )
 
     athlete = await laps.exigir_atleta(database, race_code, bib)
 
@@ -715,7 +727,15 @@ async def sincronizar_escaneos(
             continue
 
         autor = scan.scanned_by
-        info = races.vuelta_actual(carrera, en=scan.scanned_at)
+        # Un reloj de telefono adelantado no puede anotar en el futuro: la
+        # hora se recorta al presente, igual que en la confirmacion en linea.
+        momento = scan.scanned_at
+        if momento.tzinfo is None:
+            momento = momento.replace(tzinfo=timezone.utc)
+        ahora_carrera = races.ahora_en_carrera(carrera)
+        if momento > ahora_carrera:
+            momento = ahora_carrera
+        info = races.vuelta_actual(carrera, en=momento)
 
         # ----- Retiro manual confirmado en el telefono -----
         if scan.action == "dnf":
@@ -727,7 +747,7 @@ async def sincronizar_escaneos(
                 database, carrera, atleta, laps.RETIRO_MANUAL,
                 atleta.get("laps_completed", 0), laps.ORIGEN_QR, autor,
                 "DNF manual (escaneo fuera de linea)", info,
-                {"offline": True}, momento=scan.scanned_at,
+                {"offline": True}, momento=momento,
             )
             resultados.append({**registro, "status": "dnf",
                                "message": "Retiro registrado",
@@ -771,7 +791,7 @@ async def sincronizar_escaneos(
                 laps.ORIGEN_QR, autor,
                 f"Regreso antes de tiempo ({info['minutes_into_lap']} min < {MIN_LAP_TIME_MINUTES} min)",
                 info, {"minutes_into_lap": info["minutes_into_lap"], "offline": True},
-                momento=scan.scanned_at,
+                momento=momento,
             )
             resultados.append({**registro, "status": "dnf",
                                "message": f"Regreso muy temprano ({info['minutes_into_lap']} min): DNF",
@@ -783,7 +803,7 @@ async def sincronizar_escaneos(
                 database, carrera, atleta, laps.RETIRO_POR_TIEMPO, scan.lap_number,
                 laps.ORIGEN_QR, autor,
                 f"Tiempo agotado. La vuelta {scan.lap_number} debio completarse antes.",
-                info, {"offline": True}, momento=scan.scanned_at,
+                info, {"offline": True}, momento=momento,
             )
             resultados.append({**registro, "status": "dnf",
                                "message": "Tiempo agotado: DNF",
@@ -793,7 +813,7 @@ async def sincronizar_escaneos(
         estado = await laps.registrar_vuelta(
             database, carrera, atleta, scan.lap_number, laps.ORIGEN_QR, autor,
             info, {"minutes_into_lap": info["minutes_into_lap"], "offline": True},
-            momento=scan.scanned_at,
+            momento=momento,
         )
         # Sin aviso push: la vuelta ocurrio hace rato y avisarla ahora
         # confundiria mas de lo que informa.
