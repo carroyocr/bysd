@@ -44,6 +44,8 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         // el telefono; aqui solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
             :pantallas, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingAbout, null,
+            :acerca, null));
         Ui.pushView(menu, new AjustesMenuDelegate(estado), Ui.SLIDE_UP);
     }
 
@@ -73,7 +75,10 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             App.Properties.setValue(clave, ti.isEnabled());
             _estado.leerAjustes();
         } else if (id == :pantallas) {
-            PantallasMenuDelegate.abrir(_estado);
+            var vista = new PantallasView(_estado);
+            Ui.pushView(vista, new PantallasDelegate(vista), Ui.SLIDE_LEFT);
+        } else if (id == :acerca) {
+            Ui.pushView(new AcercaView(), new AcercaDelegate(), Ui.SLIDE_LEFT);
         }
     }
 
@@ -212,70 +217,159 @@ class NumeroPickerDelegate extends Ui.PickerDelegate {
     }
 }
 
-// Las pantallas de carrera: un interruptor por pantalla, para elegir cuales
-// se ven. Escribe en las mismas propiedades pageLap..pageClock que el
-// telefono; apagar pone 0 (oculta) y encender devuelve la posicion de
-// fabrica, asi que un orden personalizado desde el telefono se rehace ahi.
-// El orden -que pantalla va primera- se cambia solo desde el telefono: una
-// esfera no es sitio para arrastrar listas.
+// El catalogo de pantallas: cada una se dibuja ENTERA, con datos de
+// muestra, y el corredor decide viendola -no adivinando por el nombre-.
+// UP/DOWN recorre las seis en el orden de fabrica; START o un toque la
+// muestra u oculta; BACK vuelve al menu de ajustes.
 //
-// Si el corredor las apaga todas, RaceState deja la de vuelta: la app no se
-// queda sin pantalla.
-class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
+// Escribe en las mismas propiedades pageLap..pageClock que el telefono:
+// ocultar pone 0 y mostrar devuelve la posicion de fabrica, asi que un
+// orden personalizado desde el telefono se rehace ahi. El orden -que
+// pantalla va primera- se cambia solo desde el telefono: una esfera no es
+// sitio para arrastrar listas. Si el corredor las oculta todas, RaceState
+// deja la de yard: la app no se queda sin pantalla.
+class PantallasView extends Ui.View {
 
-    // El rotulo de cada pantalla, su propiedad y su posicion de fabrica, en
-    // el mismo orden que RaceState.AJUSTES_PAGINAS.
-    static function abrir(estado) {
-        var menu = new Ui.Menu2({ :title => Rez.Strings.settingScreens });
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenDataLap, null,
-            :pagDataLap, _visible("pageDataLap", 1), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenData, null,
-            :pagData, _visible("pageData", 2), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.margin, null,
-            :pagMargin, _visible("pageMargin", 3), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.lap, null,
-            :pagLap, _visible("pageLap", 4), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.total, null,
-            :pagTotal, _visible("pageTotal", 5), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.clock, null,
-            :pagClock, _visible("pageClock", 6), null));
-        Ui.pushView(menu, new PantallasMenuDelegate(estado), Ui.SLIDE_LEFT);
+    // Ids de pantalla en el orden de fabrica, con su propiedad y su
+    // posicion (los mismos de RaceState.AJUSTES_PAGINAS y properties.xml).
+    static const IDS = [5, 2, 1, 0, 3, 4];
+    static const CLAVES = ["pageDataLap", "pageData", "pageMargin",
+                           "pageLap", "pageTotal", "pageClock"];
+    static const POSICIONES = [1, 2, 3, 4, 5, 6];
+
+    var _estado;
+    // Un MainView propio, solo como lienzo: dibuja las paginas de verdad,
+    // con los mismos metodos que las dibujan en carrera.
+    var _lienzo;
+    var _i = 0;
+    var _nombres as Lang.Array<Lang.String> = [];
+    var _visible;
+    var _oculta;
+
+    function initialize(estado) {
+        View.initialize();
+        _estado = estado;
+        _lienzo = new MainView(estado);
     }
 
-    static function _visible(clave, porDefecto) {
+    function onLayout(dc) {
+        _lienzo.onLayout(dc);
+        _nombres = [
+            Ui.loadResource(Rez.Strings.screenDataLap),
+            Ui.loadResource(Rez.Strings.screenData),
+            Ui.loadResource(Rez.Strings.margin),
+            Ui.loadResource(Rez.Strings.lap),
+            Ui.loadResource(Rez.Strings.total),
+            Ui.loadResource(Rez.Strings.clock)
+        ] as Lang.Array<Lang.String>;
+        _visible = Ui.loadResource(Rez.Strings.screenShown);
+        _oculta = Ui.loadResource(Rez.Strings.screenHidden);
+    }
+
+    function avanzar(paso) {
+        var n = (IDS as Lang.Array<Lang.Number>).size();
+        _i = (_i + paso + n) % n;
+    }
+
+    function alternar() {
+        var clave = (CLAVES as Lang.Array<Lang.String>)[_i];
+        var pos = (POSICIONES as Lang.Array<Lang.Number>)[_i];
         try {
-            var v = App.Properties.getValue(clave);
-            var pos = v == null ? porDefecto : v.toNumber();
+            App.Properties.setValue(clave, _estaVisible() ? 0 : pos);
+        } catch (e) {
+        }
+        _estado.leerAjustes();
+    }
+
+    function _estaVisible() {
+        try {
+            var v = App.Properties.getValue(
+                (CLAVES as Lang.Array<Lang.String>)[_i]);
+            var pos = v == null
+                ? (POSICIONES as Lang.Array<Lang.Number>)[_i] : v.toNumber();
             return pos > 0;
         } catch (e) {
             return true;
         }
     }
 
-    var _estado;
+    function onUpdate(dc) {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
 
-    function initialize(estado) {
-        Menu2InputDelegate.initialize();
-        _estado = estado;
+        _lienzo.dibujarPagina(dc, (IDS as Lang.Array<Lang.Number>)[_i]);
+
+        // La franja del catalogo, abajo: el nombre con su lugar en la lista
+        // y el estado en color -verde visible, gris oculta-. Tapa la zona
+        // de las migas, que en el catalogo no significan nada.
+        var alto = h * 22 / 100;
+        var visible = _estaVisible();
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+        dc.fillRectangle(0, h - alto, w, alto);
+        dc.setPenWidth(1);
+        dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.drawLine(w * 25 / 100, h - alto, w * 75 / 100, h - alto);
+
+        var n = (IDS as Lang.Array<Lang.Number>).size();
+        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, h - (alto * 70 / 100), Gfx.FONT_XTINY,
+                    _nombres[_i] + " · " + (_i + 1).format("%d") + "/"
+                    + n.format("%d"),
+                    Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        dc.setColor(visible ? Gfx.COLOR_GREEN : Gfx.COLOR_LT_GRAY,
+                    Gfx.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, h - (alto * 30 / 100), Gfx.FONT_XTINY,
+                    visible ? _visible : _oculta,
+                    Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+    }
+}
+
+class PantallasDelegate extends Ui.BehaviorDelegate {
+
+    var _vista;
+
+    function initialize(vista) {
+        BehaviorDelegate.initialize();
+        _vista = vista;
     }
 
-    function onSelect(item) {
-        var id = item.getId();
-        var clave = null;
-        var porDefecto = 0;
-        if (id == :pagDataLap) { clave = "pageDataLap"; porDefecto = 1; }
-        else if (id == :pagData) { clave = "pageData"; porDefecto = 2; }
-        else if (id == :pagMargin) { clave = "pageMargin"; porDefecto = 3; }
-        else if (id == :pagLap) { clave = "pageLap"; porDefecto = 4; }
-        else if (id == :pagTotal) { clave = "pageTotal"; porDefecto = 5; }
-        else if (id == :pagClock) { clave = "pageClock"; porDefecto = 6; }
-        if (clave == null) { return; }
-        var ti = item as Ui.ToggleMenuItem;
-        App.Properties.setValue(clave, ti.isEnabled() ? porDefecto : 0);
-        _estado.leerAjustes();
+    function onNextPage() {
+        _vista.avanzar(1);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onPreviousPage() {
+        _vista.avanzar(-1);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    // START muestra u oculta la pantalla que se esta viendo. En los
+    // tactiles, el toque hace lo mismo.
+    function onSelect() {
+        _vista.alternar();
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onTap(evento) {
+        return onSelect();
+    }
+
+    function onSwipe(evento) {
+        var direccion = evento.getDirection();
+        if (direccion == Ui.SWIPE_UP) {
+            return onNextPage();
+        }
+        if (direccion == Ui.SWIPE_DOWN) {
+            return onPreviousPage();
+        }
+        return false;
     }
 
     function onBack() {
         Ui.popView(Ui.SLIDE_DOWN);
+        return true;
     }
 }

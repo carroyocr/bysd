@@ -559,6 +559,36 @@ class MainView extends Ui.View {
         dc.drawArc(cx, cy, radio, Gfx.ARC_CLOCKWISE, 90, fin);
     }
 
+    // Dibuja una pagina suelta con datos de muestra: la vuelta 8 con la
+    // hora a medio consumir. Es para el catalogo de pantallas de los
+    // ajustes, donde el corredor la ve entera antes de decidir si la
+    // activa. Lo que necesita actividad (km, ritmo, pulso) sale con
+    // guiones, que para reconocer la pantalla basta.
+    function dibujarPagina(dc, id) {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        var cx = w / 2;
+        var cy = h / 2;
+        var radio = (w < h ? w : h) / 2 - 6;
+        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.clear();
+        var vuelta = 8;
+        var r = (_estado.duracionVuelta * 2) / 5;
+        if (id == PAGINA_MARGEN) {
+            _paginaMargen(dc, cx, cy, h, radio, vuelta, r);
+        } else if (id == PAGINA_DATOS) {
+            _paginaDatos(dc, cx, cy, w, h);
+        } else if (id == PAGINA_DATOS_VUELTA) {
+            _paginaDatosVuelta(dc, cx, cy, w, h, vuelta, r);
+        } else if (id == PAGINA_TUYO) {
+            _paginaTuyo(dc, cx, cy, h, radio, vuelta);
+        } else if (id == PAGINA_RELOJ) {
+            _paginaReloj(dc, cx, cy, h, radio);
+        } else {
+            _paginaVuelta(dc, cx, cy, h, radio, vuelta, r);
+        }
+    }
+
     // Con una sola pagina visible no hay nada que navegar y las migas sobran.
     function _migas(dc, cx, h, n) {
         if (n < 2) { return; }

@@ -52,9 +52,12 @@
     <string id="settingLapOff">Bouton LAP désactivé</string>
     <string id="settingVibration">Vibration</string>
     <string id="settingSound">Son</string>
+    <string id="settingAbout">À propos</string>
     <string id="settingScreens">Écrans de course</string>
     <string id="screenData">Données totales</string>
     <string id="screenDataLap">Données par yard</string>
+    <string id="screenShown">Affiché</string>
+    <string id="screenHidden">Masqué</string>
     <string id="settingPageLap">Écran Yard : position (0 le masque)</string>
     <string id="settingPageMargin">Écran Marge : position (0 le masque)</string>
     <string id="settingPageData">Écran Données totales : position (0 le masque)</string>

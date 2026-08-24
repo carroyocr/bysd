@@ -53,9 +53,12 @@
     <string id="settingLapOff">LAP button off</string>
     <string id="settingVibration">Vibration</string>
     <string id="settingSound">Sound</string>
+    <string id="settingAbout">About</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Total data</string>
     <string id="screenDataLap">Data per yard</string>
+    <string id="screenShown">Shown</string>
+    <string id="screenHidden">Hidden</string>
     <string id="settingPageLap">Yard screen: position (0 hides it)</string>
     <string id="settingPageMargin">Margin screen: position (0 hides it)</string>
     <string id="settingPageData">Total data screen: position (0 hides it)</string>

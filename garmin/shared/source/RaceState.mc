@@ -272,16 +272,25 @@ class RaceState {
 
     // --- la salida y el ancla ---
 
-    // Ancla el cero a la marca de duracionVuelta mas cercana del reloj de
-    // pared. A las 8:03 el ancla es 8:00 (la vuelta ya corre); a las 7:58, ...
-    // tambien 8:00 (faltan dos minutos). El ancla se guarda en epoch: los
-    // cambios de hora de despues no la mueven.
+    // Ancla el cero a una marca de duracionVuelta del reloj de pared,
+    // mirando lo que es probable en una carrera real: pulsar START poco
+    // despues de la marca -dentro de la gracia- es salir con la campana ya
+    // sonada, y el ancla va atras (a las 8:03, la vuelta de las 8:00 ya
+    // corre). Todo lo demas es calentamiento, y el ancla va adelante.
+    // Antes se anclaba a la marca MAS CERCANA, y quien abria la app a las
+    // 12:26 caia "corriendo" una yard que nunca salio: nadie llega 26
+    // minutos tarde a una campana, pero todo el mundo calienta media hora
+    // antes. La gracia es un sexto de la vuelta, con techo de 10 minutos,
+    // para que las vueltas cortas de prueba tambien tengan calentamiento.
+    // El ancla se guarda en epoch: los cambios de hora no la mueven.
     function darLaSalida() {
         var ahora = Time.now().value();
         var reloj = Sys.getClockTime();
         var desdeMedianoche = (reloj.hour * 3600) + (reloj.min * 60) + reloj.sec;
         var resto = desdeMedianoche % duracionVuelta;
-        if (resto < duracionVuelta / 2) {
+        var gracia = duracionVuelta / 6;
+        if (gracia > 600) { gracia = 600; }
+        if (resto < gracia) {
             campana0 = ahora - resto;
         } else {
             campana0 = ahora + (duracionVuelta - resto);

@@ -52,9 +52,12 @@
     <string id="settingLapOff">Pulsante LAP spento</string>
     <string id="settingVibration">Vibrazione</string>
     <string id="settingSound">Suono</string>
+    <string id="settingAbout">Informazioni</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati totali</string>
     <string id="screenDataLap">Dati per yard</string>
+    <string id="screenShown">Visibile</string>
+    <string id="screenHidden">Nascosta</string>
     <string id="settingPageLap">Schermata Yard: posizione (0 la nasconde)</string>
     <string id="settingPageMargin">Schermata Margine: posizione (0 la nasconde)</string>
     <string id="settingPageData">Schermata Dati totali: posizione (0 la nasconde)</string>

@@ -6,4 +6,8 @@
 -->
 <drawables>
     <bitmap id="Emblema" filename="emblema.png"/>
+    <!-- El QR de Acerca de: lleva a backyardultrasantodomingo.com. Lo
+         genera tools (segno) con zona quieta blanca incluida; es igual en
+         todas las tallas, y AcercaView lo encoge si no cabe. -->
+    <bitmap id="QrWeb" filename="qr_web.png"/>
 </drawables>

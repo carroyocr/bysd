@@ -129,6 +129,8 @@ TABLA = {
     # Los tonos de la actividad: campana, marca y corral. El ajuste de
     # Sonidos del sistema del reloj manda por encima.
     "settingSound":     ("Sound",                   "Sonido",              "Son",                  "Ton",                   "Suono",                "Som"),
+    # Acerca de: version y QR al sitio del evento.
+    "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
     # cada una tiene su posicion (0 la oculta); en el reloj, un interruptor
@@ -137,6 +139,9 @@ TABLA = {
     "settingScreens":   ("Race screens",            "Pantallas de carrera", "Écrans de course",     "Rennseiten",            "Schermate di gara",    "Ecrãs de prova"),
     "screenData":       ("Total data",              "Datos totales",       "Données totales",      "Gesamtdaten",           "Dati totali",          "Dados totais"),
     "screenDataLap":    ("Data per yard",           "Datos por yard",      "Données par yard",     "Daten pro Yard",        "Dati per yard",        "Dados por yard"),
+    # El estado de cada pantalla en el catalogo de pantallas del reloj.
+    "screenShown":      ("Shown",                   "Visible",             "Affiché",              "Sichtbar",              "Visibile",             "Visível"),
+    "screenHidden":     ("Hidden",                  "Oculta",              "Masqué",               "Ausgeblendet",          "Nascosta",             "Oculta"),
     "settingPageLap":   ("Yard screen: position (0 hides it)",     "Pantalla Yard: posición (0 la oculta)",     "Écran Yard : position (0 le masque)",      "Seite Yard: Position (0 blendet aus)",    "Schermata Yard: posizione (0 la nasconde)",   "Ecrã Yard: posição (0 oculta)"),
     "settingPageMargin":("Margin screen: position (0 hides it)",   "Pantalla Margen: posición (0 la oculta)",   "Écran Marge : position (0 le masque)",     "Seite Puffer: Position (0 blendet aus)",  "Schermata Margine: posizione (0 la nasconde)","Ecrã Margem: posição (0 oculta)"),
     "settingPageData":  ("Total data screen: position (0 hides it)","Pantalla Datos totales: posición (0 la oculta)","Écran Données totales : position (0 le masque)","Seite Gesamtdaten: Position (0 blendet aus)","Schermata Dati totali: posizione (0 la nasconde)","Ecrã Dados totais: posição (0 oculta)"),

@@ -52,9 +52,12 @@
     <string id="settingLapOff">LAP-Taste aus</string>
     <string id="settingVibration">Vibration</string>
     <string id="settingSound">Ton</string>
+    <string id="settingAbout">Info</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Gesamtdaten</string>
     <string id="screenDataLap">Daten pro Yard</string>
+    <string id="screenShown">Sichtbar</string>
+    <string id="screenHidden">Ausgeblendet</string>
     <string id="settingPageLap">Seite Yard: Position (0 blendet aus)</string>
     <string id="settingPageMargin">Seite Puffer: Position (0 blendet aus)</string>
     <string id="settingPageData">Seite Gesamtdaten: Position (0 blendet aus)</string>
