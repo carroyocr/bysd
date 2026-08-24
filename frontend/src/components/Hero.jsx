@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, Clock, UserPlus } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import DescargarApp from './DescargarApp';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -24,9 +25,9 @@ export default function Hero() {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             {/* Content */}
-            <div className="text-center space-y-6 animate-slide-up lg:text-left">
+            <div className="text-center space-y-4 sm:space-y-6 animate-slide-up lg:text-left">
               <Badge className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft">
                 <Clock className="w-4 h-4" />
                 {getEditionLabel()}
@@ -36,14 +37,17 @@ export default function Hero() {
                 BACKYARD ULTRA
                 <span className="block text-primary mt-2">SANTO DOMINGO</span>
               </h1>
+
+              {/* Bajar la app: pegado al título, se ve sin hacer scroll */}
+              <DescargarApp />
               
               <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
                 Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center lg:justify-start pt-1 sm:pt-4">
                 <div
-                  className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft"
+                  className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-card rounded-lg border border-border shadow-soft"
                 >
                   <Calendar className="w-5 h-5 text-primary" />
                   <div className="text-left">
@@ -56,7 +60,7 @@ export default function Hero() {
                   href="https://maps.app.goo.gl/ZRMgpWA65jDLZgwcA"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-5 py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
+                  className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
                 >
                   <MapPin className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
                   <div className="text-left">
@@ -68,7 +72,7 @@ export default function Hero() {
                 {showInscription && (
                   <button
                     onClick={() => navigate('/mi-perfil')}
-                    className="flex items-center gap-3 px-5 py-3 bg-primary/10 rounded-lg border-2 border-primary shadow-soft hover:shadow-medium hover:bg-primary/20 transition-all duration-300 group animate-pulse hover:animate-none"
+                    className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-primary/10 rounded-lg border-2 border-primary shadow-soft hover:shadow-medium hover:bg-primary/20 transition-all duration-300 group animate-pulse hover:animate-none"
                     data-testid="inscription-open-card"
                   >
                     <UserPlus className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
@@ -80,8 +84,6 @@ export default function Hero() {
                 )}
               </div>
               
-              <div className="pt-6">
-              </div>
             </div>
 
             {/* Logo Image - Hidden on mobile, visible on desktop */}
@@ -98,22 +100,22 @@ export default function Hero() {
           </div>
           
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 pt-16 border-t border-border">
-            <div className="text-center space-y-2">
-              <div className="font-display text-4xl sm:text-5xl text-primary">6.7</div>
-              <div className="text-sm text-muted-foreground font-medium">KM por vuelta</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-6 pt-6 sm:mt-16 sm:pt-16 border-t border-border">
+            <div className="text-center space-y-1 sm:space-y-2">
+              <div className="font-display text-3xl sm:text-5xl text-primary">6.7</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">KM por vuelta</div>
             </div>
-            <div className="text-center space-y-2">
-              <div className="font-display text-4xl sm:text-5xl text-primary">60</div>
-              <div className="text-sm text-muted-foreground font-medium">Minutos límite</div>
+            <div className="text-center space-y-1 sm:space-y-2">
+              <div className="font-display text-3xl sm:text-5xl text-primary">60</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Minutos límite</div>
             </div>
-            <div className="text-center space-y-2">
-              <div className="font-display text-4xl sm:text-5xl text-primary">24h+</div>
-              <div className="text-sm text-muted-foreground font-medium">Duración estimada</div>
+            <div className="text-center space-y-1 sm:space-y-2">
+              <div className="font-display text-3xl sm:text-5xl text-primary">24h+</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Duración estimada</div>
             </div>
-            <div className="text-center space-y-2">
-              <div className="font-display text-4xl sm:text-5xl text-primary">1</div>
-              <div className="text-sm text-muted-foreground font-medium">Último en pie</div>
+            <div className="text-center space-y-1 sm:space-y-2">
+              <div className="font-display text-3xl sm:text-5xl text-primary">1</div>
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Último en pie</div>
             </div>
           </div>
         </div>
