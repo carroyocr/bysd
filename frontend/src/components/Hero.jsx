@@ -37,6 +37,9 @@ export default function Hero() {
                 BACKYARD ULTRA
                 <span className="block text-primary mt-2">SANTO DOMINGO</span>
               </h1>
+
+              {/* Bajar la app: pegado al título, se ve sin hacer scroll */}
+              <DescargarApp />
               
               <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
                 Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.
@@ -81,10 +84,6 @@ export default function Hero() {
                 )}
               </div>
               
-              {/* Bajar la app: arriba del pliegue, se ve sin hacer scroll */}
-              <div className="pt-2">
-                <DescargarApp />
-              </div>
             </div>
 
             {/* Logo Image - Hidden on mobile, visible on desktop */}
