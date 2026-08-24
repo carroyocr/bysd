@@ -165,6 +165,11 @@ class LapConfirmRequest(BaseModel):
     # el, confirmar una vuelta del mundial la habria anotado en la carrera de
     # enero solo porque era la que estaba publicada.
     race_code: Optional[str] = None
+    # La hora en que se escaneo al corredor (cargar su ficha), que es la del
+    # paso por el arco. Confirmar puede tardar: una fila, una distraccion. Lo
+    # que cuenta es cuando paso, no cuando alguien toco el boton. Los telefonos
+    # con la app vieja no la mandan y se sigue usando la hora de confirmacion.
+    scanned_at: Optional[datetime] = None
 
 
 class ScanResult(BaseModel):
@@ -492,8 +497,20 @@ async def confirm_lap(
     bib = request.bib
     athlete = await laps.exigir_atleta(database, race_code, bib)
 
+    # El reloj se evalua a la hora del escaneo, si el telefono la mando. Un
+    # reloj de telefono adelantado no puede anotar en el futuro: se recorta al
+    # presente. Hacia atras se acepta tal cual, igual que en la sincronizacion
+    # fuera de linea: quien tiene la clave de escaneo es personal de confianza.
+    momento = request.scanned_at
+    if momento is not None:
+        if momento.tzinfo is None:
+            momento = momento.replace(tzinfo=timezone.utc)
+        ahora_carrera = races.ahora_en_carrera(carrera)
+        if momento > ahora_carrera:
+            momento = ahora_carrera
+
     current_laps = athlete.get("laps_completed", 0)
-    lap_info = races.vuelta_actual(carrera)
+    lap_info = races.vuelta_actual(carrera, en=momento)
     minutes_into_lap = lap_info.get("minutes_into_lap", 0)
     current_race_lap = lap_info.get("current_lap", 0)
     autor = request.scanned_by
@@ -519,6 +536,7 @@ async def confirm_lap(
         await laps.registrar_retiro(
             database, carrera, athlete, laps.RETIRO_MANUAL, current_laps,
             laps.ORIGEN_QR, autor, "DNF manual confirmado", lap_info,
+            momento=momento,
         )
         aviso_de_retiro()
 
@@ -573,7 +591,7 @@ async def confirm_lap(
         await laps.registrar_retiro(
             database, carrera, athlete, laps.RETIRO_TEMPRANO, expected_lap,
             laps.ORIGEN_QR, autor, motivo, lap_info,
-            {"minutes_into_lap": minutes_into_lap},
+            {"minutes_into_lap": minutes_into_lap}, momento=momento,
         )
         aviso_de_retiro()
 
@@ -592,7 +610,7 @@ async def confirm_lap(
             database, carrera, athlete, laps.RETIRO_POR_TIEMPO, expected_lap,
             laps.ORIGEN_QR, autor,
             f"Tiempo agotado. Vuelta {expected_lap} debi\u00f3 completarse antes.",
-            lap_info,
+            lap_info, momento=momento,
         )
         aviso_de_retiro()
 
@@ -607,7 +625,7 @@ async def confirm_lap(
     # Todo en orden: la vuelta cuenta.
     estado = await laps.registrar_vuelta(
         database, carrera, athlete, expected_lap, laps.ORIGEN_QR, autor, lap_info,
-        {"minutes_into_lap": minutes_into_lap},
+        {"minutes_into_lap": minutes_into_lap}, momento=momento,
     )
 
     _avisar_push(
@@ -631,7 +649,7 @@ async def confirm_lap(
         "bib": bib,
         "laps_completed": estado["laps_completed"],
         "total_km": estado["total_km"],
-        "scan_time": races.ahora_en_carrera(carrera).isoformat(),
+        "scan_time": (momento or races.ahora_en_carrera(carrera)).isoformat(),
     }
 
 

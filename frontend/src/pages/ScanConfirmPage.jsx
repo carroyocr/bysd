@@ -81,6 +81,11 @@ function ScanConfirmInner() {
   
   // Timer for countdown
   const [timeRemaining, setTimeRemaining] = useState(0);
+
+  // La hora en que se cargó la ficha del corredor: ESA es la hora del paso por
+  // el arco. Confirmar puede tardar (una fila, un descuido) y la vuelta debe
+  // quedar anotada a la hora del escaneo, no a la del botón.
+  const [escaneadoEn, setEscaneadoEn] = useState(null);
   
   // Get scanned_by from localStorage (admin username)
   const scannedBy = localStorage.getItem('admin_username') || 'scanner';
@@ -107,6 +112,7 @@ function ScanConfirmInner() {
           setError(res?.error || 'No hay datos descargados para esta carrera');
         } else {
           setAthlete(res);
+          setEscaneadoEn(new Date().toISOString());
           setTimeRemaining(res.time_remaining_seconds || 0);
           if (res.already_registered) toast.info('Esta vuelta ya fue registrada anteriormente');
           else if (res.early_return) toast.warning(`⚠️ Regresó muy temprano (${res.minutes_into_lap} min). Se marcará como DNF.`);
@@ -149,8 +155,9 @@ function ScanConfirmInner() {
         }
         
         setAthlete(data);
+        setEscaneadoEn(new Date().toISOString());
         setTimeRemaining(data.time_remaining_seconds || 0);
-        
+
         // Show appropriate warnings
         if (data.already_registered) {
           toast.info('Esta vuelta ya fue registrada anteriormente');
@@ -199,6 +206,7 @@ function ScanConfirmInner() {
       const res = evaluarEscaneo(bib);
       if (res && !res.error) {
         setAthlete(res);
+        setEscaneadoEn(new Date().toISOString());
         setTimeRemaining(res.time_remaining_seconds || 0);
       }
       return;
@@ -238,15 +246,16 @@ function ScanConfirmInner() {
       }
       
       setAthlete(data);
+      setEscaneadoEn(new Date().toISOString());
       setTimeRemaining(data.time_remaining_seconds || 0);
       setLoading(false);
     };
-    
+
     xhr.onerror = function() {
       setError('Error de conexión');
       setLoading(false);
     };
-    
+
     xhr.send();
   };
   
@@ -265,6 +274,7 @@ function ScanConfirmInner() {
       action: manualDnf ? 'dnf' : 'lap_completed',
       scannedBy,
       autoDnf: esAutoDnf,
+      scannedAt: escaneadoEn,
     });
     setCompleted(true);
     setCompletedAction({
@@ -302,7 +312,10 @@ function ScanConfirmInner() {
           // De qué carrera es este QR. Sin esto, la vuelta se anotaba en la
           // carrera publicada, que no tiene por qué ser la que se está
           // corriendo.
-          race_code: raceCode || null
+          race_code: raceCode || null,
+          // La hora del escaneo (cargar la ficha), que es la del paso por el
+          // arco: la vuelta queda anotada a esa hora aunque se confirme tarde.
+          scanned_at: escaneadoEn
         })
       });
       
@@ -367,7 +380,8 @@ function ScanConfirmInner() {
           force_dnf: true,
           dnf_confirmation: 'DNF',
           scanned_by: scannedBy,
-          race_code: raceCode || null
+          race_code: raceCode || null,
+          scanned_at: escaneadoEn
         })
       });
       

@@ -188,7 +188,7 @@ export const pendientes = () => cola().filter((s) => s.estado !== 'sincronizada'
  * hora, pero aquí hace falta saberlo para que el corredor cuente como retirado
  * en los escaneos locales siguientes.
  */
-export function encolar({ raceCode, bib, nombre, lapNumber, action, scannedBy, autoDnf = false }) {
+export function encolar({ raceCode, bib, nombre, lapNumber, action, scannedBy, autoDnf = false, scannedAt = null }) {
   const items = cola();
   const item = {
     id: `${Date.now()}-${bib}-${lapNumber}`,
@@ -198,7 +198,8 @@ export function encolar({ raceCode, bib, nombre, lapNumber, action, scannedBy, a
     lap_number: lapNumber,
     action,
     auto_dnf: autoDnf,
-    scanned_at: new Date().toISOString(),
+    // La hora del escaneo (cargar la ficha), no la de tocar Confirmar.
+    scanned_at: scannedAt || new Date().toISOString(),
     scanned_by: scannedBy || 'scanner',
     estado: 'pendiente',
     mensaje: '',
