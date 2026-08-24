@@ -4,6 +4,7 @@ using Toybox.Lang as Lang;
 using Toybox.System as Sys;
 using Toybox.Activity as Activity;
 using Toybox.Time as Time;
+using Toybox.Position as Position;
 
 // Las pantallas de carrera.
 //
@@ -261,6 +262,30 @@ class MainView extends Ui.View {
                   + bateria.format("%d") + "%";
         }
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+
+        // El check del GPS: verde cuando el reloj ya fijo posicion, gris
+        // mientras busca. Es lo que se mira de reojo antes de la salida.
+        var colorGps = _gpsListo() ? Gfx.COLOR_GREEN : Gfx.COLOR_DK_GRAY;
+        var yGps = _yPie2(cy, h);
+        _check(dc, cx - (h * 5 / 100), yGps, h, colorGps);
+        _txt(dc, cx + (h * 3 / 100), yGps, Gfx.FONT_XTINY, colorGps, "GPS");
+    }
+
+    function _gpsListo() {
+        var info = Position.getInfo();
+        return info != null && info.accuracy != null
+            && info.accuracy >= Position.QUALITY_USABLE;
+    }
+
+    // Una palomita dibujada a mano: las fuentes numericas del reloj no traen
+    // el caracter, y un simbolo que a veces sale y a veces no, no es simbolo.
+    function _check(dc, x, y, h, color) {
+        var u = h * 15 / 1000;
+        if (u < 4) { u = 4; }
+        dc.setPenWidth(3);
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.drawLine(x - u, y, x - (u / 3), y + u);
+        dc.drawLine(x - (u / 3), y + u, x + u, y - u);
     }
 
     // La hora del dia como la quiere el reloj: "6:34 AM" o "18:34".

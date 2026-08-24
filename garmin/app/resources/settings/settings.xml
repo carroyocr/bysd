@@ -29,6 +29,14 @@
     <setting propertyKey="@Properties.lapOff" title="@Strings.settingLapOff">
         <settingConfig type="boolean"/>
     </setting>
+    <!-- Las vibraciones y los tonos de la actividad: campanas, marcas y
+         corral. El sonido ademas obedece a los Sonidos del sistema. -->
+    <setting propertyKey="@Properties.vibration" title="@Strings.settingVibration">
+        <settingConfig type="boolean"/>
+    </setting>
+    <setting propertyKey="@Properties.sound" title="@Strings.settingSound">
+        <settingConfig type="boolean"/>
+    </setting>
 
     <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0
          como "oculta". La etiqueta de cada ajuste lo explica; los empates los

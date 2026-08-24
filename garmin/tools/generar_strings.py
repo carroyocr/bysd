@@ -123,6 +123,12 @@ TABLA = {
     # Apagar el boton LAP, para quien va totalmente automatico y no quiere
     # marcar por error con un roce. Apagado el ajuste = LAP funciona.
     "settingLapOff":    ("LAP button off",          "Apagar botón LAP",    "Bouton LAP désactivé", "LAP-Taste aus",         "Pulsante LAP spento",  "Botão LAP desligado"),
+    # Apagar todas las vibraciones de la actividad (campanas, marcas y
+    # corral). Encendido de fabrica.
+    "settingVibration": ("Vibration",               "Vibración",           "Vibration",            "Vibration",             "Vibrazione",           "Vibração"),
+    # Los tonos de la actividad: campana, marca y corral. El ajuste de
+    # Sonidos del sistema del reloj manda por encima.
+    "settingSound":     ("Sound",                   "Sonido",              "Son",                  "Ton",                   "Suono",                "Som"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
     # cada una tiene su posicion (0 la oculta); en el reloj, un interruptor

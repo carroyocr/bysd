@@ -50,6 +50,8 @@
     <string id="settingAutoLap">Auto-Yard im Ziel</string>
     <string id="settingAutoLapKm">Auto-Yard nach Distanz</string>
     <string id="settingLapOff">LAP-Taste aus</string>
+    <string id="settingVibration">Vibration</string>
+    <string id="settingSound">Ton</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Gesamtdaten</string>
     <string id="screenDataLap">Daten pro Yard</string>

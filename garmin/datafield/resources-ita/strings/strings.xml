@@ -50,6 +50,8 @@
     <string id="settingAutoLap">Yard auto al traguardo</string>
     <string id="settingAutoLapKm">Yard auto per distanza</string>
     <string id="settingLapOff">Pulsante LAP spento</string>
+    <string id="settingVibration">Vibrazione</string>
+    <string id="settingSound">Suono</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati totali</string>
     <string id="screenDataLap">Dati per yard</string>

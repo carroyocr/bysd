@@ -51,6 +51,8 @@
     <string id="settingAutoLap">Auto yard at finish line</string>
     <string id="settingAutoLapKm">Auto yard by distance</string>
     <string id="settingLapOff">LAP button off</string>
+    <string id="settingVibration">Vibration</string>
+    <string id="settingSound">Sound</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Total data</string>
     <string id="screenDataLap">Data per yard</string>

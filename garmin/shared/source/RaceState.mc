@@ -50,14 +50,20 @@ class RaceState {
     // por error con un roce del boton. Solo silencia el boton del corredor;
     // las vueltas automaticas siguen marcando igual.
     var lapApagado = false;
+    // Vibrar y sonar, o no, durante la actividad: campanas, marcas y
+    // corral. Quien corre de noche al lado de companeros dormidos apaga
+    // los dos; el sonido ademas obedece a los Sonidos del sistema.
+    var vibracion = true;
+    var sonido = true;
 
     // El orden de las pantallas de carrera de la app, como ids en el orden
     // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
     // 4 reloj, 5 datos de vuelta). Lo montan los ajustes pageLap..pageClock;
     // el campo de datos no lo usa. MainView tiene los mismos ids en su enum.
-    // El id 5 va despues de 2 en el orden de fabrica: lo deciden las
-    // posiciones por defecto de properties.xml, no este literal.
-    var ordenPaginas = [0, 1, 2, 5, 3, 4];
+    // De fabrica: datos del yard, datos totales, margen, proxima salida,
+    // total y hora — lo deciden los defectos de properties.xml, no este
+    // literal, que solo los refleja.
+    var ordenPaginas = [5, 2, 1, 0, 3, 4];
 
     // El ancla: epoch de la campana de la vuelta 1. Solo la app lo pone, al
     // dar la salida; en el campo de datos se queda en null y manda la
@@ -123,6 +129,8 @@ class RaceState {
         autoLap = _ajuste("autoLap", false);
         autoLapKm = _ajuste("autoLapKm", false);
         lapApagado = _ajuste("lapOff", false);
+        vibracion = _ajuste("vibration", true);
+        sonido = _ajuste("sound", true);
         _leerOrdenPaginas();
     }
 

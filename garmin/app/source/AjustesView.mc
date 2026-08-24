@@ -36,6 +36,10 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             :autoLapKm, estado.autoLapKm, null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingLapOff, null,
             :lapOff, estado.lapApagado, null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingVibration, null,
+            :vibracion, estado.vibracion, null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingSound, null,
+            :sonido, estado.sonido, null));
         // Las pantallas de carrera: cuales se ven. El orden se cambia desde
         // el telefono; aqui solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
@@ -56,13 +60,16 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             _abrirRueda(:minutos);
         } else if (id == :distancia) {
             _abrirRueda(:km);
-        } else if (id == :autoLap || id == :autoLapKm || id == :lapOff) {
+        } else if (id == :autoLap || id == :autoLapKm || id == :lapOff
+                   || id == :vibracion || id == :sonido) {
             // El ToggleMenuItem ya cambio su check al tocarlo; se guarda en la
             // misma propiedad que lee el telefono. No cierra el menu: el
             // corredor ve el nuevo estado y sigue.
             var ti = item as Ui.ToggleMenuItem;
             var clave = id == :autoLap ? "autoLap"
-                      : id == :autoLapKm ? "autoLapKm" : "lapOff";
+                      : id == :autoLapKm ? "autoLapKm"
+                      : id == :lapOff ? "lapOff"
+                      : id == :vibracion ? "vibration" : "sound";
             App.Properties.setValue(clave, ti.isEnabled());
             _estado.leerAjustes();
         } else if (id == :pantallas) {
@@ -220,14 +227,14 @@ class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
     // el mismo orden que RaceState.AJUSTES_PAGINAS.
     static function abrir(estado) {
         var menu = new Ui.Menu2({ :title => Rez.Strings.settingScreens });
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.lap, null,
-            :pagLap, _visible("pageLap", 1), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.margin, null,
-            :pagMargin, _visible("pageMargin", 2), null));
-        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenData, null,
-            :pagData, _visible("pageData", 3), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenDataLap, null,
-            :pagDataLap, _visible("pageDataLap", 4), null));
+            :pagDataLap, _visible("pageDataLap", 1), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.screenData, null,
+            :pagData, _visible("pageData", 2), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.margin, null,
+            :pagMargin, _visible("pageMargin", 3), null));
+        menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.lap, null,
+            :pagLap, _visible("pageLap", 4), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.total, null,
             :pagTotal, _visible("pageTotal", 5), null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.clock, null,
@@ -256,10 +263,10 @@ class PantallasMenuDelegate extends Ui.Menu2InputDelegate {
         var id = item.getId();
         var clave = null;
         var porDefecto = 0;
-        if (id == :pagLap) { clave = "pageLap"; porDefecto = 1; }
-        else if (id == :pagMargin) { clave = "pageMargin"; porDefecto = 2; }
-        else if (id == :pagData) { clave = "pageData"; porDefecto = 3; }
-        else if (id == :pagDataLap) { clave = "pageDataLap"; porDefecto = 4; }
+        if (id == :pagDataLap) { clave = "pageDataLap"; porDefecto = 1; }
+        else if (id == :pagData) { clave = "pageData"; porDefecto = 2; }
+        else if (id == :pagMargin) { clave = "pageMargin"; porDefecto = 3; }
+        else if (id == :pagLap) { clave = "pageLap"; porDefecto = 4; }
         else if (id == :pagTotal) { clave = "pageTotal"; porDefecto = 5; }
         else if (id == :pagClock) { clave = "pageClock"; porDefecto = 6; }
         if (clave == null) { return; }

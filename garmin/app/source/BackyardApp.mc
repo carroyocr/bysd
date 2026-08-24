@@ -7,6 +7,7 @@ using Toybox.ActivityRecording as Rec;
 using Toybox.Activity as Activity;
 using Toybox.Position as Position;
 using Toybox.System as Sys;
+using Toybox.Lang as Lang;
 
 // Backyard.
 //
@@ -89,6 +90,7 @@ class BackyardApp extends App.AppBase {
         var v = estado.vuelta();
         _vueltaVista = v == null ? 0 : v;
         _vibrar(1500);
+        _sonar(Attention.TONE_START);
     }
 
     // Reanudar una carrera que se cerro a mitad (bateria, reinicio). El estado
@@ -119,6 +121,7 @@ class BackyardApp extends App.AppBase {
         _session.addLap();
         estado.guardar();
         _vibrar(500);
+        _sonar(Attention.TONE_LAP);
     }
 
     // Fin de carrera. Guardar cierra el FIT y lo deja listo para subir;
@@ -182,6 +185,8 @@ class BackyardApp extends App.AppBase {
         // marcar la vuelta, y esa marca guarda por su lado.)
         estado.guardar();
         _vibrar(1500);
+        // La campana es la campana: el tono mas fuerte que da el reloj.
+        _sonar(Attention.TONE_ALARM);
     }
 
     function _quizaAvisar() {
@@ -198,8 +203,8 @@ class BackyardApp extends App.AppBase {
         }
 
         // Se busca el aviso mas profundo ya cruzado y se dispara una sola vez.
-        // Si el corredor mira el reloj a falta de un minuto, vibra una vez,
-        // no tres seguidas.
+        // Si el corredor mira el reloj a falta de un minuto, vibra ese aviso,
+        // no los tres seguidos.
         var objetivo = -1;
         for (var i = 0; i < RaceState.AVISOS_CORRAL.size(); i++) {
             if (restante <= RaceState.AVISOS_CORRAL[i]) {
@@ -208,13 +213,47 @@ class BackyardApp extends App.AppBase {
         }
         if (objetivo > _avisoDado) {
             _avisoDado = objetivo;
-            _vibrar(500);
+            _vibrarAviso(objetivo);
+            // A 3 y 2 minutos, tono de alerta; el ultimo minuto suena como
+            // la campana que se viene.
+            _sonar(objetivo >= 2 ? Attention.TONE_ALARM : Attention.TONE_ALERT_HI);
         }
     }
 
+    // Los avisos del corral se distinguen a ciegas: tres vibraciones cortas
+    // a los 3 minutos, dos a los 2, y una larga en el ultimo minuto. El
+    // corredor sabe cuanto queda sin levantar la muneca.
+    function _vibrarAviso(indice) {
+        if (!estado.vibracion || !(Attention has :vibrate)) { return; }
+        if (indice >= 2) {
+            _vibrar(1200);
+            return;
+        }
+        var patron = [];
+        var toques = indice == 0 ? 3 : 2;
+        for (var i = 0; i < toques; i++) {
+            if (i > 0) {
+                patron = patron.add(new Attention.VibeProfile(0, 250));
+            }
+            patron = patron.add(new Attention.VibeProfile(75, 300));
+        }
+        Attention.vibrate(patron as Lang.Array<Attention.VibeProfile>);
+    }
+
+    // Todas las vibraciones de la actividad pasan por aqui o por
+    // _vibrarAviso, asi que el interruptor de vibracion las apaga todas.
     function _vibrar(milis) {
-        if (Attention has :vibrate) {
+        if (estado.vibracion && (Attention has :vibrate)) {
             Attention.vibrate([ new Attention.VibeProfile(75, milis) ]);
+        }
+    }
+
+    // Y todos los tonos pasan por aqui: el interruptor de sonido los apaga
+    // todos, y en relojes sin altavoz o con los Sonidos del sistema en
+    // silencio simplemente no suena nada.
+    function _sonar(tono) {
+        if (estado.sonido && (Attention has :playTone)) {
+            Attention.playTone(tono);
         }
     }
 }
@@ -242,8 +281,10 @@ class SalidaView extends Ui.View {
 
     // Milisegundos por tic y cuanto sube el aro en cada uno: se llena en algo
     // menos de un segundo. Luego el mensaje de "hecho" se queda unos tics, y
-    // el frame negro apenas los justos para llegar a pintarse.
-    static const TIC_MS = 40;
+    // el frame negro apenas los justos para llegar a pintarse. 50 ms es el
+    // minimo que aceptan los relojes: pedir menos solo generaba el aviso
+    // "Timer interval is too small" y corria igual a 50.
+    static const TIC_MS = 50;
     static const PASO = 0.06;
     static const TICS_HECHO = 28;
     static const TICS_NEGRO = 3;
