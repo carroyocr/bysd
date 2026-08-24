@@ -4,7 +4,6 @@ using Toybox.Graphics as Gfx;
 using Toybox.Timer as Timer;
 using Toybox.Attention as Attention;
 using Toybox.ActivityRecording as Rec;
-using Toybox.FitContributor as Fit;
 using Toybox.Activity as Activity;
 using Toybox.Position as Position;
 using Toybox.System as Sys;
@@ -23,13 +22,6 @@ class BackyardApp extends App.AppBase {
 
     var _session = null;
     var _timer;
-
-    // El porcentaje de bateria, grabado dentro del propio FIT como campo de
-    // desarrollador a nivel de record. En una carrera de 30-80 horas la
-    // bateria es un dato de carrera: con la curva entera en el archivo se
-    // puede medir cuanto pide cada hora y planear las cargas. Si el campo no
-    // se puede crear, la carrera sigue sin el.
-    var _campoBateria = null;
 
     // La ultima vuelta vista, para detectar la campana. Cero significa que la
     // carrera no ha empezado.
@@ -91,7 +83,6 @@ class BackyardApp extends App.AppBase {
             :name => "Backyard",
             :sport => Activity.SPORT_RUNNING
         });
-        _crearCampoBateria();
         _session.start();
         estado.darLaSalida();
         estado.guardar();
@@ -112,25 +103,11 @@ class BackyardApp extends App.AppBase {
             :name => "Backyard",
             :sport => Activity.SPORT_RUNNING
         });
-        _crearCampoBateria();
         _session.start();
         var v = estado.vuelta();
         _vueltaVista = v == null ? 0 : v;
         _vueltaDelAviso = 0;
         _avisoDado = -1;
-    }
-
-    // El campo va en cada record del FIT, en porcentaje entero. El try no es
-    // paranoia: si el firmware no da campos de desarrollador, la app no tiene
-    // por que enterarse siquiera.
-    function _crearCampoBateria() {
-        try {
-            _campoBateria = _session.createField("battery", 0,
-                Fit.DATA_TYPE_UINT8,
-                { :mesgType => Fit.MESG_TYPE_RECORD, :units => "%" });
-        } catch (e) {
-            _campoBateria = null;
-        }
     }
 
     // El LAP del corredor: la vuelta termino, empieza el descanso. Solo vale
@@ -169,7 +146,6 @@ class BackyardApp extends App.AppBase {
             _session.discard();
         }
         _session = null;
-        _campoBateria = null;
         // La carrera termino: se borra el guardado para no ofrecer reanudarla
         // la proxima vez que se abra la app.
         estado.limpiar();
@@ -178,14 +154,6 @@ class BackyardApp extends App.AppBase {
     // 'as Void' no es adorno: Timer.start exige un metodo que no devuelva
     // nada, y sin la anotacion el comprobador de tipos lo da por 'Any'.
     function tic() as Void {
-        // La muestra de bateria del segundo. setData solo apunta el valor;
-        // el FIT lo escribe con el record que ya iba a escribir.
-        if (_campoBateria != null) {
-            var stats = Sys.getSystemStats();
-            if (stats != null && stats.battery != null) {
-                _campoBateria.setData(stats.battery.toNumber());
-            }
-        }
         estado.refrescarFoto();
         estado.muestrearPulso();
         _quizaCampana();
