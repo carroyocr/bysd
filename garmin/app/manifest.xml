@@ -17,6 +17,12 @@
         minApiLevel="3.2.0">
 
         <iq:products>
+            <iq:product id="fenix5plus"/>
+            <iq:product id="fenix5splus"/>
+            <iq:product id="fenix5xplus"/>
+            <iq:product id="fr745"/>
+            <iq:product id="fr945"/>
+            <iq:product id="fr945lte"/>
             <iq:product id="fenix6"/>
             <iq:product id="fenix6pro"/>
             <iq:product id="fenix6s"/>
