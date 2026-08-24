@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, Clock, UserPlus } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import DescargarApp from './DescargarApp';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -80,7 +81,9 @@ export default function Hero() {
                 )}
               </div>
               
-              <div className="pt-6">
+              {/* Bajar la app: arriba del pliegue, se ve sin hacer scroll */}
+              <div className="pt-2">
+                <DescargarApp />
               </div>
             </div>
 
