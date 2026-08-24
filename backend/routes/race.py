@@ -846,11 +846,14 @@ async def mark_winner(
 
     nombre = f"{atleta.get('nombre', '')} {atleta.get('apellidos', '')}".strip()
     vueltas = atleta.get("laps_completed", 0)
+    # "El último en pie" es como se gana una backyard; el articulo sigue al
+    # sexo de la ficha de inscripcion.
+    en_pie = "la última en pie" if (atleta.get("sexo") or "").lower().startswith("f") else "el último en pie"
     tarea = asyncio.create_task(avisar_a_todos(
         database,
-        "¡Tenemos Ganador!",
-        f"{nombre}, con un total de {vueltas} vueltas, para un gran total de "
-        f"{atleta.get('total_km', 0)} km. Muchas felicidades.",
+        "¡Tenemos ganador!" if en_pie.startswith("el") else "¡Tenemos ganadora!",
+        f"{nombre} es {en_pie}: {vueltas} vueltas y {atleta.get('total_km', 0)} km. "
+        "¡Muchas felicidades!",
         {"tipo": "ganador", "bib": str(atleta.get("bib")), "race_code": carrera.get("code")},
     ))
     _tareas_push.add(tarea)
