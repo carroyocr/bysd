@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { REG_STATUS_OPTIONS, PAYMENT_OPTIONS } from './EmailComposer';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -60,7 +61,7 @@ export default function WhatsAppComposer() {
   const [previewRecipient, setPreviewRecipient] = useState(null);
   const textareaRef = useRef(null);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   useEffect(() => {
     fetch(`${API_URL}/api/race-config/all`, { headers: { Authorization: `Bearer ${token}` } })

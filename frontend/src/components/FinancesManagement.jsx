@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { adminFetch } from '../lib/adminApi';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -69,7 +70,7 @@ export default function FinancesManagement() {
     notas: ''
   });
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const loadData = useCallback(async () => {
     if (!raceCode || configLoading) return;

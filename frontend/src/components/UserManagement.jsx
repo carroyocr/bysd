@@ -9,6 +9,7 @@ import {
   Save, X, Loader2, Eye, EyeOff, Edit2, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -77,7 +78,7 @@ export default function UserManagement() {
 
   const loadUsers = async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = sesionToken();
       const response = await fetch(`${API_URL}/api/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -115,7 +116,7 @@ export default function UserManagement() {
     
     setSaving(true);
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = sesionToken();
       const response = await fetch(`${API_URL}/api/users`, {
         method: 'POST',
         headers: { 
@@ -144,7 +145,7 @@ export default function UserManagement() {
   const handleUpdatePermissions = async (username) => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = sesionToken();
       const response = await fetch(`${API_URL}/api/users/${username}/permissions`, {
         method: 'PUT',
         headers: { 
@@ -175,7 +176,7 @@ export default function UserManagement() {
     }
     
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = sesionToken();
       const response = await fetch(`${API_URL}/api/users/${username}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }

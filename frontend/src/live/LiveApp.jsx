@@ -3,11 +3,13 @@ import { Routes, Route, useParams } from 'react-router-dom';
 import { LiveThemeProvider, useLiveTheme } from './liveTheme';
 import { getJson, FOLLOWED_KEY, NOTIF_KEY } from './liveApi';
 import { pushDisponible, refrescarPush } from './push';
+import { migrarSesionHeredada } from './sesion';
 import useSwipeBack from './useSwipeBack';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
 import AdFooter from './components/AdFooter';
 import WelcomeScreen from './screens/WelcomeScreen';
+import EntradaScreen from './screens/EntradaScreen';
 import RaceSelectScreen from './screens/RaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import TrackingScreen from './screens/TrackingScreen';
@@ -52,6 +54,12 @@ export const useRace = () => useContext(RaceContext);
  */
 function useLapNotifications(raceCode) {
   const lastLaps = useRef({});
+
+  // Una sola vez al arrancar: adopta la sesión que hubiera de una versión
+  // anterior de la app y borra del llavero las credenciales biométricas de
+  // cuando había dos accesos separados. Sin esto, un teléfono que ya tenía la
+  // app pediría la cara para no encontrar nada.
+  useEffect(() => { migrarSesionHeredada(); }, []);
 
   useEffect(() => {
     if (pushDisponible()) return undefined;
@@ -243,7 +251,12 @@ export default function LiveApp() {
     <LiveThemeProvider>
       <Routes>
         <Route index element={<WelcomeScreen />} />
+        {/* Decide con qué carrera abrir (la guardada o la más próxima). El
+            selector clásico queda solo como respaldo cuando no hay carreras. */}
+        <Route path="ir" element={<EntradaScreen />} />
         <Route path="carreras" element={<RaceSelectScreen />} />
+        {/* La carrera elegida, antes de entrar en ella. Va antes de
+            :raceCode para que "portada" no se lea como un código. */}
         {/* Antes de :raceCode para que no se interpreten como código de carrera */}
         <Route path="login" element={<LoginScreen />} />
         <Route path="perfil" element={<PerfilScreen />} />

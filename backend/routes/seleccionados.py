@@ -143,6 +143,27 @@ class SeleccionadoUpdate(BaseModel):
     categoria: str
 
 
+@router.get("/public")
+async def public_seleccionados(db=Depends(get_db)):
+    """Nomina para la pagina publica del campeonato: solo nombre y vueltas."""
+    docs = await db.campeonato_seleccionados.find(
+        {}, {"_id": 0, "nombre": 1, "apellidos": 1, "laps_completed": 1, "categoria": 1}
+    ).to_list(500)
+
+    def publicos(categoria):
+        grupo = [d for d in docs if d.get("categoria") == categoria]
+        grupo.sort(key=lambda d: (-(d.get("laps_completed") or 0), d.get("nombre", "")))
+        return [
+            {
+                "name": f"{d.get('nombre', '')} {d.get('apellidos', '')}".strip(),
+                "laps": d.get("laps_completed") or 0,
+            }
+            for d in grupo
+        ]
+
+    return {"titulares": publicos("titular"), "reservas": publicos("reserva")}
+
+
 @router.get("/admin", dependencies=[solo_atletas])
 async def list_seleccionados(db=Depends(get_db)):
     docs = await db.campeonato_seleccionados.find({}, {"_id": 0}).sort("created_at", 1).to_list(500)

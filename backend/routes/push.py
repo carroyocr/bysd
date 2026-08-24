@@ -43,6 +43,11 @@ class RegistroDispositivo(BaseModel):
     # habia forma de mandar un aviso "a los inscritos": el registro solo sabia
     # a quien sigue el telefono, no de quien es.
     athlete_email: Optional[str] = None
+    # Cuenta unica. Sustituye a los dos campos de arriba: tener que llevar
+    # `athlete_email` y `staff_email` en el mismo documento era el sintoma de
+    # que una persona que corre y ademas es voluntaria tenia dos identidades.
+    # Los dos viejos se siguen aceptando hasta que la app deje de mandarlos.
+    account_id: Optional[str] = None
 
 
 class Baja(BaseModel):
@@ -125,6 +130,15 @@ async def registrar_dispositivo(registro: RegistroDispositivo, request: Request)
         campos["staff_email"] = registro.staff_email.strip().lower() or None
     if registro.athlete_email is not None:
         campos["athlete_email"] = registro.athlete_email.strip().lower() or None
+    if registro.account_id is not None:
+        from bson import ObjectId
+
+        try:
+            campos["account_id"] = ObjectId(registro.account_id.strip())
+        except Exception:
+            # Un identificador con mala pinta no vale para tumbar el registro
+            # del telefono: se ignora y el aparato sigue recibiendo lo general.
+            pass
 
     await database.push_devices.update_one(
         {"token": token},
@@ -206,6 +220,29 @@ async def enviar_aviso(aviso: Aviso):
 # ============= AVISOS AUTOMATICOS =============
 
 
+async def avisar_a_todos(
+    database,
+    titulo: str,
+    cuerpo: str,
+    data: Optional[dict] = None,
+) -> None:
+    """Aviso a todas las apps instaladas, sin filtrar por carrera.
+
+    Para lo poco que le importa a todo el mundo: hoy, el ganador. Igual que
+    `avisar_a_seguidores`, esta pensada para `asyncio.create_task`: se traga
+    sus errores para que un fallo de FCM nunca tumbe a quien la dispara.
+    """
+    try:
+        if not push_service.esta_configurado():
+            return
+        tokens = [d["token"] async for d in database.push_devices.find({}, {"token": 1})]
+        if not tokens:
+            return
+        await _enviar_y_limpiar(database, tokens, titulo, cuerpo, data)
+    except Exception as e:
+        logger.warning(f"No se pudo enviar el aviso general: {e}")
+
+
 async def avisar_a_seguidores(
     database,
     race_code: Optional[str],
@@ -256,7 +293,7 @@ async def avisar_a_seguidores(
 
 
 class FiltroPush(BaseModel):
-    # 'todos' | 'atletas' | 'staff' | 'seguidores' | 'manual'
+    # 'todos' | 'atletas' | 'staff' | 'espectadores' | 'seguidores' | 'manual'
     audiencia: str
     race_code: Optional[str] = None
     # Solo 'atletas'
@@ -319,10 +356,33 @@ async def _correos_staff(database, filtro: FiltroPush) -> List[str]:
     return [c.strip().lower() for c in correos if isinstance(c, str) and c.strip()]
 
 
+async def _cuentas_espectadoras(database) -> List:
+    """Los `_id` de las cuentas a las que se puede escribir.
+
+    Manda **solo el consentimiento**: tener cuenta no es haber aceptado que le
+    escriban, y esa casilla va aparte del alta a proposito. No se exige tambien
+    correo verificado porque el espectador no verifica —solo se le pide codigo
+    si algun dia pasa a corredor o a equipo—, y exigirlo dejaria este envio sin
+    destinatarios para siempre sin que nada fallara a la vista.
+
+    Esto es para el envio dirigido que escribe una persona desde el panel. El
+    aviso automatico de "el corredor al que sigues acaba de cerrar vuelta" no
+    pasa por aqui: ese es el servicio que la persona pidio al seguirlo, y va por
+    `followed` como siempre.
+    """
+    return await database.accounts.distinct("_id", {"acepta_comunicaciones": True})
+
+
 async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:
     """Dispositivos alcanzados por el filtro, sin repetir token."""
     if filtro.audiencia == "todos":
         query = {"race_code": filtro.race_code} if filtro.race_code else {}
+
+    elif filtro.audiencia == "espectadores":
+        ids = await _cuentas_espectadoras(database)
+        if not ids:
+            return []
+        query = {"account_id": {"$in": ids}}
 
     elif filtro.audiencia == "seguidores":
         formas: List[str] = []
@@ -337,24 +397,32 @@ async def _dispositivos_de(database, filtro: FiltroPush) -> List[dict]:
     else:
         if filtro.audiencia == "atletas":
             correos = await _correos_atletas(database, filtro)
-            campo = "athlete_email"
         elif filtro.audiencia == "staff":
             correos = await _correos_staff(database, filtro)
-            campo = "staff_email"
         elif filtro.audiencia == "manual":
             correos = [c.strip().lower() for c in filtro.correos if c and c.strip()]
-            # A mano no se sabe si el correo es de un corredor o del equipo: se
-            # busca por los dos lados.
-            if not correos:
-                return []
-            query = {"$or": [{"athlete_email": {"$in": correos}}, {"staff_email": {"$in": correos}}]}
-            return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
         else:
             raise HTTPException(status_code=400, detail="Audiencia desconocida")
 
         if not correos:
             return []
-        query = {campo: {"$in": correos}}
+
+        # Del correo al telefono hay dos caminos y hacen falta los dos. El
+        # telefono que entro con la cuenta unica quedo vinculado por
+        # `account_id` y ya no lleva correo encima; los registrados por
+        # versiones anteriores de la app llevan `athlete_email` o
+        # `staff_email` y pueden no tener cuenta. Buscar solo por los campos
+        # de correo mandaba los avisos al token viejo y muerto de quien
+        # reinstalo la app, y FCM ni siquiera lo rechaza: decia "enviado" y
+        # no llegaba nada.
+        cuentas = await database[
+            "accounts"
+        ].find({"email": {"$in": correos}}, {"_id": 1}).to_list(len(correos))
+        query = {"$or": [
+            {"account_id": {"$in": [c["_id"] for c in cuentas]}},
+            {"athlete_email": {"$in": correos}},
+            {"staff_email": {"$in": correos}},
+        ]}
 
     return await database.push_devices.find(query, {"_id": 0}).to_list(5000)
 
@@ -377,13 +445,15 @@ async def previsualizar_destinatarios(filtro: FiltroPush, _=Depends(_puede_envia
         esperados = len(await _correos_atletas(database, filtro))
     elif filtro.audiencia == "staff":
         esperados = len(await _correos_staff(database, filtro))
+    elif filtro.audiencia == "espectadores":
+        esperados = len(await _cuentas_espectadoras(database))
     elif filtro.audiencia == "manual":
         esperados = len([c for c in filtro.correos if c and c.strip()])
 
     con_app = len({
-        (d.get("athlete_email") or d.get("staff_email"))
+        (d.get("account_id") or d.get("athlete_email") or d.get("staff_email"))
         for d in dispositivos
-        if d.get("athlete_email") or d.get("staff_email")
+        if d.get("account_id") or d.get("athlete_email") or d.get("staff_email")
     })
 
     return {

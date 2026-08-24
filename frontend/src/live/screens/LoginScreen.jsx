@@ -1,197 +1,778 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Footprints, ShieldCheck, ScanFace, Loader2, Eye, Flame } from 'lucide-react';
-import { useLiveTheme } from '../liveTheme';
-import { Screen } from '../LiveApp';
-import { estadoBiometria, entrarConBiometria, ATLETA, STAFF } from '../biometria';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Flame, Loader2, ScanFace, Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Check, UserCheck,
+} from 'lucide-react';
+import { API } from '../liveApi';
 import { clic } from '../sonido';
-import { TOKEN_ATLETA, TOKEN_STAFF, marcarAccesoAtleta, hayAtleta, hayStaff, rutaDeEntrada } from '../sesion';
+import { estadoBiometria, entrarConBiometria, activarBiometria } from '../biometria';
+import Picker from '../components/Picker';
+import DateField from '../components/DateField';
+import { COUNTRIES } from '../../data/countries';
+import {
+  guardarSesion, haySesion, rutaDeEntrada, guardarRol, ESPECTADOR, marcarAcceso,
+} from '../sesion';
 
-const ESPECTADOR = 'espectador';
-
-/**
- * Los tres accesos, cada uno con su color.
- *
- * El color no decora: dice a qué puerta lleva cada cosa, y es el mismo que
- * usan después las pantallas de cada rol. La franja de la portada y el
- * corredor comparten el naranja de la marca; staff y espectador traen los
- * suyos para no depender solo del icono.
- *
- * Cada rol lleva dos tonos porque la app tiene tema claro y oscuro: sobre el
- * crema del tema claro los fondos oscuros se ven como manchas.
- */
-const ROLES = [
-  {
-    quien: ATLETA,
-    Icon: Footprints,
-    etiqueta: 'Corredor',
-    ruta: '/live/perfil',
-    color: { dark: '#E77622', light: '#C25F12' },
-    fondo: { dark: '#3A2410', light: '#FDEEDF' },
-    borde: { dark: 'rgba(231,118,34,0.45)', light: 'rgba(194,95,18,0.30)' },
-    canto: { dark: '#A85718', light: '#E0BE9B' },
-  },
-  {
-    quien: STAFF,
-    Icon: ShieldCheck,
-    etiqueta: 'Staff',
-    ruta: '/live/staff',
-    color: { dark: '#5DCAA5', light: '#0F6E56' },
-    fondo: { dark: '#14342B', light: '#E1F5EE' },
-    borde: { dark: 'rgba(93,202,165,0.45)', light: 'rgba(15,110,86,0.26)' },
-    canto: { dark: '#2E8A6D', light: '#AFDACB' },
-  },
-  {
-    quien: ESPECTADOR,
-    Icon: Eye,
-    etiqueta: 'Espectador',
-    ruta: '/live/carreras',
-    color: { dark: '#85B7EB', light: '#185FA5' },
-    fondo: { dark: '#1B2E40', light: '#E6F1FB' },
-    borde: { dark: 'rgba(133,183,235,0.45)', light: 'rgba(24,95,165,0.26)' },
-    canto: { dark: '#3C6FA8', light: '#B2CEEC' },
-  },
+// Los tres tipos de cuenta.
+//
+// Los tres se crean desde cero: el perfil es uno solo para todo el mundo, y esa
+// era la razón de unificarlo. Lo que el tipo decide es el rol, no el acceso:
+// una cuenta de equipo nace **sin ningún permiso** y con eso solo ve su propio
+// perfil y los turnos libres. Quién entra a inscripciones, a finanzas o a las
+// fichas médicas —que exigen el permiso `scanner`— lo sigue decidiendo la
+// organización desde el panel, que es donde debe decidirse.
+const TIPOS = [
+  { id: 'espectador', etiqueta: 'Espectador', pie: 'Seguir la carrera, animar a los corredores y recibir avisos.' },
+  { id: 'atleta', etiqueta: 'Atleta', pie: 'Correr, inscribirte y llevar tu historial de carreras.' },
+  { id: 'staff', etiqueta: 'Staff', pie: 'Voluntario o equipo. Los accesos del panel te los da la organización después.' },
 ];
 
+const SEXOS = ['Masculino', 'Femenino'];
+
+// La puerta va en negro siempre, con tema claro u oscuro, así que los
+// selectores de la app reciben aquí los valores oscuros a mano en vez del tema
+// vigente. La hoja inferior y el rodillo se quedan tal cual: eso es lo que hace
+// que se vean igual que en el resto de la app.
+const T_PUERTA = {
+  input: 'bg-white/[0.05] border border-white/10 text-[#EFE9DD] placeholder-[#6d655a]',
+  drawer: 'bg-[#141210] text-[#EFE9DD]',
+  divider: 'border-white/10',
+  itraBox: 'bg-white/[0.06]',
+  muted: 'text-[#6d655a]',
+};
+
+const CAMPO = 'w-full rounded-full px-5 py-3.5 bg-white/[0.05] border border-white/10 '
+  + 'text-[13px] text-[#EFE9DD] placeholder:text-[#6d655a] outline-none '
+  + 'focus:border-[rgba(231,118,34,0.5)]';
+
 /**
- * Única puerta de entrada, y la primera pantalla al abrir la app: primero se
- * elige quién eres y solo entonces se ve el acceso que te toca.
+ * Campo de contraseña con el ojo para mostrarla.
  *
- * Antes el menú ofrecía "Perfil del corredor" y "Staff" a la vez, y cualquiera
- * podía asomarse al formulario de staff. Ahora el menú solo muestra "Iniciar
- * sesión" mientras no haya sesión, y desde aquí se va a uno u otro.
+ * A nivel de módulo, no dentro del render de LoginScreen: anidarlo haría que
+ * React lo tratara como un tipo de componente nuevo en cada tecla, lo
+ * remontaría, y el campo perdería el foco a la primera letra. El build no
+ * detecta eso.
+ */
+function Clave({ valor, alCambiar, marcador, autocompletar, visible, alternar }) {
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        value={valor}
+        onChange={alCambiar}
+        placeholder={marcador}
+        autoComplete={autocompletar}
+        className={`${CAMPO} pr-14`}
+      />
+      <button
+        type="button"
+        onClick={alternar}
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6d655a] p-1"
+      >
+        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Aviso de correo ya registrado.
  *
- * Espectador no es una sesión: es seguir la carrera sin identificarse, que es
- * lo que hace la mayoría. Por eso los tres pesan lo mismo en pantalla y ninguno
- * pide nada hasta que se toca.
+ * Emergente y no una línea de texto porque llega mientras se escribe, con la
+ * atención puesta en el teclado: un renglón bajo el campo se lee tarde o no se
+ * lee, y para entonces la persona ya rellenó el resto.
+ */
+function AvisoCuentaExiste({ correo, alEntrar, alCerrar }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-7"
+      style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(2px)' }}
+      onClick={alCerrar}
+    >
+      <div
+        onClick={(ev) => ev.stopPropagation()}
+        className="w-full max-w-sm rounded-3xl border border-white/12 bg-[#141210]
+          px-6 py-7 text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+      >
+        <div className="w-12 h-12 rounded-full grid place-items-center mx-auto
+          border border-[rgba(133,183,235,0.4)] bg-[rgba(133,183,235,0.10)]">
+          <UserCheck className="w-5 h-5 text-[#85B7EB]" />
+        </div>
+
+        <p className="mt-4 text-[13px] text-[#EFE9DD]">Ese correo ya tiene cuenta</p>
+        <p className="mt-1.5 text-[11.5px] text-[#a49c8f] break-all">{correo}</p>
+        <p className="mt-3 text-[11.5px] text-[#6d655a]">
+          No hace falta que crees otra: entra con la que ya tienes.
+        </p>
+
+        <button
+          type="button"
+          onClick={alEntrar}
+          className="w-full mt-6 rounded-full px-5 py-3.5 flex items-center justify-center gap-2
+            border border-[rgba(231,118,34,0.5)] bg-white/[0.035] text-[12.5px]
+            uppercase tracking-[0.14em] text-[#E77622] active:scale-[0.985]
+            transition-all duration-100"
+        >
+          <LogIn className="w-4 h-4" />
+          Ir a iniciar sesión
+        </button>
+        <button
+          type="button"
+          onClick={alCerrar}
+          className="w-full mt-2 py-2.5 text-[11px] uppercase tracking-[0.14em] text-[#6d655a]"
+        >
+          Usar otro correo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const vacio = {
+  nombre: '', apellidos: '', email: '', password: '', tipo: 'espectador',
+  telefono: '', fecha_nacimiento: '', sexo: '', nacionalidad: '', ciudad_residencia: '',
+  contacto_emergencia_nombre: '', contacto_emergencia_telefono: '',
+  acepta_comunicaciones: false,
+};
+
+/**
+ * Primera pantalla de la app: la puerta.
  *
- * Si el teléfono ya tiene la biometría activada para alguno de los dos accesos
- * con cuenta, se ofrece entrar directamente con la cara o la huella.
+ * Antes preguntaba "¿cómo entras?" y ofrecía tres caminos —corredor, staff,
+ * espectador—, porque detrás había tres accesos distintos y había que elegir a
+ * cuál ibas antes de saber quién eras. Con la cuenta única eso deja de tener
+ * sentido: se entra una vez y el backend mira los roles para decidir qué se
+ * abre.
+ *
+ * Todo lo que tenga que ver con la cuenta vive aquí —entrar, crearla,
+ * recuperarla— y no repartido por dos pantallas distintas según el rol. El
+ * registro es un solo formulario que crece: los mismos cuatro campos para
+ * todos, y solo quien va a correr sigue rellenando.
+ *
+ * Va sin barra superior y sin menú: es una puerta, no una pantalla donde haya
+ * nada que consultar. El negro se mantiene aunque el tema esté en claro, igual
+ * que la banda de marca: es lo que hace que se lea como la carrera y no como un
+ * formulario.
  */
 export default function LoginScreen() {
-  const { T, theme } = useLiveTheme();
   const navigate = useNavigate();
-  const modo = theme === 'dark' ? 'dark' : 'light';
+  const location = useLocation();
 
-  const [bioAtleta, setBioAtleta] = useState({ activada: false, nombre: '' });
-  const [bioStaff, setBioStaff] = useState({ activada: false, nombre: '' });
-  const [entrando, setEntrando] = useState(null);
+  // 'puerta' | 'acceso' | 'recuperar' | 'registro'
+  // Se puede llegar directo al registro (p. ej. desde el aviso de favoritos);
+  // el tipo por defecto ya es espectador, que es el que ahí se ofrece.
+  const [modo, setModo] = useState(location.state?.modo === 'registro' ? 'registro' : 'puerta');
+  const [bio, setBio] = useState({ activada: false, disponible: false, nombre: '', usuario: '' });
+  const [verClave, setVerClave] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState('');
+  const [aviso, setAviso] = useState('');
 
-  // Con sesión abierta aquí no hay nada que elegir: se pasa de largo. Cubre
-  // llegar por enlace directo o por el botón de atrás; la bienvenida ya manda
-  // a cada uno a su sitio sin pasar por aquí.
-  const conSesion = hayAtleta() || hayStaff();
+  // Acceso
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [conBio, setConBio] = useState(false);
+
+  // Recuperar y códigos: 'pedir' | 'codigo'
+  const [pasoCodigo, setPasoCodigo] = useState('pedir');
+  const [codigo, setCodigo] = useState('');
+  const [passwordNueva, setPasswordNueva] = useState('');
+
+  // Registro
+  const [correoEnUso, setCorreoEnUso] = useState(false);
+  const [paso, setPaso] = useState(1);
+  const [f, setF] = useState(vacio);
+  const set = (k) => (ev) => setF((p) => ({ ...p, [k]: ev.target.value }));
+  const detalle = TIPOS.find((t) => t.id === f.tipo) || TIPOS[0];
+
+  // Se comprueba mientras se escribe, con una pausa: en cuanto el correo tiene
+  // forma de correo y la persona deja de teclear medio segundo, se pregunta. El
+  // aviso llega así antes de bajar al resto del formulario, que era el problema.
+  useEffect(() => {
+    const correo = f.email.trim();
+    if (modo !== 'registro' || paso !== 1) return undefined;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) { setCorreoEnUso(false); return undefined; }
+
+    const t = setTimeout(() => { comprobarCorreo(correo); }, 500);
+    return () => clearTimeout(t);
+  }, [f.email, modo, paso]);
+
+  const conSesion = haySesion();
   useEffect(() => {
     if (conSesion) navigate(rutaDeEntrada(), { replace: true });
   }, [conSesion, navigate]);
 
   useEffect(() => {
     let cancel = false;
-    Promise.all([estadoBiometria(ATLETA), estadoBiometria(STAFF)]).then(([a, s]) => {
+    estadoBiometria().then((e) => {
       if (cancel) return;
-      setBioAtleta(a);
-      setBioStaff(s);
+      setBio(e);
+      if (e.usuario) setEmail(e.usuario);
+      setConBio(e.disponible && !e.activada);
     });
     return () => { cancel = true; };
   }, []);
 
-  const entrarBio = async (quien) => {
-    setEntrando(quien);
+  const ir = (siguiente) => {
+    clic();
+    setModo(siguiente);
     setError('');
-    const token = await entrarConBiometria(quien);
-    setEntrando(null);
+    setAviso('');
+    setVerClave(false);
+    setPasoCodigo('pedir');
+    // El aviso de correo repetido se baja SIEMPRE, no solo al ir al registro.
+    // Estaba dentro del `if` y por eso "Ir a iniciar sesión" cambiaba de
+    // pantalla con el emergente todavía encima, tapándola.
+    setCorreoEnUso(false);
+    if (siguiente === 'registro') { setPaso(1); setF({ ...vacio, email }); }
+  };
+
+  const entrada = async (datos, correoBio) => {
+    guardarSesion(datos);
+    if (conBio && bio.disponible && !bio.activada && datos.token) {
+      await activarBiometria(correoBio, datos.token);
+    }
+    navigate('/live/ir');
+  };
+
+  // ---------- Acceso ----------
+
+  const entrarBio = async () => {
+    setOcupado(true);
+    setError('');
+    const token = await entrarConBiometria();
+    setOcupado(false);
     if (!token) {
       setError('No se pudo verificar. Entra con tu contraseña.');
       return;
     }
-    if (quien === ATLETA) {
-      localStorage.setItem(TOKEN_ATLETA, token);
-      marcarAccesoAtleta();
-      navigate('/live/perfil');
-    } else {
-      localStorage.setItem(TOKEN_STAFF, token);
-      navigate('/live/staff');
+    guardarSesion({ token });
+    marcarAcceso();
+    navigate('/live/ir');
+  };
+
+  const entrar = async (ev) => {
+    ev.preventDefault();
+    if (!email.trim() || !password) { setError('Faltan el correo y la contraseña.'); return; }
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch(`${API}/api/cuentas/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'No se pudo entrar'); setOcupado(false); return; }
+      await entrada({
+        token: d.token,
+        username: d.cuenta?.email,
+        is_admin: d.cuenta?.is_admin,
+        permissions: d.cuenta?.permissions || [],
+      }, email.trim());
+    } catch {
+      setError('No se pudo conectar.'); setOcupado(false);
     }
   };
 
-  // Un atajo por cada acceso que tenga la biometría puesta. Con los dos
-  // activados hay que decir cuál es cuál; con uno solo, la frase corta basta.
-  const atajos = [
-    { quien: ATLETA, bio: bioAtleta, prefijo: 'Entrar con' },
-    { quien: STAFF, bio: bioStaff, prefijo: 'Entrar al staff con' },
-  ].filter(({ bio }) => bio.activada);
+  // ---------- Recuperar contraseña ----------
 
-  // Mientras el efecto de arriba redirige, no se pinta la elección: verla
-  // aparecer y desaparecer es peor que no verla.
+  const pedirCodigo = async (ev) => {
+    ev.preventDefault();
+    if (!email.trim()) { setError('Escribe tu correo.'); return; }
+    setOcupado(true); setError('');
+    try {
+      await fetch(`${API}/api/cuentas/recuperar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      // Se responde igual exista o no la cuenta: decir cuál existe sería una
+      // forma cómoda de averiguar quién está registrado.
+      setAviso('Si ese correo tiene cuenta, te enviamos un código.');
+      setPasoCodigo('codigo');
+    } catch {
+      setError('No se pudo conectar.');
+    }
+    setOcupado(false);
+  };
+
+  const cambiarPassword = async (ev) => {
+    ev.preventDefault();
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch(`${API}/api/cuentas/nueva-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), code: codigo.trim(), password: passwordNueva }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'No se pudo cambiar'); setOcupado(false); return; }
+      await entrada({ token: d.token }, email.trim());
+    } catch {
+      setError('No se pudo conectar.'); setOcupado(false);
+    }
+  };
+
+  // ---------- Registro ----------
+
+  /**
+   * ¿Ese correo ya tiene cuenta?
+   *
+   * Se pregunta al salir del campo y otra vez al enviar. Lo primero es para que
+   * el aviso llegue cuando todavía no cuesta nada; lo segundo, porque el blur
+   * puede no haber ocurrido —se envía con la tecla de ir— y esta es la puerta
+   * que de verdad tiene que cerrar.
+   */
+  const comprobarCorreo = async (correo) => {
+    if (!correo || !correo.includes('@')) return false;
+    try {
+      const r = await fetch(`${API}/api/cuentas/existe?email=${encodeURIComponent(correo)}`);
+      const d = await r.json().catch(() => ({}));
+      setCorreoEnUso(!!d.existe);
+      return !!d.existe;
+    } catch {
+      // Si no se puede comprobar no se bloquea el alta: el backend rechaza el
+      // duplicado igualmente, solo que más tarde.
+      return false;
+    }
+  };
+
+  const siguientePaso = async (ev) => {
+    ev.preventDefault();
+    if (!f.nombre.trim() || !f.apellidos.trim()) { setError('Faltan tu nombre y tus apellidos.'); return; }
+    if (!f.email.trim()) { setError('Falta el correo.'); return; }
+    if (f.password.length < 8) { setError('La contraseña necesita al menos 8 caracteres.'); return; }
+    setError('');
+
+    setOcupado(true);
+    const usado = await comprobarCorreo(f.email.trim());
+    setOcupado(false);
+    if (usado) return undefined;
+
+    // Espectador y staff terminan aquí: los dos son la misma cuenta con un rol
+    // distinto. Solo quien va a correr sigue rellenando.
+    if (f.tipo !== 'atleta') return crearCuenta();
+    setPaso(2);
+    return undefined;
+  };
+
+  const crearCuenta = async () => {
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch(`${API}/api/cuentas/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: f.email.trim(), nombre: f.nombre.trim(), apellidos: f.apellidos.trim(),
+          password: f.password, acepta_comunicaciones: f.acepta_comunicaciones,
+          tipo: f.tipo,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'No se pudo crear la cuenta'); setOcupado(false); return; }
+      await entrada({ token: d.token }, f.email.trim());
+    } catch {
+      setError('No se pudo conectar.'); setOcupado(false);
+    }
+  };
+
+  const crearAtleta = async (ev) => {
+    ev.preventDefault();
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch(`${API}/api/athletes/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: f.email.trim(), password: f.password,
+          nombre: f.nombre.trim(), apellidos: f.apellidos.trim(),
+          telefono: f.telefono || null,
+          fecha_nacimiento: f.fecha_nacimiento || null,
+          sexo: f.sexo || null,
+          nacionalidad: f.nacionalidad || null,
+          ciudad_residencia: f.ciudad_residencia || null,
+          contacto_emergencia_nombre: f.contacto_emergencia_nombre || null,
+          contacto_emergencia_telefono: f.contacto_emergencia_telefono || null,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'No se pudo crear la cuenta'); setOcupado(false); return; }
+      setAviso('Te enviamos un código para confirmar tu correo.');
+      setPasoCodigo('codigo');
+      setPaso(3);
+    } catch {
+      setError('No se pudo conectar.');
+    }
+    setOcupado(false);
+  };
+
+  const verificarAtleta = async (ev) => {
+    ev.preventDefault();
+    setOcupado(true); setError('');
+    try {
+      const r = await fetch(`${API}/api/athletes/verify-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: f.email.trim(), code: codigo.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.detail || 'Código incorrecto'); setOcupado(false); return; }
+      await entrada({ token: d.token }, f.email.trim());
+    } catch {
+      setError('No se pudo conectar.'); setOcupado(false);
+    }
+  };
+
   if (conSesion) return null;
 
+  // ---------- Piezas visuales ----------
+
+  const campo = CAMPO;
+
+  const botonPrincipal = 'w-full rounded-full px-5 py-3.5 flex items-center justify-center gap-2 '
+    + 'border border-[rgba(231,118,34,0.5)] bg-white/[0.035] text-[12.5px] uppercase '
+    + 'tracking-[0.14em] text-[#E77622] disabled:opacity-50 transition-all duration-100 '
+    + 'active:scale-[0.985]';
+
+  const botonPlano = 'w-full rounded-full px-5 py-3.5 flex items-center gap-3.5 border '
+    + 'border-white/10 bg-white/[0.035] transition-all duration-100 ease-out active:scale-[0.985]';
+
+  const enlace = 'w-full flex items-center justify-center gap-2 text-[11px] uppercase '
+    + 'tracking-[0.14em] text-[#6d655a] py-2.5';
+
+  const volver = (destino, texto = 'Volver') => (
+    <button type="button" onClick={() => ir(destino)} className={enlace}>
+      <ArrowLeft className="w-3.5 h-3.5" />
+      {texto}
+    </button>
+  );
+
   return (
-    <Screen title="Iniciar sesión">
-      {/* Portada: la banda oscura de marca se mantiene igual en los dos temas,
-          que es lo que hace que la pantalla se lea como la carrera y no como
-          un formulario. */}
-      <div className="bg-[#2A1707] px-6 py-8 flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#E77622] flex items-center justify-center">
-          <Flame className="w-7 h-7 text-[#2A1707]" strokeWidth={2.2} />
+    <div
+      className="min-h-[100dvh] flex flex-col items-center text-center text-[#EFE9DD]"
+      style={{
+        // El haz cálido de arriba y el frío tenue de abajo son la identidad
+        // "linterna nocturna": dan atmósfera sin necesidad de una sola foto.
+        background:
+          'radial-gradient(90% 55% at 50% -8%, rgba(231,118,34,.30) 0%, rgba(231,118,34,.06) 45%, transparent 72%),'
+          + 'radial-gradient(70% 45% at 50% 108%, rgba(133,183,235,.10) 0%, transparent 70%),'
+          + '#070707',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <div className="w-full max-w-md px-7 pb-10 pt-[calc(3rem+env(safe-area-inset-top))] flex flex-col items-center flex-1">
+        <div
+          className="w-[66px] h-[66px] rounded-full grid place-items-center text-[#E77622] shrink-0
+            border border-[rgba(231,118,34,0.45)]
+            shadow-[0_0_34px_rgba(231,118,34,0.32),inset_0_0_22px_rgba(231,118,34,0.14)]"
+        >
+          <Flame className="w-7 h-7" strokeWidth={1.5} />
         </div>
-        <p className="mt-3.5 text-lg font-extrabold tracking-wide text-white">
-          BYSD <span className="text-[#E77622]">LIVE</span>
+
+        <p className="mt-5 text-[15px] font-light uppercase tracking-[0.42em] indent-[0.42em] text-white">
+          BYSD Live
         </p>
-        <p className="mt-1.5 text-[11px] tracking-[0.18em] uppercase text-[#D6B18A]">
-          Last one standing
-        </p>
-      </div>
+        <span className="w-7 h-px bg-white/20 mt-4 mb-5" />
 
-      <div className="px-4 py-6">
-        <p className={`text-xs text-center mb-5 ${T.muted}`}>¿Cómo quieres entrar?</p>
+        {error && <p className="text-xs text-red-400 mb-4 px-2">{error}</p>}
+        {aviso && !error && (
+          <p className="text-xs text-[#85B7EB] mb-4 px-2 flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5" />{aviso}
+          </p>
+        )}
 
-        {error && <p className="text-xs text-red-500 text-center mb-4">{error}</p>}
-
-        {/* Botón de canto, como una tecla: sobre negro una sombra difusa no se
-            ve —lo que da volumen es un borde inferior macizo y más oscuro, que
-            se lee como el grosor de la pieza. Al pulsar, el cuadro baja hasta
-            apoyarse en ese canto, que es el gesto de una tecla al hundirse. */}
-        <div className="flex gap-2.5">
-          {ROLES.map(({ quien, Icon, etiqueta, ruta, color, fondo, borde, canto }) => (
-            <button
-              key={quien}
-              onClick={() => { clic(); navigate(ruta); }}
-              className="group flex-1 min-w-0"
-              style={{ '--fondo': fondo[modo], '--borde': borde[modo], '--canto': canto[modo] }}
-            >
-              <span
-                className="block w-full aspect-square rounded-2xl border bg-[var(--fondo)] border-[var(--borde)]
-                  shadow-[0_4px_0_var(--canto),0_5px_10px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.13)]
-                  transition-all duration-75 ease-out
-                  group-active:translate-y-[3px]
-                  group-active:shadow-[0_1px_0_var(--canto),0_1px_3px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.08)]
-                  flex items-center justify-center"
+        {/* ---------- PUERTA ---------- */}
+        {modo === 'puerta' && (
+          <>
+            <div className="w-full flex flex-col gap-3">
+              <button
+                onClick={() => { clic(); guardarRol(ESPECTADOR); navigate('/live/ir'); }}
+                data-testid="ver-sin-cuenta"
+                className={`${botonPlano} border-[rgba(231,118,34,0.5)] shadow-[0_0_26px_rgba(231,118,34,0.16)]`}
               >
-                <Icon className="w-7 h-7" style={{ color: color[modo] }} strokeWidth={1.9} />
-              </span>
-              <span className="block mt-2.5 text-xs font-semibold">{etiqueta}</span>
-            </button>
-          ))}
-        </div>
+                <Eye className="w-[18px] h-[18px] shrink-0 text-[#E77622]" />
+                <span className="text-[12.5px] uppercase tracking-[0.14em] text-[#E77622]">
+                  Seguimiento sin registro
+                </span>
+              </button>
 
-        {atajos.map(({ quien, bio, prefijo }) => (
-          <button
-            key={quien}
-            onClick={() => { clic(); entrarBio(quien); }}
-            disabled={entrando === quien}
-            className={`w-full mt-6 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-bold
-              shadow-[0_3px_0_var(--canto)] active:translate-y-[2px] active:shadow-[0_1px_0_var(--canto)]
-              transition-all duration-75 ease-out disabled:opacity-50 ${T.card}`}
-            style={{ '--canto': modo === 'dark' ? '#000000' : '#E4DBC0' }}
-          >
-            {entrando === quien
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : <ScanFace className="w-4 h-4 text-[#E77622]" />}
-            {entrando === quien ? 'Verificando…' : `${prefijo} ${bio.nombre}`}
-          </button>
-        ))}
+              <button onClick={() => ir('acceso')} data-testid="entrar" className={botonPlano}>
+                <LogIn className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[12.5px] uppercase tracking-[0.14em]">Entrar</span>
+              </button>
+
+              <button onClick={() => ir('registro')} data-testid="crear-cuenta" className={botonPlano}>
+                <UserPlus className="w-[18px] h-[18px] shrink-0" />
+                <span className="text-[12.5px] uppercase tracking-[0.14em]">Crear cuenta</span>
+              </button>
+            </div>
+
+            {bio.activada && (
+              <button
+                onClick={() => { clic(); entrarBio(); }}
+                disabled={ocupado}
+                className="w-full mt-4 rounded-full px-5 py-3 flex items-center justify-center gap-2
+                  border border-white/10 bg-white/[0.02] text-[11px] uppercase tracking-[0.14em]
+                  disabled:opacity-50 transition-all duration-100 active:scale-[0.985]"
+              >
+                {ocupado ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <ScanFace className="w-4 h-4 text-[#E77622]" />}
+                {ocupado ? 'Verificando…' : `Entrar con ${bio.nombre}`}
+              </button>
+            )}
+          </>
+        )}
+
+        {/* ---------- ACCESO ---------- */}
+        {modo === 'acceso' && (
+          <form onSubmit={entrar} className="w-full flex flex-col gap-3">
+            <input
+              type="email" name="email" value={email}
+              onChange={(ev) => setEmail(ev.target.value.replace(/\s/g, ''))}
+              placeholder="Correo" autoComplete="email" inputMode="email"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} className={campo}
+            />
+            <Clave
+              valor={password} alCambiar={(ev) => setPassword(ev.target.value)}
+              marcador="Contraseña" autocompletar="current-password"
+              visible={verClave} alternar={() => setVerClave((v) => !v)}
+            />
+
+            {bio.disponible && !bio.activada && (
+              <label className="flex items-center gap-2.5 px-2 text-[11px] text-[#a49c8f]">
+                <input type="checkbox" checked={conBio} onChange={(ev) => setConBio(ev.target.checked)} />
+                Entrar con {bio.nombre} la próxima vez
+              </label>
+            )}
+
+            <button type="submit" disabled={ocupado} className={botonPrincipal}>
+              {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+              {ocupado ? 'Entrando…' : 'Entrar'}
+            </button>
+
+            <button type="button" onClick={() => ir('recuperar')} className={enlace}>
+              Olvidé mi contraseña
+            </button>
+            <button type="button" onClick={() => ir('registro')} className={enlace}>
+              <UserPlus className="w-3.5 h-3.5" />
+              Crear una cuenta
+            </button>
+            {volver('puerta')}
+          </form>
+        )}
+
+        {/* ---------- RECUPERAR ---------- */}
+        {modo === 'recuperar' && (
+          <form onSubmit={pasoCodigo === 'pedir' ? pedirCodigo : cambiarPassword} className="w-full flex flex-col gap-3">
+            <p className="text-[11px] text-[#a49c8f] px-2 mb-1">
+              {pasoCodigo === 'pedir'
+                ? 'Te mandamos un código de seis dígitos para poner una contraseña nueva.'
+                : 'Escribe el código que te llegó y la contraseña nueva.'}
+            </p>
+
+            <input
+              type="email" value={email} onChange={(ev) => setEmail(ev.target.value)}
+              placeholder="Correo" autoComplete="email"
+              disabled={pasoCodigo === 'codigo'} className={`${campo} disabled:opacity-60`}
+            />
+
+            {pasoCodigo === 'codigo' && (
+              <>
+                <input
+                  value={codigo} onChange={(ev) => setCodigo(ev.target.value)}
+                  placeholder="000000" maxLength={6} inputMode="numeric"
+                  className={`${campo} text-center tracking-[0.5em]`}
+                />
+                <Clave
+                  valor={passwordNueva} alCambiar={(ev) => setPasswordNueva(ev.target.value)}
+                  marcador="Contraseña nueva" autocompletar="new-password"
+                  visible={verClave} alternar={() => setVerClave((v) => !v)}
+                />
+              </>
+            )}
+
+            <button type="submit" disabled={ocupado} className={botonPrincipal}>
+              {ocupado && <Loader2 className="w-4 h-4 animate-spin" />}
+              {pasoCodigo === 'pedir' ? 'Enviarme el código' : 'Guardar y entrar'}
+            </button>
+            {volver('acceso')}
+          </form>
+        )}
+
+        {/* ---------- REGISTRO ---------- */}
+        {modo === 'registro' && paso === 1 && (
+          <form onSubmit={siguientePaso} className="w-full flex flex-col gap-3">
+            {/* `name` e `id` además de `autoComplete`: iOS deriva el
+                textContentType del WKWebView de estos atributos, y sin ellos no
+                ofrece rellenar desde la ficha de contacto. */}
+            <input id="reg-nombre" name="given-name" value={f.nombre} onChange={set('nombre')}
+              placeholder="Nombre" autoComplete="given-name" className={campo} />
+            <input id="reg-apellidos" name="family-name" value={f.apellidos} onChange={set('apellidos')}
+              placeholder="Apellidos" autoComplete="family-name" className={campo} />
+            <input
+              type="email" value={f.email}
+              id="reg-email" name="email"
+              onChange={(ev) => {
+                // El teclado del teléfono mete un espacio al autocompletar y
+                // al pegar; sin quitarlo, el correo se guarda con él y luego
+                // no coincide con nada.
+                setF((p) => ({ ...p, email: ev.target.value.replace(/\s/g, '') }));
+                setCorreoEnUso(false);
+              }}
+              onBlur={(ev) => comprobarCorreo(ev.target.value.trim())}
+              placeholder="Correo" autoComplete="email" inputMode="email"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} className={campo}
+            />
+
+            <Clave
+              valor={f.password} alCambiar={set('password')}
+              marcador="Contraseña (mínimo 8)" autocompletar="new-password"
+              visible={verClave} alternar={() => setVerClave((v) => !v)}
+            />
+
+            <label htmlFor="tipo-cuenta" className="text-[10px] uppercase tracking-[0.16em] text-[#6d655a] mt-2 text-left px-2">
+              Tipo de cuenta
+            </label>
+            <Picker
+              T={T_PUERTA}
+              title="Tipo de cuenta"
+              value={f.tipo}
+              onSelect={(v) => { setF((p) => ({ ...p, tipo: v })); setError(''); }}
+              options={TIPOS.map((t) => ({ value: t.id, label: t.etiqueta }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left`}
+            />
+
+            {/* El detalle del tipo elegido: en un desplegable el pie de cada
+                opción no se ve hasta abrirlo, así que se enseña aquí. */}
+            <p className="text-[11px] text-[#a49c8f] text-left px-2 -mt-1">
+              {detalle.pie}
+            </p>
+
+            {f.tipo === 'espectador' && (
+              <label className="flex items-start gap-2.5 px-2 text-[11px] text-[#a49c8f] text-left mt-1">
+                <input
+                  type="checkbox" checked={f.acepta_comunicaciones}
+                  onChange={(ev) => setF((p) => ({ ...p, acepta_comunicaciones: ev.target.checked }))}
+                  className="mt-0.5"
+                />
+                Quiero recibir avisos de la carrera por correo.
+              </label>
+            )}
+
+            <button
+              type="submit"
+              disabled={ocupado || correoEnUso}
+              className={botonPrincipal}
+            >
+              {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+              {f.tipo === 'atleta' ? 'Continuar' : 'Crear cuenta'}
+            </button>
+            {volver('puerta')}
+          </form>
+        )}
+
+        {/* Paso 2: solo lo rellena quien va a correr. */}
+        {modo === 'registro' && paso === 2 && (
+          <form onSubmit={crearAtleta} className="w-full flex flex-col gap-3">
+            <p className="text-[11px] text-[#a49c8f] px-2 mb-1 text-left">
+              Tus datos de corredor. Los médicos, la talla y el resto se completan
+              después en tu perfil o al inscribirte.
+            </p>
+
+            <input value={f.telefono} onChange={set('telefono')} placeholder="Teléfono"
+              inputMode="tel" autoComplete="tel" className={campo} />
+            {/* El `input type="date"` nativo trae su propio ancho y se salía
+                de la pantalla. El selector de la app abre una hoja inferior y
+                además es el mismo que ya usa el registro de voluntario. */}
+            <DateField
+              T={T_PUERTA}
+              title="Fecha de nacimiento"
+              value={f.fecha_nacimiento}
+              onChange={(v) => setF((p) => ({ ...p, fecha_nacimiento: v }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left
+                ${f.fecha_nacimiento ? '' : 'text-[#6d655a]'}`}
+            />
+
+            <div className="flex gap-2">
+              {SEXOS.map((s) => (
+                <button
+                  key={s} type="button"
+                  onClick={() => { clic(); setF((p) => ({ ...p, sexo: s })); }}
+                  className={`flex-1 rounded-full px-4 py-3 text-[11.5px] uppercase tracking-[0.12em]
+                    border transition-all duration-100 active:scale-[0.985]
+                    ${f.sexo === s
+                      ? 'border-[rgba(231,118,34,0.55)] bg-[rgba(231,118,34,0.08)] text-[#E77622]'
+                      : 'border-white/10 bg-white/[0.03]'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            <Picker
+              T={T_PUERTA}
+              title="Nacionalidad"
+              placeholder="Nacionalidad"
+              value={f.nacionalidad}
+              onSelect={(v) => setF((p) => ({ ...p, nacionalidad: v }))}
+              options={COUNTRIES.map((c) => ({ value: c.name, label: c.name }))}
+              claseBoton={`${campo} flex items-center justify-between gap-2 text-left
+                ${f.nacionalidad ? '' : 'text-[#6d655a]'}`}
+            />
+            <input value={f.ciudad_residencia} onChange={set('ciudad_residencia')}
+              placeholder="Ciudad de residencia" className={campo} />
+
+            <p className="text-[10px] uppercase tracking-[0.16em] text-[#6d655a] mt-2 text-left px-2">
+              Contacto de emergencia
+            </p>
+            <input value={f.contacto_emergencia_nombre} onChange={set('contacto_emergencia_nombre')}
+              placeholder="Nombre" className={campo} />
+            <input value={f.contacto_emergencia_telefono} onChange={set('contacto_emergencia_telefono')}
+              placeholder="Teléfono" inputMode="tel" className={campo} />
+
+            <button type="submit" disabled={ocupado} className={botonPrincipal}>
+              {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+              Crear cuenta
+            </button>
+            <button type="button" onClick={() => { clic(); setPaso(1); setError(''); }} className={enlace}>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Volver
+            </button>
+          </form>
+        )}
+
+        {/* Paso 3: el código de verificación, solo para quien va a correr. */}
+        {modo === 'registro' && paso === 3 && (
+          <form onSubmit={verificarAtleta} className="w-full flex flex-col gap-3">
+            <p className="text-[11px] text-[#a49c8f] px-2 mb-1">
+              Escribe el código de seis dígitos que enviamos a {f.email}.
+            </p>
+            <input
+              value={codigo} onChange={(ev) => setCodigo(ev.target.value)}
+              placeholder="000000" maxLength={6} inputMode="numeric"
+              className={`${campo} text-center tracking-[0.5em]`}
+            />
+            <button type="submit" disabled={ocupado || codigo.length < 6} className={botonPrincipal}>
+              {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Confirmar y entrar
+            </button>
+            {volver('puerta', 'Cancelar')}
+          </form>
+        )}
+
+        <p className="mt-auto pt-8 text-[10px] uppercase tracking-[0.2em] text-[#6d655a]">
+          Backyard Ultra Santo Domingo
+        </p>
       </div>
-    </Screen>
+
+      {correoEnUso && modo === 'registro' && paso === 1 && (
+        <AvisoCuentaExiste
+          correo={f.email.trim()}
+          alEntrar={() => { setEmail(f.email.trim()); ir('acceso'); }}
+          alCerrar={() => { setCorreoEnUso(false); setF((p) => ({ ...p, email: '' })); }}
+        />
+      )}
+    </div>
   );
 }

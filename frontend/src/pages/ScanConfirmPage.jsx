@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { scanHeaders } from '../lib/adminApi';
+import { pack, modoActivo, evaluarEscaneo, encolar } from '../lib/scanOffline';
+import { carreraGuardada } from '../live/carrera';
 import ScanKeyGate from '../components/ScanKeyGate';
 import { getJson, statusLabel } from '../live/liveApi';
 import { LiveThemeProvider, useLiveTheme } from '../live/liveTheme';
@@ -61,7 +63,8 @@ function ScanConfirmInner() {
   const navigate = useNavigate();
   
   const bib = searchParams.get('bib');
-  const raceCode = searchParams.get('race');
+  // La carrera del QR manda; sin ella (un BIB pelado), la elegida en la app.
+  const raceCode = searchParams.get('race') || carreraGuardada();
   
   const [loading, setLoading] = useState(true);
   const [athlete, setAthlete] = useState(null);
@@ -78,21 +81,47 @@ function ScanConfirmInner() {
   
   // Timer for countdown
   const [timeRemaining, setTimeRemaining] = useState(0);
+
+  // La hora en que se cargó la ficha del corredor: ESA es la hora del paso por
+  // el arco. Confirmar puede tardar (una fila, un descuido) y la vuelta debe
+  // quedar anotada a la hora del escaneo, no a la del botón.
+  const [escaneadoEn, setEscaneadoEn] = useState(null);
   
   // Get scanned_by from localStorage (admin username)
   const scannedBy = localStorage.getItem('admin_username') || 'scanner';
-  
+
+  // Sin señal (o con el modo activado a mano) todo se resuelve con los datos
+  // descargados: mismo veredicto, sin esperar a una red que no va a responder.
+  const sinLinea = (modoActivo() || !navigator.onLine) && !!pack()
+    && (!raceCode || pack().race.code === raceCode.toUpperCase());
+
   useEffect(() => {
     let isMounted = true;
     let xhr = null;
-    
+
     const loadAthleteData = () => {
       if (!bib) {
         setError('No se proporcionó número de BIB');
         setLoading(false);
         return;
       }
-      
+
+      if (sinLinea) {
+        const res = evaluarEscaneo(bib);
+        if (!res || res.error) {
+          setError(res?.error || 'No hay datos descargados para esta carrera');
+        } else {
+          setAthlete(res);
+          setEscaneadoEn(new Date().toISOString());
+          setTimeRemaining(res.time_remaining_seconds || 0);
+          if (res.already_registered) toast.info('Esta vuelta ya fue registrada anteriormente');
+          else if (res.early_return) toast.warning(`⚠️ Regresó muy temprano (${res.minutes_into_lap} min). Se marcará como DNF.`);
+          else if (res.auto_dnf) toast.warning('Tiempo agotado - El atleta será marcado como DNF');
+        }
+        setLoading(false);
+        return;
+      }
+
       const url = raceCode 
         ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
         : `${API_URL}/api/qr-scan/athlete/${bib}`;
@@ -126,8 +155,9 @@ function ScanConfirmInner() {
         }
         
         setAthlete(data);
+        setEscaneadoEn(new Date().toISOString());
         setTimeRemaining(data.time_remaining_seconds || 0);
-        
+
         // Show appropriate warnings
         if (data.already_registered) {
           toast.info('Esta vuelta ya fue registrada anteriormente');
@@ -171,10 +201,20 @@ function ScanConfirmInner() {
   
   const refreshAthleteData = () => {
     if (!bib) return;
-    
+
+    if (sinLinea) {
+      const res = evaluarEscaneo(bib);
+      if (res && !res.error) {
+        setAthlete(res);
+        setEscaneadoEn(new Date().toISOString());
+        setTimeRemaining(res.time_remaining_seconds || 0);
+      }
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    
+
     const url = raceCode 
       ? `${API_URL}/api/qr-scan/athlete/${bib}?race_code=${raceCode}`
       : `${API_URL}/api/qr-scan/athlete/${bib}`;
@@ -206,21 +246,59 @@ function ScanConfirmInner() {
       }
       
       setAthlete(data);
+      setEscaneadoEn(new Date().toISOString());
       setTimeRemaining(data.time_remaining_seconds || 0);
       setLoading(false);
     };
-    
+
     xhr.onerror = function() {
       setError('Error de conexión');
       setLoading(false);
     };
-    
+
     xhr.send();
   };
   
+  /**
+   * Guarda la confirmación en el teléfono en vez de mandarla: es lo que hace
+   * el modo fuera de línea, y también la red cuando se cae a mitad de escaneo.
+   */
+  const confirmarSinLinea = (manualDnf) => {
+    const datos = pack();
+    const esAutoDnf = !manualDnf && (athlete.auto_dnf || athlete.early_return);
+    encolar({
+      raceCode: datos.race.code,
+      bib: athlete.bib,
+      nombre: `${athlete.nombre} ${athlete.apellidos}`.trim(),
+      lapNumber: athlete.lap_to_complete || (athlete.laps_completed + 1),
+      action: manualDnf ? 'dnf' : 'lap_completed',
+      scannedBy,
+      autoDnf: esAutoDnf,
+      scannedAt: escaneadoEn,
+    });
+    setCompleted(true);
+    setCompletedAction({
+      offline: true,
+      action: manualDnf ? 'dnf' : esAutoDnf ? 'dnf_early_return' : 'lap_completed',
+      bib: athlete.bib,
+      laps_completed: (manualDnf || esAutoDnf) ? athlete.laps_completed : athlete.lap_to_complete,
+      total_km: (manualDnf || esAutoDnf)
+        ? undefined
+        : Math.round(athlete.lap_to_complete * (datos.race.km_por_vuelta || 6.7) * 10) / 10,
+      minutes_into_lap: esAutoDnf ? athlete.minutes_into_lap : undefined,
+      message: 'Guardado en el teléfono. Se anotará al sincronizar.',
+    });
+    toast.success('Escaneo guardado en el teléfono');
+    setConfirming(false);
+    setShowDnfConfirm(false);
+    setDnfInput('');
+  };
+
   const handleConfirmLap = async () => {
     if (!athlete) return;
-    
+
+    if (sinLinea) { confirmarSinLinea(false); return; }
+
     setConfirming(true);
     try {
       const response = await fetch(`${API_URL}/api/qr-scan/confirm`, {
@@ -234,7 +312,10 @@ function ScanConfirmInner() {
           // De qué carrera es este QR. Sin esto, la vuelta se anotaba en la
           // carrera publicada, que no tiene por qué ser la que se está
           // corriendo.
-          race_code: raceCode || null
+          race_code: raceCode || null,
+          // La hora del escaneo (cargar la ficha), que es la del paso por el
+          // arco: la vuelta queda anotada a esa hora aunque se confirme tarde.
+          scanned_at: escaneadoEn
         })
       });
       
@@ -263,7 +344,15 @@ function ScanConfirmInner() {
         toast.error(data.detail || 'Error al confirmar vuelta');
       }
     } catch (err) {
-      toast.error('Error de conexión');
+      // La señal se cayó entre cargar al atleta y confirmar: si hay datos
+      // descargados de esta carrera, la vuelta se guarda en vez de perderse.
+      const datos = pack();
+      if (datos && (!raceCode || datos.race.code === raceCode.toUpperCase())) {
+        confirmarSinLinea(false);
+        toast.warning('Sin señal: el escaneo quedó guardado en el teléfono');
+      } else {
+        toast.error('Error de conexión');
+      }
     } finally {
       setConfirming(false);
     }
@@ -271,13 +360,15 @@ function ScanConfirmInner() {
   
   const handleDNF = async () => {
     if (!athlete) return;
-    
+
     // Check DNF confirmation
     if (dnfInput !== 'DNF') {
       toast.error('Debe escribir "DNF" para confirmar el retiro');
       return;
     }
-    
+
+    if (sinLinea) { confirmarSinLinea(true); return; }
+
     setConfirming(true);
     try {
       const response = await fetch(`${API_URL}/api/qr-scan/confirm`, {
@@ -289,7 +380,8 @@ function ScanConfirmInner() {
           force_dnf: true,
           dnf_confirmation: 'DNF',
           scanned_by: scannedBy,
-          race_code: raceCode || null
+          race_code: raceCode || null,
+          scanned_at: escaneadoEn
         })
       });
       
@@ -305,7 +397,13 @@ function ScanConfirmInner() {
         toast.error(data.detail || 'Error al marcar DNF');
       }
     } catch (err) {
-      toast.error('Error de conexión');
+      const datos = pack();
+      if (datos && (!raceCode || datos.race.code === raceCode.toUpperCase())) {
+        confirmarSinLinea(true);
+        toast.warning('Sin señal: el retiro quedó guardado en el teléfono');
+      } else {
+        toast.error('Error de conexión');
+      }
     } finally {
       setConfirming(false);
       setShowDnfConfirm(false);
@@ -407,6 +505,14 @@ function ScanConfirmInner() {
             <p className={`text-xs mt-1 ${T.muted}`}>{completedAction.message}</p>
           </div>
 
+          {completedAction.offline && (
+            <div className="rounded-xl px-3 py-2.5 mb-3 bg-[#E77622]/10 border border-[#E77622]">
+              <p className="text-xs font-bold text-[#E77622]">
+                Pendiente de sincronizar: se enviará cuando haya señal, con la hora de este escaneo.
+              </p>
+            </div>
+          )}
+
           {isSuccess && (
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div className={`rounded-xl px-3 py-3 ${T.itraBox}`}>
@@ -474,6 +580,15 @@ function ScanConfirmInner() {
   
   return (
     <ScanShell>
+      {/* Escaneo con los datos del teléfono, sin tocar la red */}
+      {sinLinea && (
+        <div className="rounded-2xl px-4 py-2.5 mb-4 text-center bg-[#E77622]/10 border border-[#E77622]">
+          <p className="text-xs font-bold text-[#E77622]">
+            FUERA DE LÍNEA · el escaneo se guardará en este teléfono
+          </p>
+        </div>
+      )}
+
       {/* Vuelta aún no iniciada */}
       {isLapNotStarted && (
         <div className="rounded-2xl px-4 py-3.5 mb-4 text-center bg-purple-500/10 border border-purple-500">

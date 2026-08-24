@@ -4,6 +4,7 @@ import { Search, Star, Users, Loader2 } from 'lucide-react';
 import { getJson, flagOf, initialsOf, useFollowed, raceStartMs } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
+import AvisoFavorito, { debeAvisarFavorito } from '../components/AvisoFavorito';
 
 const POLL_MS = 30000;
 
@@ -119,7 +120,13 @@ export default function TrackingScreen() {
     return list;
   }, [participants, filter, search, followed]);
 
-  const toggleFollow = (bib) => setFollowed(followedStore.toggle(bib));
+  const [avisoFav, setAvisoFav] = useState(false);
+
+  const toggleFollow = (bib) => {
+    const agregando = !followed.includes(bib);
+    setFollowed(followedStore.toggle(bib));
+    if (agregando && debeAvisarFavorito()) setAvisoFav(true);
+  };
 
   const progressLine = (p) => {
     if (p.status === 'waitlist') return 'En lista de espera';
@@ -220,6 +227,7 @@ export default function TrackingScreen() {
           </div>
         ))}
       </div>
+      <AvisoFavorito abierto={avisoFav} onCerrar={() => setAvisoFav(false)} />
     </Screen>
   );
 }

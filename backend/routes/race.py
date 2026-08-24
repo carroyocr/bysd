@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Header, Query, Request
 from fastapi.responses import FileResponse
 from typing import Optional, List
+import asyncio
 import bcrypt
 from datetime import datetime, timedelta, timezone
 import os
@@ -55,20 +56,62 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     # autocompletado tampoco perdonaba.
     usuario = (credentials.username or "").strip().lower()
 
+    # Se mira primero en `accounts` y, si ahi no esta, en `admin_users` de
+    # siempre. Esa caida permite desplegar esto **antes** de correr la
+    # migracion: mientras `accounts` este vacia todo sigue igual, y en cuanto el
+    # script pase, cada quien entra por su cuenta sin coordinar el minuto exacto.
+    #
+    # Se busca por correo y tambien por `staff_username` porque la cuenta de
+    # `admin` no tiene correo: su identidad es el usuario. Sin esta segunda via
+    # la migracion dejaria al administrador fuera de su propio panel.
+    from services import cuentas as servicio_cuentas
+
+    cuenta = await database[servicio_cuentas.COLECCION].find_one(
+        {"$or": [{"email": usuario}, {"staff_username": usuario}]}
+    )
+
+    if cuenta:
+        if not servicio_cuentas.verificar_password(credentials.password, cuenta.get("password_hash")):
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        if servicio_cuentas.STAFF not in (cuenta.get("roles") or []):
+            raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
+
+        if servicio_cuentas.es_heredado(cuenta.get("password_hash")):
+            await database[servicio_cuentas.COLECCION].update_one(
+                {"_id": cuenta["_id"]},
+                {"$set": {"password_hash": servicio_cuentas.hash_password(credentials.password)}},
+            )
+
+        await database[servicio_cuentas.COLECCION].update_one(
+            {"_id": cuenta["_id"]}, {"$set": {"last_login_at": datetime.now(timezone.utc)}}
+        )
+
+        # Quien acierta no arrastra los fallos previos
+        rate_limit.olvidar("login", ip)
+
+        permissions = ["all"] if cuenta.get("is_admin") else (cuenta.get("permissions") or [])
+        nombre_usuario = cuenta.get("staff_username") or cuenta["email"]
+        return {
+            "token": servicio_cuentas.emitir_token({**cuenta, "permissions": permissions}),
+            "username": nombre_usuario,
+            "is_admin": bool(cuenta.get("is_admin")),
+            "permissions": permissions,
+        }
+
     # Find admin user
     admin = await database.admin_users.find_one({"username": usuario}, {"_id": 0})
 
     if not admin:
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    
+
     # Verify password
     if not bcrypt.checkpw(credentials.password.encode('utf-8'), admin["password"].encode('utf-8')):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-    
+
     # Get user permissions (admin user has all permissions)
     is_admin = usuario == "admin"
     permissions = admin.get("permissions", [])
-    
+
     # Create JWT token with permissions
     token_data = {
         "username": usuario,
@@ -82,7 +125,7 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     rate_limit.olvidar("login", ip)
 
     return {
-        "token": token, 
+        "token": token,
         "username": usuario,
         "is_admin": is_admin,
         "permissions": permissions if not is_admin else ["all"]
@@ -364,10 +407,16 @@ def _autor(user: dict) -> str:
     return (user or {}).get("username") or "panel"
 
 
+# Referencias vivas de los avisos en segundo plano: sin ellas, el recolector
+# puede llevarse la tarea antes de que el push salga (mismo patron que en
+# routes/qr_scan.py).
+_tareas_push = set()
+
+
 @router.post("/start")
 async def iniciar_carrera(
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Sella la hora real de salida: a partir de ahi se cuentan las vueltas.
 
@@ -427,7 +476,7 @@ class HoraDeSalida(BaseModel):
 async def corregir_hora_de_salida(
     datos: HoraDeSalida,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Corrige la hora de salida cuando se sello tarde o se sello mal."""
     from server import db as database
@@ -630,7 +679,7 @@ async def clima_de_la_carrera(race_code: Optional[str] = None):
 async def mark_retired(
     request: MarkRetiredRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """DNF: el corredor abandona conservando las vueltas que ya completo."""
     from server import db as database
@@ -665,7 +714,7 @@ async def mark_retired(
 async def mark_dns(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """DNS: no se presento. Sus vueltas vuelven a cero."""
     from server import db as database
@@ -701,7 +750,7 @@ async def mark_dns(
 async def adjust_participant_laps(
     request: AdjustLapsRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Fija a mano las vueltas de un corredor."""
     from server import db as database
@@ -729,7 +778,7 @@ async def adjust_participant_laps(
 async def edit_participant(
     request: EditParticipantRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Corrige el nombre o la nacionalidad de un corredor."""
     from server import db as database
@@ -761,7 +810,7 @@ async def edit_participant(
 async def mark_winner(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Declara el ganador. Solo puede haber uno por carrera."""
     from server import db as database
@@ -789,6 +838,27 @@ async def mark_winner(
         {"$set": {"status": "winner", "won_at": ahora, "updated_at": ahora}},
     )
 
+    # El ganador se anuncia a TODAS las apps instaladas, no solo a quien lo
+    # seguia: es el momento por el que existe la carrera. En segundo plano,
+    # como los avisos del escaneo: declarar al ganador no puede fallar porque
+    # FCM este lento.
+    from routes.push import avisar_a_todos
+
+    nombre = f"{atleta.get('nombre', '')} {atleta.get('apellidos', '')}".strip()
+    vueltas = atleta.get("laps_completed", 0)
+    # "El último en pie" es como se gana una backyard; el articulo sigue al
+    # sexo de la ficha de inscripcion.
+    en_pie = "la última en pie" if (atleta.get("sexo") or "").lower().startswith("f") else "el último en pie"
+    tarea = asyncio.create_task(avisar_a_todos(
+        database,
+        "¡Tenemos ganador!" if en_pie.startswith("el") else "¡Tenemos ganadora!",
+        f"{nombre} es {en_pie}: {vueltas} vueltas y {atleta.get('total_km', 0)} km. "
+        "¡Muchas felicidades!",
+        {"tipo": "ganador", "bib": str(atleta.get("bib")), "race_code": carrera.get("code")},
+    ))
+    _tareas_push.add(tarea)
+    tarea.add_done_callback(_tareas_push.discard)
+
     return {
         "message": f"¡{atleta.get('nombre')} {atleta.get('apellidos')} ha sido marcado como GANADOR!",
         "bib": atleta.get("bib"),
@@ -801,7 +871,7 @@ async def mark_winner(
 async def mark_honor(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Marca a un corredor como Invitada de Honor."""
     from server import db as database
@@ -828,7 +898,7 @@ async def mark_honor(
 async def reactivate_participant(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Devuelve a la carrera a alguien marcado por error.
 
@@ -866,7 +936,7 @@ async def reactivate_participant(
 async def complete_lap(
     request: CompleteLapRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Anota una vuelta a mano, cuando el escaneo no llego a hacerse."""
     from server import db as database
@@ -893,7 +963,7 @@ async def complete_lap(
 async def complete_lap_all_active(
     race_code: str = Depends(races.carrera_del_panel),
     lap_number: Optional[int] = None,
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Cierra una vuelta para todos los que siguen en carrera.
 
@@ -944,7 +1014,7 @@ async def complete_lap_all_active(
 async def revert_lap(
     race_code: str = Depends(races.carrera_del_panel),
     lap_number: Optional[int] = None,
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Deshace una vuelta que se cerro por error.
 
@@ -996,7 +1066,7 @@ async def revert_lap(
 async def reset_database(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra el seguimiento de una carrera y la deja lista para volver a correr.
 
@@ -1188,7 +1258,7 @@ async def update_subscription_silent(
 async def reset_cheers(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra los mensajes de animo de una carrera (solo administracion)."""
     from server import db as database
@@ -1347,7 +1417,7 @@ async def get_followers_count(
 async def reset_subscriptions(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra las suscripciones de correo de una carrera (solo administracion)."""
     from server import db as database
@@ -1403,22 +1473,32 @@ async def get_subscribers_count_public(
 @router.post("/cheer")
 async def submit_cheer_message(
     request: CheerMessageRequest,
+    authorization: Optional[str] = Header(None),
     db=Depends(lambda: None)
 ):
-    """Submit a cheer message for an athlete"""
+    """Submit a cheer message for an athlete.
+
+    El token es opcional a proposito. Animar sin cuenta sigue funcionando igual
+    que siempre —es como llega la mayoria, y cerrarlo de golpe cortaria el hilo
+    de la carrera—, pero cuando viene firmado se guarda `account_id` y el
+    mensaje deja de ser un nombre suelto: se sabe quien anima, se le puede
+    avisar, y el ano que viene se le reconoce.
+    """
     from server import db as database
     from services.twitter_service import post_cheer_to_twitter
-    
-    # Get active race code
-    active_race_code = await get_active_race_code(database)
+    from services import races as servicio_carreras
+
+    # La carrera sobre la que se anima es la que la app tiene abierta, no la
+    # activa: con dos carreras conviviendo, el dorsal 001 del campeonato y el
+    # de enero son personas distintas. Sin `race_code` (las versiones de la app
+    # ya instaladas no lo mandan) se cae en la publica, que era lo de siempre.
+    carrera = await servicio_carreras.resolver_carrera(database, request.race_code)
+    active_race_code = carrera.get("code")
 
     # El hilo de animos se cierra un mes despues de la carrera. Se comprueba
     # aqui y no solo en la pantalla: la app vieja que siga instalada, o
     # cualquiera que llame al endpoint, tiene que encontrarse la puerta cerrada
     # igual.
-    from services import races as servicio_carreras
-
-    carrera = await database.race_configurations.find_one({"code": active_race_code}) if active_race_code else None
     if servicio_carreras.animos_cerrados(carrera):
         cierre = servicio_carreras.cierre_de_animos(carrera)
         raise HTTPException(
@@ -1458,6 +1538,20 @@ async def submit_cheer_message(
     if len(request.fan_name) > 50:
         raise HTTPException(status_code=400, detail="El nombre no puede exceder 50 caracteres")
     
+    # Quien viene con sesion abierta firma el mensaje con su cuenta. Un token
+    # invalido o caducado no tumba el envio: se anima igual, sin cuenta, que es
+    # lo que se hacia hasta ahora.
+    cuenta = None
+    if authorization:
+        try:
+            from services import cuentas as servicio_cuentas
+            from services.auth import verify_cuenta_token
+
+            payload = verify_cuenta_token(authorization)
+            cuenta = await servicio_cuentas.por_id(database, payload.get("sub"))
+        except Exception:
+            cuenta = None
+
     # Create cheer message with race_code
     cheer_data = {
         "athlete_bib": request.athlete_bib,
@@ -1466,7 +1560,13 @@ async def submit_cheer_message(
         "race_code": active_race_code,
         "created_at": datetime.now(timezone.utc)
     }
-    
+    if cuenta:
+        cheer_data["account_id"] = cuenta["_id"]
+        # El nombre de la cuenta manda sobre el que venga escrito en el cuerpo:
+        # es el que la persona eligio para si, no uno tecleado de paso.
+        if (cuenta.get("nombre") or "").strip():
+            cheer_data["fan_name"] = cuenta["nombre"].strip()
+
     await database.cheer_messages.insert_one(cheer_data)
     
     # Try to post to Twitter (non-blocking, don't fail if Twitter fails)
@@ -1474,7 +1574,8 @@ async def submit_cheer_message(
     nacionalidad = athlete.get('nacionalidad', '')
     
     twitter_result = await post_cheer_to_twitter(
-        fan_name=request.fan_name,
+        # El mismo nombre que se guardo, que con cuenta es el de la cuenta.
+        fan_name=cheer_data["fan_name"],
         athlete_name=athlete_name,
         athlete_bib=request.athlete_bib,
         message=request.message,
@@ -1497,10 +1598,13 @@ async def submit_cheer_message(
     return response
 
 
-# Un mensaje borrado por el corredor no se enseña en ninguna parte, pero el
-# documento se conserva: lo normal es que se borre por ofensivo, y ahi la
-# organizacion necesita poder verlo.
-SIN_BORRADOS = {"deleted_by_athlete": {"$ne": True}}
+# Un mensaje borrado por el corredor o reportado por cualquiera no se enseña en
+# ninguna parte, pero el documento se conserva: lo normal es que se quite por
+# ofensivo, y ahi la organizacion necesita poder verlo y decidir si vuelve.
+SIN_BORRADOS = {
+    "deleted_by_athlete": {"$ne": True},
+    "hidden_by_report": {"$ne": True},
+}
 
 
 @router.get("/cheers")
@@ -1656,6 +1760,103 @@ async def like_cheer_message(cheer_id: str, quitar: bool = False):
         nuevos = max(0, actuales - 1) if quitar else actuales + 1
         await coleccion.update_one({"_id": oid}, {"$set": {"likes": nuevos}})
         return {"id": cheer_id, "likes": nuevos}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+
+class CheerReportRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/cheers/{cheer_id}/report")
+async def report_cheer_message(
+    cheer_id: str, datos: CheerReportRequest = None, request: Request = None
+):
+    """Reporta un mensaje de animo y lo esconde en el acto.
+
+    El muro lo escribe cualquiera sin cuenta, asi que la moderacion tiene que
+    poder ejercerla cualquiera igual: un reporte basta para que el mensaje
+    desaparezca del muro mientras la organizacion lo revisa. Es la politica que
+    cabe en un muro de apoyo —esconder de mas un rato es barato; dejar un insulto
+    colgado durante una carrera de 24 horas no—. El documento no se toca mas que
+    para marcarlo: la organizacion lo ve, y decide si vuelve o se queda fuera.
+    """
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    # Reportar tambien esconde, asi que sin limite seria una forma de vaciar el
+    # muro a mano. Con limite, vaciarlo requiere mas telefonos que mensajes.
+    rate_limit.comprobar(
+        "reportar-animo",
+        rate_limit.ip_cliente(request),
+        limite=10,
+        ventana_segundos=600,
+        mensaje="Demasiados reportes seguidos. Espera unos minutos.",
+    )
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    reporte = {
+        "reason": ((datos.reason if datos else None) or "").strip()[:280] or None,
+        "at": datetime.now(timezone.utc),
+    }
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        resultado = await coleccion.update_one(
+            {"_id": oid},
+            {
+                "$set": {"hidden_by_report": True},
+                "$push": {"reports": reporte},
+            },
+        )
+        if resultado.matched_count:
+            return {"id": cheer_id, "message": "Mensaje reportado. Queda oculto mientras la organización lo revisa."}
+
+    raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+
+@router.get("/cheers/reported", dependencies=[Depends(require_permission("control"))])
+async def get_reported_cheers(race_code: Optional[str] = None):
+    """Los mensajes escondidos por reporte, para que la organizacion los revise."""
+    from server import db as database
+
+    filtro = {"hidden_by_report": True}
+    if race_code:
+        filtro["race_code"] = race_code
+
+    mensajes = []
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        docs = await coleccion.find(filtro).sort("created_at", -1).to_list(200)
+        for doc in docs:
+            doc["id"] = str(doc.pop("_id"))
+            doc.pop("account_id", None)
+            mensajes.append(doc)
+
+    return {"messages": mensajes}
+
+
+@router.post("/cheers/{cheer_id}/restore", dependencies=[Depends(require_permission("control"))])
+async def restore_cheer_message(cheer_id: str):
+    """Devuelve al muro un mensaje reportado que resulto estar bien."""
+    from server import db as database
+    from bson import ObjectId
+    from bson.errors import InvalidId
+
+    try:
+        oid = ObjectId(cheer_id)
+    except (InvalidId, TypeError):
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+    for coleccion in (database.cheer_messages, database.archived_cheer_messages):
+        resultado = await coleccion.update_one(
+            {"_id": oid}, {"$unset": {"hidden_by_report": "", "reports": ""}}
+        )
+        if resultado.matched_count:
+            return {"id": cheer_id, "restored": True}
 
     raise HTTPException(status_code=404, detail="Mensaje no encontrado")
 
@@ -1961,7 +2162,7 @@ async def get_twitter_status():
 @router.post("/send-runner-emails")
 async def send_runner_completion_emails(
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("emails")),
 ):
     """Correo de cierre a los corredores de una carrera, cuando ya hay ganador.
 
@@ -2088,7 +2289,7 @@ async def send_runner_completion_emails(
 async def send_test_runner_email(
     bib: str,
     test_email: str,
-    user=Depends(verify_token),
+    user=Depends(require_permission("emails")),
     db=Depends(lambda: None)
 ):
     """Send a test completion email for a specific runner to a test email address"""

@@ -124,7 +124,7 @@ export function PickerSheet({ title, onClose, onConfirm, children }) {
  * abre una hoja inferior con un rodillo. Sustituye al <select> nativo.
  * options: array de strings o de objetos { value, label }.
  */
-export default function Picker({ value, onSelect, options, placeholder = 'Selecciona', title }) {
+export default function Picker({ value, onSelect, options, placeholder = 'Selecciona', title, claseBoton }) {
   const { T } = useLiveTheme();
   const [open, setOpen] = useState(false);
   const [temp, setTemp] = useState(value);
@@ -147,7 +147,7 @@ export default function Picker({ value, onSelect, options, placeholder = 'Selecc
       <button
         type="button"
         onClick={openSheet}
-        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm text-left ${T.input}`}
+        className={claseBoton || `w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm text-left ${T.input}`}
       >
         <span className={`truncate ${current ? '' : 'opacity-50'}`}>
           {current ? current.label : placeholder}

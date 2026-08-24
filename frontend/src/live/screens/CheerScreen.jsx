@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Send, MessageCircle, Loader2, Search, X, Heart, Lock } from 'lucide-react';
-import { getJson, postJson, FAN_NAME_KEY, initialsOf, flagOf } from '../liveApi';
+import { Send, MessageCircle, Loader2, Search, X, Heart, Lock, MoreHorizontal, Flag, EyeOff } from 'lucide-react';
+import { getJson, postJson, FAN_NAME_KEY, BLOQUEADOS_KEY, initialsOf, flagOf } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 
@@ -44,6 +44,37 @@ export default function CheerScreen() {
       return new Set();
     }
   });
+
+  // Moderación al alcance de quien lee: reportar un mensaje o dejar de ver a
+  // su autor (lo pide la App Store para todo contenido de usuarios).
+  const [bloqueados, setBloqueados] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(BLOQUEADOS_KEY)) || []);
+    } catch {
+      return new Set();
+    }
+  });
+  const [menuDe, setMenuDe] = useState(null);
+  const [avisoModeracion, setAvisoModeracion] = useState(null);
+
+  const reportar = async (mensaje) => {
+    setMenuDe(null);
+    // Se esconde ya: el reporte es de quien lo ve, no del servidor.
+    setCheers((prev) => prev.filter((c) => c.id !== mensaje.id));
+    setAvisoModeracion('Mensaje reportado. Queda oculto mientras la organización lo revisa.');
+    await postJson(`/api/race/cheers/${mensaje.id}/report`, {});
+  };
+
+  const bloquear = (mensaje) => {
+    const clave = (mensaje.fan_name || '').trim().toLowerCase();
+    if (!clave) return;
+    const siguientes = new Set(bloqueados);
+    siguientes.add(clave);
+    setBloqueados(siguientes);
+    localStorage.setItem(BLOQUEADOS_KEY, JSON.stringify([...siguientes]));
+    setMenuDe(null);
+    setAvisoModeracion(`No verás más mensajes de ${mensaje.fan_name} en este teléfono.`);
+  };
 
   const alternarLike = async (mensaje) => {
     const id = mensaje.id;
@@ -121,10 +152,14 @@ export default function CheerScreen() {
     }
     setSending(true);
     setResult(null);
+    // Con el race_code el ánimo cae en la carrera que se está viendo; sin él,
+    // el backend lo anotaba siempre en la activa y el dorsal 001 del campeonato
+    // recibía los mensajes del 001 de enero.
     const { ok, data } = await postJson('/api/race/cheer', {
       athlete_bib: bib,
       fan_name: fanName.trim(),
       message: message.trim(),
+      race_code: raceCode,
     });
     if (ok) {
       localStorage.setItem(FAN_NAME_KEY, fanName.trim());
@@ -136,6 +171,11 @@ export default function CheerScreen() {
     }
     setSending(false);
   };
+
+  const visibles = useMemo(
+    () => cheers.filter((c) => !bloqueados.has((c.fan_name || '').trim().toLowerCase())),
+    [cheers, bloqueados]
+  );
 
   const contenido = (
     <>
@@ -247,13 +287,21 @@ export default function CheerScreen() {
         <p className={`text-xs font-bold tracking-wider uppercase mb-2 ${T.subtle}`}>
           {bibParam ? 'Mensajes recibidos' : 'Mensajes recientes'}
         </p>
-        {cheers.length === 0 ? (
+        {avisoModeracion && (
+          <div className={`rounded-xl px-3.5 py-2.5 mb-2.5 flex items-start justify-between gap-3 ${T.card}`}>
+            <p className={`text-xs ${T.muted}`}>{avisoModeracion}</p>
+            <button aria-label="Cerrar aviso" onClick={() => setAvisoModeracion(null)}>
+              <X className={`w-3.5 h-3.5 ${T.subtle}`} />
+            </button>
+          </div>
+        )}
+        {visibles.length === 0 ? (
           <div className={`text-center py-10 ${T.muted}`}>
             <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-60" />
             <p className="text-xs">Sé la primera persona en enviar ánimo.</p>
           </div>
         ) : (
-          cheers.map((c, i) => {
+          visibles.map((c, i) => {
             const miLike = c.id && misLikes.has(c.id);
             return (
               <div key={c.id || i} className={`rounded-2xl px-3.5 py-3 mb-2.5 ${T.card}`}>
@@ -272,7 +320,32 @@ export default function CheerScreen() {
                     <Heart className={`w-4 h-4 ${miLike ? 'fill-[#E77622]' : ''}`} />
                     {c.likes > 0 ? c.likes : ''}
                   </button>
+                  <button
+                    aria-label="Opciones del mensaje"
+                    aria-expanded={menuDe === c.id}
+                    onClick={() => setMenuDe(menuDe === c.id ? null : c.id)}
+                    disabled={!c.id}
+                    className={`shrink-0 disabled:opacity-40 ${T.subtle}`}
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
                 </div>
+                {menuDe === c.id && (
+                  <div className={`flex flex-col gap-1 mt-2 pt-2 border-t ${T.divider}`}>
+                    <button
+                      onClick={() => reportar(c)}
+                      className={`flex items-center gap-2 py-1.5 text-xs font-semibold text-left ${T.muted}`}
+                    >
+                      <Flag className="w-3.5 h-3.5 shrink-0" /> Reportar mensaje
+                    </button>
+                    <button
+                      onClick={() => bloquear(c)}
+                      className={`flex items-center gap-2 py-1.5 text-xs font-semibold text-left ${T.muted}`}
+                    >
+                      <EyeOff className="w-3.5 h-3.5 shrink-0" /> Ocultar mensajes de {c.fan_name}
+                    </button>
+                  </div>
+                )}
                 {/* La respuesta va debajo de la firma: en medio separaba el
                     mensaje de quien lo escribió, que van juntos. */}
                 {c.reply && (

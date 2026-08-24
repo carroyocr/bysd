@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, QrCode, Timer, LayoutDashboard, LogOut, ChevronRight, Eye, EyeOff, Lock,
-  HeartPulse, ScanFace, Loader2, Users, UserRound, Check,
+  HeartPulse, ScanFace, Loader2, Users, UserRound, Check, CloudOff, Download,
 } from 'lucide-react';
 import { authJson } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
+import { useLiveTheme, THEMES } from '../liveTheme';
 import { Screen } from '../LiveApp';
-import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, STAFF } from '../biometria';
-import { cerrarSesionStaff } from '../sesion';
+import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
+import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria } from '../biometria';
+import { cerrarSesion, guardarSesion, token as tokenSesion } from '../sesion';
 import InputClave from '../components/InputClave';
+import { descargarPack, pack } from '../../lib/scanOffline';
 
 /**
  * Acceso del staff dentro de BYSD Live: inicia sesión con las credenciales
@@ -20,12 +22,31 @@ export default function StaffScreen() {
   const { T } = useLiveTheme();
   const navigate = useNavigate();
 
-  const [logged, setLogged] = useState(() => !!localStorage.getItem('admin_token'));
+  const [logged, setLogged] = useState(() => !!tokenSesion());
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Datos para trabajar sin señal: corredores para el escáner y fichas de
+  // emergencia. La descarga es la misma que la del escáner; desde aquí queda a
+  // mano de todo el que atiende, no solo de quien escanea.
+  const [datosOffline, setDatosOffline] = useState(() => pack());
+  const [descargando, setDescargando] = useState(false);
+  const [avisoDescarga, setAvisoDescarga] = useState('');
+
+  const descargarDatos = async () => {
+    setDescargando(true);
+    setAvisoDescarga('');
+    try {
+      const datos = await descargarPack();
+      setDatosOffline(datos);
+    } catch {
+      setAvisoDescarga('No se pudieron descargar los datos. ¿Hay señal?');
+    }
+    setDescargando(false);
+  };
 
   // Biometría del staff: guarda su propio token, aparte del de corredor.
   const [bio, setBio] = useState({ disponible: false, nombre: '', activada: false });
@@ -34,7 +55,7 @@ export default function StaffScreen() {
   useEffect(() => {
     let cancel = false;
     (async () => {
-      const estado = await estadoBiometria(STAFF);
+      const estado = await estadoBiometria();
       if (cancel) return;
       setBio(estado);
       // Igual que en el perfil del corredor: si luego prefiere la contraseña,
@@ -48,10 +69,10 @@ export default function StaffScreen() {
       setClave((p) => ({ ...p, conBio: estado.disponible && !estado.activada }));
       // Con biometría activada se pide siempre, aunque quede sesión guardada:
       // estas herramientas abren la ficha médica de todos los inscritos.
-      if (estado.activada && !localStorage.getItem('admin_token')) {
-        const token = await entrarConBiometria(STAFF);
+      if (estado.activada && !tokenSesion()) {
+        const token = await entrarConBiometria();
         if (!cancel && token) {
-          localStorage.setItem('admin_token', token);
+          guardarSesion({ token });
           setLogged(true);
         }
       }
@@ -63,11 +84,12 @@ export default function StaffScreen() {
     if (bioBusy) return;
     setBioBusy(true);
     setError('');
-    const token = await entrarConBiometria(STAFF);
+    const token = await entrarConBiometria();
     setBioBusy(false);
     if (token) {
-      localStorage.setItem('admin_token', token);
+      guardarSesion({ token });
       setLogged(true);
+      navigate('/live/ir');
     } else {
       setError('No se pudo verificar. Entra con tu usuario y contraseña.');
     }
@@ -77,11 +99,11 @@ export default function StaffScreen() {
     if (bioBusy) return;
     setBioBusy(true);
     if (bio.activada) {
-      await desactivarBiometria(STAFF);
+      await desactivarBiometria();
       setBio((p) => ({ ...p, activada: false }));
     } else {
       const { ok } = await activarBiometria(
-        localStorage.getItem('admin_username'), localStorage.getItem('admin_token'), STAFF,
+        localStorage.getItem('admin_username'), tokenSesion(),
       );
       if (ok) setBio((p) => ({ ...p, activada: true }));
     }
@@ -153,17 +175,15 @@ export default function StaffScreen() {
       setError(data.detail || 'No se pudo guardar la contraseña');
       return;
     }
-    localStorage.setItem('admin_token', data.token);
-    localStorage.setItem('admin_username', data.username);
-    localStorage.setItem('admin_is_admin', 'false');
-    localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    guardarSesion({ ...data, is_admin: false, permissions: data.permissions || [] });
 
     if (clave.conBio && bio.disponible) {
-      const { ok: okBio } = await activarBiometria(email, data.token, STAFF);
+      const { ok: okBio } = await activarBiometria(email, data.token);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
     setClave({ modo: 'login', email: '', code: '', password: '', password2: '', conBio: false, cargando: false, msg: '' });
     setLogged(true);
+    navigate('/live/ir');
   };
 
   /** El mismo submit sirve para los tres estados del formulario. */
@@ -201,51 +221,47 @@ export default function StaffScreen() {
       setError(data.detail || 'Usuario o contraseña incorrectos');
       return;
     }
-    localStorage.setItem('admin_token', data.token);
-    localStorage.setItem('admin_username', data.username);
-    localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
-    localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+    guardarSesion({ ...data, permissions: data.permissions || [] });
     if (clave.conBio && bio.disponible && !bio.activada) {
-      const { ok: okBio } = await activarBiometria(username.trim(), data.token, STAFF);
+      const { ok: okBio } = await activarBiometria(username.trim(), data.token);
       if (okBio) setBio((p) => ({ ...p, activada: true }));
     }
     setPassword('');
     setLogged(true);
+    // Entró: a la carrera de entrada (la elegida o la más próxima).
+    navigate('/live/ir');
   };
 
   const logout = async () => {
-    cerrarSesionStaff();
-    // El token del llavero es esta misma sesión: dejarlo haría que cerrar
-    // sesión no cerrara nada.
-    await desactivarBiometria(STAFF);
+    // `cerrarSesion` apaga también la biometría: el token del llavero es esta
+    // misma sesión, y dejarlo haría que cerrar sesión no cerrara nada.
+    await cerrarSesion();
     setBio((p) => ({ ...p, activada: false }));
     setLogged(false);
   };
 
   if (!logged) {
     const enVoluntario = clave.modo !== 'login';
+    // Paleta oscura fija: el acceso es nocturno aunque el tema esté claro.
+    const Tacc = THEMES.dark;
 
     return (
-      <Screen title="Staff">
-        <div className="px-4 py-6">
-          <div className={`rounded-2xl px-5 py-6 ${T.card}`}>
-            <div className="flex flex-col items-center mb-5">
-              <span className="w-14 h-14 rounded-full bg-[#E77622]/15 flex items-center justify-center mb-3">
-                <ShieldCheck className="w-7 h-7 text-[#E77622]" />
-              </span>
-              <h2 className="text-lg font-bold">Acceso del staff</h2>
-              <p className={`text-xs mt-1 text-center ${T.muted}`}>
-                {clave.modo === 'login' && 'Usa tus credenciales del panel'}
-                {clave.modo === 'codigo' && 'Te enviamos un código al correo de tu cuenta para que pongas una contraseña nueva'}
-                {clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`}
-              </p>
-            </div>
+      <PantallaAcceso>
+        <TarjetaAcceso
+          Icono={ShieldCheck}
+          titulo="Acceso del staff"
+          subtitulo={
+            (clave.modo === 'login' && 'Usa tus credenciales del panel')
+            || (clave.modo === 'codigo' && 'Te enviamos un código al correo de tu cuenta para que pongas una contraseña nueva')
+            || (clave.modo === 'definir' && `Escribe el código que enviamos a ${clave.email}`)
+          }
+        >
 
             <form onSubmit={enviarFormulario} className="space-y-3">
               {/* Usuario, o correo del voluntario: el mismo hueco cambia de
                   papel para no llenar la pantalla de campos. */}
               <label className="block">
-                <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>
+                <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>
                   {enVoluntario ? 'Tu correo' : 'Usuario'}
                 </span>
                 <input
@@ -258,26 +274,26 @@ export default function StaffScreen() {
                   readOnly={clave.modo === 'definir'}
                   required
                   autoCapitalize="none"
-                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
+                  className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input} ${clave.modo === 'definir' ? 'opacity-60' : ''}`}
                 />
               </label>
 
               {clave.modo === 'definir' && (
                 <>
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Código de 6 dígitos</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Código de 6 dígitos</span>
                     <input
                       inputMode="numeric"
                       value={clave.code}
                       onChange={(e) => setClave((p) => ({ ...p, code: e.target.value }))}
                       required
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input}`}
                     />
                   </label>
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Nueva contraseña (mínimo 8)</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Nueva contraseña (mínimo 8)</span>
                     <InputClave
-                      T={T}
+                      T={Tacc}
                       value={clave.password}
                       onChange={(e) => setClave((p) => ({ ...p, password: e.target.value }))}
                       required
@@ -286,9 +302,9 @@ export default function StaffScreen() {
                   {/* Repetirla: es la unica ocasion en que se escribe a ciegas
                       y no hay forma de recuperarla si sale un dedazo. */}
                   <label className="block">
-                    <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Repite la contraseña</span>
+                    <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Repite la contraseña</span>
                     <InputClave
-                      T={T}
+                      T={Tacc}
                       value={clave.password2}
                       onChange={(e) => setClave((p) => ({ ...p, password2: e.target.value }))}
                       required
@@ -302,16 +318,16 @@ export default function StaffScreen() {
 
               {clave.modo === 'login' && (
                 <label className="block">
-                  <span className={`block text-[11px] font-bold mb-1 ${T.muted}`}>Contraseña</span>
+                  <span className={`block text-[11px] font-bold mb-1 ${Tacc.muted}`}>Contraseña</span>
                   <div className="relative">
                     <input
                       type={showPwd ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${T.input}`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none ${Tacc.input}`}
                     />
-                    <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                    <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${Tacc.muted}`} aria-label="Mostrar contraseña">
                       {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -352,7 +368,7 @@ export default function StaffScreen() {
                   type="button"
                   onClick={entrarBiometrico}
                   disabled={bioBusy}
-                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${T.divider}`}
+                  className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${Tacc.divider}`}
                 >
                   {bioBusy
                     ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -371,14 +387,14 @@ export default function StaffScreen() {
                     <button
                       type="button"
                       onClick={() => cambiarModo('codigo')}
-                      className={`text-xs underline ${T.muted}`}
+                      className={`text-xs underline ${Tacc.muted}`}
                     >
                       Olvidé mi contraseña
                     </button>
                     <button
                       type="button"
                       onClick={() => cambiarModo('codigo')}
-                      className={`text-xs underline ${T.muted}`}
+                      className={`text-xs underline ${Tacc.muted}`}
                     >
                       Soy voluntario y no tengo contraseña
                     </button>
@@ -394,16 +410,15 @@ export default function StaffScreen() {
                   <button
                     type="button"
                     onClick={() => cambiarModo('login')}
-                    className={`text-xs underline ${T.muted}`}
+                    className={`text-xs underline ${Tacc.muted}`}
                   >
                     Ya tengo contraseña, quiero entrar
                   </button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
-      </Screen>
+        </TarjetaAcceso>
+      </PantallaAcceso>
     );
   }
 
@@ -470,6 +485,43 @@ export default function StaffScreen() {
             </button>
           ))}
         </div>
+
+        {/* Descargar para trabajar sin señal: solo para quien puede ver las
+            fichas (permiso scanner); sin él, el backend no entrega nada. */}
+        {can('scanner') && (
+          <div className={`rounded-2xl mt-4 px-4 py-4 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <CloudOff className="w-4 h-4 text-[#E77622]" /> Usar sin señal
+            </h3>
+            <p className={`text-[11px] mt-1 mb-3 leading-relaxed ${T.muted}`}>
+              Descarga los corredores y las fichas de emergencia de atletas y
+              equipo. Si la señal se cae, el escáner y las fichas siguen
+              funcionando con lo descargado.
+            </p>
+            <button
+              onClick={descargarDatos}
+              disabled={descargando}
+              data-testid="staff-offline-download"
+              className={`w-full h-11 rounded-xl flex items-center justify-center gap-2 text-sm font-bold border ${T.divider} disabled:opacity-50`}
+            >
+              {descargando
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Download className="w-4 h-4 text-[#E77622]" />}
+              {datosOffline ? 'Actualizar datos descargados' : 'Descargar datos'}
+            </button>
+            {avisoDescarga && (
+              <p className="text-[11px] text-center mt-1.5 text-red-500">{avisoDescarga}</p>
+            )}
+            {datosOffline && !avisoDescarga && (
+              <p className={`text-[11px] text-center mt-1.5 ${T.subtle}`}>
+                {datosOffline.race.name} · {datosOffline.participants.length} corredores ·{' '}
+                {new Date(datosOffline.descargado_en).toLocaleString('es-DO', {
+                  day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+                })}
+              </p>
+            )}
+          </div>
+        )}
 
         {bio.disponible && (
           <div className={`rounded-2xl mt-4 px-4 py-4 flex items-center gap-3.5 ${T.card}`}>

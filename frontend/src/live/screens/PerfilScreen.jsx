@@ -8,17 +8,18 @@ import {
   MessageCircle, Send, Trash2, Contact, Share2, Settings,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
+import { useLiveTheme, THEMES } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
 import { useRaceConfig } from '../../contexts/RaceConfigContext';
 import { estadoBiometria, activarBiometria, desactivarBiometria, entrarConBiometria, recordarUsuarioBiometrico } from '../biometria';
 import { registrarAtleta } from '../push';
-import { marcarAccesoAtleta, accesoAtletaCaducado, cerrarSesionAtleta, HORAS_SESION } from '../sesion';
+import { marcarAcceso, accesoCaducado, cerrarSesion, HORAS_SESION, TOKEN } from '../sesion';
+import PantallaAcceso, { TarjetaAcceso } from '../components/PantallaAcceso';
 import Picker from '../components/Picker';
 import DateField from '../components/DateField';
 
-const TOKEN_KEY = 'athlete_token';
+const TOKEN_KEY = TOKEN;
 
 /** "2027-01-23T14:05:00Z" -> "23 ene 2027, 10:05 a. m." (hora de RD). */
 function fechaHora(iso) {
@@ -600,13 +601,13 @@ export default function PerfilScreen() {
         if (cancelado) return;
         if (!guardado) return;                       // canceló: se queda bloqueado
         localStorage.setItem(TOKEN_KEY, guardado);
-        marcarAccesoAtleta();
+        marcarAcceso();
         if (!(await fetchAll()) && !cancelado) await sesionBiometricaCaducada();
         return;
       }
 
-      if (accesoAtletaCaducado()) {
-        cerrarSesionAtleta();
+      if (accesoCaducado()) {
+        cerrarSesion();
         setMsg({ type: 'error', text: `Han pasado más de ${HORAS_SESION} horas. Entra otra vez.` });
         setView('login');
         return;
@@ -624,7 +625,7 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
-      marcarAccesoAtleta();
+      marcarAcceso();
       if (conBio && bio.disponible && !bio.activada) {
         const { ok: okBio } = await activarBiometria(email.trim(), data.token);
         if (okBio) {
@@ -632,7 +633,9 @@ export default function PerfilScreen() {
           setMsg({ type: 'ok', text: `Listo: la próxima vez entra con ${bio.nombre}.` });
         }
       }
-      fetchAll();
+      // Login hecho: a la carrera de entrada (la elegida o la más próxima).
+      await fetchAll();
+      navigate('/live/ir');
     } else if (status === 403) {
       setPendingEmail(email.trim());
       setCode('');
@@ -651,8 +654,9 @@ export default function PerfilScreen() {
     setBioBusy(false);
     if (guardado) {
       localStorage.setItem(TOKEN_KEY, guardado);
-      marcarAccesoAtleta();
+      marcarAcceso();
       if (!(await fetchAll())) await sesionBiometricaCaducada();
+      else navigate('/live/ir');
     } else {
       setMsg({ type: 'error', text: 'No se pudo verificar. Entra con tu contraseña.' });
     }
@@ -734,8 +738,9 @@ export default function PerfilScreen() {
     setLoading(false);
     if (ok) {
       localStorage.setItem(TOKEN_KEY, data.token);
-      marcarAccesoAtleta();
-      fetchAll();
+      marcarAcceso();
+      await fetchAll();
+      navigate('/live/ir');
     } else {
       setMsg({ type: 'error', text: data.detail || 'Código incorrecto' });
     }
@@ -990,20 +995,15 @@ export default function PerfilScreen() {
 
   /* ---------------- vistas de autenticación ---------------- */
 
+  // Las pantallas de acceso van con la paleta oscura fija, sea cual sea el
+  // tema: son parte del camino de entrada, que es nocturno de principio a fin.
+  const Tacc = THEMES.dark;
+
   const authCard = (title, subtitle, body) => (
-    <div className="px-4 py-6">
-      <div className={`rounded-2xl px-5 py-6 ${T.card}`}>
-        <div className="flex flex-col items-center mb-5">
-          <span className="w-14 h-14 rounded-full bg-[#E77622]/15 flex items-center justify-center mb-3">
-            <User className="w-7 h-7 text-[#E77622]" />
-          </span>
-          <h2 className="text-lg font-bold">{title}</h2>
-          {subtitle && <p className={`text-xs mt-1 text-center ${T.muted}`}>{subtitle}</p>}
-        </div>
-        {body}
-        <Msg T={T} msg={msg} />
-      </div>
-    </div>
+    <TarjetaAcceso Icono={User} titulo={title} subtitulo={subtitle}>
+      {body}
+      <Msg T={Tacc} msg={msg} />
+    </TarjetaAcceso>
   );
 
   if (view === 'cargando') {
@@ -1041,7 +1041,7 @@ export default function PerfilScreen() {
               const correo = bio.usuario || email;
               await desactivarBiometria();
               setBio((p) => ({ ...p, activada: false }));
-              cerrarSesionAtleta();
+              cerrarSesion();
               setEmail(correo);
               setView('login');
             }}
@@ -1056,16 +1056,16 @@ export default function PerfilScreen() {
 
   if (view === 'login') {
     return (
-      <Screen title="Perfil del corredor">
+      <PantallaAcceso>
         {authCard('Mi cuenta de atleta', 'Usa la misma cuenta del sitio web', (
           <form onSubmit={doLogin} className="space-y-3">
-            <Field T={T} label="Email">
-              <TextInput T={T} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+            <Field T={Tacc} label="Email">
+              <TextInput T={Tacc} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </Field>
-            <Field T={T} label="Contraseña">
+            <Field T={Tacc} label="Contraseña">
               <div className="relative">
-                <TextInput T={T} type={showPwd ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-                <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                <TextInput T={Tacc} type={showPwd ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${Tacc.muted}`} aria-label="Mostrar contraseña">
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -1092,14 +1092,14 @@ export default function PerfilScreen() {
                 type="button"
                 onClick={entrarBiometrico}
                 disabled={bioBusy}
-                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${T.divider}`}
+                className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold border disabled:opacity-50 ${Tacc.divider}`}
               >
                 <ScanFace className="w-4 h-4 text-[#E77622]" />
                 {bioBusy ? 'Verificando…' : `Entrar con ${bio.nombre}`}
               </button>
             )}
             <div className="flex justify-between pt-1">
-              <button type="button" onClick={doForgot} className={`text-xs underline ${T.muted}`}>
+              <button type="button" onClick={doForgot} className={`text-xs underline ${Tacc.muted}`}>
                 Olvidé mi contraseña
               </button>
               <button type="button" onClick={startRegistro} className="text-xs underline text-[#E77622]">
@@ -1108,109 +1108,109 @@ export default function PerfilScreen() {
             </div>
           </form>
         ))}
-      </Screen>
+      </PantallaAcceso>
     );
   }
 
   if (view === 'registro') {
     return (
-      <Screen title="Crear cuenta">
+      <PantallaAcceso>
         {authCard('Crear mi cuenta', 'Con ella te inscribes y sigues tu carrera', (
           <form onSubmit={doRegistro} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <Field T={T} label="Nombre *">
-                <TextInput T={T} value={regData.nombre} onChange={updReg('nombre')} required autoComplete="given-name" />
+              <Field T={Tacc} label="Nombre *">
+                <TextInput T={Tacc} value={regData.nombre} onChange={updReg('nombre')} required autoComplete="given-name" />
               </Field>
-              <Field T={T} label="Apellidos *">
-                <TextInput T={T} value={regData.apellidos} onChange={updReg('apellidos')} required autoComplete="family-name" />
+              <Field T={Tacc} label="Apellidos *">
+                <TextInput T={Tacc} value={regData.apellidos} onChange={updReg('apellidos')} required autoComplete="family-name" />
               </Field>
             </div>
-            <Field T={T} label="Email *">
-              <TextInput T={T} type="email" inputMode="email" autoCapitalize="none" value={regData.email} onChange={updReg('email')} required autoComplete="email" />
+            <Field T={Tacc} label="Email *">
+              <TextInput T={Tacc} type="email" inputMode="email" autoCapitalize="none" value={regData.email} onChange={updReg('email')} required autoComplete="email" />
             </Field>
-            <Field T={T} label="Contraseña * (mínimo 8 caracteres)">
+            <Field T={Tacc} label="Contraseña * (mínimo 8 caracteres)">
               <div className="relative">
-                <TextInput T={T} type={showPwd ? 'text' : 'password'} value={regData.password} onChange={updReg('password')} required autoComplete="new-password" />
-                <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${T.muted}`} aria-label="Mostrar contraseña">
+                <TextInput T={Tacc} type={showPwd ? 'text' : 'password'} value={regData.password} onChange={updReg('password')} required autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPwd(!showPwd)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${Tacc.muted}`} aria-label="Mostrar contraseña">
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field T={T} label="Teléfono">
-                <TextInput T={T} type="tel" inputMode="tel" value={regData.telefono} onChange={updReg('telefono')} autoComplete="tel" />
+              <Field T={Tacc} label="Teléfono">
+                <TextInput T={Tacc} type="tel" inputMode="tel" value={regData.telefono} onChange={updReg('telefono')} autoComplete="tel" />
               </Field>
-              <Field T={T} label="Sexo">
-                <SelectInput T={T} options={SEXOS} value={regData.sexo} onChange={updReg('sexo')} />
+              <Field T={Tacc} label="Sexo">
+                <SelectInput T={Tacc} options={SEXOS} value={regData.sexo} onChange={updReg('sexo')} />
               </Field>
             </div>
-            <Field T={T} label="Fecha de nacimiento">
+            <Field T={Tacc} label="Fecha de nacimiento">
               <DateField
-                T={T}
+                T={Tacc}
                 title="Fecha de nacimiento"
                 value={regData.fecha_nacimiento}
                 onChange={(v) => setRegData((p) => ({ ...p, fecha_nacimiento: v }))}
               />
             </Field>
-            <Field T={T} label="Ciudad de residencia">
-              <TextInput T={T} value={regData.ciudad_residencia} onChange={updReg('ciudad_residencia')} />
+            <Field T={Tacc} label="Ciudad de residencia">
+              <TextInput T={Tacc} value={regData.ciudad_residencia} onChange={updReg('ciudad_residencia')} />
             </Field>
-            <p className={`text-[11px] leading-relaxed ${T.muted}`}>
+            <p className={`text-[11px] leading-relaxed ${Tacc.muted}`}>
               Los datos médicos y el contacto de emergencia se completan después,
               en la pestaña Datos. Hacen falta para poder inscribirte a la carrera.
             </p>
             <PrimaryButton type="submit" disabled={loading}>
               {loading ? 'Creando…' : 'Crear cuenta'}
             </PrimaryButton>
-            <button type="button" onClick={() => { setView('login'); setMsg(null); }} className={`block mx-auto text-xs underline ${T.muted}`}>
+            <button type="button" onClick={() => { setView('login'); setMsg(null); }} className={`block mx-auto text-xs underline ${Tacc.muted}`}>
               Ya tengo cuenta
             </button>
           </form>
         ))}
-      </Screen>
+      </PantallaAcceso>
     );
   }
 
   if (view === 'verificar') {
     return (
-      <Screen title="Verificar email">
+      <PantallaAcceso>
         {authCard('Verifica tu email', `Enviamos un código a ${pendingEmail}`, (
           <form onSubmit={doVerify} className="space-y-3">
-            <Field T={T} label="Código de verificación">
-              <TextInput T={T} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} required />
+            <Field T={Tacc} label="Código de verificación">
+              <TextInput T={Tacc} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} required />
             </Field>
             <PrimaryButton type="submit" disabled={loading}>
               {loading ? 'Verificando…' : 'Verificar'}
             </PrimaryButton>
-            <button type="button" onClick={() => setView('login')} className={`block mx-auto text-xs underline ${T.muted}`}>
+            <button type="button" onClick={() => setView('login')} className={`block mx-auto text-xs underline ${Tacc.muted}`}>
               Volver
             </button>
           </form>
         ))}
-      </Screen>
+      </PantallaAcceso>
     );
   }
 
   if (view === 'restablecer') {
     return (
-      <Screen title="Restablecer contraseña">
+      <PantallaAcceso>
         {authCard('Restablecer contraseña', `Enviamos un código a ${pendingEmail}`, (
           <form onSubmit={doReset} className="space-y-3">
-            <Field T={T} label="Código recibido">
-              <TextInput T={T} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} required />
+            <Field T={Tacc} label="Código recibido">
+              <TextInput T={Tacc} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} required />
             </Field>
-            <Field T={T} label="Nueva contraseña">
-              <TextInput T={T} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
+            <Field T={Tacc} label="Nueva contraseña">
+              <TextInput T={Tacc} type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} />
             </Field>
             <PrimaryButton type="submit" disabled={loading}>
               {loading ? 'Guardando…' : 'Guardar contraseña'}
             </PrimaryButton>
-            <button type="button" onClick={() => setView('login')} className={`block mx-auto text-xs underline ${T.muted}`}>
+            <button type="button" onClick={() => setView('login')} className={`block mx-auto text-xs underline ${Tacc.muted}`}>
               Volver
             </button>
           </form>
         ))}
-      </Screen>
+      </PantallaAcceso>
     );
   }
 

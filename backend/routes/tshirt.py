@@ -19,11 +19,25 @@ def _verify_admin(authorization: Optional[str]):
     return payload
 
 
+def _athlete_payload(authorization: Optional[str]):
+    """Cuenta con perfil de corredor, con token de cuenta unica o el heredado.
+
+    `verify_athlete_token` solo entendia el token viejo (`type: "athlete"`,
+    firma derivada): toda sesion iniciada tras la cuenta unica daba 401 aqui.
+    """
+    from services.auth import require_athlete
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Debes iniciar sesión para votar")
+    payload = require_athlete(authorization)
+    if not payload.get("athlete_id"):
+        raise HTTPException(status_code=403, detail="Esta cuenta no tiene perfil de corredor")
+    return payload
+
+
 @router.get("/designs")
 async def get_designs(authorization: Optional[str] = Header(None)):
     """Public: list t-shirt designs with vote counts, ranking and the current athlete's choice."""
     from server import db as database
-    from routes.athletes import verify_athlete_token
 
     designs = await database.tshirt_designs.find(
         {}, {"image_data": 0}
@@ -38,7 +52,7 @@ async def get_designs(authorization: Optional[str] = Header(None)):
     my_vote = None
     if authorization and authorization.startswith("Bearer "):
         try:
-            payload = verify_athlete_token(authorization.replace("Bearer ", ""))
+            payload = _athlete_payload(authorization)
             v = await database.tshirt_votes.find_one({"athlete_id": payload["athlete_id"]})
             if v:
                 my_vote = v["design_id"]
@@ -91,15 +105,8 @@ async def vote(payload: dict, authorization: Optional[str] = Header(None)):
     """Authenticated: cast or change a vote. One vote per athlete profile."""
     from server import db as database
     from bson import ObjectId
-    from routes.athletes import verify_athlete_token
 
-    # Require athlete login
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Debes iniciar sesión para votar")
-    try:
-        token_payload = verify_athlete_token(authorization.replace("Bearer ", ""))
-    except Exception:
-        raise HTTPException(status_code=401, detail="Sesión inválida. Inicia sesión de nuevo")
+    token_payload = _athlete_payload(authorization)
     athlete_id = token_payload["athlete_id"]
 
     design_id = (payload.get("design_id") or "").strip()

@@ -12,7 +12,7 @@ const MESES = [
 ];
 
 
-export default function DateField({ T, value, onChange, fromYear, toYear, title = 'Fecha' }) {
+export default function DateField({ T, value, onChange, fromYear, toYear, title = 'Fecha', claseBoton }) {
   const now = new Date();
   const startYear = fromYear ?? now.getFullYear() - 10;
   const endYear = toYear ?? 1930;
@@ -56,7 +56,7 @@ export default function DateField({ T, value, onChange, fromYear, toYear, title 
       <button
         type="button"
         onClick={openSheet}
-        className={`w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm text-left ${T.input}`}
+        className={claseBoton || `w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm text-left ${T.input}`}
       >
         <span className={value ? '' : 'opacity-50'}>{label}</span>
         <ChevronDown className="w-4 h-4 opacity-60 shrink-0" />

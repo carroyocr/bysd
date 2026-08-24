@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import { guardarSesion } from '../lib/sesion';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -34,10 +35,7 @@ export default function AdminLogin() {
       }
 
       const data = await response.json();
-      localStorage.setItem('admin_token', data.token);
-      localStorage.setItem('admin_username', data.username);
-      localStorage.setItem('admin_is_admin', data.is_admin ? 'true' : 'false');
-      localStorage.setItem('admin_permissions', JSON.stringify(data.permissions || []));
+      guardarSesion({ ...data, permissions: data.permissions || [] });
       navigate('/admin');
     } catch (err) {
       setError(err.message);

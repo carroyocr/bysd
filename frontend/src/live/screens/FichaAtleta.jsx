@@ -7,6 +7,7 @@ import { API, getAthleteProfile, raceIsPast, flagOf, initialsOf, useFollowed, ab
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
+import AvisoFavorito, { debeAvisarFavorito } from '../components/AvisoFavorito';
 
 /**
  * Ficha del corredor: encabezado común a todas sus secciones.
@@ -52,6 +53,13 @@ export default function FichaAtleta() {
   const [failed, setFailed] = useState(false);
   const followedStore = useFollowed();
   const [followed, setFollowed] = useState(followedStore.read());
+  const [avisoFav, setAvisoFav] = useState(false);
+
+  const alternarFavorito = (bibFav) => {
+    const agregando = !followed.includes(bibFav);
+    setFollowed(followedStore.toggle(bibFav));
+    if (agregando && debeAvisarFavorito()) setAvisoFav(true);
+  };
 
   useEffect(() => {
     let cancel = false;
@@ -158,7 +166,7 @@ export default function FichaAtleta() {
                 <span className={`text-sm font-mono font-extrabold px-2.5 py-1 rounded-lg ${T.chipOn}`}>#{profile.bib}</span>
                 <button
                   aria-label="Seguir"
-                  onClick={() => setFollowed(followedStore.toggle(profile.bib))}
+                  onClick={() => alternarFavorito(profile.bib)}
                   className="block ml-auto mt-2"
                 >
                   <Star className={`w-5 h-5 ${followed.includes(profile.bib) ? 'text-[#E77622] fill-[#E77622]' : T.subtle}`} />
@@ -192,6 +200,7 @@ export default function FichaAtleta() {
           <Outlet context={{ profile, raceCode, race, bib }} />
         </div>
       )}
+      <AvisoFavorito abierto={avisoFav} onCerrar={() => setAvisoFav(false)} />
     </Screen>
   );
 }

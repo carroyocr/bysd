@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
 import RaceSelector from './RaceSelector';
 import { adminFetch } from '../lib/adminApi';
+import { token as sesionToken } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -28,7 +29,7 @@ export default function ClaimedResultsManagement() {
   const [sortField, setSortField] = useState('bib');
   const [sortAsc, setSortAsc] = useState(true);
 
-  const token = localStorage.getItem('admin_token');
+  const token = sesionToken();
 
   const loadData = useCallback(async () => {
     if (!raceCode || cargandoCarrera) return;

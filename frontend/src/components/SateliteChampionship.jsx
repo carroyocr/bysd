@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Globe, Users, Trophy, CalendarCheck, Flag, Star, Timer, Award, Target, Shield } from 'lucide-react';
 
-const teamMembers = [
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Respaldo por si la nomina no carga; la fuente de verdad es el panel
+// (campeonato_seleccionados, via /api/seleccionados/public).
+const fallbackTeamMembers = [
   { name: 'Jordano Martínez Abreu', laps: 47 },
   { name: 'Livio Feliz', laps: 30 },
   { name: 'Jorge Lewis Camilo Tejada', laps: 23 },
@@ -21,11 +25,33 @@ const teamMembers = [
   { name: 'Luis Antonio De León Encarnación', laps: 13 },
 ];
 
-const reserveMembers = [
-
+const fallbackReserveMembers = [
+  { name: 'Cristhian Arroyo', laps: 17 },
+  { name: 'Bernardo De Jesús', laps: 12 },
+  { name: 'Esteban Gabriel Senna', laps: 7 },
+  { name: 'Randy Alexander Minaya Cubilete', laps: 0 },
+  { name: 'Ramón Tolentino', laps: 0 },
 ];
 
 export default function SateliteChampionship() {
+  const [teamMembers, setTeamMembers] = useState(fallbackTeamMembers);
+  const [reserveMembers, setReserveMembers] = useState(fallbackReserveMembers);
+
+  useEffect(() => {
+    const cargarNomina = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/seleccionados/public`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.titulares?.length) setTeamMembers(data.titulares);
+        if (data.reservas?.length) setReserveMembers(data.reservas);
+      } catch (error) {
+        // Sin backend se queda el respaldo escrito arriba
+      }
+    };
+    cargarNomina();
+  }, []);
+
   return (
     <section className="py-10 bg-gradient-to-b from-muted/20 to-background" data-testid="satelite-championship">
       <div className="container mx-auto px-4">
@@ -150,7 +176,43 @@ export default function SateliteChampionship() {
               </CardContent>
             </Card>
 
- 
+            {/* Reserve Team */}
+            <Card className="shadow-soft">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Shield className="w-5 h-5 text-muted-foreground" />
+                  <h4 className="font-display text-lg text-foreground">Equipo de Reserva</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" data-testid="team-reserve-table">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
+                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reserveMembers.map((m, i) => (
+                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + teamMembers.length + 1).padStart(2, '0')}</td>
+                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            {m.laps ? (
+                              <Badge variant="outline" className="font-mono text-muted-foreground">
+                                <Timer className="w-3 h-3 mr-1" />{m.laps}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Deadline Note */}
             <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800" data-testid="deadline-note">

@@ -12,6 +12,7 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
 import ItraExperienceSection from '../components/ItraExperienceSection';
 import { Switch } from '../components/ui/switch';
+import { token as sesionToken, guardarSesion, cerrarSesion } from '../lib/sesion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -148,7 +149,7 @@ export default function MyProfilePage() {
       const xhr = new XMLHttpRequest();
       xhr.open(method, url, true);
       if (body) xhr.setRequestHeader('Content-Type', 'application/json');
-      const token = localStorage.getItem('athlete_token');
+      const token = sesionToken();
       if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.onload = () => {
         let data = {};
@@ -162,7 +163,7 @@ export default function MyProfilePage() {
 
   // Check for existing session
   useEffect(() => {
-    const token = localStorage.getItem('athlete_token');
+    const token = sesionToken();
     if (token) fetchProfile();
   }, []);
 
@@ -182,7 +183,7 @@ export default function MyProfilePage() {
       fetchRaceHistory();
       fetchCheerMessages();
     } else {
-      localStorage.removeItem('athlete_token');
+      cerrarSesion();
     }
   };
 
@@ -206,7 +207,7 @@ export default function MyProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('athlete_token');
+    cerrarSesion();
     setAthlete(null);
     setCurrentView(VIEW_LANDING);
     setActiveTab('profile');
@@ -220,7 +221,7 @@ export default function MyProfilePage() {
     try {
       const { ok, status, data } = await apiCall('POST', `${API_URL}/api/athletes/login`, { email: email.trim(), password });
       if (ok) {
-        localStorage.setItem('athlete_token', data.token);
+        guardarSesion(data);
         toast.success('Bienvenido!');
         await fetchProfile();
       } else if (status === 403) {
@@ -240,7 +241,7 @@ export default function MyProfilePage() {
     try {
       const { ok, data } = await apiCall('POST', `${API_URL}/api/athletes/verify-email`, { email: pendingEmail, code: verificationCode });
       if (ok) {
-        localStorage.setItem('athlete_token', data.token);
+        guardarSesion(data);
         // Upload photo if one was selected during registration
         if (photoFile) {
           toast.info('Subiendo foto...');
@@ -1088,7 +1089,7 @@ export default function MyProfilePage() {
                             formData.append('photo', file);
                             const xhr = new XMLHttpRequest();
                             xhr.open('POST', `${API_URL}/api/athletes/upload-photo`, true);
-                            xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('athlete_token')}`);
+                            xhr.setRequestHeader('Authorization', `Bearer ${sesionToken()}`);
                             xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { toast.success('Foto actualizada'); setPhotoFailed(false); fetchProfile(); } else { toast.error('Error al subir foto'); } };
                             xhr.send(formData);
                           }} data-testid="profile-photo-upload" />
