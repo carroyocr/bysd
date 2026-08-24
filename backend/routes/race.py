@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Header, Query, Request
 from fastapi.responses import FileResponse
 from typing import Optional, List
+import asyncio
 import bcrypt
 from datetime import datetime, timedelta, timezone
 import os
@@ -404,6 +405,12 @@ async def _carrera_y_atleta(database, race_code: str, bib):
 
 def _autor(user: dict) -> str:
     return (user or {}).get("username") or "panel"
+
+
+# Referencias vivas de los avisos en segundo plano: sin ellas, el recolector
+# puede llevarse la tarea antes de que el push salga (mismo patron que en
+# routes/qr_scan.py).
+_tareas_push = set()
 
 
 @router.post("/start")
@@ -830,6 +837,24 @@ async def mark_winner(
         {"_id": atleta["_id"]},
         {"$set": {"status": "winner", "won_at": ahora, "updated_at": ahora}},
     )
+
+    # El ganador se anuncia a TODAS las apps instaladas, no solo a quien lo
+    # seguia: es el momento por el que existe la carrera. En segundo plano,
+    # como los avisos del escaneo: declarar al ganador no puede fallar porque
+    # FCM este lento.
+    from routes.push import avisar_a_todos
+
+    nombre = f"{atleta.get('nombre', '')} {atleta.get('apellidos', '')}".strip()
+    vueltas = atleta.get("laps_completed", 0)
+    tarea = asyncio.create_task(avisar_a_todos(
+        database,
+        "¡Tenemos Ganador!",
+        f"{nombre}, con un total de {vueltas} vueltas, para un gran total de "
+        f"{atleta.get('total_km', 0)} km. Muchas felicidades.",
+        {"tipo": "ganador", "bib": str(atleta.get("bib")), "race_code": carrera.get("code")},
+    ))
+    _tareas_push.add(tarea)
+    tarea.add_done_callback(_tareas_push.discard)
 
     return {
         "message": f"¡{atleta.get('nombre')} {atleta.get('apellidos')} ha sido marcado como GANADOR!",

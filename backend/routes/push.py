@@ -220,6 +220,29 @@ async def enviar_aviso(aviso: Aviso):
 # ============= AVISOS AUTOMATICOS =============
 
 
+async def avisar_a_todos(
+    database,
+    titulo: str,
+    cuerpo: str,
+    data: Optional[dict] = None,
+) -> None:
+    """Aviso a todas las apps instaladas, sin filtrar por carrera.
+
+    Para lo poco que le importa a todo el mundo: hoy, el ganador. Igual que
+    `avisar_a_seguidores`, esta pensada para `asyncio.create_task`: se traga
+    sus errores para que un fallo de FCM nunca tumbe a quien la dispara.
+    """
+    try:
+        if not push_service.esta_configurado():
+            return
+        tokens = [d["token"] async for d in database.push_devices.find({}, {"token": 1})]
+        if not tokens:
+            return
+        await _enviar_y_limpiar(database, tokens, titulo, cuerpo, data)
+    except Exception as e:
+        logger.warning(f"No se pudo enviar el aviso general: {e}")
+
+
 async def avisar_a_seguidores(
     database,
     race_code: Optional[str],
