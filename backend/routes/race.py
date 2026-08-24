@@ -416,7 +416,7 @@ _tareas_push = set()
 @router.post("/start")
 async def iniciar_carrera(
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Sella la hora real de salida: a partir de ahi se cuentan las vueltas.
 
@@ -476,7 +476,7 @@ class HoraDeSalida(BaseModel):
 async def corregir_hora_de_salida(
     datos: HoraDeSalida,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Corrige la hora de salida cuando se sello tarde o se sello mal."""
     from server import db as database
@@ -679,7 +679,7 @@ async def clima_de_la_carrera(race_code: Optional[str] = None):
 async def mark_retired(
     request: MarkRetiredRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """DNF: el corredor abandona conservando las vueltas que ya completo."""
     from server import db as database
@@ -714,7 +714,7 @@ async def mark_retired(
 async def mark_dns(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """DNS: no se presento. Sus vueltas vuelven a cero."""
     from server import db as database
@@ -750,7 +750,7 @@ async def mark_dns(
 async def adjust_participant_laps(
     request: AdjustLapsRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Fija a mano las vueltas de un corredor."""
     from server import db as database
@@ -778,7 +778,7 @@ async def adjust_participant_laps(
 async def edit_participant(
     request: EditParticipantRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Corrige el nombre o la nacionalidad de un corredor."""
     from server import db as database
@@ -810,7 +810,7 @@ async def edit_participant(
 async def mark_winner(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Declara el ganador. Solo puede haber uno por carrera."""
     from server import db as database
@@ -871,7 +871,7 @@ async def mark_winner(
 async def mark_honor(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Marca a un corredor como Invitada de Honor."""
     from server import db as database
@@ -898,7 +898,7 @@ async def mark_honor(
 async def reactivate_participant(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Devuelve a la carrera a alguien marcado por error.
 
@@ -936,7 +936,7 @@ async def reactivate_participant(
 async def complete_lap(
     request: CompleteLapRequest,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Anota una vuelta a mano, cuando el escaneo no llego a hacerse."""
     from server import db as database
@@ -963,7 +963,7 @@ async def complete_lap(
 async def complete_lap_all_active(
     race_code: str = Depends(races.carrera_del_panel),
     lap_number: Optional[int] = None,
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Cierra una vuelta para todos los que siguen en carrera.
 
@@ -1014,7 +1014,7 @@ async def complete_lap_all_active(
 async def revert_lap(
     race_code: str = Depends(races.carrera_del_panel),
     lap_number: Optional[int] = None,
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Deshace una vuelta que se cerro por error.
 
@@ -1066,7 +1066,7 @@ async def revert_lap(
 async def reset_database(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra el seguimiento de una carrera y la deja lista para volver a correr.
 
@@ -1258,7 +1258,7 @@ async def update_subscription_silent(
 async def reset_cheers(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra los mensajes de animo de una carrera (solo administracion)."""
     from server import db as database
@@ -1417,7 +1417,7 @@ async def get_followers_count(
 async def reset_subscriptions(
     request: dict,
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Borra las suscripciones de correo de una carrera (solo administracion)."""
     from server import db as database
@@ -2162,7 +2162,7 @@ async def get_twitter_status():
 @router.post("/send-runner-emails")
 async def send_runner_completion_emails(
     race_code: str = Depends(races.carrera_del_panel),
-    user=Depends(verify_token),
+    user=Depends(require_permission("emails")),
 ):
     """Correo de cierre a los corredores de una carrera, cuando ya hay ganador.
 
@@ -2289,7 +2289,7 @@ async def send_runner_completion_emails(
 async def send_test_runner_email(
     bib: str,
     test_email: str,
-    user=Depends(verify_token),
+    user=Depends(require_permission("emails")),
     db=Depends(lambda: None)
 ):
     """Send a test completion email for a specific runner to a test email address"""
