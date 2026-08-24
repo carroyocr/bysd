@@ -44,6 +44,10 @@
     <string id="discarding">Verwerfen</string>
     <string id="discarded">Aktivität verworfen</string>
     <string id="settingsTitle">Yard-Einstellungen</string>
+    <string id="settingStartTime">Startzeit</string>
+    <string id="settingStartTimeFull">Startzeit (HHMM, -1 = automatisch)</string>
+    <string id="auto">Auto</string>
+    <string id="fixedTime">Feste Zeit</string>
     <string id="settingLapMinutes">Yard (Minuten)</string>
     <string id="settingLapDistance">Yard-Länge (km)</string>
     <string id="settingCorral">Corral-Warnung</string>

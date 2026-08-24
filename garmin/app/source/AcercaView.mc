@@ -10,7 +10,7 @@ using Toybox.Graphics as Gfx;
 // para algo que no cambia nunca.
 class AcercaView extends Ui.View {
 
-    static const VERSION = "1.1.0";
+    static const VERSION = "1.2.0";
     // La URL va partida en dos lineas: entera no cabe en la parte baja de
     // la esfera redonda (probado en el fenix 8: se cortaba por los lados).
     static const WEB1 = "backyardultra";

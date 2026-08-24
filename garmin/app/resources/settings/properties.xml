@@ -15,6 +15,9 @@
       cuatro primeros deben seguir iguales en los dos proyectos; autoLapKm es
       solo de la app, porque un campo de datos no puede marcar vueltas.
     -->
+    <!-- La hora de salida fija, como numero HHMM (700 = 7:00, 1830 = 6:30
+         PM). -1 es "automatica": el ancla se deduce al pulsar START. -->
+    <property id="startTime" type="number">-1</property>
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>

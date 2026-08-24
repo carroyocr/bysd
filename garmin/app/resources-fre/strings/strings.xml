@@ -44,6 +44,10 @@
     <string id="discarding">Suppression</string>
     <string id="discarded">Activité supprimée</string>
     <string id="settingsTitle">Réglages du yard</string>
+    <string id="settingStartTime">Heure de départ</string>
+    <string id="settingStartTimeFull">Heure de départ (HHMM, -1 = auto)</string>
+    <string id="auto">Auto</string>
+    <string id="fixedTime">Heure fixe</string>
     <string id="settingLapMinutes">Yard (minutes)</string>
     <string id="settingLapDistance">Yard (km)</string>
     <string id="settingCorral">Alerte corral</string>

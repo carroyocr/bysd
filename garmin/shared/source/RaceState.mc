@@ -43,6 +43,9 @@ class RaceState {
     // --- ajustes, del telefono ---
     var duracionVuelta = DURACION_VUELTA;
     var kmPorVuelta = KM_POR_VUELTA;
+    // La hora de salida fija, como HHMM (700 = 7:00). -1 es "automatica":
+    // el ancla se deduce de la hora a la que se pulsa START.
+    var horaSalida = -1;
     var avisoCorral = true;
     var autoLap = false;
     var autoLapKm = false;
@@ -123,6 +126,16 @@ class RaceState {
         var vuelta = _ajuste("lapDistance", KM_POR_VUELTA);
         if (vuelta != null && vuelta > 0) {
             kmPorVuelta = vuelta.toFloat();
+        }
+
+        var salida = _ajuste("startTime", -1);
+        horaSalida = -1;
+        if (salida != null) {
+            var s = salida.toNumber();
+            // Solo un HHMM legitimo vale; cualquier otra cosa es automatica.
+            if (s >= 0 && s <= 2359 && (s % 100) < 60) {
+                horaSalida = s;
+            }
         }
 
         avisoCorral = _ajuste("corralAlert", true);
@@ -272,28 +285,43 @@ class RaceState {
 
     // --- la salida y el ancla ---
 
-    // Ancla el cero a una marca de duracionVuelta del reloj de pared,
-    // mirando lo que es probable en una carrera real: pulsar START poco
-    // despues de la marca -dentro de la gracia- es salir con la campana ya
-    // sonada, y el ancla va atras (a las 8:03, la vuelta de las 8:00 ya
-    // corre). Todo lo demas es calentamiento, y el ancla va adelante.
-    // Antes se anclaba a la marca MAS CERCANA, y quien abria la app a las
-    // 12:26 caia "corriendo" una yard que nunca salio: nadie llega 26
-    // minutos tarde a una campana, pero todo el mundo calienta media hora
-    // antes. La gracia es un sexto de la vuelta, con techo de 10 minutos,
-    // para que las vueltas cortas de prueba tambien tengan calentamiento.
-    // El ancla se guarda en epoch: los cambios de hora no la mueven.
+    // Ancla el cero -la campana de la vuelta 1- al reloj de pared. Con hora
+    // de salida fija en los ajustes, el ancla es esa hora, sin adivinar;
+    // sin ella, se deduce de la hora a la que se pulsa START. El ancla se
+    // guarda en epoch: los cambios de hora de despues no la mueven.
     function darLaSalida() {
         var ahora = Time.now().value();
         var reloj = Sys.getClockTime();
         var desdeMedianoche = (reloj.hour * 3600) + (reloj.min * 60) + reloj.sec;
-        var resto = desdeMedianoche % duracionVuelta;
-        var gracia = duracionVuelta / 6;
-        if (gracia > 600) { gracia = 600; }
-        if (resto < gracia) {
-            campana0 = ahora - resto;
+
+        if (horaSalida >= 0) {
+            // Hora de salida fija: la campana de la vuelta 1 es esa hora del
+            // dia, sin adivinar nada. Si aun no llega, lo que queda es
+            // calentamiento; si ya paso, la carrera va corriendo desde ahi.
+            // Y si quedo a mas de doce horas en el pasado, es la de manana:
+            // el que configura a las 8 de la noche la salida de las 7 no
+            // quiere una carrera con trece vueltas corridas.
+            var objetivo = ((horaSalida / 100) * 3600) + ((horaSalida % 100) * 60);
+            campana0 = ahora - desdeMedianoche + objetivo;
+            if (campana0 < ahora - 43200) {
+                campana0 += 86400;
+            }
         } else {
-            campana0 = ahora + (duracionVuelta - resto);
+            // Automatica: se ancla a una marca de duracionVuelta mirando lo
+            // probable. Pulsar START poco despues de la marca -dentro de la
+            // gracia- es salir con la campana ya sonada (a las 8:03, la
+            // vuelta de las 8:00 ya corre); todo lo demas es calentamiento
+            // hacia la marca que viene. La gracia es un sexto de la vuelta,
+            // con techo de 10 minutos, para que las vueltas cortas de prueba
+            // tambien tengan calentamiento.
+            var resto = desdeMedianoche % duracionVuelta;
+            var gracia = duracionVuelta / 6;
+            if (gracia > 600) { gracia = 600; }
+            if (resto < gracia) {
+                campana0 = ahora - resto;
+            } else {
+                campana0 = ahora + (duracionVuelta - resto);
+            }
         }
         vueltaMarcada = 0;
         _latSalida = _lat;

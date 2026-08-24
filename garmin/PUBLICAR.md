@@ -45,6 +45,27 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ---
 
+## Novedades de la versión 1.2.0 (para el campo "What's New")
+
+**ES**
+
+> - Hora de salida definible, el primer ajuste: fija la hora de tu carrera y
+>   las campanas quedan ancladas a ella — antes de esa hora todo es
+>   calentamiento, y da igual cuándo pulses START. En Auto, el reloj la
+>   deduce solo, como hasta ahora.
+> - Seis relojes más: fēnix 5 Plus, 5S Plus y 5X Plus, y Forerunner 745,
+>   945 y 945 LTE.
+
+**EN**
+
+> - Start time setting, first in the list: set your race's start time and
+>   the bells anchor to it — everything before it is warm-up, no matter when
+>   you press START. On Auto, the watch works it out by itself, as before.
+> - Six more watches: fēnix 5 Plus, 5S Plus and 5X Plus, and Forerunner
+>   745, 945 and 945 LTE.
+
+---
+
 ## Novedades de la versión 1.1.0 (para el campo "What's New")
 
 El paquete es `build/backyard.iq` (export de los 52 builds). La versión que

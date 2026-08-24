@@ -1,5 +1,9 @@
 <?xml version="1.0"?>
 <settings>
+    <!-- La hora de salida fija va primero: es lo primero que se decide. -->
+    <setting propertyKey="@Properties.startTime" title="@Strings.settingStartTimeFull">
+        <settingConfig type="numeric" min="-1" max="2359"/>
+    </setting>
     <setting propertyKey="@Properties.lapMinutes" title="@Strings.settingLapMinutes">
         <settingConfig type="numeric" min="1" max="1440"/>
     </setting>

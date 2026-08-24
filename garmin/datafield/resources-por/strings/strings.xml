@@ -44,6 +44,10 @@
     <string id="discarding">Descartando</string>
     <string id="discarded">Atividade descartada</string>
     <string id="settingsTitle">Ajustes do yard</string>
+    <string id="settingStartTime">Hora de largada</string>
+    <string id="settingStartTimeFull">Hora de largada (HHMM, -1 = automática)</string>
+    <string id="auto">Auto</string>
+    <string id="fixedTime">Hora fixa</string>
     <string id="settingLapMinutes">Yard (minutos)</string>
     <string id="settingLapDistance">Yard (km)</string>
     <string id="settingCorral">Aviso de corral</string>

@@ -45,6 +45,10 @@
     <string id="discarding">Discarding</string>
     <string id="discarded">Activity discarded</string>
     <string id="settingsTitle">Yard settings</string>
+    <string id="settingStartTime">Start time</string>
+    <string id="settingStartTimeFull">Start time (HHMM, -1 = auto)</string>
+    <string id="auto">Auto</string>
+    <string id="fixedTime">Set time</string>
     <string id="settingLapMinutes">Yard duration (minutes)</string>
     <string id="settingLapDistance">Yard distance (km)</string>
     <string id="settingCorral">Corral alert</string>

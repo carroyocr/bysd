@@ -2,6 +2,7 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Application as App;
 using Toybox.Lang as Lang;
+using Toybox.System as Sys;
 
 // Los ajustes de la vuelta, desde el reloj.
 //
@@ -24,6 +25,9 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
     // la campana de la vuelta 1 todavia no sono.
     static function abrir(estado) {
         var menu = new Ui.Menu2({ :title => Rez.Strings.settingsTitle });
+        // La hora de salida va primero: es lo primero que se decide.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingStartTime,
+            textoDeSalida(estado.horaSalida), :salida, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapMinutes,
             (estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
@@ -56,9 +60,28 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         _estado = estado;
     }
 
+    // El sub-rotulo del ajuste de salida: la hora fija como la escribe el
+    // reloj, o "Auto".
+    static function textoDeSalida(horaSalida) {
+        if (horaSalida < 0) {
+            return Ui.loadResource(Rez.Strings.auto);
+        }
+        var h = horaSalida / 100;
+        var m = horaSalida % 100;
+        if (Sys.getDeviceSettings().is24Hour) {
+            return h.format("%d") + ":" + m.format("%02d");
+        }
+        var marca = h < 12 ? "AM" : "PM";
+        var h12 = h % 12;
+        if (h12 == 0) { h12 = 12; }
+        return h12.format("%d") + ":" + m.format("%02d") + " " + marca;
+    }
+
     function onSelect(item) {
         var id = item.getId();
-        if (id == :duracion) {
+        if (id == :salida) {
+            _abrirSalida();
+        } else if (id == :duracion) {
             _abrirRueda(:minutos);
         } else if (id == :distancia) {
             _abrirRueda(:km);
@@ -114,6 +137,178 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         });
         Ui.pushView(picker, new NumeroPickerDelegate(_estado, cual),
                     Ui.SLIDE_LEFT);
+    }
+
+    // La hora de salida se decide en dos pasos: primero Auto u hora fija.
+    // Con Auto no hay nada mas que preguntar: se guarda y se cierra. Solo
+    // la hora fija abre la rueda de hora y minutos.
+    function _abrirSalida() {
+        var menu = new Ui.Menu2({ :title => Rez.Strings.settingStartTime });
+        menu.addItem(new Ui.MenuItem(Rez.Strings.auto, null, :auto, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.fixedTime,
+            _estado.horaSalida >= 0
+                ? AjustesMenuDelegate.textoDeSalida(_estado.horaSalida) : null,
+            :fija, null));
+        Ui.pushView(menu, new SalidaMenuDelegate(_estado), Ui.SLIDE_LEFT);
+    }
+}
+
+// El menu de Auto u hora fija. Auto guarda -1 y cierra todo; la hora fija
+// abre la rueda.
+class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
+
+    var _estado;
+
+    function initialize(estado) {
+        Menu2InputDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onSelect(item) {
+        if (item.getId() == :auto) {
+            App.Properties.setValue("startTime", -1);
+            _estado.leerAjustes();
+            SalidaPickerDelegate.resellar(_estado);
+            // Cierra este menu y el de ajustes, de vuelta a donde se estaba.
+            Ui.popView(Ui.SLIDE_DOWN);
+            Ui.popView(Ui.SLIDE_DOWN);
+            return;
+        }
+        var horas = new HoraSalidaFactory();
+        var minutos = new MinutoSalidaFactory();
+        var actual = _estado.horaSalida;
+        var picker = new Ui.Picker({
+            :title => new Ui.Text({
+                :text => Ui.loadResource(Rez.Strings.settingStartTime),
+                :color => Gfx.COLOR_WHITE,
+                :font => Gfx.FONT_XTINY,
+                :locX => Ui.LAYOUT_HALIGN_CENTER,
+                :locY => Ui.LAYOUT_VALIGN_BOTTOM
+            }),
+            :pattern => [ horas, minutos ],
+            :defaults => [ horas.indiceDe(actual), minutos.indiceDe(actual) ]
+        });
+        Ui.pushView(picker, new SalidaPickerDelegate(_estado), Ui.SLIDE_LEFT);
+    }
+
+    function onBack() {
+        Ui.popView(Ui.SLIDE_DOWN);
+    }
+}
+
+// La columna de horas de la rueda de salida: las 24 horas del dia,
+// escritas como las escribe el reloj (12 o 24 horas).
+class HoraSalidaFactory extends Ui.PickerFactory {
+
+    function initialize() {
+        PickerFactory.initialize();
+    }
+
+    function getSize() {
+        return 24;
+    }
+
+    function getValue(index) {
+        return index;
+    }
+
+    // Sin hora fijada, la rueda arranca en las 7:00: la salida clasica.
+    function indiceDe(horaSalida) {
+        if (horaSalida < 0) { return 7; }
+        return horaSalida / 100;
+    }
+
+    function getDrawable(index, selected) {
+        var texto;
+        if (Sys.getDeviceSettings().is24Hour) {
+            texto = index.format("%d");
+        } else {
+            var marca = index < 12 ? " AM" : " PM";
+            var h12 = index % 12;
+            if (h12 == 0) { h12 = 12; }
+            texto = h12.format("%d") + marca;
+        }
+        return new Ui.Text({
+            :text => texto,
+            :color => Gfx.COLOR_WHITE,
+            :font => Gfx.FONT_NUMBER_MEDIUM,
+            :locX => Ui.LAYOUT_HALIGN_CENTER,
+            :locY => Ui.LAYOUT_VALIGN_CENTER
+        });
+    }
+}
+
+// La columna de minutos: 00 a 55 en pasos de cinco.
+class MinutoSalidaFactory extends Ui.PickerFactory {
+
+    function initialize() {
+        PickerFactory.initialize();
+    }
+
+    function getSize() {
+        return 12;
+    }
+
+    function getValue(index) {
+        return index * 5;
+    }
+
+    function indiceDe(horaSalida) {
+        if (horaSalida < 0) { return 0; }
+        var i = ((horaSalida % 100) + 2) / 5;
+        return i < 12 ? i : 11;
+    }
+
+    function getDrawable(index, selected) {
+        return new Ui.Text({
+            :text => (index * 5).format("%02d"),
+            :color => Gfx.COLOR_WHITE,
+            :font => Gfx.FONT_NUMBER_MEDIUM,
+            :locX => Ui.LAYOUT_HALIGN_CENTER,
+            :locY => Ui.LAYOUT_VALIGN_CENTER
+        });
+    }
+}
+
+// Al aceptar la rueda de salida se guarda el HHMM elegido. Si el cambio
+// ocurre durante el calentamiento, el ancla se vuelve a sellar, igual que
+// al cambiar la duracion: la campana 1 aun no sono.
+class SalidaPickerDelegate extends Ui.PickerDelegate {
+
+    // Re-sella el ancla si hay carrera abierta y la campana 1 no ha sonado.
+    // Compartido con el camino de Auto del menu.
+    static function resellar(estado) {
+        if (estado.campana0 == null) { return; }
+        var vuelta = estado.vuelta();
+        if (vuelta != null && vuelta == 0) {
+            estado.darLaSalida();
+            estado.guardar();
+        }
+    }
+
+    var _estado;
+
+    function initialize(estado) {
+        PickerDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onCancel() {
+        Ui.popView(Ui.SLIDE_DOWN);
+        return true;
+    }
+
+    function onAccept(valores) {
+        var hora = (valores as Lang.Array)[0] as Lang.Number;
+        var minuto = (valores as Lang.Array)[1] as Lang.Number;
+        App.Properties.setValue("startTime", (hora * 100) + minuto);
+        _estado.leerAjustes();
+        SalidaPickerDelegate.resellar(_estado);
+        // Cierra la rueda, el menu de Auto/fija y el de ajustes.
+        Ui.popView(Ui.SLIDE_DOWN);
+        Ui.popView(Ui.SLIDE_DOWN);
+        Ui.popView(Ui.SLIDE_DOWN);
+        return true;
     }
 }
 

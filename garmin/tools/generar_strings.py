@@ -107,6 +107,12 @@ TABLA = {
     # Titulo del menu de ajustes que se abre en la linea de salida con el
     # boton de menu (UP largo), para fijar la vuelta sin sacar el telefono.
     "settingsTitle":    ("Yard settings",           "Ajustes del yard",    "Réglages du yard",     "Yard-Einstellungen",    "Impostazioni yard",    "Ajustes do yard"),
+    # La hora de salida fija. En el reloj es una rueda; en el telefono un
+    # numero HHMM, y la etiqueta larga explica el formato y el -1.
+    "settingStartTime": ("Start time",              "Hora de salida",      "Heure de départ",      "Startzeit",             "Ora di partenza",      "Hora de largada"),
+    "settingStartTimeFull": ("Start time (HHMM, -1 = auto)", "Hora de salida (HHMM, -1 = automática)", "Heure de départ (HHMM, -1 = auto)", "Startzeit (HHMM, -1 = automatisch)", "Ora di partenza (HHMM, -1 = auto)", "Hora de largada (HHMM, -1 = automática)"),
+    "auto":             ("Auto",                    "Auto",                "Auto",                 "Auto",                  "Auto",                 "Auto"),
+    "fixedTime":        ("Set time",                "Hora fija",           "Heure fixe",           "Feste Zeit",            "Ora fissa",            "Hora fixa"),
     "settingLapMinutes":("Yard duration (minutes)", "Yard (minutos)",      "Yard (minutes)",       "Yard (Minuten)",        "Yard (minuti)",        "Yard (minutos)"),
     # En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria con
     # el dibujo, que si obedece a la unidad del reloj: un ajuste que cambiara
