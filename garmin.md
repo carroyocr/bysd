@@ -1,11 +1,12 @@
 # Garmin — lo que queda
 
-Estado a 17 de agosto de 2026, rama `garmin-universal`.
+Estado a 24 de agosto de 2026. La 1.2.0 está empaquetada (commit `ff2d82f`);
+la versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha de
+la tienda están en `garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-24 relojes de la lista, salvo los del tamaño del icono. La arquitectura, cómo se
-compila y qué está comprobado están en [`garmin/README.md`](garmin/README.md);
-aquí solo está lo que falta.
+30 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
 
@@ -46,6 +47,62 @@ El de Homebrew compila igual, pero su simulador arranca sin abrir el puerto y
 `monkeydo` responde «Unable to connect to simulator» sin más explicación.
 
 ---
+
+## El fēnix 8 Solar se quedó fuera: a ese reloj la app le sale «no compatible»
+
+Descubierto el 24 de agosto con el reloj delante (fēnix 8 — 47 mm, Solar). **No
+es un fallo de la 1.2:** ese reloj nunca estuvo en la lista.
+
+Los dos manifiestos declaran `fenix843mm` y `fenix847mm`, que son los fēnix 8
+**AMOLED**. El Solar es otro dispositivo en Connect IQ —pantalla MIP en vez de
+AMOLED, otra resolución—, con su propio identificador y su propia ficha en la
+tienda:
+
+| Reloj | Ficha de la tienda |
+|---|---|
+| fēnix 8 AMOLED (47/51 mm) | `apps.garmin.com/devices/fenix8-51mm/` |
+| fēnix 8 Solar (47 mm) | `apps.garmin.com/devices/fenix8s-47mm/` |
+| fēnix 8 Solar (51 mm) | `apps.garmin.com/devices/fenix8s-51mm/` |
+
+Como el `.iq` publicado no lleva build para el Solar, la tienda no deja ni
+encolar la descarga. No es cosa de `minApiLevel` (3.2.0 en la app, 3.1.0 en el
+campo de datos): el Solar va muy por encima de eso. Y encaja con el histórico:
+todo se probó con `-d fenix847mm` (`garmin/README.md`, `REPLAN.md`), o sea el
+AMOLED.
+
+**Es lo primero al retomar, y hay que hacerlo en el Mac**, porque necesita el
+SDK instalado:
+
+1. Sacar los identificadores exactos. Es el único dato que falta:
+
+   ```
+   ls ~/Library/Application\ Support/Garmin/ConnectIQ/Devices/ | grep -i "fenix8\|fenixe"
+   ```
+
+   Adivinarlo es peor que equivocarse: un id mal escrito **no rompe la
+   compilación**, suelta un `WARNING` y deja al reloj fuera en silencio —
+   exactamente el fallo que se quiere arreglar. Compila con `-w` y lee los
+   avisos.
+
+2. Añadir los `<iq:product>` a **los dos** manifiestos (`garmin/app/` y
+   `garmin/datafield/`).
+
+3. Añadir la línea del icono del lanzador en **los dos** `monkey.jungle`. El
+   emblema no hay que tocarlo: las reglas del jungle van por familia de
+   pantalla, así que el Solar cae solo en el grupo que le corresponde. El icono
+   sí es por dispositivo, y sin su línea vuelve el aviso de escalado que se
+   quitó en `837c51f`. El tamaño que pide cada reloj está en su `compiler.json`,
+   en esa misma carpeta `Devices/`.
+
+4. Recompilar los dos `.iq` y **subir versión nueva de los dos productos** a la
+   tienda. Esto es lo que marca el plazo real: no basta con recompilar en el
+   Mac, pasa otra vez por la revisión de Garmin.
+
+Ya que hay que pasar por revisión, conviene mirar de una vez **qué otros relojes
+faltan** —el fēnix E, los fēnix 8 Pro, lo que haya salido desde agosto— y
+meterlos todos en el mismo envío, en vez de repetir el trámite dentro de dos
+meses. La lista es manual y envejece sola, como avisa el comentario de cabecera
+del propio `manifest.xml`.
 
 ## 0. Dos fallos confirmados en el simulador, sin arreglar
 
@@ -176,7 +233,9 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 24. Cuidado al
+- **Los identificadores de dispositivo del manifest**, los 30 declarados hoy
+  (24 + los seis de agosto). Ojo: esos 30 son los que compilan, no los que
+  existen — el fēnix 8 Solar falta, ver la sección de arriba. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`
   y deja al reloj fuera en silencio. Así estuvieron fuera los seis Forerunner.
   Compila con `-w` y lee los avisos.
