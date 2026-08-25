@@ -6,7 +6,7 @@ se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están en
 `garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-42 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+46 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
 están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
@@ -59,8 +59,8 @@ vez de AMOLED, otra resolución— con su propio identificador y su propia ficha
 en la tienda. Sin build suyo en el `.iq`, la tienda no deja ni encolar la
 descarga. No era `minApiLevel`: el Solar va muy por encima.
 
-**Arreglado en la rama `garmin-mip-fenix`.** Se añadieron **doce** relojes a
-los dos manifiestos y a los dos `monkey.jungle`, aprovechando el envío:
+**Arreglado en la rama `garmin-mip-fenix`.** Se añadieron **dieciséis** relojes
+a los dos manifiestos y a los dos `monkey.jungle`, aprovechando el envío:
 
 | Reloj | id | Pantalla | Icono |
 |---|---|---|---|
@@ -71,16 +71,31 @@ los dos manifiestos y a los dos `monkey.jungle`, aprovechando el envío:
 | fēnix 7 Pro / 7S Pro / 7X Pro | `fenix7pro`, `fenix7spro`, `fenix7xpro` | 260 / 240 / 280 MIP | 40 |
 | fēnix 7 Pro y 7X Pro sin wifi | `fenix7pronowifi`, `fenix7xpronowifi` | 260 / 280 MIP | 40 |
 | epix Pro 42 / 47 / 51 mm | `epix2pro42mm`, `epix2pro47mm`, `epix2pro51mm` | 390 / 416 / 454 AMOLED | 60 |
+| fēnix 5 y 5X (2017) | `fenix5`, `fenix5x` | 240×240 MIP | 40 |
+| fēnix 5S y Chronos (2017) | `fenix5s`, `fenixchronos` | 218×218 MIP | 36 |
 
-**Ninguno estrena familia de pantalla**: las seis (240, 260, 280, 390, 416 y
-454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
+La generación de 2017 entró por lo mismo que salía el Solar, pero al revés:
+se queda en **Connect IQ 3.1.6** y la app declaraba `minApiLevel` 3.2.0. Bajarlo
+a 3.1.0 bastó —el código no usa nada por encima de 3.1— y trajo de regalo el
+tactix Charlie y el quatix 5, que viajan dentro de `fenix5x` y `fenix5`. Lo
+único nuevo que hubo que dibujar es el **icono de 36 px** (`shared/resources-icon36`),
+que no pide ningún otro reloj.
+
+**Ojo con el dato de memoria, que engaña:** el `appStorageCapacity` de
+`simulator.json` (131072 en el fēnix 5X) **no** es el presupuesto de la app,
+es la capacidad del API `Application.Storage`. El bueno está en
+`compiler.json`, en `appTypes`: el fēnix 5X da **1,25 MB** para una watchApp y
+128 KB para un campo de datos, y las builds pesan 157 KB y 25 KB. Sobra sitio.
+
+**Ninguno estrena familia de pantalla**: las siete (218, 240, 260, 280, 390,
+416 y 454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
 línea de dibujo. Tampoco emblema nuevo: el reparto del `monkey.jungle` va por
 familia. Lo que sí hubo que escribir a mano es la línea del icono de cada
 dispositivo —el tamaño va por reloj, no por familia—; los de 65 px
 (`fenix8pro47mm`) usan el icono por defecto de `shared/resources` y no llevan
 línea.
 
-Los dos `.iq` de tienda vuelven a salir con **78 builds cada uno, sin un solo
+Los dos `.iq` de tienda vuelven a salir con **86 builds cada uno, sin un solo
 error ni aviso** (eran 52). La versión de `AcercaView.mc` subió a **1.3.0**, y
 las novedades ES/EN están en `garmin/PUBLICAR.md`.
 
@@ -98,8 +113,8 @@ apuntado abajo para el Instinct 2: en MIP **monocromo** el texto en
 eso no le afecta.
 
 Quedan fuera a propósito los relojes que no son de la familia fēnix/epix
-(Instinct 3, Descent, D2, tactix): cada uno pide su comprobación, y el
-Instinct arrastra el problema del gris.
+(Instinct 3, Descent, D2): cada uno pide su comprobación, y el Instinct
+arrastra el problema del gris.
 
 ## 0. Dos fallos confirmados en el simulador, sin arreglar
 
@@ -230,7 +245,7 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 42 declarados hoy.
+- **Los identificadores de dispositivo del manifest**, los 46 declarados hoy.
   Ojo: esos 42 son los que compilan, no los que existen — la lista envejece
   sola con cada reloj nuevo de Garmin. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`

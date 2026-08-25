@@ -17,6 +17,10 @@ base.resourcePath = resources;../shared/resources
 # Mismo criterio que la app, pero aqui no hay emblema: solo el icono por
 # dispositivo. Los de 65 px (fenix847mm, fr965) usan el de shared/resources.
 vivoactive4.resourcePath = $(base.resourcePath);../shared/resources-icon35
+fenix5.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix5x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix5s.resourcePath = $(base.resourcePath);../shared/resources-icon36
+fenixchronos.resourcePath = $(base.resourcePath);../shared/resources-icon36
 fenix5plus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5splus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5xplus.resourcePath = $(base.resourcePath);../shared/resources-icon40

@@ -45,6 +45,14 @@ round-454x454.resourcePath = $(base.resourcePath);resources-large
 vivoactive4.resourcePath = $(base.resourcePath);../shared/resources-icon35
 
 # 40 px (pantalla base)
+# 40 px (pantalla base). La generacion de 2017: el fenix 5 y el 5X son de
+# 240 px, como los Plus.
+fenix5.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix5x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+# 36 px (emblema small): el fenix 5S y el Chronos son de 218 px y piden un
+# icono de 36 que no pide ningun otro reloj.
+fenix5s.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon36
+fenixchronos.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon36
 fenix5plus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5splus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5xplus.resourcePath = $(base.resourcePath);../shared/resources-icon40
