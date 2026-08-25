@@ -1,11 +1,12 @@
 # Garmin — lo que queda
 
-Estado a 24 de agosto de 2026. La 1.2.0 está empaquetada (commit `ff2d82f`);
-la versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha de
-la tienda están en `garmin/PUBLICAR.md`.
+Estado a 24 de agosto de 2026. La **1.3.0 está empaquetada** —la que suma los
+fēnix MIP, ver la sección de abajo— y le falta el envío a la tienda; la versión
+se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están en
+`garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-30 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+42 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
 están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
@@ -48,61 +49,57 @@ El de Homebrew compila igual, pero su simulador arranca sin abrir el puerto y
 
 ---
 
-## El fēnix 8 Solar se quedó fuera: a ese reloj la app le sale «no compatible»
+## El fēnix 8 Solar ya entra (24-ago): faltan los dos envíos a la tienda
 
-Descubierto el 24 de agosto con el reloj delante (fēnix 8 — 47 mm, Solar). **No
-es un fallo de la 1.2:** ese reloj nunca estuvo en la lista.
+Descubierto el 24 de agosto con el reloj delante (fēnix 8 — 47 mm, Solar): la
+app le salía «no compatible». **No era un fallo de la 1.2:** ese reloj nunca
+estuvo en la lista. Los manifiestos declaraban `fenix843mm` y `fenix847mm`, que
+son los fēnix 8 **AMOLED**; el Solar es otro dispositivo en Connect IQ —MIP en
+vez de AMOLED, otra resolución— con su propio identificador y su propia ficha
+en la tienda. Sin build suyo en el `.iq`, la tienda no deja ni encolar la
+descarga. No era `minApiLevel`: el Solar va muy por encima.
 
-Los dos manifiestos declaran `fenix843mm` y `fenix847mm`, que son los fēnix 8
-**AMOLED**. El Solar es otro dispositivo en Connect IQ —pantalla MIP en vez de
-AMOLED, otra resolución—, con su propio identificador y su propia ficha en la
-tienda:
+**Arreglado en la rama `garmin-mip-fenix`.** Se añadieron **doce** relojes a
+los dos manifiestos y a los dos `monkey.jungle`, aprovechando el envío:
 
-| Reloj | Ficha de la tienda |
-|---|---|
-| fēnix 8 AMOLED (47/51 mm) | `apps.garmin.com/devices/fenix8-51mm/` |
-| fēnix 8 Solar (47 mm) | `apps.garmin.com/devices/fenix8s-47mm/` |
-| fēnix 8 Solar (51 mm) | `apps.garmin.com/devices/fenix8s-51mm/` |
+| Reloj | id | Pantalla | Icono |
+|---|---|---|---|
+| fēnix 8 Solar 47 mm | `fenix8solar47mm` | 260×260 MIP | 40 |
+| fēnix 8 Solar 51 mm | `fenix8solar51mm` | 280×280 MIP | 40 |
+| fēnix 8 Pro 47 mm | `fenix8pro47mm` | 454×454 AMOLED | 65 |
+| fēnix E | `fenixe` | 416×416 AMOLED | 60 |
+| fēnix 7 Pro / 7S Pro / 7X Pro | `fenix7pro`, `fenix7spro`, `fenix7xpro` | 260 / 240 / 280 MIP | 40 |
+| fēnix 7 Pro y 7X Pro sin wifi | `fenix7pronowifi`, `fenix7xpronowifi` | 260 / 280 MIP | 40 |
+| epix Pro 42 / 47 / 51 mm | `epix2pro42mm`, `epix2pro47mm`, `epix2pro51mm` | 390 / 416 / 454 AMOLED | 60 |
 
-Como el `.iq` publicado no lleva build para el Solar, la tienda no deja ni
-encolar la descarga. No es cosa de `minApiLevel` (3.2.0 en la app, 3.1.0 en el
-campo de datos): el Solar va muy por encima de eso. Y encaja con el histórico:
-todo se probó con `-d fenix847mm` (`garmin/README.md`, `REPLAN.md`), o sea el
-AMOLED.
+**Ninguno estrena familia de pantalla**: las seis (240, 260, 280, 390, 416 y
+454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
+línea de dibujo. Tampoco emblema nuevo: el reparto del `monkey.jungle` va por
+familia. Lo que sí hubo que escribir a mano es la línea del icono de cada
+dispositivo —el tamaño va por reloj, no por familia—; los de 65 px
+(`fenix8pro47mm`) usan el icono por defecto de `shared/resources` y no llevan
+línea.
 
-**Es lo primero al retomar, y hay que hacerlo en el Mac**, porque necesita el
-SDK instalado:
+Los dos `.iq` de tienda vuelven a salir con **78 builds cada uno, sin un solo
+error ni aviso** (eran 52). La versión de `AcercaView.mc` subió a **1.3.0**, y
+las novedades ES/EN están en `garmin/PUBLICAR.md`.
 
-1. Sacar los identificadores exactos. Es el único dato que falta:
+**Lo que falta, y solo lo puede hacer Cristhian:** subir la versión nueva de
+**los dos productos** a la Connect IQ Store (`build/backyard.iq` y
+`build/backyard-margen.iq`) y pasar otra vez por la revisión de Garmin. Eso es
+lo que marca el plazo real, no la compilación.
 
-   ```
-   ls ~/Library/Application\ Support/Garmin/ConnectIQ/Devices/ | grep -i "fenix8\|fenixe"
-   ```
+Sin comprobar todavía: cómo se ve la app en una pantalla MIP de verdad. El
+riesgo es bajo —el fēnix 7 y el enduro, de las mismas familias y del mismo
+tipo de pantalla, ya estaban dentro y el código no distingue— pero conviene
+mirarlo en el simulador con `-d fenix8solar51mm` antes de enviar. Ojo con lo
+apuntado abajo para el Instinct 2: en MIP **monocromo** el texto en
+`COLOR_DK_GRAY` no se ve. El Solar no es monocromo (8 bits de color), así que
+eso no le afecta.
 
-   Adivinarlo es peor que equivocarse: un id mal escrito **no rompe la
-   compilación**, suelta un `WARNING` y deja al reloj fuera en silencio —
-   exactamente el fallo que se quiere arreglar. Compila con `-w` y lee los
-   avisos.
-
-2. Añadir los `<iq:product>` a **los dos** manifiestos (`garmin/app/` y
-   `garmin/datafield/`).
-
-3. Añadir la línea del icono del lanzador en **los dos** `monkey.jungle`. El
-   emblema no hay que tocarlo: las reglas del jungle van por familia de
-   pantalla, así que el Solar cae solo en el grupo que le corresponde. El icono
-   sí es por dispositivo, y sin su línea vuelve el aviso de escalado que se
-   quitó en `837c51f`. El tamaño que pide cada reloj está en su `compiler.json`,
-   en esa misma carpeta `Devices/`.
-
-4. Recompilar los dos `.iq` y **subir versión nueva de los dos productos** a la
-   tienda. Esto es lo que marca el plazo real: no basta con recompilar en el
-   Mac, pasa otra vez por la revisión de Garmin.
-
-Ya que hay que pasar por revisión, conviene mirar de una vez **qué otros relojes
-faltan** —el fēnix E, los fēnix 8 Pro, lo que haya salido desde agosto— y
-meterlos todos en el mismo envío, en vez de repetir el trámite dentro de dos
-meses. La lista es manual y envejece sola, como avisa el comentario de cabecera
-del propio `manifest.xml`.
+Quedan fuera a propósito los relojes que no son de la familia fēnix/epix
+(Instinct 3, Descent, D2, tactix): cada uno pide su comprobación, y el
+Instinct arrastra el problema del gris.
 
 ## 0. Dos fallos confirmados en el simulador, sin arreglar
 
@@ -233,9 +230,9 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 30 declarados hoy
-  (24 + los seis de agosto). Ojo: esos 30 son los que compilan, no los que
-  existen — el fēnix 8 Solar falta, ver la sección de arriba. Cuidado al
+- **Los identificadores de dispositivo del manifest**, los 42 declarados hoy.
+  Ojo: esos 42 son los que compilan, no los que existen — la lista envejece
+  sola con cada reloj nuevo de Garmin. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`
   y deja al reloj fuera en silencio. Así estuvieron fuera los seis Forerunner.
   Compila con `-w` y lee los avisos.

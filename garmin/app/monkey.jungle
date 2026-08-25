@@ -59,6 +59,16 @@ fenix6xpro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7s.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7pro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7spro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7xpro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7pronowifi.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7xpronowifi.resourcePath = $(base.resourcePath);../shared/resources-icon40
+# 40 px (MIP): los fenix 8 Solar son de 260 y 280 px, la misma familia de
+# pantalla que el fenix 7 y el 7X. El fenix 8 Pro (454 px) no lleva linea:
+# su icono es de 65 px, el de shared/resources, y su emblema lo pone la familia.
+fenix8solar47mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix8solar51mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro3.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fr255.resourcePath = $(base.resourcePath);../shared/resources-icon40
@@ -73,6 +83,10 @@ vivoactive5.resourcePath = $(base.resourcePath);resources-large;../shared/resour
 fenix843mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 epix2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 fr265.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+fenixe.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro42mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro47mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro51mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 # 60 px (pantalla base)
 fr265s.resourcePath = $(base.resourcePath);../shared/resources-icon60
 
