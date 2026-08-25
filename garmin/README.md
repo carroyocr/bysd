@@ -5,9 +5,10 @@ en qué vuelta va, cuánto falta para la próxima campana y si al ritmo que llev
 va a llegar a tiempo.
 
 > **Estado: compila y arranca en el simulador.** Los dos proyectos compilan sin
-> errores ni avisos para los 24 relojes de la lista, salvo los del tamaño del
-> icono. Lo que **no** se ha probado todavía es un reloj de verdad: batería,
-> memoria bajo carga y treinta horas de actividad solo se ven ahí.
+> errores ni avisos para los 46 relojes de la lista —AMOLED y MIP, desde la
+> generación fēnix 5 de 2017—. Lo que
+> **no** se ha probado todavía es un reloj de verdad: batería, memoria bajo
+> carga y treinta horas de actividad solo se ven ahí.
 
 ## La idea
 
@@ -293,8 +294,8 @@ python3 tools/verificar_aritmetica.py
 
 Además, ya en el SDK:
 
-- **Compilación.** Los dos proyectos, para los 24 relojes de la lista, sin
-  errores ni avisos salvo los del tamaño del icono.
+- **Compilación.** Los dos proyectos, para los 46 relojes de la lista, sin un
+  solo error ni aviso: 86 builds cada uno en el export de tienda.
 - **Arranque.** La app y el campo de datos se cargan en el simulador con
   `monkeydo` sin ninguna excepción, y con una traza temporal en `onUpdate` se
   confirmó que la vista se repinta y con qué valores. Esa traza es la que

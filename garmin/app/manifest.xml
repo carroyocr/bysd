@@ -14,9 +14,20 @@
         name="@Strings.appName"
         entry="BackyardApp"
         launcherIcon="@Drawables.LauncherIcon"
-        minApiLevel="3.2.0">
+        minApiLevel="3.1.0">
 
         <iq:products>
+            <!--
+              La generacion fenix 5 de 2017 (con el Chronos y el tactix Charlie,
+              que viajan dentro de fenix5 y fenix5x) se queda en Connect IQ
+              3.1.6. Por eso el minApiLevel de arriba es 3.1.0 y no 3.2.0: el
+              codigo no usa nada por encima de 3.1, comprobado reloj a reloj
+              con -w y en el export de tienda.
+            -->
+            <iq:product id="fenix5"/>
+            <iq:product id="fenix5s"/>
+            <iq:product id="fenix5x"/>
+            <iq:product id="fenixchronos"/>
             <iq:product id="fenix5plus"/>
             <iq:product id="fenix5splus"/>
             <iq:product id="fenix5xplus"/>
@@ -31,9 +42,21 @@
             <iq:product id="fenix7"/>
             <iq:product id="fenix7s"/>
             <iq:product id="fenix7x"/>
+            <iq:product id="fenix7pro"/>
+            <iq:product id="fenix7spro"/>
+            <iq:product id="fenix7xpro"/>
+            <iq:product id="fenix7pronowifi"/>
+            <iq:product id="fenix7xpronowifi"/>
             <iq:product id="fenix843mm"/>
             <iq:product id="fenix847mm"/>
+            <iq:product id="fenix8solar47mm"/>
+            <iq:product id="fenix8solar51mm"/>
+            <iq:product id="fenix8pro47mm"/>
+            <iq:product id="fenixe"/>
             <iq:product id="epix2"/>
+            <iq:product id="epix2pro42mm"/>
+            <iq:product id="epix2pro47mm"/>
+            <iq:product id="epix2pro51mm"/>
             <iq:product id="enduro"/>
             <iq:product id="enduro3"/>
             <iq:product id="fr255"/>

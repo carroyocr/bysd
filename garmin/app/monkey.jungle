@@ -45,6 +45,14 @@ round-454x454.resourcePath = $(base.resourcePath);resources-large
 vivoactive4.resourcePath = $(base.resourcePath);../shared/resources-icon35
 
 # 40 px (pantalla base)
+# 40 px (pantalla base). La generacion de 2017: el fenix 5 y el 5X son de
+# 240 px, como los Plus.
+fenix5.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix5x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+# 36 px (emblema small): el fenix 5S y el Chronos son de 218 px y piden un
+# icono de 36 que no pide ningun otro reloj.
+fenix5s.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon36
+fenixchronos.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon36
 fenix5plus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5splus.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix5xplus.resourcePath = $(base.resourcePath);../shared/resources-icon40
@@ -59,6 +67,16 @@ fenix6xpro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7s.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix7x.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7pro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7spro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7xpro.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7pronowifi.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix7xpronowifi.resourcePath = $(base.resourcePath);../shared/resources-icon40
+# 40 px (MIP): los fenix 8 Solar son de 260 y 280 px, la misma familia de
+# pantalla que el fenix 7 y el 7X. El fenix 8 Pro (454 px) no lleva linea:
+# su icono es de 65 px, el de shared/resources, y su emblema lo pone la familia.
+fenix8solar47mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix8solar51mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro3.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fr255.resourcePath = $(base.resourcePath);../shared/resources-icon40
@@ -73,6 +91,10 @@ vivoactive5.resourcePath = $(base.resourcePath);resources-large;../shared/resour
 fenix843mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 epix2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 fr265.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+fenixe.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro42mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro47mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+epix2pro51mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 # 60 px (pantalla base)
 fr265s.resourcePath = $(base.resourcePath);../shared/resources-icon60
 

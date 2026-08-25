@@ -1,15 +1,16 @@
 # Publicar Backyard en la Connect IQ Store
 
 Estado y guía para subir los dos productos a la tienda de Garmin. Actualizado
-el 21 de agosto de 2026.
+el 24 de agosto de 2026.
 
 ## Estado técnico — listo
 
 - La **app** (`backyard.iq`) y el **campo de datos** (`backyard-margen.iq`)
-  compilan para los **52 builds** de los 24 dispositivos, **sin un solo
+  compilan para los **86 builds** de los 46 dispositivos, **sin un solo
   error**. Los paquetes de tienda están en `garmin/build/*.iq`.
 - Firma con la developer key de `~/Proyectos/bysd-secretos/garmin/`.
-- Único aviso pendiente: el **icono del lanzador**. Ver la sección al final.
+- **Sin un solo aviso**, tampoco los del icono del lanzador: hay un icono por
+  talla y cada reloj mapea al suyo. Ver la sección al final.
 
 ## Reparto de tareas
 
@@ -42,6 +43,37 @@ van por separado.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.3.0 (para el campo "What's New")
+
+Dieciséis relojes más, y por primera vez los **fēnix que no son AMOLED**: el
+fēnix 8 Solar no podía ni encolar la descarga en la tienda porque el `.iq` no
+llevaba build para él. Entra también la generación **fēnix 5 de 2017**, que
+solo pedía bajar el `minApiLevel` de la app de 3.2.0 a 3.1.0 (el código no usa
+nada por encima de 3.1). Ningún cambio de código: las familias de pantalla
+(218, 240, 260, 280, 390, 416 y 454 px) ya estaban resueltas.
+
+**ES**
+
+> - Dieciséis relojes más: fēnix 8 Solar (47 y 51 mm), fēnix 8 Pro, fēnix E,
+>   fēnix 7 Pro, 7S Pro y 7X Pro (también las versiones sin wifi), epix Pro
+>   (42, 47 y 51 mm) y la generación fēnix 5 de 2017 — fēnix 5, 5S y 5X, con
+>   el tactix Charlie y el fēnix Chronos.
+> - Las ruedas de los ajustes —hora de salida, duración y distancia— se ven
+>   ahora en negro con cifras blancas en todos los relojes. En los de pantalla
+>   MIP salían en blanco sobre blanco, ilegibles.
+
+**EN**
+
+> - Sixteen more watches: fēnix 8 Solar (47 and 51 mm), fēnix 8 Pro, fēnix E,
+>   fēnix 7 Pro, 7S Pro and 7X Pro (no-wifi versions too), epix Pro (42, 47
+>   and 51 mm), and the 2017 fēnix 5 generation — fēnix 5, 5S and 5X, plus
+>   tactix Charlie and fēnix Chronos.
+> - The settings wheels — start time, lap duration and distance — are now
+>   black with white figures on every watch. On MIP screens they came out
+>   white on white, unreadable.
 
 ---
 
@@ -172,8 +204,8 @@ versión = actualizarla ahí y regenerar el `.iq`.
 
 ## El icono del lanzador — resuelto
 
-Cada dispositivo pide su tamaño de icono (35, 40, 56, 60, 62, 65, 70 px). Ya
-se generó el icono en los **siete tamaños** (en `shared/resources-icon<N>/`) y
+Cada dispositivo pide su tamaño de icono (35, 36, 40, 56, 60, 62, 65, 70 px).
+Ya se generó el icono en los **ocho tamaños** (en `shared/resources-icon<N>/`) y
 cada reloj mapea al suyo en los `monkey.jungle`. Los `.iq` compilan **sin
 ningún aviso de icono** — máxima calidad en todos los relojes, sin depender del
 escalado de Garmin.
@@ -183,11 +215,12 @@ Grupos por tamaño de icono:
 | px | dispositivos |
 |---|---|
 | 35 | vivoactive4 |
-| 40 | fenix6/6pro/6s/6spro/6xpro, fenix7/7s/7x, enduro, enduro3, fr255/255s, fr955 |
+| 36 | fenix5s, fenixchronos |
+| 40 | fenix5/5x, fenix5plus/5splus/5xplus, fenix6/6pro/6s/6spro/6xpro, fenix7/7s/7x, fenix7pro/7spro/7xpro (+nowifi), fenix8solar47mm/51mm, enduro, enduro3, fr255/255s, fr745, fr945/945lte, fr955 |
 | 56 | vivoactive5 |
-| 60 | fenix843mm, epix2, fr265/265s |
+| 60 | fenix843mm, fenixe, epix2, epix2pro42mm/47mm/51mm, fr265/265s |
 | 62 | instinct2 |
-| 65 | fenix847mm, fr965 |
+| 65 | fenix847mm, fenix8pro47mm, fr965 |
 | 70 | venu2, venu3 |
 
 Hecho el 21 de agosto de 2026 (commit `837c51f`).

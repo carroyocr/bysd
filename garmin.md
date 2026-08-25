@@ -1,11 +1,13 @@
 # Garmin — lo que queda
 
-Estado a 17 de agosto de 2026, rama `garmin-universal`.
+Estado a 24 de agosto de 2026. La **1.3.0 está empaquetada** —la que suma los
+fēnix MIP, ver la sección de abajo— y le falta el envío a la tienda; la versión
+se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están en
+`garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-24 relojes de la lista, salvo los del tamaño del icono. La arquitectura, cómo se
-compila y qué está comprobado están en [`garmin/README.md`](garmin/README.md);
-aquí solo está lo que falta.
+46 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
 
@@ -46,6 +48,115 @@ El de Homebrew compila igual, pero su simulador arranca sin abrir el puerto y
 `monkeydo` responde «Unable to connect to simulator» sin más explicación.
 
 ---
+
+## El fēnix 8 Solar ya entra (24-ago): faltan los dos envíos a la tienda
+
+Descubierto el 24 de agosto con el reloj delante (fēnix 8 — 47 mm, Solar): la
+app le salía «no compatible». **No era un fallo de la 1.2:** ese reloj nunca
+estuvo en la lista. Los manifiestos declaraban `fenix843mm` y `fenix847mm`, que
+son los fēnix 8 **AMOLED**; el Solar es otro dispositivo en Connect IQ —MIP en
+vez de AMOLED, otra resolución— con su propio identificador y su propia ficha
+en la tienda. Sin build suyo en el `.iq`, la tienda no deja ni encolar la
+descarga. No era `minApiLevel`: el Solar va muy por encima.
+
+**Arreglado en la rama `garmin-mip-fenix`.** Se añadieron **dieciséis** relojes
+a los dos manifiestos y a los dos `monkey.jungle`, aprovechando el envío:
+
+| Reloj | id | Pantalla | Icono |
+|---|---|---|---|
+| fēnix 8 Solar 47 mm | `fenix8solar47mm` | 260×260 MIP | 40 |
+| fēnix 8 Solar 51 mm | `fenix8solar51mm` | 280×280 MIP | 40 |
+| fēnix 8 Pro 47 mm | `fenix8pro47mm` | 454×454 AMOLED | 65 |
+| fēnix E | `fenixe` | 416×416 AMOLED | 60 |
+| fēnix 7 Pro / 7S Pro / 7X Pro | `fenix7pro`, `fenix7spro`, `fenix7xpro` | 260 / 240 / 280 MIP | 40 |
+| fēnix 7 Pro y 7X Pro sin wifi | `fenix7pronowifi`, `fenix7xpronowifi` | 260 / 280 MIP | 40 |
+| epix Pro 42 / 47 / 51 mm | `epix2pro42mm`, `epix2pro47mm`, `epix2pro51mm` | 390 / 416 / 454 AMOLED | 60 |
+| fēnix 5 y 5X (2017) | `fenix5`, `fenix5x` | 240×240 MIP | 40 |
+| fēnix 5S y Chronos (2017) | `fenix5s`, `fenixchronos` | 218×218 MIP | 36 |
+
+La generación de 2017 entró por lo mismo que salía el Solar, pero al revés:
+se queda en **Connect IQ 3.1.6** y la app declaraba `minApiLevel` 3.2.0. Bajarlo
+a 3.1.0 bastó —el código no usa nada por encima de 3.1— y trajo de regalo el
+tactix Charlie y el quatix 5, que viajan dentro de `fenix5x` y `fenix5`. Lo
+único nuevo que hubo que dibujar es el **icono de 36 px** (`shared/resources-icon36`),
+que no pide ningún otro reloj.
+
+**Y un fallo que la compilación no ve, encontrado en el simulador el 24-ago:**
+al pulsar START en el fēnix 5X la app se caía en el acto con
+
+```
+Error: Symbol Not Found Error
+Details: Could not find symbol '008000df'
+```
+
+Era `Toybox.Activity.SPORT_RUNNING`, que **no existe hasta Connect IQ 3.2**:
+en la generación de 2017 esa constante vive en `ActivityRecording`. Compila
+sin un aviso y revienta en el reloj, en la única línea que importa —la que
+crea la sesión de grabación—. Arreglado en `BackyardApp._deporte()`, que
+pregunta con `has` y si no está usa el número del perfil FIT (correr = 1);
+nombrar `Rec.SPORT_RUNNING` compila, pero suelta un aviso de obsoleta en los
+otros 45 relojes.
+
+**Cómo se traduce un crash así**, que es lo que costó encontrarlo: el id del
+símbolo está en el `api.debug.xml` del propio reloj —
+`grep 'symbol="SPORT_RUNNING"' fenix5x.api.debug.xml` da `id="8388831"`, que
+es `0x8000df`—. Y las direcciones del stack se resuelven con el
+`<prg>.prg.debug.xml` que deja `monkeyc` al lado del `.prg`, buscando la
+entrada de `pcToLineNum` con el pc más cercano por debajo. Ahí salió
+`darLaSalida` y `StartDelegate.onSelect`, o sea: pulsar START.
+
+Moraleja para los relojes viejos: **compilar limpio no prueba nada**. La VM
+resuelve los símbolos en marcha, y el compilador no distingue entre un
+símbolo que existe en el SDK y uno que existe en ese reloj. Hay que abrir el
+simulador con `-d` del reloj viejo y recorrer las pantallas a mano.
+
+**Y las ruedas de ajustes, que salian en blanco sobre blanco.** Encontrado en
+el simulador del fēnix 5S: `Ui.Picker` pinta el fondo con el **tema del reloj**,
+y en la generación fēnix 5 ese tema es blanco, así que las cifras blancas de la
+app quedaban invisibles. No hay opción para cambiarlo —el `Picker` no acepta
+color de fondo—, limpiar a negro en el `onUpdate` de un `Picker` propio no vale
+(repinta después) y hacerlo desde el título solo ennegrece su banda, porque
+cada elemento va recortado a su zona. La rueda es ahora una vista nuestra,
+`RuedaView` + `RuedaDelegate` en `AjustesView.mc`: fondo negro, cifra grande y
+su marca —`AM`/`PM`, `min`, `km`— debajo en fuente de texto, porque
+`FONT_NUMBER_MEDIUM` **no tiene letras** y pegadas al número salen dos cajas
+vacías. Los mismos botones de siempre: UP/DOWN cambian, START pasa de columna y
+acepta, BACK cancela.
+
+**Ojo con el dato de memoria, que engaña:** el `appStorageCapacity` de
+`simulator.json` (131072 en el fēnix 5X) **no** es el presupuesto de la app,
+es la capacidad del API `Application.Storage`. El bueno está en
+`compiler.json`, en `appTypes`: el fēnix 5X da **1,25 MB** para una watchApp y
+128 KB para un campo de datos, y las builds pesan 157 KB y 25 KB. Sobra sitio.
+
+**Ninguno estrena familia de pantalla**: las siete (218, 240, 260, 280, 390,
+416 y 454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
+línea de dibujo. Tampoco emblema nuevo: el reparto del `monkey.jungle` va por
+familia. Lo que sí hubo que escribir a mano es la línea del icono de cada
+dispositivo —el tamaño va por reloj, no por familia—; los de 65 px
+(`fenix8pro47mm`) usan el icono por defecto de `shared/resources` y no llevan
+línea.
+
+Los dos `.iq` de tienda vuelven a salir con **86 builds cada uno, sin un solo
+error ni aviso** (eran 52). La versión de `AcercaView.mc` subió a **1.3.0**, y
+las novedades ES/EN están en `garmin/PUBLICAR.md`.
+
+**Lo que falta, y solo lo puede hacer Cristhian:** subir la versión nueva de
+**los dos productos** a la Connect IQ Store (`build/backyard.iq` y
+`build/backyard-margen.iq`) y pasar otra vez por la revisión de Garmin. Eso es
+lo que marca el plazo real, no la compilación.
+
+Sin comprobar todavía: cómo se ve la app en una pantalla MIP de verdad. El
+riesgo es bajo —el fēnix 7 y el enduro, de las mismas familias y del mismo
+tipo de pantalla, ya estaban dentro y el código no distingue— pero conviene
+mirarlo en el simulador con `-d fenix8solar51mm` antes de enviar. Ojo con lo
+apuntado abajo para el Instinct 2: en MIP **monocromo** el texto en
+`COLOR_DK_GRAY` no se ve. El Solar no es monocromo (8 bits de color), así que
+eso no le afecta.
+
+Quedan fuera a propósito los relojes que no son de la familia fēnix/epix
+(Instinct 3, Descent, D2): cada uno pide su comprobación, y el Instinct
+arrastra el problema del gris.
 
 ## 0. Dos fallos confirmados en el simulador, sin arreglar
 
@@ -176,7 +287,9 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 24. Cuidado al
+- **Los identificadores de dispositivo del manifest**, los 46 declarados hoy.
+  Ojo: esos 42 son los que compilan, no los que existen — la lista envejece
+  sola con cada reloj nuevo de Garmin. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`
   y deja al reloj fuera en silencio. Así estuvieron fuera los seis Forerunner.
   Compila con `-w` y lee los avisos.
