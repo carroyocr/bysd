@@ -116,26 +116,19 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         var titulo;
         var actual;
         if (cual == :minutos) {
-            factory = new NumeroFactory(1, 120, 1, 0, " min");
+            factory = new NumeroFactory(1, 120, 1, 0, "min");
             titulo = Ui.loadResource(Rez.Strings.settingLapMinutes);
             actual = _estado.duracionVuelta / 60;
         } else {
-            factory = new NumeroFactory(1.0, 20.0, 0.1, 1, " km");
+            factory = new NumeroFactory(1.0, 20.0, 0.1, 1, "km");
             titulo = Ui.loadResource(Rez.Strings.settingLapDistance);
             actual = _estado.kmPorVuelta;
         }
-        var picker = new Ui.Picker({
-            :title => new Ui.Text({
-                :text => titulo,
-                :color => Gfx.COLOR_WHITE,
-                :font => Gfx.FONT_XTINY,
-                :locX => Ui.LAYOUT_HALIGN_CENTER,
-                :locY => Ui.LAYOUT_VALIGN_BOTTOM
-            }),
-            :pattern => [ factory ],
-            :defaults => [ factory.getIndex(actual) ]
-        });
-        Ui.pushView(picker, new NumeroPickerDelegate(_estado, cual),
+        var rueda = new RuedaView(titulo, [ factory ],
+                                  [ factory.getIndex(actual) ], null);
+        Ui.pushView(rueda,
+                    new RuedaDelegate(rueda,
+                                      new NumeroPickerDelegate(_estado, cual)),
                     Ui.SLIDE_LEFT);
     }
 
@@ -177,18 +170,14 @@ class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
         var horas = new HoraSalidaFactory();
         var minutos = new MinutoSalidaFactory();
         var actual = _estado.horaSalida;
-        var picker = new Ui.Picker({
-            :title => new Ui.Text({
-                :text => Ui.loadResource(Rez.Strings.settingStartTime),
-                :color => Gfx.COLOR_WHITE,
-                :font => Gfx.FONT_XTINY,
-                :locX => Ui.LAYOUT_HALIGN_CENTER,
-                :locY => Ui.LAYOUT_VALIGN_BOTTOM
-            }),
-            :pattern => [ horas, minutos ],
-            :defaults => [ horas.indiceDe(actual), minutos.indiceDe(actual) ]
-        });
-        Ui.pushView(picker, new SalidaPickerDelegate(_estado), Ui.SLIDE_LEFT);
+        var rueda = new RuedaView(Ui.loadResource(Rez.Strings.settingStartTime),
+                                  [ horas, minutos ],
+                                  [ horas.indiceDe(actual),
+                                    minutos.indiceDe(actual) ], ":");
+        Ui.pushView(rueda,
+                    new RuedaDelegate(rueda,
+                                      new SalidaPickerDelegate(_estado)),
+                    Ui.SLIDE_LEFT);
     }
 
     function onBack() {
@@ -196,12 +185,192 @@ class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
     }
 }
 
+// La rueda de valores, dibujada por nosotros.
+//
+// No es un Ui.Picker, y no por gusto: el Picker pinta el fondo con el tema
+// del reloj, y en la generacion fenix 5 ese tema es BLANCO. Las letras
+// blancas de la app quedaban invisibles -se veia el hueco de las letras y
+// nada mas-. No hay opcion para cambiar ese fondo: ni :backgroundColor ni
+// nada parecido. Limpiar a negro en el onUpdate de un Picker propio tampoco
+// vale (el Picker repinta despues), y hacerlo desde el titulo solo ennegrece
+// su banda, porque el Picker recorta cada elemento a su zona.
+//
+// Dibujandola entera aqui, el fondo es negro y las letras blancas en los 46
+// relojes, igual que el resto de la app. Y de paso la columna sin foco va en
+// LT_GRAY y no en DK_GRAY, que en los MIP monocromos no se ve.
+class RuedaView extends Ui.View {
+
+    // Con tipos: sin ellos el comprobador avisa en cada acceso a los arrays.
+    var _titulo as Lang.String;
+    var _columnas as Lang.Array;                 // una o dos columnas
+    var _indices as Lang.Array<Lang.Number>;     // donde esta cada una
+    var _separador;                              // ":" entre hora y minuto
+    var _foco as Lang.Number;                    // la que mueven UP y DOWN
+
+    function initialize(titulo, columnas, indices, separador) {
+        View.initialize();
+        _titulo = titulo;
+        _columnas = columnas;
+        _indices = indices;
+        _separador = separador;
+        _foco = 0;
+    }
+
+    // UP y DOWN mueven la columna con foco, dando la vuelta por los extremos.
+    function mover(paso) {
+        var n = _columnas[_foco].getSize();
+        _indices[_foco] = ((_indices[_foco] + paso) + n) % n;
+    }
+
+    // START pasa a la columna siguiente; si ya era la ultima, devuelve false
+    // y el que manda acepta.
+    function avanzarFoco() {
+        if (_foco + 1 >= _columnas.size()) { return false; }
+        _foco++;
+        return true;
+    }
+
+    function valores() as Lang.Array {
+        var v = new [_columnas.size()] as Lang.Array;
+        for (var i = 0; i < _columnas.size(); i++) {
+            v[i] = _columnas[i].getValue(_indices[i]);
+        }
+        return v;
+    }
+
+    function onUpdate(dc) {
+        var w = dc.getWidth();
+        var h = dc.getHeight();
+        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
+        dc.clear();
+
+        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.drawText(w / 2, (h * 0.20).toNumber(), Gfx.FONT_XTINY, _titulo,
+                    Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+
+        var n = _columnas.size();
+        var medio = (h * 0.52).toNumber();
+        // Con dos columnas cada una tiene su tercio; el hueco del medio es
+        // del separador.
+        var centros = n == 1
+                    ? [ w / 2 ]
+                    : [ (w * 0.33).toNumber(), (w * 0.67).toNumber() ];
+        var hueco = n == 1 ? (w * 0.80).toNumber() : (w * 0.40).toNumber();
+
+        // Si alguna columna lleva marca -AM/PM, min, km-, TODAS las cifras
+        // suben lo mismo: si sube solo la que la lleva, la hora queda mas
+        // alta que los minutos y se nota.
+        var altoMarca = dc.getFontHeight(Gfx.FONT_XTINY);
+        var hayMarca = false;
+        for (var i = 0; i < n; i++) {
+            if (_columnas[i].marcaDe(_indices[i]) != null) { hayMarca = true; }
+        }
+        var yCifra = hayMarca ? medio - (altoMarca / 2) : medio;
+
+        for (var i = 0; i < n; i++) {
+            var texto = _columnas[i].textoDe(_indices[i]);
+            var marca = _columnas[i].marcaDe(_indices[i]);
+            var fuente = _fuenteQueQuepa(dc, texto, hueco);
+            dc.setColor(i == _foco ? Gfx.COLOR_WHITE : Gfx.COLOR_LT_GRAY,
+                        Gfx.COLOR_TRANSPARENT);
+            dc.drawText(centros[i], yCifra, fuente, texto,
+                        Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+            if (marca != null) {
+                // La marca va debajo, y el centro de una y otra se separan
+                // media cifra MAS media marca: contar solo la cifra dejaba el
+                // AM montado encima del numero.
+                dc.drawText(centros[i],
+                            yCifra + (dc.getFontHeight(fuente) / 2)
+                                   + (altoMarca / 2),
+                            Gfx.FONT_XTINY, marca,
+                            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+            }
+        }
+
+        if (_separador != null && n == 2) {
+            dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+            dc.drawText(w / 2, yCifra, Gfx.FONT_MEDIUM, _separador,
+                        Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+        }
+
+        // Las flechas dicen que esa columna es la que se mueve. Sin palabras:
+        // asi no hay que traducir nada.
+        var salto = (h * 0.19).toNumber();
+        _flecha(dc, centros[_foco], medio - salto, true);
+        _flecha(dc, centros[_foco], medio + salto, false);
+    }
+
+    // La fuente mas grande en la que el valor todavia cabe. Medido, no
+    // supuesto: "12 PM" en la rueda de horas no ocupa lo que "6".
+    function _fuenteQueQuepa(dc, texto, ancho) {
+        var fuentes = [ Gfx.FONT_NUMBER_MEDIUM, Gfx.FONT_NUMBER_MILD,
+                        Gfx.FONT_LARGE, Gfx.FONT_MEDIUM, Gfx.FONT_SMALL ];
+        for (var i = 0; i < fuentes.size(); i++) {
+            if (dc.getTextWidthInPixels(texto, fuentes[i]) <= ancho) {
+                return fuentes[i];
+            }
+        }
+        return Gfx.FONT_XTINY;
+    }
+
+    function _flecha(dc, cx, cy, haciaArriba) {
+        var b = (dc.getWidth() * 0.035).toNumber();
+        var a = (dc.getWidth() * 0.032).toNumber();
+        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        if (haciaArriba) {
+            dc.fillPolygon([ [cx - b, cy + a], [cx + b, cy + a], [cx, cy] ]);
+        } else {
+            dc.fillPolygon([ [cx - b, cy - a], [cx + b, cy - a], [cx, cy] ]);
+        }
+    }
+}
+
+// El manejo de la rueda: UP y DOWN cambian el valor, START pasa de columna y
+// al final acepta, BACK cancela. Quien decide que hacer con el valor es el
+// delegado de destino, el mismo de antes.
+class RuedaDelegate extends Ui.BehaviorDelegate {
+
+    var _vista;
+    var _destino;
+
+    function initialize(vista, destino) {
+        BehaviorDelegate.initialize();
+        _vista = vista;
+        _destino = destino;
+    }
+
+    function onNextPage() {
+        _vista.mover(1);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onPreviousPage() {
+        _vista.mover(-1);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onSelect() {
+        if (_vista.avanzarFoco()) {
+            Ui.requestUpdate();
+            return true;
+        }
+        _destino.onAccept(_vista.valores());
+        return true;
+    }
+
+    function onBack() {
+        _destino.onCancel();
+        return true;
+    }
+}
+
 // La columna de horas de la rueda de salida: las 24 horas del dia,
 // escritas como las escribe el reloj (12 o 24 horas).
-class HoraSalidaFactory extends Ui.PickerFactory {
+class HoraSalidaFactory {
 
     function initialize() {
-        PickerFactory.initialize();
     }
 
     function getSize() {
@@ -218,31 +387,27 @@ class HoraSalidaFactory extends Ui.PickerFactory {
         return horaSalida / 100;
     }
 
-    function getDrawable(index, selected) {
-        var texto;
+    function textoDe(index) {
         if (Sys.getDeviceSettings().is24Hour) {
-            texto = index.format("%d");
-        } else {
-            var marca = index < 12 ? " AM" : " PM";
-            var h12 = index % 12;
-            if (h12 == 0) { h12 = 12; }
-            texto = h12.format("%d") + marca;
+            return index.format("%d");
         }
-        return new Ui.Text({
-            :text => texto,
-            :color => Gfx.COLOR_WHITE,
-            :font => Gfx.FONT_NUMBER_MEDIUM,
-            :locX => Ui.LAYOUT_HALIGN_CENTER,
-            :locY => Ui.LAYOUT_VALIGN_CENTER
-        });
+        var h12 = index % 12;
+        if (h12 == 0) { h12 = 12; }
+        return h12.format("%d");
+    }
+
+    // AM o PM va aparte: la fuente de cifras no tiene letras, y pegado al
+    // numero salen dos cajas vacias.
+    function marcaDe(index) {
+        if (Sys.getDeviceSettings().is24Hour) { return null; }
+        return index < 12 ? "AM" : "PM";
     }
 }
 
 // La columna de minutos: 00 a 55 en pasos de cinco.
-class MinutoSalidaFactory extends Ui.PickerFactory {
+class MinutoSalidaFactory {
 
     function initialize() {
-        PickerFactory.initialize();
     }
 
     function getSize() {
@@ -259,21 +424,19 @@ class MinutoSalidaFactory extends Ui.PickerFactory {
         return i < 12 ? i : 11;
     }
 
-    function getDrawable(index, selected) {
-        return new Ui.Text({
-            :text => (index * 5).format("%02d"),
-            :color => Gfx.COLOR_WHITE,
-            :font => Gfx.FONT_NUMBER_MEDIUM,
-            :locX => Ui.LAYOUT_HALIGN_CENTER,
-            :locY => Ui.LAYOUT_VALIGN_CENTER
-        });
+    function textoDe(index) {
+        return (index * 5).format("%02d");
+    }
+
+    function marcaDe(index) {
+        return null;
     }
 }
 
 // Al aceptar la rueda de salida se guarda el HHMM elegido. Si el cambio
 // ocurre durante el calentamiento, el ancla se vuelve a sellar, igual que
 // al cambiar la duracion: la campana 1 aun no sono.
-class SalidaPickerDelegate extends Ui.PickerDelegate {
+class SalidaPickerDelegate {
 
     // Re-sella el ancla si hay carrera abierta y la campana 1 no ha sonado.
     // Compartido con el camino de Auto del menu.
@@ -289,7 +452,6 @@ class SalidaPickerDelegate extends Ui.PickerDelegate {
     var _estado;
 
     function initialize(estado) {
-        PickerDelegate.initialize();
         _estado = estado;
     }
 
@@ -298,9 +460,9 @@ class SalidaPickerDelegate extends Ui.PickerDelegate {
         return true;
     }
 
-    function onAccept(valores) {
-        var hora = (valores as Lang.Array)[0] as Lang.Number;
-        var minuto = (valores as Lang.Array)[1] as Lang.Number;
+    function onAccept(valores as Lang.Array) {
+        var hora = valores[0] as Lang.Number;
+        var minuto = valores[1] as Lang.Number;
         App.Properties.setValue("startTime", (hora * 100) + minuto);
         _estado.leerAjustes();
         SalidaPickerDelegate.resellar(_estado);
@@ -315,7 +477,7 @@ class SalidaPickerDelegate extends Ui.PickerDelegate {
 // Genera los valores de la rueda: del minimo al maximo en pasos, con sus
 // decimales y su sufijo. Es la misma para minutos y para kilometros; solo
 // cambian los numeros.
-class NumeroFactory extends Ui.PickerFactory {
+class NumeroFactory {
 
     // En Float siempre -aunque los minutos sean enteros- para que el
     // comprobador sepa que se puede dividir y formatear. Sin los tipos avisa
@@ -327,7 +489,6 @@ class NumeroFactory extends Ui.PickerFactory {
     var _n as Lang.Number;
 
     function initialize(minimo, maximo, paso, decimales, sufijo) {
-        PickerFactory.initialize();
         _min = minimo.toFloat();
         _paso = paso.toFloat();
         _decimales = decimales;
@@ -352,31 +513,29 @@ class NumeroFactory extends Ui.PickerFactory {
         return i;
     }
 
-    function getDrawable(index, selected) {
+    function textoDe(index) {
         var v = _min + index * _paso;
-        var texto = _decimales > 0
-                  ? v.format("%.1f")
-                  : v.toNumber().format("%d");
-        return new Ui.Text({
-            :text => texto + _sufijo,
-            :color => Gfx.COLOR_WHITE,
-            :font => Gfx.FONT_NUMBER_MEDIUM,
-            :locX => Ui.LAYOUT_HALIGN_CENTER,
-            :locY => Ui.LAYOUT_VALIGN_CENTER
-        });
+        return _decimales > 0
+             ? v.format("%.1f")
+             : v.toNumber().format("%d");
+    }
+
+    // "min" o "km" debajo de la cifra, por lo mismo que el AM/PM: en la
+    // fuente de cifras las letras no existen.
+    function marcaDe(index) {
+        return _sufijo;
     }
 }
 
 // Al aceptar la rueda, guarda el valor en la propiedad que lee todo el mundo
 // -la app y el telefono- y vuelve a la linea de salida, que ya muestra la
 // cifra nueva. Cancelar deja el ajuste como estaba.
-class NumeroPickerDelegate extends Ui.PickerDelegate {
+class NumeroPickerDelegate {
 
     var _estado;
     var _cual;
 
     function initialize(estado, cual) {
-        PickerDelegate.initialize();
         _estado = estado;
         _cual = cual;
     }
@@ -386,7 +545,7 @@ class NumeroPickerDelegate extends Ui.PickerDelegate {
         return true;
     }
 
-    function onAccept(valores) {
+    function onAccept(valores as Lang.Array) {
         var v = valores[0] as Lang.Float;
         if (_cual == :minutos) {
             App.Properties.setValue("lapMinutes", v.toNumber());

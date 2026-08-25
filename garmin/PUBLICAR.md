@@ -61,6 +61,9 @@ nada por encima de 3.1). Ningún cambio de código: las familias de pantalla
 >   fēnix 7 Pro, 7S Pro y 7X Pro (también las versiones sin wifi), epix Pro
 >   (42, 47 y 51 mm) y la generación fēnix 5 de 2017 — fēnix 5, 5S y 5X, con
 >   el tactix Charlie y el fēnix Chronos.
+> - Las ruedas de los ajustes —hora de salida, duración y distancia— se ven
+>   ahora en negro con cifras blancas en todos los relojes. En los de pantalla
+>   MIP salían en blanco sobre blanco, ilegibles.
 
 **EN**
 
@@ -68,6 +71,9 @@ nada por encima de 3.1). Ningún cambio de código: las familias de pantalla
 >   fēnix 7 Pro, 7S Pro and 7X Pro (no-wifi versions too), epix Pro (42, 47
 >   and 51 mm), and the 2017 fēnix 5 generation — fēnix 5, 5S and 5X, plus
 >   tactix Charlie and fēnix Chronos.
+> - The settings wheels — start time, lap duration and distance — are now
+>   black with white figures on every watch. On MIP screens they came out
+>   white on white, unreadable.
 
 ---
 

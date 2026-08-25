@@ -110,6 +110,19 @@ resuelve los símbolos en marcha, y el compilador no distingue entre un
 símbolo que existe en el SDK y uno que existe en ese reloj. Hay que abrir el
 simulador con `-d` del reloj viejo y recorrer las pantallas a mano.
 
+**Y las ruedas de ajustes, que salian en blanco sobre blanco.** Encontrado en
+el simulador del fēnix 5S: `Ui.Picker` pinta el fondo con el **tema del reloj**,
+y en la generación fēnix 5 ese tema es blanco, así que las cifras blancas de la
+app quedaban invisibles. No hay opción para cambiarlo —el `Picker` no acepta
+color de fondo—, limpiar a negro en el `onUpdate` de un `Picker` propio no vale
+(repinta después) y hacerlo desde el título solo ennegrece su banda, porque
+cada elemento va recortado a su zona. La rueda es ahora una vista nuestra,
+`RuedaView` + `RuedaDelegate` en `AjustesView.mc`: fondo negro, cifra grande y
+su marca —`AM`/`PM`, `min`, `km`— debajo en fuente de texto, porque
+`FONT_NUMBER_MEDIUM` **no tiene letras** y pegadas al número salen dos cajas
+vacías. Los mismos botones de siempre: UP/DOWN cambian, START pasa de columna y
+acepta, BACK cancela.
+
 **Ojo con el dato de memoria, que engaña:** el `appStorageCapacity` de
 `simulator.json` (131072 en el fēnix 5X) **no** es el presupuesto de la app,
 es la capacidad del API `Application.Storage`. El bueno está en
