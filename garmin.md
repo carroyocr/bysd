@@ -81,6 +81,35 @@ tactix Charlie y el quatix 5, que viajan dentro de `fenix5x` y `fenix5`. Lo
 único nuevo que hubo que dibujar es el **icono de 36 px** (`shared/resources-icon36`),
 que no pide ningún otro reloj.
 
+**Y un fallo que la compilación no ve, encontrado en el simulador el 24-ago:**
+al pulsar START en el fēnix 5X la app se caía en el acto con
+
+```
+Error: Symbol Not Found Error
+Details: Could not find symbol '008000df'
+```
+
+Era `Toybox.Activity.SPORT_RUNNING`, que **no existe hasta Connect IQ 3.2**:
+en la generación de 2017 esa constante vive en `ActivityRecording`. Compila
+sin un aviso y revienta en el reloj, en la única línea que importa —la que
+crea la sesión de grabación—. Arreglado en `BackyardApp._deporte()`, que
+pregunta con `has` y si no está usa el número del perfil FIT (correr = 1);
+nombrar `Rec.SPORT_RUNNING` compila, pero suelta un aviso de obsoleta en los
+otros 45 relojes.
+
+**Cómo se traduce un crash así**, que es lo que costó encontrarlo: el id del
+símbolo está en el `api.debug.xml` del propio reloj —
+`grep 'symbol="SPORT_RUNNING"' fenix5x.api.debug.xml` da `id="8388831"`, que
+es `0x8000df`—. Y las direcciones del stack se resuelven con el
+`<prg>.prg.debug.xml` que deja `monkeyc` al lado del `.prg`, buscando la
+entrada de `pcToLineNum` con el pc más cercano por debajo. Ahí salió
+`darLaSalida` y `StartDelegate.onSelect`, o sea: pulsar START.
+
+Moraleja para los relojes viejos: **compilar limpio no prueba nada**. La VM
+resuelve los símbolos en marcha, y el compilador no distingue entre un
+símbolo que existe en el SDK y uno que existe en ese reloj. Hay que abrir el
+simulador con `-d` del reloj viejo y recorrer las pantallas a mano.
+
 **Ojo con el dato de memoria, que engaña:** el `appStorageCapacity` de
 `simulator.json` (131072 en el fēnix 5X) **no** es el presupuesto de la app,
 es la capacidad del API `Application.Storage`. El bueno está en

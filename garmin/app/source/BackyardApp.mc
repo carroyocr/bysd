@@ -78,11 +78,29 @@ class BackyardApp extends App.AppBase {
     // La salida: crea la sesion, arranca a grabar y ancla las campanas a la
     // marca de hora mas cercana. Si el corredor pulso antes de la hora, la
     // vuelta 0 es la cuenta atras y la campana de verdad sonara sola.
+    // Correr, para la sesion de grabacion. El 1 es el numero del deporte en el
+    // perfil FIT y no cambia entre sitios ni entre versiones.
+    const CORRIENDO = 1;
+
+    // El deporte de la sesion, con el rodeo de la generacion fenix 5.
+    //
+    // Toybox.Activity.SPORT_RUNNING no existe hasta Connect IQ 3.2. Los fenix
+    // 5, 5S, 5X y el Chronos se quedan en 3.1.6, y pedirle esa constante a
+    // Activity no rompe la compilacion: la app se cae en el reloj, al dar la
+    // salida, con "Symbol Not Found" y el id 0x8000df, que es justo
+    // SPORT_RUNNING. En esos relojes la constante vive en ActivityRecording,
+    // pero nombrarla ahi suelta un aviso de obsoleta en todos los demas, asi
+    // que abajo va el numero, que es el mismo en los dos sitios.
+    function _deporte() {
+        return (Activity has :SPORT_RUNNING) ? Activity.SPORT_RUNNING
+                                             : CORRIENDO;
+    }
+
     function darLaSalida() {
         if (_session != null) { return; }
         _session = Rec.createSession({
             :name => "Backyard",
-            :sport => Activity.SPORT_RUNNING
+            :sport => _deporte()
         });
         _session.start();
         estado.darLaSalida();
@@ -103,7 +121,7 @@ class BackyardApp extends App.AppBase {
         if (_session != null) { return; }
         _session = Rec.createSession({
             :name => "Backyard",
-            :sport => Activity.SPORT_RUNNING
+            :sport => _deporte()
         });
         _session.start();
         var v = estado.vuelta();
