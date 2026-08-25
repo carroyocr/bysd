@@ -52,8 +52,11 @@ Dieciséis relojes más, y por primera vez los **fēnix que no son AMOLED**: el
 fēnix 8 Solar no podía ni encolar la descarga en la tienda porque el `.iq` no
 llevaba build para él. Entra también la generación **fēnix 5 de 2017**, que
 solo pedía bajar el `minApiLevel` de la app de 3.2.0 a 3.1.0 (el código no usa
-nada por encima de 3.1). Ningún cambio de código: las familias de pantalla
-(218, 240, 260, 280, 390, 416 y 454 px) ya estaban resueltas.
+nada por encima de 3.1). Ninguna familia de pantalla es nueva —218, 240, 260,
+280, 390, 416 y 454 px ya estaban resueltas—, pero sí hubo dos arreglos que
+solo se ven en relojes viejos: `Activity.SPORT_RUNNING` (no existe antes de
+Connect IQ 3.2 y tumbaba la app al dar la salida) y las ruedas de ajustes, que
+en las pantallas MIP salían en blanco sobre blanco.
 
 **ES**
 
