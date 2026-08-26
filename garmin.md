@@ -2,7 +2,7 @@
 
 Estado a 26 de agosto de 2026. La **1.4.0 está publicada** en la Connect IQ
 Store —la del barrido de dispositivos: 104 relojes, ver la sección de abajo—.
-Se llevó dentro todo lo de la 1.3.0, que nunca llegó a subirse suelta. La
+La 1.3.0 sí llegó a la tienda antes (versión inicial, 24 de agosto). La
 versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están
 en `garmin/PUBLICAR.md`.
 

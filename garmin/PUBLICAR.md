@@ -5,8 +5,15 @@ el 26 de agosto de 2026.
 
 ## Estado — la 1.4.0, publicada
 
-La **1.4.0 salió a la Connect IQ Store el 26 de agosto de 2026**: 104 relojes,
-174 builds, y dentro todo lo de la 1.3.0, que nunca se subió suelta.
+La **1.4.0 salió a la Connect IQ Store el 26 de agosto de 2026**: 104 relojes y
+174 builds. La ficha es «Backyard Ultra — lap, pace & rest», con descripción en
+inglés y en español, y pesa 136 KB.
+
+- App: `https://apps.garmin.com/en-US/apps/39077413-5fe7-438d-b932-d85cea576a0f`
+  (y `es-ES` para la española). **El segmento de idioma es obligatorio**: sin él
+  la ficha no carga, se queda en la portada de la tienda.
+- El id de la tienda **no es** el del `manifest.xml`: Garmin asigna el suyo.
+- Versión inicial en tienda: 24 de agosto de 2026, con la 1.3.0.
 
 ## Estado técnico — listo
 
