@@ -31,6 +31,14 @@
             <iq:product id="fenix5plus"/>
             <iq:product id="fenix5splus"/>
             <iq:product id="fenix5xplus"/>
+            <!--
+              El Forerunner 645 y el 645 Music son de la misma cosecha que el
+              fenix 5 y tienen su misma pantalla: 240x240 MIP, cinco botones y
+              128 KB de memoria de app. El 645 se queda en Connect IQ 3.1.6,
+              como los fenix de 2017; el 645 Music llega a 3.2.3.
+            -->
+            <iq:product id="fr645"/>
+            <iq:product id="fr645m"/>
             <iq:product id="fr745"/>
             <iq:product id="fr945"/>
             <iq:product id="fr945lte"/>

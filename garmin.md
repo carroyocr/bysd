@@ -6,7 +6,7 @@ se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están en
 `garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-46 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+48 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
 están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
@@ -95,7 +95,7 @@ sin un aviso y revienta en el reloj, en la única línea que importa —la que
 crea la sesión de grabación—. Arreglado en `BackyardApp._deporte()`, que
 pregunta con `has` y si no está usa el número del perfil FIT (correr = 1);
 nombrar `Rec.SPORT_RUNNING` compila, pero suelta un aviso de obsoleta en los
-otros 45 relojes.
+otros 47 relojes.
 
 **Cómo se traduce un crash así**, que es lo que costó encontrarlo: el id del
 símbolo está en el `api.debug.xml` del propio reloj —
@@ -129,6 +129,14 @@ es la capacidad del API `Application.Storage`. El bueno está en
 `compiler.json`, en `appTypes`: el fēnix 5X da **1,25 MB** para una watchApp y
 128 KB para un campo de datos, y las builds pesan 157 KB y 25 KB. Sobra sitio.
 
+**El Forerunner 645 y el 645 Music entran de propina.** Son de la misma
+cosecha que el fēnix 5 y comparten con él todo lo que importa: 240x240 MIP de
+8 bits, cinco botones, Connect IQ 3.1.6 y 128 KB de presupuesto para una
+watchApp (el Music sube a 1 MB). Tanto, que la build del 645 sale **byte a
+byte idéntica** a la del fēnix 5 —158 636 bytes de `.prg`, 29 376 de código y
+5 149 de datos—, así que no hubo que tocar ni una línea de código: dos ids en
+cada `manifest.xml` y dos líneas de icono de 40 px en cada `monkey.jungle`.
+
 **Ninguno estrena familia de pantalla**: las siete (218, 240, 260, 280, 390,
 416 y 454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
 línea de dibujo. Tampoco emblema nuevo: el reparto del `monkey.jungle` va por
@@ -137,7 +145,7 @@ dispositivo —el tamaño va por reloj, no por familia—; los de 65 px
 (`fenix8pro47mm`) usan el icono por defecto de `shared/resources` y no llevan
 línea.
 
-Los dos `.iq` de tienda vuelven a salir con **86 builds cada uno, sin un solo
+Los dos `.iq` de tienda vuelven a salir con **90 builds cada uno, sin un solo
 error ni aviso** (eran 52). La versión de `AcercaView.mc` subió a **1.3.0**, y
 las novedades ES/EN están en `garmin/PUBLICAR.md`.
 
@@ -287,8 +295,8 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 46 declarados hoy.
-  Ojo: esos 42 son los que compilan, no los que existen — la lista envejece
+- **Los identificadores de dispositivo del manifest**, los 48 declarados hoy.
+  Ojo: esos 48 son los que compilan, no los que existen — la lista envejece
   sola con cada reloj nuevo de Garmin. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`
   y deja al reloj fuera en silencio. Así estuvieron fuera los seis Forerunner.

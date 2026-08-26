@@ -6,7 +6,7 @@ el 24 de agosto de 2026.
 ## Estado técnico — listo
 
 - La **app** (`backyard.iq`) y el **campo de datos** (`backyard-margen.iq`)
-  compilan para los **86 builds** de los 46 dispositivos, **sin un solo
+  compilan para los **90 builds** de los 48 dispositivos, **sin un solo
   error**. Los paquetes de tienda están en `garmin/build/*.iq`.
 - Firma con la developer key de `~/Proyectos/bysd-secretos/garmin/`.
 - **Sin un solo aviso**, tampoco los del icono del lanzador: hay un icono por
@@ -48,11 +48,12 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ## Novedades de la versión 1.3.0 (para el campo "What's New")
 
-Dieciséis relojes más, y por primera vez los **fēnix que no son AMOLED**: el
+Dieciocho relojes más, y por primera vez los **fēnix que no son AMOLED**: el
 fēnix 8 Solar no podía ni encolar la descarga en la tienda porque el `.iq` no
-llevaba build para él. Entra también la generación **fēnix 5 de 2017**, que
-solo pedía bajar el `minApiLevel` de la app de 3.2.0 a 3.1.0 (el código no usa
-nada por encima de 3.1). Ninguna familia de pantalla es nueva —218, 240, 260,
+llevaba build para él. Entra también la generación **fēnix 5 de 2017** —y con
+ella el **Forerunner 645** y el 645 Music, que son de la misma cosecha y de la
+misma pantalla—, que solo pedía bajar el `minApiLevel` de la app de 3.2.0 a
+3.1.0 (el código no usa nada por encima de 3.1). Ninguna familia de pantalla es nueva —218, 240, 260,
 280, 390, 416 y 454 px ya estaban resueltas—, pero sí hubo dos arreglos que
 solo se ven en relojes viejos: `Activity.SPORT_RUNNING` (no existe antes de
 Connect IQ 3.2 y tumbaba la app al dar la salida) y las ruedas de ajustes, que
@@ -60,20 +61,20 @@ en las pantallas MIP salían en blanco sobre blanco.
 
 **ES**
 
-> - Dieciséis relojes más: fēnix 8 Solar (47 y 51 mm), fēnix 8 Pro, fēnix E,
+> - Dieciocho relojes más: fēnix 8 Solar (47 y 51 mm), fēnix 8 Pro, fēnix E,
 >   fēnix 7 Pro, 7S Pro y 7X Pro (también las versiones sin wifi), epix Pro
->   (42, 47 y 51 mm) y la generación fēnix 5 de 2017 — fēnix 5, 5S y 5X, con
->   el tactix Charlie y el fēnix Chronos.
+>   (42, 47 y 51 mm), la generación fēnix 5 de 2017 — fēnix 5, 5S y 5X, con
+>   el tactix Charlie y el fēnix Chronos — y el Forerunner 645 y 645 Music.
 > - Las ruedas de los ajustes —hora de salida, duración y distancia— se ven
 >   ahora en negro con cifras blancas en todos los relojes. En los de pantalla
 >   MIP salían en blanco sobre blanco, ilegibles.
 
 **EN**
 
-> - Sixteen more watches: fēnix 8 Solar (47 and 51 mm), fēnix 8 Pro, fēnix E,
+> - Eighteen more watches: fēnix 8 Solar (47 and 51 mm), fēnix 8 Pro, fēnix E,
 >   fēnix 7 Pro, 7S Pro and 7X Pro (no-wifi versions too), epix Pro (42, 47
->   and 51 mm), and the 2017 fēnix 5 generation — fēnix 5, 5S and 5X, plus
->   tactix Charlie and fēnix Chronos.
+>   and 51 mm), the 2017 fēnix 5 generation — fēnix 5, 5S and 5X, plus
+>   tactix Charlie and fēnix Chronos — and the Forerunner 645 and 645 Music.
 > - The settings wheels — start time, lap duration and distance — are now
 >   black with white figures on every watch. On MIP screens they came out
 >   white on white, unreadable.
