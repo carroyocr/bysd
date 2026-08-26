@@ -2,13 +2,13 @@ import React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import SponsorsSection from '../components/SponsorsSection';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
-import useHasSponsors from '../hooks/useHasSponsors';
+import useSponsorsPageVisible from '../hooks/useSponsorsPageVisible';
 
 export default function PatrocinadoresPage() {
   const { raceCode } = useParams();
   const { config } = useRaceConfig();
   const displayRaceCode = raceCode || config?.code;
-  const { hasSponsors, loading } = useHasSponsors(displayRaceCode);
+  const { visible, loading } = useSponsorsPageVisible(displayRaceCode);
 
   // Mientras se consulta no se decide nada: evita el parpadeo del redirect
   if (loading) {
@@ -23,8 +23,9 @@ export default function PatrocinadoresPage() {
     );
   }
 
-  // La página solo existe cuando la carrera tiene patrocinadores publicados
-  if (!hasSponsors) {
+  // La página existe si su interruptor está encendido, se decide en
+  // Administración > Carreras y no depende de que haya patrocinadores cargados
+  if (!visible) {
     return <Navigate to="/" replace />;
   }
 

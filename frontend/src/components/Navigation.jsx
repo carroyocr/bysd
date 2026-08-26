@@ -4,7 +4,6 @@ import { Menu, X, ChevronDown, ChevronRight, History, User } from 'lucide-react'
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
-import useHasSponsors from '../hooks/useHasSponsors';
 import { isNative } from '../lib/platform';
 import {
   DropdownMenu,
@@ -41,7 +40,7 @@ export default function Navigation() {
   const [pastRaces, setPastRaces] = useState([]);
   const [expandedMobile, setExpandedMobile] = useState({ anteriores: false });
   const [expandedPastRace, setExpandedPastRace] = useState({});
-  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true });
+  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true, showSponsors: true });
   const [menuLogo, setMenuLogo] = useState('/icon-bu.png');
   const location = useLocation();
   const { getYear, config } = useRaceConfig();
@@ -64,7 +63,8 @@ export default function Navigation() {
           setPageVisibility({
             showTracking: data.show_tracking_page,
             showCommunity: data.show_community_page,
-            showPreregistration: data.show_preregistration !== false
+            showPreregistration: data.show_preregistration !== false,
+            showSponsors: data.show_sponsors_page !== false
           });
         }
       } catch (error) {
@@ -143,9 +143,6 @@ export default function Navigation() {
   // Get active race code for direct links
   const activeRaceCode = activeRace?.code?.toLowerCase() || config?.code?.toLowerCase() || 'bysd-2027';
 
-  // Solo se enseña Patrocinadores si la carrera activa ya tiene alguno publicado
-  const { hasSponsors: activeRaceHasSponsors } = useHasSponsors(activeRaceCode);
-
   const isPatrocinadoresActive = location.pathname.includes('/patrocinadores');
   const isResultadosActive = location.pathname.includes('/resultados') || location.pathname === '/en-vivo';
   const isComunidadActive = location.pathname.includes('/comunidad');
@@ -206,8 +203,8 @@ export default function Navigation() {
               </Link>
             ))}
 
-            {/* Direct link to active race Patrocinadores - Only show if the race has sponsors */}
-            {activeRaceHasSponsors && (
+            {/* Direct link to active race Patrocinadores - Only show if the sponsors page is enabled */}
+            {pageVisibility.showSponsors && (
               <Link
                 to={`/patrocinadores/${activeRaceCode}`}
                 className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
@@ -272,11 +269,13 @@ export default function Navigation() {
                       </DropdownMenuSubTrigger>
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent className="min-w-[140px]">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/patrocinadores/${race.code.toLowerCase()}`}>
-                              Patrocinadores
-                            </Link>
-                          </DropdownMenuItem>
+                          {race.show_sponsors_page !== false && (
+                            <DropdownMenuItem asChild>
+                              <Link to={`/patrocinadores/${race.code.toLowerCase()}`}>
+                                Patrocinadores
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem asChild>
                             <Link to={`/resultados/${race.code.toLowerCase()}`}>
                               Resultados
@@ -356,7 +355,7 @@ export default function Navigation() {
                   ))}
 
                   {/* Direct links to active race pages */}
-                  {activeRaceHasSponsors && (
+                  {pageVisibility.showSponsors && (
                     <Link
                       to={`/patrocinadores/${activeRaceCode}`}
                       onClick={handleLinkClick}
@@ -432,13 +431,15 @@ export default function Navigation() {
                               </button>
                               {expandedPastRace[race.code] && (
                                 <div className="ml-4 mt-1 space-y-1">
-                                  <Link
-                                    to={`/patrocinadores/${race.code.toLowerCase()}`}
-                                    onClick={handleLinkClick}
-                                    className="block px-4 py-2 text-sm rounded-lg text-muted-foreground hover:text-primary hover:bg-secondary/30"
-                                  >
-                                    Patrocinadores
-                                  </Link>
+                                  {race.show_sponsors_page !== false && (
+                                    <Link
+                                      to={`/patrocinadores/${race.code.toLowerCase()}`}
+                                      onClick={handleLinkClick}
+                                      className="block px-4 py-2 text-sm rounded-lg text-muted-foreground hover:text-primary hover:bg-secondary/30"
+                                    >
+                                      Patrocinadores
+                                    </Link>
+                                  )}
                                   <Link
                                     to={`/resultados/${race.code.toLowerCase()}`}
                                     onClick={handleLinkClick}
