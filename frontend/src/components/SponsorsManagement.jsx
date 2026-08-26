@@ -40,10 +40,11 @@ const DEFAULT_PUBLICAR_DESDE = 'cierre';
 const getStatusInfo = (status) =>
   STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
 
-const isPublished = (sponsor, destino = 'web') => {
+// Si el proceso comercial ya llegó al momento de publicar. No dice dónde se
+// ve: eso lo deciden los interruptores de su ficha, en Publicidad. Aquí solo
+// se sabe si el proceso deja de estorbar.
+const procesoPermitePublicar = (sponsor) => {
   if (!sponsor.is_active) return false;
-  // Cada sitio tiene su interruptor; sin el campo (los de antes) va encendido
-  if (sponsor[destino === 'app' ? 'publicar_app' : 'publicar_web'] === false) return false;
   // Publicación apagada por defecto: sin status cuenta como "prospecto"
   const idx = PIPELINE_ORDER.indexOf(sponsor.status || 'prospecto');
   if (idx === -1) return false; // declinado
@@ -498,7 +499,7 @@ export default function SponsorsManagement() {
           <h2 className="text-2xl font-bold">Patrocinadores</h2>
           <p className="text-muted-foreground">
             Gestiona los patrocinadores y su proceso de cierre • {sponsors.length} registrados •{' '}
-            {sponsors.filter(isPublished).length} publicados en el sitio
+            {sponsors.filter(procesoPermitePublicar).length} listos para publicar
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -865,7 +866,7 @@ export default function SponsorsManagement() {
         ) : (
           sponsors.map((sponsor) => {
             const statusInfo = getStatusInfo(sponsor.status);
-            const publicado = isPublished(sponsor);
+            const publicado = procesoPermitePublicar(sponsor);
             const ultima = ultimoContacto(sponsor);
             const categoria = getCategory(sponsor.propuesta_categoria);
             return (
@@ -928,15 +929,17 @@ export default function SponsorsManagement() {
                           <Badge className={`text-xs ${statusInfo.badgeClass} hover:${statusInfo.badgeClass}`}>
                             {statusInfo.label}
                           </Badge>
+                          {/* El proceso, no el resultado: dónde se ve de verdad
+                              lo mandan los interruptores de su ficha, en Publicidad. */}
                           {publicado ? (
                             <Badge className="text-xs bg-green-600 text-white hover:bg-green-600 flex items-center gap-1">
                               <Eye className="w-3 h-3" />
-                              Publicado
+                              Listo para publicar
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs text-muted-foreground flex items-center gap-1">
                               <EyeOff className="w-3 h-3" />
-                              No publicado
+                              Aún no
                             </Badge>
                           )}
                         </h3>

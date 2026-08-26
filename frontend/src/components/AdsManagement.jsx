@@ -23,7 +23,8 @@ const EMPTY_FORM = {
   weight: 1,
   start_at: '',
   end_at: '',
-  is_active: true,
+  publicar_web: true,
+  publicar_app: true,
   mostrar_marca: true,
 };
 
@@ -41,55 +42,6 @@ export default function AdsManagement() {
   const [saving, setSaving] = useState(false);
   const uploadTargetRef = useRef(null);
   const fileInputRef = useRef(null);
-  // Los patrocinadores de la carrera, para decidir aquí dónde se ve cada uno.
-  // Quién se ve de verdad no se recalcula aquí: se pregunta a las dos listas
-  // públicas, que son exactamente lo que reciben el sitio y la app.
-  const [sponsors, setSponsors] = useState([]);
-  const [visibles, setVisibles] = useState({ web: [], app: [] });
-
-  const fetchSponsors = useCallback(async () => {
-    if (!raceCode) return;
-    try {
-      const [admin, web, app] = await Promise.all([
-        adminFetch(`${API_URL}/api/sponsors/admin/race/${raceCode}`),
-        fetch(`${API_URL}/api/sponsors/race/${raceCode}`),
-        fetch(`${API_URL}/api/sponsors/race/${raceCode}?destino=app`),
-      ]);
-      if (!admin.ok) return;
-      const { sponsors: todos } = await admin.json();
-      const enWeb = web.ok ? (await web.json()).sponsors : [];
-      const enApp = app.ok ? (await app.json()).sponsors : [];
-      setSponsors(todos || []);
-      setVisibles({
-        web: (enWeb || []).map((x) => x.name),
-        app: (enApp || []).map((x) => x.name),
-      });
-    } catch (error) {
-      /* la publicidad se puede llevar igual sin esta lista */
-    }
-  }, [raceCode]);
-
-  const cambiarVisibilidad = async (sponsor, campo) => {
-    const siguiente = sponsor[campo] === false;
-    try {
-      const response = await adminFetch(
-        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${raceCode}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [campo]: siguiente }),
-        }
-      );
-      if (response.ok) {
-        fetchSponsors();
-      } else {
-        toast.error('No se pudo cambiar la visibilidad');
-      }
-    } catch (error) {
-      toast.error('Error de conexión');
-    }
-  };
-
   const fetchBanners = useCallback(async () => {
     if (!raceCode) return;
     setLoading(true);
@@ -111,10 +63,6 @@ export default function AdsManagement() {
     fetchBanners();
   }, [fetchBanners]);
 
-  useEffect(() => {
-    fetchSponsors();
-  }, [fetchSponsors]);
-
   const openCreate = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
@@ -132,7 +80,8 @@ export default function AdsManagement() {
       weight: banner.weight || 1,
       start_at: toInputValue(banner.start_at),
       end_at: toInputValue(banner.end_at),
-      is_active: banner.is_active !== false,
+      publicar_web: banner.publicar_web !== false,
+      publicar_app: banner.publicar_app !== false,
       mostrar_marca: banner.mostrar_marca !== false,
     });
     setShowForm(true);
@@ -154,7 +103,8 @@ export default function AdsManagement() {
         weight: Number(form.weight) || 1,
         start_at: form.start_at || '',
         end_at: form.end_at || '',
-        is_active: form.is_active,
+        publicar_web: form.publicar_web,
+        publicar_app: form.publicar_app,
         mostrar_marca: form.mostrar_marca,
       };
       let response;
@@ -207,17 +157,21 @@ export default function AdsManagement() {
     }
   };
 
-  const handleToggleActive = async (banner) => {
+  // Donde se ve esta ficha. "App" manda tambien en el pie publicitario: antes
+  // eran dos interruptores distintos -"App" del patrocinador y "Activo" de la
+  // ficha- que decidian lo mismo sin verse entre ellos.
+  const cambiarDonde = async (banner, campo) => {
+    const siguiente = banner[campo] === false;
     try {
       const response = await adminFetch(`${API_URL}/api/ads/${banner.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !banner.is_active }),
+        body: JSON.stringify({ [campo]: siguiente }),
       });
       if (response.ok) {
         fetchBanners();
       } else {
-        toast.error('No se pudo cambiar el estado');
+        toast.error('No se pudo cambiar dónde se ve');
       }
     } catch (error) {
       toast.error('Error de conexión');
@@ -418,14 +372,25 @@ export default function AdsManagement() {
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 mt-3 text-sm">
-              <input
-                type="checkbox"
-                checked={form.is_active}
-                onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-              />
-              Activo (visible en la rotación)
-            </label>
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-medium">Dónde se ve</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.publicar_web}
+                  onChange={(e) => setForm({ ...form, publicar_web: e.target.checked })}
+                />
+                Sitio — página de patrocinadores
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.publicar_app}
+                  onChange={(e) => setForm({ ...form, publicar_app: e.target.checked })}
+                />
+                App — pantalla de patrocinadores y rotación del pie
+              </label>
+            </div>
             <label className="flex items-start gap-2 mt-2 text-sm">
               <input
                 type="checkbox"
@@ -463,7 +428,7 @@ export default function AdsManagement() {
             {banners.map((banner, index) => (
               <div
                 key={banner.id}
-                className={`flex flex-wrap items-center gap-3 border rounded-xl px-3 py-2.5 ${banner.is_active ? '' : 'opacity-55'}`}
+                className={`flex flex-wrap items-center gap-3 border rounded-xl px-3 py-2.5 ${banner.publicar_app === false && banner.publicar_web === false ? 'opacity-55' : ''}`}
               >
                 <div className="flex flex-col gap-0.5">
                   <button
@@ -565,10 +530,19 @@ export default function AdsManagement() {
                   </Button>
                   <Button
                     size="sm"
-                    variant={banner.is_active ? 'secondary' : 'default'}
-                    onClick={() => handleToggleActive(banner)}
+                    variant={banner.publicar_web === false ? 'outline' : 'secondary'}
+                    onClick={() => cambiarDonde(banner, 'publicar_web')}
+                    title="Página de patrocinadores del sitio"
                   >
-                    {banner.is_active ? 'Pausar' : 'Activar'}
+                    <Globe className="w-3.5 h-3.5 mr-1" /> Sitio {banner.publicar_web === false ? 'no' : 'sí'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={banner.publicar_app === false ? 'outline' : 'secondary'}
+                    onClick={() => cambiarDonde(banner, 'publicar_app')}
+                    title="Pantalla de patrocinadores de BYSD Live y rotación del pie"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 mr-1" /> App {banner.publicar_app === false ? 'no' : 'sí'}
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => handleDelete(banner)}>
                     <Trash2 className="w-3.5 h-3.5" />
@@ -580,7 +554,7 @@ export default function AdsManagement() {
         )}
 
         {/* Vista previa: el banner tal como se ve en el pie de /live (modo oscuro) */}
-        {banners.filter((b) => b.is_active).length > 0 && (
+        {banners.filter((b) => b.publicar_app !== false).length > 0 && (
           <div className="mt-6">
             <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
               Vista previa del pie (modo oscuro)
@@ -590,7 +564,7 @@ export default function AdsManagement() {
                 Patrocinador
               </span>
               {(() => {
-                const first = banners.find((b) => b.is_active);
+                const first = banners.find((b) => b.publicar_app !== false);
                 return (
                   <>
                     {first.logo_url ? (
@@ -617,80 +591,6 @@ export default function AdsManagement() {
       </CardContent>
     </Card>
 
-    {/* Dónde se ve cada patrocinador. Vive aquí y no en Patrocinadores porque
-        aquella sección es la gestión comercial —el proceso, los contactos, la
-        bitácora— y esto es publicación: lo mismo que se decide de los banners. */}
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Globe className="w-5 h-5" /> Dónde se ve cada patrocinador
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          El sitio y la app se encienden por separado. Un patrocinador puede estar en la
-          página de patrocinadores y no en la app, o al revés.
-        </p>
-      </CardHeader>
-      <CardContent>
-        {sponsors.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Esta carrera no tiene patrocinadores.</p>
-        ) : (
-          <div className="space-y-2">
-            {sponsors.map((sponsor) => {
-              const enWeb = visibles.web.includes(sponsor.name);
-              const enApp = visibles.app.includes(sponsor.name);
-              const apagadoWeb = sponsor.publicar_web === false;
-              const apagadoApp = sponsor.publicar_app === false;
-              return (
-                <div
-                  key={sponsor.name}
-                  className={`flex flex-wrap items-center gap-3 border rounded-xl px-3 py-2.5 ${sponsor.is_active ? '' : 'opacity-55'}`}
-                >
-                  {sponsor.logo_url ? (
-                    <img
-                      src={`${API_URL}${sponsor.logo_url}`}
-                      alt={sponsor.name}
-                      className="w-10 h-10 rounded-lg object-contain bg-white border"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-[9px] font-bold text-muted-foreground">
-                      SIN LOGO
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm truncate">{sponsor.name}</p>
-                    {/* El interruptor encendido no basta: si el proceso comercial
-                        no ha llegado al momento de publicar, no se ve igual. */}
-                    {!enWeb && !apagadoWeb && !enApp && !apagadoApp && (
-                      <p className="text-[11px] text-muted-foreground">
-                        Todavía no se publica: el proceso no ha llegado al momento elegido en Patrocinadores.
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <Button
-                      size="sm"
-                      variant={apagadoWeb ? 'outline' : 'secondary'}
-                      onClick={() => cambiarVisibilidad(sponsor, 'publicar_web')}
-                      title="Página de patrocinadores del sitio"
-                    >
-                      <Globe className="w-3.5 h-3.5 mr-1" /> Sitio {apagadoWeb ? 'no' : 'sí'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={apagadoApp ? 'outline' : 'secondary'}
-                      onClick={() => cambiarVisibilidad(sponsor, 'publicar_app')}
-                      title="Menú, pantalla de patrocinadores y pie publicitario de BYSD Live"
-                    >
-                      <Smartphone className="w-3.5 h-3.5 mr-1" /> App {apagadoApp ? 'no' : 'sí'}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
     </div>
   );
 }

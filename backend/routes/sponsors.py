@@ -51,17 +51,13 @@ ORDERED_PIPELINE = [s for s in SPONSOR_STATUSES if s != "declinado"]
 DEFAULT_PUBLICAR_DESDE = "cierre"
 
 
-def sponsor_esta_publicado(doc: dict, destino: str = "web") -> bool:
-    """Si un patrocinador se ensena, y donde.
+def proceso_permite_publicar(doc: dict) -> bool:
+    """Si el proceso comercial de un patrocinador ya llego al momento de salir.
 
-    El sitio y la app se encienden por separado: un patrocinador puede estar
-    en la pagina de patrocinadores y no salir en el pie de la app, o al reves.
-    Antes era la misma decision para los dos sitios, asi que apagarlo en uno
-    lo apagaba en el otro. Sin el campo (los de antes) cuenta como encendido.
+    Es el unico filtro que sigue siendo del patrocinador: "no lo ensenes hasta
+    que firme" es una decision comercial, no de publicacion. Donde se ve -sitio
+    o app- lo decide ahora su ficha de publicidad, no esto.
     """
-    interruptor = "publicar_app" if destino == "app" else "publicar_web"
-    if doc.get(interruptor) is False:
-        return False
     status = doc.get("status") or "prospecto"
     if status not in ORDERED_PIPELINE:
         return False  # declinado o valor desconocido
@@ -84,7 +80,7 @@ PUBLIC_FIELDS = {
 
 # Los dos interruptores de publicacion no son de la vitrina, pero hacen falta
 # para decidir quien sale: se piden aparte y se quitan antes de responder.
-CAMPOS_PUBLICACION = {"status": 1, "publicar_desde": 1, "publicar_web": 1, "publicar_app": 1}
+CAMPOS_PUBLICACION = {"status": 1, "publicar_desde": 1}
 
 # Uploads directory for sponsor logos
 UPLOADS_DIR = Path(__file__).parent.parent / "static" / "uploads" / "sponsors"
@@ -107,8 +103,6 @@ class SponsorCreate(BaseModel):
     propuesta_monto: Optional[float] = None
     status: Optional[str] = "prospecto"
     publicar_desde: Optional[str] = None
-    publicar_web: bool = True
-    publicar_app: bool = True
 
 
 class SponsorUpdate(BaseModel):
@@ -126,8 +120,6 @@ class SponsorUpdate(BaseModel):
     propuesta_monto: Optional[float] = None
     status: Optional[str] = None
     publicar_desde: Optional[str] = None
-    publicar_web: Optional[bool] = None
-    publicar_app: Optional[bool] = None
 
 
 class BitacoraEntry(BaseModel):
@@ -198,25 +190,44 @@ async def get_sponsors_by_race(race_code: str, destino: str = "web", db=Depends(
     """Patrocinadores publicados de una carrera (publico).
 
     `destino` dice quien pregunta: "web" es la pagina de patrocinadores del
-    sitio y "app" el BYSD Live. Cada uno tiene su interruptor, asi que la
-    misma carrera puede ensenar listas distintas en cada sitio.
+    sitio y "app" el BYSD Live. Quien sale donde lo decide **la ficha de
+    publicidad** de cada uno, que es donde viven los dos interruptores; aqui
+    solo se le pregunta. Lo que si sigue siendo del patrocinador es si su
+    proceso comercial llego al momento de publicar.
+
+    La ficha se busca por nombre y carrera, que es como se direcciona un
+    patrocinador en todo el backend. Un patrocinador sin ficha -no deberia
+    haberlos, cada alta estrena la suya- se ensena: no se le castiga por una
+    ficha que falta.
     """
+    code = race_code.upper()
     # Los campos de publicacion se necesitan para decidir quien sale, pero se
     # quitan antes de responder: son datos del panel.
     projection = {**PUBLIC_FIELDS, **CAMPOS_PUBLICACION}
     docs = await db.sponsors.find(
-        {"race_code": race_code.upper(), "is_active": True},
+        {"race_code": code, "is_active": True},
         projection
     ).sort("order", 1).to_list(100)
 
+    interruptor = "publicar_app" if destino == "app" else "publicar_web"
+    fichas = await db.ad_banners.find(
+        {"race_code": code},
+        {"_id": 0, "name": 1, interruptor: 1},
+    ).to_list(200)
+    apagados = {
+        f["name"] for f in fichas if f.get(interruptor) is False
+    }
+
     sponsors = []
     for doc in docs:
-        if sponsor_esta_publicado(doc, destino):
+        if doc.get("name") in apagados:
+            continue
+        if proceso_permite_publicar(doc):
             for campo in CAMPOS_PUBLICACION:
                 doc.pop(campo, None)
             sponsors.append(doc)
 
-    return {"sponsors": sponsors, "race_code": race_code.upper()}
+    return {"sponsors": sponsors, "race_code": code}
 
 
 @router.get("/admin/race/{race_code}", dependencies=[solo_sponsors])
@@ -278,8 +289,6 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
         "propuesta_monto": sponsor.propuesta_monto,
         "status": status,
         "publicar_desde": publicar_desde,
-        "publicar_web": sponsor.publicar_web,
-        "publicar_app": sponsor.publicar_app,
         "bitacora": [],
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
