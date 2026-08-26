@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
-import { IconSeguir, IconInstagram } from './icons';
+import { IconSeguir } from './icons';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { SPONSOR_CATEGORIES, getCategory } from '../lib/sponsorCategories';
 
@@ -29,34 +29,27 @@ const PRESENTACION = {
     grid: 'grid-cols-1 max-w-2xl mx-auto',
     logo: 'h-40',
     nombre: 'text-3xl sm:text-4xl',
-    descripcion: true,
     tono: 'bg-foreground text-background border-transparent shadow-strong',
     fondoLogo: 'bg-background/95',
-    enlace: 'text-primary hover:opacity-80',
   },
   platino: {
     grid: 'sm:grid-cols-2',
     logo: 'h-32',
     nombre: 'text-2xl',
-    descripcion: true,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
-    enlace: 'text-primary hover:text-accent',
   },
   oro: {
     grid: 'sm:grid-cols-2 lg:grid-cols-3',
     logo: 'h-28',
     nombre: 'text-xl',
-    descripcion: true,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
-    enlace: 'text-primary hover:text-accent',
   },
   plata: {
     grid: 'grid-cols-2 lg:grid-cols-4',
     logo: 'h-24',
     nombre: 'text-base',
-    descripcion: false,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
   },
@@ -64,7 +57,6 @@ const PRESENTACION = {
     grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
     logo: 'h-20',
     nombre: 'text-sm',
-    descripcion: false,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
   },
@@ -72,16 +64,13 @@ const PRESENTACION = {
     grid: 'grid-cols-1',
     logo: 'h-32',
     nombre: 'text-2xl sm:text-3xl',
-    descripcion: true,
     tono: 'bg-accent text-accent-foreground border-transparent shadow-medium',
     fondoLogo: 'bg-background/95',
-    enlace: 'hover:opacity-80',
   },
   especie: {
     grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
     logo: 'h-24',
     nombre: 'text-base',
-    descripcion: false,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
   },
@@ -92,7 +81,6 @@ const PRESENTACION = {
     grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4',
     logo: 'h-24',
     nombre: 'text-base',
-    descripcion: false,
     tono: CLARO,
     fondoLogo: FONDO_LOGO_CLARO,
   },
@@ -100,7 +88,6 @@ const PRESENTACION = {
     grid: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
     logo: 'h-16',
     nombre: 'text-sm',
-    descripcion: false,
     tono: 'bg-muted/30 border-border/60',
     fondoLogo: 'bg-background/60',
   },
@@ -113,29 +100,16 @@ const SIN_CATEGORIA = {
   grid: 'sm:grid-cols-2 lg:grid-cols-3',
   logo: 'h-32',
   nombre: 'text-xl',
-  descripcion: true,
   tono: CLARO,
   fondoLogo: FONDO_LOGO_CLARO,
-  enlace: 'text-primary hover:text-accent',
 };
 
+// La vitrina enseña el logo, el nombre y poco más. La descripción y el
+// Instagram se mudaron a la ficha de publicidad, que es donde vive lo que se
+// le cuenta al público; aquí quedó lo que distingue un nivel de otro.
 function TarjetaPatrocinador({ sponsor, estilo }) {
-  // Sin descripción que leer, la tarjeta entera es el enlace: no hay dónde
-  // poner un "Ver en Instagram" sin apretar el logo.
-  const enlaceCompleto = !!sponsor.instagram && !estilo.descripcion;
-  const Contenedor = enlaceCompleto ? 'a' : 'div';
-  const propsEnlace = enlaceCompleto
-    ? {
-        href: sponsor.instagram,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        'aria-label': `${sponsor.name} en Instagram`,
-      }
-    : {};
-
   return (
-    <Contenedor
-      {...propsEnlace}
+    <div
       className={`block rounded-xl border p-5 space-y-4 transition-all duration-300 hover-lift ${estilo.tono}`}
     >
       <div className={`w-full ${estilo.logo} flex items-center justify-center rounded-lg p-4 ${estilo.fondoLogo}`}>
@@ -153,22 +127,8 @@ function TarjetaPatrocinador({ sponsor, estilo }) {
 
       <div className={`space-y-2 ${estilo.centrado ? 'text-center' : ''}`}>
         <h4 className={`font-display leading-tight ${estilo.nombre}`}>{sponsor.name}</h4>
-        {estilo.descripcion && sponsor.description && (
-          <p className="text-sm leading-relaxed opacity-80">{sponsor.description}</p>
-        )}
-        {estilo.descripcion && sponsor.instagram && (
-          <a
-            href={sponsor.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1.5 text-sm font-semibold transition-colors ${estilo.enlace || ''}`}
-          >
-            <IconInstagram className="w-4 h-4" />
-            Ver en Instagram
-          </a>
-        )}
       </div>
-    </Contenedor>
+    </div>
   );
 }
 
@@ -238,8 +198,6 @@ export default function SponsorsSection({ raceCode }) {
             // Map API response to match the expected format
             const mappedSponsors = (data.sponsors || []).map(s => ({
               name: s.name,
-              description: s.description,
-              instagram: s.instagram,
               categoria: s.propuesta_categoria || '',
               // Convert relative logo URL to full URL
               logo: s.logo_url ? `${process.env.REACT_APP_BACKEND_URL}${s.logo_url}` : null

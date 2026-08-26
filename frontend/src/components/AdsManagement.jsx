@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   name: '',
   text: '',
   link_url: '',
+  description: '',
+  instagram: '',
   weight: 1,
   start_at: '',
   end_at: '',
@@ -125,6 +127,8 @@ export default function AdsManagement() {
       name: banner.name || '',
       text: banner.text || '',
       link_url: banner.link_url || '',
+      description: banner.description || '',
+      instagram: banner.instagram || '',
       weight: banner.weight || 1,
       start_at: toInputValue(banner.start_at),
       end_at: toInputValue(banner.end_at),
@@ -145,6 +149,8 @@ export default function AdsManagement() {
         name: form.name.trim(),
         text: form.text.trim(),
         link_url: form.link_url.trim(),
+        description: form.description.trim(),
+        instagram: form.instagram.trim(),
         weight: Number(form.weight) || 1,
         start_at: form.start_at || '',
         end_at: form.end_at || '',
@@ -365,6 +371,24 @@ export default function AdsManagement() {
                   value={form.link_url}
                   onChange={(e) => setForm({ ...form, link_url: e.target.value })}
                   placeholder="https://aguacristal.do"
+                />
+              </div>
+              <div>
+                <Label>Instagram</Label>
+                <Input
+                  value={form.instagram}
+                  onChange={(e) => setForm({ ...form, instagram: e.target.value })}
+                  placeholder="https://www.instagram.com/usuario/"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Descripción</Label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Qué es y qué aporta al evento…"
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
                 />
               </div>
               <div>

@@ -73,8 +73,11 @@ def sponsor_esta_publicado(doc: dict, destino: str = "web") -> bool:
 # El endpoint publico solo expone los campos de la vitrina del sitio; los
 # datos comerciales (RNC, montos, bitacora, contactos) son solo del panel.
 # La categoria si sale al publico: es la que agrupa la vitrina del sitio.
+# La descripcion y el Instagram ya no salen: se mudaron a la ficha de
+# publicidad (routes/ads.py). En la vitrina queda el logo, el nombre y la
+# categoria, que es lo que distingue a un nivel de otro.
 PUBLIC_FIELDS = {
-    "_id": 0, "name": 1, "description": 1, "instagram": 1,
+    "_id": 0, "name": 1,
     "logo_url": 1, "order": 1, "race_code": 1, "is_active": 1,
     "propuesta_categoria": 1,
 }
@@ -90,8 +93,6 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 class SponsorCreate(BaseModel):
     name: str
-    description: str
-    instagram: Optional[str] = None
     race_code: str
     order: Optional[int] = 0
     # Datos comerciales (CRM)
@@ -112,8 +113,6 @@ class SponsorCreate(BaseModel):
 
 class SponsorUpdate(BaseModel):
     name: Optional[str] = None
-    description: Optional[str] = None
-    instagram: Optional[str] = None
     order: Optional[int] = None
     is_active: Optional[bool] = None
     razon_social: Optional[str] = None
@@ -157,6 +156,42 @@ def logo_filename(race_code: str, sponsor_name: str, ext: str = "png") -> str:
 def get_db():
     from server import db
     return db
+
+
+async def estrenar_ficha_publicidad(db, sponsor: dict) -> dict | None:
+    """Le crea al patrocinador su ficha de publicidad, si no la tiene ya.
+
+    Nace **apagada** y sin imagenes a proposito: un banner sin pieza grafica
+    en el pie de BYSD Live se veria como un hueco con un nombre. Lo unico que
+    queda por hacer es subirle el logo, el banner y la imagen de detalle, y
+    encenderla.
+
+    Devuelve None si ya habia una para ese patrocinador, para que reponer un
+    patrocinador borrado no duplique fichas.
+    """
+    from routes.ads import nuevo_banner
+
+    race_code = sponsor["race_code"]
+    ya_hay = await db.ad_banners.find_one({
+        "race_code": race_code,
+        "name": sponsor["name"],
+    })
+    if ya_hay:
+        return None
+
+    orden = await db.ad_banners.count_documents({"race_code": race_code})
+    banner = nuevo_banner(
+        race_code,
+        sponsor["name"],
+        order=orden,
+        sponsor_id=sponsor.get("id"),
+        description=sponsor.get("description"),
+        instagram=sponsor.get("instagram"),
+        is_active=False,
+    )
+    await db.ad_banners.insert_one(banner)
+    banner.pop("_id", None)
+    return banner
 
 
 @router.get("/race/{race_code}")
@@ -229,8 +264,6 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
 
     sponsor_data = {
         "name": sponsor.name,
-        "description": sponsor.description,
-        "instagram": sponsor.instagram,
         "race_code": sponsor.race_code.upper(),
         "order": sponsor.order or next_order,
         "logo_url": None,
@@ -254,10 +287,16 @@ async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
     }
     
     await db.sponsors.insert_one(sponsor_data)
-    
+
+    banner = await estrenar_ficha_publicidad(db, sponsor_data)
+
     # Return without _id
     sponsor_data.pop("_id", None)
-    return {"message": "Patrocinador creado exitosamente", "sponsor": sponsor_data}
+    return {
+        "message": "Patrocinador creado exitosamente",
+        "sponsor": sponsor_data,
+        "banner_id": banner.get("id") if banner else None,
+    }
 
 
 @router.put("/update/{sponsor_name}", dependencies=[solo_sponsors])
@@ -422,8 +461,8 @@ async def add_bitacora_entry(
 async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
     """Traer patrocinadores de otra edicion a la carrera indicada.
 
-    Llega lo que sirve para volver a tocar la puerta (descripcion, Instagram,
-    logo y los datos de contacto), pero no el resultado de la negociacion
+    Llega lo que sirve para volver a tocar la puerta (logo y datos de
+    contacto), pero no el resultado de la negociacion
     anterior: el proceso empieza otra vez en "prospecto" y el monto de aquella
     vez queda solo como referencia en la bitacora, no como propuesta vigente.
     """
@@ -473,10 +512,8 @@ async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
         referencia = f" Entró como {categoria_anterior}." if categoria_anterior else ""
         referencia += f" Aportó RD${monto_anterior:,.2f}." if monto_anterior else ""
 
-        await db.sponsors.insert_one({
+        copia = {
             "name": name,
-            "description": fuente.get("description", ""),
-            "instagram": fuente.get("instagram"),
             "race_code": destino,
             "order": siguiente_orden,
             "logo_url": logo_url,
@@ -500,7 +537,15 @@ async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
             }],
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
-        })
+        }
+        await db.sponsors.insert_one(copia)
+
+        # En la carrera destino estrena su propia ficha de publicidad, con la
+        # descripcion y el Instagram de la edicion anterior ya dentro: son lo
+        # que sirve para volver a tocar la puerta.
+        copia["description"] = fuente.get("description", "")
+        copia["instagram"] = fuente.get("instagram")
+        await estrenar_ficha_publicidad(db, copia)
 
         siguiente_orden += 1
         copiados.append(name)
