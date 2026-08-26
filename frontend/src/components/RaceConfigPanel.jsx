@@ -9,7 +9,8 @@ import {
   Settings, Plus, Upload, Check, Calendar, Clock, MapPin, 
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
-  Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info, Bell
+  Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info, Bell,
+  Handshake
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -65,6 +66,7 @@ export default function RaceConfigPanel() {
     show_tracking_page: true,
     show_community_page: true,
     show_preregistration: true,
+    show_sponsors_page: true,
     show_volunteer_carrera: false
   });
 
@@ -104,6 +106,7 @@ export default function RaceConfigPanel() {
         show_tracking_page: activeData.show_tracking_page !== false,
         show_community_page: activeData.show_community_page !== false,
         show_preregistration: activeData.show_preregistration !== false,
+        show_sponsors_page: activeData.show_sponsors_page !== false,
         // Apagado salvo que esté explícitamente encendido
         show_volunteer_carrera: activeData.show_volunteer_carrera === true
       });
@@ -1389,6 +1392,35 @@ export default function RaceConfigPanel() {
                           <><Eye className="w-3 h-3 text-green-600" /> Activo - Boton "Inscribirme" visible en Mi Perfil</>
                         ) : (
                           <><EyeOff className="w-3 h-3 text-gray-500" /> Inactivo - Muestra "Proximamente" en Mi Perfil</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sponsors Page Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_sponsors_page ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_sponsors_page ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Handshake className={`w-5 h-5 ${editForm.show_sponsors_page ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Página de Patrocinadores</h4>
+                          <p className="text-sm text-muted-foreground">Enlace en el menú y página pública</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_sponsors_page}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_sponsors_page: checked})}
+                        data-testid="toggle-sponsors-page"
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_sponsors_page ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Visible - Aparece en el menú</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Oculta - No aparece en el menú</>
                         )}
                       </p>
                     </div>

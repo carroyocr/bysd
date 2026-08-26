@@ -46,6 +46,16 @@ class TestPageVisibility:
         assert isinstance(data["show_community_page"], bool), "show_community_page should be boolean"
         print(f"✓ show_community_page: {data['show_community_page']}")
     
+    def test_page_visibility_returns_show_sponsors_page(self):
+        """Test that response contains show_sponsors_page field"""
+        response = requests.get(f"{BASE_URL}/api/race-config/page-visibility")
+        assert response.status_code == 200
+        data = response.json()
+
+        assert "show_sponsors_page" in data, "Missing show_sponsors_page field"
+        assert isinstance(data["show_sponsors_page"], bool), "show_sponsors_page should be boolean"
+        print(f"✓ show_sponsors_page: {data['show_sponsors_page']}")
+
     def test_page_visibility_returns_race_name(self):
         """Test that response contains race_name field"""
         response = requests.get(f"{BASE_URL}/api/race-config/page-visibility")
@@ -234,6 +244,30 @@ class TestPageVisibilityUpdate:
         
         print(f"✓ Successfully updated show_tracking_page: {original_value} -> {new_value} -> {original_value}")
     
+    def test_update_show_sponsors_page(self, auth_token):
+        """Test updating show_sponsors_page setting"""
+        response = requests.get(f"{BASE_URL}/api/race-config/active")
+        assert response.status_code == 200
+        original_value = response.json().get("show_sponsors_page", True)
+        new_value = not original_value
+
+        response = requests.put(
+            f"{BASE_URL}/api/race-config/update",
+            json={"show_sponsors_page": new_value},
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+
+        response = requests.get(f"{BASE_URL}/api/race-config/active")
+        assert response.json()["show_sponsors_page"] == new_value
+
+        requests.put(
+            f"{BASE_URL}/api/race-config/update",
+            json={"show_sponsors_page": original_value},
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        print(f"✓ Successfully updated show_sponsors_page: {original_value} -> {new_value} -> {original_value}")
+
     def test_update_show_community_page(self, auth_token):
         """Test updating show_community_page setting"""
         headers = {"Authorization": f"Bearer {auth_token}"}
