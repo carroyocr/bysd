@@ -22,6 +22,7 @@ PUBLIC_FIELDS = {
     "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
     "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
     "mostrar_marca": 1, "description": 1, "instagram": 1,
+    "publicar_web": 1, "publicar_app": 1,
 }
 
 # banner_url: PNG del tamano exacto de la barra (1200x240, proporcion 5:1).
@@ -50,6 +51,11 @@ class BannerCreate(BaseModel):
     text: Optional[str] = None
     link_url: Optional[str] = None
     race_code: str
+    # Donde se ve esta ficha. Viven aqui y no en el patrocinador: alli queda
+    # solo lo comercial. "App" manda tambien en el pie publicitario, que antes
+    # tenia su propio "activo" y se pisaba con este.
+    publicar_web: bool = True
+    publicar_app: bool = True
     # La descripcion y el Instagram viven aqui, no en la ficha del
     # patrocinador: alli solo queda lo comercial. No son el texto ni el enlace
     # del banner, que son de una linea y del tamano de la barra.
@@ -58,7 +64,6 @@ class BannerCreate(BaseModel):
     weight: int = Field(default=1, ge=1, le=10)
     start_at: Optional[str] = None   # ISO; vigencia opcional
     end_at: Optional[str] = None
-    is_active: bool = True
     # La nota "Patrocinador" sobre el banner. Se puede quitar cuando la propia
     # pieza ya deja claro de quien es y la nota solo estorba.
     mostrar_marca: bool = True
@@ -73,9 +78,10 @@ class BannerUpdate(BaseModel):
     weight: Optional[int] = Field(default=None, ge=1, le=10)
     start_at: Optional[str] = None
     end_at: Optional[str] = None
-    is_active: Optional[bool] = None
     order: Optional[int] = None
     mostrar_marca: Optional[bool] = None
+    publicar_web: Optional[bool] = None
+    publicar_app: Optional[bool] = None
 
 
 class ReorderRequest(BaseModel):
@@ -114,7 +120,8 @@ def nuevo_banner(
     weight: int = 1,
     start_at: Optional[str] = None,
     end_at: Optional[str] = None,
-    is_active: bool = True,
+    publicar_web: bool = True,
+    publicar_app: bool = True,
     mostrar_marca: bool = True,
 ) -> dict:
     """El documento de una ficha de publicidad recien nacida.
@@ -141,7 +148,8 @@ def nuevo_banner(
         "weight": weight,
         "start_at": start_at,
         "end_at": end_at,
-        "is_active": is_active,
+        "publicar_web": publicar_web,
+        "publicar_app": publicar_app,
         "mostrar_marca": mostrar_marca,
         "order": order,
         "impressions": 0,
@@ -151,6 +159,17 @@ def nuevo_banner(
     }
 
 
+def _tiene_pieza(banner: dict) -> bool:
+    """Si la ficha tiene con que pintarse en el pie.
+
+    Sin banner, sin logo y sin imagen de detalle no hay nada que ensenar, y un
+    hueco con un nombre dentro es peor que no ensenar nada. Por eso el pie las
+    salta aunque esten encendidas: encender es una intencion, tener pieza es
+    poder cumplirla.
+    """
+    return any(banner.get(campo) for campo in IMAGENES.values())
+
+
 @router.get("/public")
 async def get_public_banners(race_code: Optional[str] = None, db=Depends(get_db)):
     """Banners activos y vigentes para el pie de la vista en vivo (público)."""
@@ -158,11 +177,11 @@ async def get_public_banners(race_code: Optional[str] = None, db=Depends(get_db)
     if not code:
         return []
     banners = await db.ad_banners.find(
-        {"race_code": code.upper(), "is_active": True},
+        {"race_code": code.upper(), "publicar_app": {"$ne": False}},
         PUBLIC_FIELDS | {"start_at": 1, "end_at": 1},
     ).sort("order", 1).to_list(100)
     now = datetime.now(timezone.utc)
-    vigentes = [b for b in banners if _vigente(b, now)]
+    vigentes = [b for b in banners if _vigente(b, now) and _tiene_pieza(b)]
     for b in vigentes:
         b.pop("start_at", None)
         b.pop("end_at", None)
@@ -173,16 +192,15 @@ async def get_public_banners(race_code: Optional[str] = None, db=Depends(get_db)
 async def pie_publicitario(race_code: Optional[str] = None, db=Depends(get_db)):
     """Lo que va en el pie de la app, ya resuelto. Publico.
 
-    El respaldo a los patrocinadores publicados vivia en la app, y desde alli
-    no se puede distinguir "esta carrera no tiene publicidad montada" de "la
-    tiene toda pausada": las dos cosas llegaban como una lista vacia. Al pausar
-    el unico banner, el pie resucitaba al mismo patrocinador por la puerta de
-    atras y pausar no servia de nada.
+    El pie ensena fichas y nada mas. Hubo un respaldo que armaba banners con
+    los patrocinadores cuando la carrera no tenia publicidad montada; se retiro
+    el 26 de agosto de 2026, cuando cada patrocinador paso a estrenar su propia
+    ficha al darlo de alta: ya no existe la carrera sin publicidad montada que
+    justificaba el respaldo, y mantener dos caminos al mismo pie solo servia
+    para que pausar no sirviera de nada.
 
-    La regla es la que se espera: si la carrera tiene banners montados, el pie
-    ensena solo los suyos que esten activos y en vigencia, aunque no quede
-    ninguno. El respaldo de patrocinadores es solo para las carreras que no
-    tienen publicidad montada.
+    Entra la ficha que este encendida para la app, en vigencia y **con alguna
+    imagen**: sin pieza no hay nada que pintar.
     """
     code = race_code or await _active_race_code(db)
     if not code:
@@ -191,52 +209,24 @@ async def pie_publicitario(race_code: Optional[str] = None, db=Depends(get_db)):
 
     montados = await db.ad_banners.find(
         {"race_code": code},
-        PUBLIC_FIELDS | {"start_at": 1, "end_at": 1, "is_active": 1},
+        PUBLIC_FIELDS | {"start_at": 1, "end_at": 1},
     ).sort("order", 1).to_list(100)
 
     now = datetime.now(timezone.utc)
-    vigentes = [b for b in montados if b.get("is_active") and _vigente(b, now)]
+    vigentes = [
+        b for b in montados
+        if b.get("publicar_app") is not False and _vigente(b, now) and _tiene_pieza(b)
+    ]
     for b in vigentes:
-        for campo in ("start_at", "end_at", "is_active"):
+        for campo in ("start_at", "end_at", "publicar_web", "publicar_app"):
             b.pop(campo, None)
 
     if vigentes:
         return {"banners": vigentes, "origen": "ads"}
     if montados:
-        # Los tiene, pero pausados o fuera de fecha: es una decision, se respeta.
+        # Las tiene, pero apagadas, fuera de fecha o sin pieza: se respeta.
         return {"banners": [], "origen": "pausados"}
-
-    from routes.sponsors import (
-        PUBLIC_FIELDS as SPONSOR_FIELDS,
-        CAMPOS_PUBLICACION,
-        sponsor_esta_publicado,
-    )
-
-    docs = await db.sponsors.find(
-        {"race_code": code, "is_active": True},
-        {**SPONSOR_FIELDS, **CAMPOS_PUBLICACION},
-    ).sort("order", 1).to_list(100)
-
-    respaldo = []
-    for i, s in enumerate(docs):
-        # El pie es app: manda el interruptor de la app, no el del sitio.
-        if not sponsor_esta_publicado(s, "app"):
-            continue
-        instagram = s.get("instagram") or ""
-        respaldo.append({
-            "id": f"sponsor-{code}-{i}",
-            "name": s.get("name"),
-            "text": s.get("description") or None,
-            "logo_url": s.get("logo_url") or None,
-            "link_url": (
-                instagram if instagram.startswith("http")
-                else f"https://instagram.com/{instagram.lstrip('@')}" if instagram
-                else None
-            ),
-            "is_sponsor_fallback": True,
-        })
-
-    return {"banners": respaldo, "origen": "patrocinadores"}
+    return {"banners": [], "origen": "vacio"}
 
 
 @router.get("/admin", dependencies=[solo_sponsors])
@@ -263,7 +253,8 @@ async def create_banner(data: BannerCreate, db=Depends(get_db)):
         weight=data.weight,
         start_at=data.start_at,
         end_at=data.end_at,
-        is_active=data.is_active,
+        publicar_web=data.publicar_web,
+        publicar_app=data.publicar_app,
         mostrar_marca=data.mostrar_marca,
     )
     await db.ad_banners.insert_one(doc)
