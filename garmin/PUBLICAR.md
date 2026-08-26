@@ -1,7 +1,12 @@
 # Publicar Backyard en la Connect IQ Store
 
 Estado y guía para subir los dos productos a la tienda de Garmin. Actualizado
-el 24 de agosto de 2026.
+el 26 de agosto de 2026.
+
+## Estado — la 1.4.0, publicada
+
+La **1.4.0 salió a la Connect IQ Store el 26 de agosto de 2026**: 104 relojes,
+174 builds, y dentro todo lo de la 1.3.0, que nunca se subió suelta.
 
 ## Estado técnico — listo
 
