@@ -1,12 +1,13 @@
 # Garmin — lo que queda
 
-Estado a 24 de agosto de 2026. La **1.3.0 está empaquetada** —la que suma los
-fēnix MIP, ver la sección de abajo— y le falta el envío a la tienda; la versión
-se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están en
-`garmin/PUBLICAR.md`.
+Estado a 26 de agosto de 2026. La **1.4.0 está empaquetada** —la del barrido
+de dispositivos: 104 relojes, ver la sección de abajo— y le falta el envío a la
+tienda. Se lleva dentro todo lo de la 1.3.0, que nunca llegó a subirse. La
+versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están
+en `garmin/PUBLICAR.md`.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
-46 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
+104 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
 están en [`garmin/README.md`](garmin/README.md); aquí solo está lo que falta.
 
 ## Qué cambió
@@ -95,7 +96,7 @@ sin un aviso y revienta en el reloj, en la única línea que importa —la que
 crea la sesión de grabación—. Arreglado en `BackyardApp._deporte()`, que
 pregunta con `has` y si no está usa el número del perfil FIT (correr = 1);
 nombrar `Rec.SPORT_RUNNING` compila, pero suelta un aviso de obsoleta en los
-otros 45 relojes.
+otros 47 relojes.
 
 **Cómo se traduce un crash así**, que es lo que costó encontrarlo: el id del
 símbolo está en el `api.debug.xml` del propio reloj —
@@ -129,6 +130,14 @@ es la capacidad del API `Application.Storage`. El bueno está en
 `compiler.json`, en `appTypes`: el fēnix 5X da **1,25 MB** para una watchApp y
 128 KB para un campo de datos, y las builds pesan 157 KB y 25 KB. Sobra sitio.
 
+**El Forerunner 645 y el 645 Music entran de propina.** Son de la misma
+cosecha que el fēnix 5 y comparten con él todo lo que importa: 240x240 MIP de
+8 bits, cinco botones, Connect IQ 3.1.6 y 128 KB de presupuesto para una
+watchApp (el Music sube a 1 MB). Tanto, que la build del 645 sale **byte a
+byte idéntica** a la del fēnix 5 —158 636 bytes de `.prg`, 29 376 de código y
+5 149 de datos—, así que no hubo que tocar ni una línea de código: dos ids en
+cada `manifest.xml` y dos líneas de icono de 40 px en cada `monkey.jungle`.
+
 **Ninguno estrena familia de pantalla**: las siete (218, 240, 260, 280, 390,
 416 y 454 px) ya se compilaban para otros relojes, así que no hizo falta tocar ni una
 línea de dibujo. Tampoco emblema nuevo: el reparto del `monkey.jungle` va por
@@ -137,7 +146,7 @@ dispositivo —el tamaño va por reloj, no por familia—; los de 65 px
 (`fenix8pro47mm`) usan el icono por defecto de `shared/resources` y no llevan
 línea.
 
-Los dos `.iq` de tienda vuelven a salir con **86 builds cada uno, sin un solo
+Los dos `.iq` de tienda vuelven a salir con **90 builds cada uno, sin un solo
 error ni aviso** (eran 52). La versión de `AcercaView.mc` subió a **1.3.0**, y
 las novedades ES/EN están en `garmin/PUBLICAR.md`.
 
@@ -154,9 +163,64 @@ apuntado abajo para el Instinct 2: en MIP **monocromo** el texto en
 `COLOR_DK_GRAY` no se ve. El Solar no es monocromo (8 bits de color), así que
 eso no le afecta.
 
-Quedan fuera a propósito los relojes que no son de la familia fēnix/epix
-(Instinct 3, Descent, D2): cada uno pide su comprobación, y el Instinct
-arrastra el problema del gris.
+Eso se escribió cuando quedaban fuera a propósito los relojes que no son de la
+familia fēnix/epix. **Ya no**: el barrido de la 1.4.0 metió los Descent, los D2,
+los Approach y los Instinct 3 AMOLED. Lo que sigue fuera son los Instinct
+monocromos, por el problema del gris.
+
+## El barrido de dispositivos (26-ago): de 48 a 104 relojes
+
+Revisados **los 166 dispositivos del SDK**, uno a uno, con los datos que
+manda: `appTypes` (si admite watchApp y campo de datos, y con cuánta memoria),
+`partNumbers` (la versión de Connect IQ de cada variante), `deviceFamily`,
+`bitsPerPixel` y `launcherIcon`. De ahí salieron **56 que entran sin tocar
+código**, y entraron todos.
+
+**No se tocó ni una línea de las vistas.** Ninguna familia de pantalla es
+nueva: las siete de siempre. Lo único escrito a mano fueron cuatro iconos del
+lanzador que no existían, sacados del de 70 px, que es el mayor con alfa:
+
+| Talla | Para quién |
+|---|---|
+| 30 px | vívoactive 4S, Captain Marvel, Rey |
+| 38 px | Instinct Crossover AMOLED |
+| 54 px | fr165, fr170, fr570 42 mm, fr70, Venu 4 41 mm, vívoactive 6 |
+| 40x33 px | vívoactive 3 Music y 3 Music LTE |
+
+El de 40x33 es el único raro: es el **primer icono no cuadrado** del proyecto.
+Los vívoactive 3 lo piden así, y como el dibujo es un aro redondo, se encoge a
+33 y se centra en el lienzo ancho; aplastarlo lo deformaría. Sin ese PNG,
+`monkeyc` no falla — suelta un `WARNING` y escala él, que es justo lo que este
+proyecto evita.
+
+Los dos `.iq` de tienda salen ahora con **174 builds cada uno, sin un solo
+error ni aviso** (eran 90). La versión de `AcercaView.mc` subió a **1.4.0**.
+
+**Lo que quedó fuera, y por qué**, para no volver a mirarlo:
+
+- **21 por Connect IQ anterior a 3.1**: fēnix 3, fr235/230/630/735XT/920XT,
+  vívoactive y vívoactive HR, D2 Bravo, Approach S60 y S62, epix gen 1,
+  GPSMAP 66/86, Oregon, Rino.
+- **26 por pantalla rectangular**: todos los Edge, el Venu Sq y Sq 2, el
+  Venu X1, Montana, GPSMAP H1, eTrex. El dibujo es radial
+  (`radio = min(w,h)/2 - 6`), así que en un 282x470 el aro sale inscrito en el
+  lado corto y sobra media pantalla. Se puede hacer, pero es rediseñar la
+  vista, no añadir un id.
+- **4 que no admiten apps**: fr45, Garmin Swim 2, Edge 130 y 130 Plus.
+- **11 pendientes de mirar**, no descartados: los Instinct monocromos
+  (Instinct 2X, 3 Solar, E 40/45 mm, 2S, Crossover, Descent G1), que heredan
+  del Instinct 2 el problema del `COLOR_DK_GRAY`; el **Venu 2S**, que estrena
+  familia `round-360x360` y se llevaría el emblema de 240 px en una pantalla
+  de 360; el **fr55**, de 4 bits y familia `round-208x208`; y el
+  **vívoactive 3** y el **D2 Delta PX**, que compilan pero pierden una
+  variante vieja (CIQ 3.0.3) con aviso.
+
+**Memoria, que era la duda razonable:** el más justo del lote da 96 KB para la
+app y 32 KB para el campo de datos. Las builds gastan **34,5 KB** (29 376 de
+código y 5 149 de datos) y **8,8 KB**. Sobra en todos.
+
+Y el aviso de siempre, que aquí pesa más que nunca: **compilar limpio no
+prueba nada**. Son 56 relojes que nadie ha visto arrancar.
 
 ## 0. Dos fallos confirmados en el simulador, sin arreglar
 
@@ -287,8 +351,8 @@ que se quiere enseñar.
   que decía el README viejo: las AMOLED usan una fuente numérica
   proporcionalmente mayor, y el único texto que llegó a salirse lo hizo en la
   de 416 px. Si tocas un formato, mídelo; no lo supongas en ninguna dirección.
-- **Los identificadores de dispositivo del manifest**, los 46 declarados hoy.
-  Ojo: esos 42 son los que compilan, no los que existen — la lista envejece
+- **Los identificadores de dispositivo del manifest**, los 104 declarados hoy.
+  Ojo: esos 104 son los que compilan, no los que existen — la lista envejece
   sola con cada reloj nuevo de Garmin. Cuidado al
   añadir: uno mal escrito **no rompe la compilación**, solo suelta un `WARNING`
   y deja al reloj fuera en silencio. Así estuvieron fuera los seis Forerunner.

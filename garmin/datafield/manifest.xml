@@ -32,6 +32,14 @@
             <iq:product id="fenix5plus"/>
             <iq:product id="fenix5splus"/>
             <iq:product id="fenix5xplus"/>
+            <!--
+              El Forerunner 645 y el 645 Music son de la misma cosecha que el
+              fenix 5 y tienen su misma pantalla: 240x240 MIP, cinco botones y
+              128 KB de memoria de app. El 645 se queda en Connect IQ 3.1.6,
+              como los fenix de 2017; el 645 Music llega a 3.2.3.
+            -->
+            <iq:product id="fr645"/>
+            <iq:product id="fr645m"/>
             <iq:product id="fr745"/>
             <iq:product id="fr945"/>
             <iq:product id="fr945lte"/>
@@ -71,6 +79,86 @@
             <iq:product id="venu3"/>
             <iq:product id="vivoactive4"/>
             <iq:product id="vivoactive5"/>
+
+            <!--
+              Forerunner. Los que corren y faltaban: del 935 de 2017 al 970 de hoy.
+              El 570 entra en sus dos tallas, que piden iconos distintos.
+            -->
+            <iq:product id="fr70"/>
+            <iq:product id="fr165"/>
+            <iq:product id="fr165m"/>
+            <iq:product id="fr170"/>
+            <iq:product id="fr170m"/>
+            <iq:product id="fr245"/>
+            <iq:product id="fr245m"/>
+            <iq:product id="fr255m"/>
+            <iq:product id="fr255sm"/>
+            <iq:product id="fr57042mm"/>
+            <iq:product id="fr57047mm"/>
+            <iq:product id="fr935"/>
+            <iq:product id="fr970"/>
+            <!--
+              Venu y vivoactive. Pantalla tactil con dos botones, como el Venu 2 y el
+              vivoactive 5 que ya estaban.
+            -->
+            <iq:product id="venu"/>
+            <iq:product id="venud"/>
+            <iq:product id="venu2plus"/>
+            <iq:product id="venu3s"/>
+            <iq:product id="venu441mm"/>
+            <iq:product id="venu445mm"/>
+            <iq:product id="vivoactive3m"/>
+            <iq:product id="vivoactive3mlte"/>
+            <iq:product id="vivoactive4s"/>
+            <iq:product id="vivoactive6"/>
+            <!--
+              Instinct AMOLED. Son de 16 bits de color, asi que no arrastran el
+              problema del gris de los Instinct monocromos.
+            -->
+            <iq:product id="instinct3amoled45mm"/>
+            <iq:product id="instinct3amoled50mm"/>
+            <iq:product id="instinctcrossoveramoled"/>
+            <!--
+              MARQ. Por dentro son multideporte de gama fenix, y sus duenos corren.
+            -->
+            <iq:product id="marqadventurer"/>
+            <iq:product id="marqathlete"/>
+            <iq:product id="marqaviator"/>
+            <iq:product id="marqcaptain"/>
+            <iq:product id="marqcommander"/>
+            <iq:product id="marqdriver"/>
+            <iq:product id="marqexpedition"/>
+            <iq:product id="marqgolfer"/>
+            <iq:product id="marq2"/>
+            <iq:product id="marq2aviator"/>
+            <!--
+              Descent, D2 y Approach. Buceo, aviacion y golf, pero todos graban una
+              carrera como cualquier fenix: el perfil de correr esta ahi.
+            -->
+            <iq:product id="descentmk1"/>
+            <iq:product id="descentmk2"/>
+            <iq:product id="descentmk2s"/>
+            <iq:product id="descentmk343mm"/>
+            <iq:product id="descentmk351mm"/>
+            <iq:product id="descentg2"/>
+            <iq:product id="d2air"/>
+            <iq:product id="d2airx10"/>
+            <iq:product id="d2delta"/>
+            <iq:product id="d2deltas"/>
+            <iq:product id="d2mach1"/>
+            <iq:product id="d2mach2"/>
+            <iq:product id="d2mach2pro"/>
+            <iq:product id="approachs50"/>
+            <iq:product id="approachs7042mm"/>
+            <iq:product id="approachs7047mm"/>
+            <!--
+              Ediciones tematicas de Garmin, que por dentro son un vivoactive 3 o un
+              Venu.
+            -->
+            <iq:product id="legacyherocaptainmarvel"/>
+            <iq:product id="legacyherofirstavenger"/>
+            <iq:product id="legacysagadarthvader"/>
+            <iq:product id="legacysagarey"/>
         </iq:products>
 
         <!--
