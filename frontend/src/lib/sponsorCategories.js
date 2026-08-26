@@ -82,7 +82,7 @@ export const SPONSOR_CATEGORIES = [
   },
   {
     slug: 'especie',
-    label: 'Aliado en Especie',
+    label: 'Aliado',
     subtitle: null,
     cupos: null,
     cuposLabel: 's/valor',

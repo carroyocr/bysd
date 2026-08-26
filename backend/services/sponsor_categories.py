@@ -83,7 +83,7 @@ CATEGORIES = [
     },
     {
         "slug": "especie",
-        "label": "Aliado en Especie",
+        "label": "Aliado",
         "subtitle": None,
         "cupos": None,
         "cupos_label": "s/valor",
