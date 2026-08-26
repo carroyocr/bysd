@@ -55,8 +55,6 @@ class BannerCreate(BaseModel):
     # del banner, que son de una linea y del tamano de la barra.
     description: Optional[str] = None
     instagram: Optional[str] = None
-    # De que patrocinador es esta ficha, cuando nacio de un alta suya.
-    sponsor_id: Optional[str] = None
     weight: int = Field(default=1, ge=1, le=10)
     start_at: Optional[str] = None   # ISO; vigencia opcional
     end_at: Optional[str] = None
@@ -109,7 +107,6 @@ def nuevo_banner(
     name: str,
     *,
     order: int,
-    sponsor_id: Optional[str] = None,
     description: Optional[str] = None,
     instagram: Optional[str] = None,
     text: Optional[str] = None,
@@ -125,6 +122,9 @@ def nuevo_banner(
     Vive aqui y no en el endpoint porque el alta de un patrocinador tambien
     estrena la suya, y las dos tienen que salir con la misma forma: si una se
     queda sin un campo, el panel lo lee como vacio y nadie se entera.
+
+    La ficha se ata a su patrocinador por nombre y carrera, que es como se
+    direcciona un patrocinador en todo el backend: no tiene campo `id`.
     """
     ahora = datetime.now(timezone.utc)
     return {
@@ -135,7 +135,6 @@ def nuevo_banner(
         "link_url": (link_url or "").strip(),
         "description": (description or "").strip(),
         "instagram": (instagram or "").strip(),
-        "sponsor_id": sponsor_id,
         "logo_url": None,
         "banner_url": None,
         "detail_url": None,
@@ -257,7 +256,6 @@ async def create_banner(data: BannerCreate, db=Depends(get_db)):
         data.race_code,
         data.name,
         order=count,
-        sponsor_id=data.sponsor_id,
         description=data.description,
         instagram=data.instagram,
         text=data.text,

@@ -184,7 +184,6 @@ async def estrenar_ficha_publicidad(db, sponsor: dict) -> dict | None:
         race_code,
         sponsor["name"],
         order=orden,
-        sponsor_id=sponsor.get("id"),
         description=sponsor.get("description"),
         instagram=sponsor.get("instagram"),
         is_active=False,

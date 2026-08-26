@@ -69,7 +69,6 @@ async def migrar(escribir: bool) -> int:
             race_code,
             nombre,
             order=ordenes[race_code],
-            sponsor_id=sponsor.get("id"),
             description=sponsor.get("description"),
             instagram=sponsor.get("instagram"),
             is_active=False,
