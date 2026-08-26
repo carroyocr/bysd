@@ -6,7 +6,7 @@ el 24 de agosto de 2026.
 ## Estado técnico — listo
 
 - La **app** (`backyard.iq`) y el **campo de datos** (`backyard-margen.iq`)
-  compilan para los **90 builds** de los 48 dispositivos, **sin un solo
+  compilan para los **174 builds** de los 104 dispositivos, **sin un solo
   error**. Los paquetes de tienda están en `garmin/build/*.iq`.
 - Firma con la developer key de `~/Proyectos/bysd-secretos/garmin/`.
 - **Sin un solo aviso**, tampoco los del icono del lanzador: hay un icono por
@@ -43,6 +43,44 @@ van por separado.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.4.0 (para el campo "What's New")
+
+Cincuenta y seis relojes más, y con ellos la lista pasa de 48 a **104
+dispositivos** y de 90 a **174 builds**. No es una versión de código: no se
+tocó ni una línea de las vistas. Ninguna familia de pantalla es nueva —las
+siete de siempre, más el `round-208x208` que no entró— y lo único que hubo que
+hacer a mano fueron cuatro iconos del lanzador que no existían: 30, 38 y 54 px,
+y uno de 40x33 —no cuadrado— para los vívoactive 3 Music, con el aro centrado
+en vez de aplastado.
+
+Entra por fin toda la línea Forerunner moderna, que era el hueco de verdad: el
+165, el 170, el 570 en sus dos tallas y el 970. Y con ellos los Venu y
+vívoactive que faltaban, los Instinct AMOLED, la familia MARQ entera, los
+Descent, los D2 y los Approach — que serán de buceo, aviación o golf, pero por
+dentro son multideporte de gama fēnix y graban una carrera igual.
+
+Esta versión **se lleva también todo lo de la 1.3.0**, que nunca llegó a la
+tienda: los fēnix MIP, la generación fēnix 5 de 2017, el Forerunner 645 y los
+dos arreglos de relojes viejos (`SPORT_RUNNING` y las ruedas de ajustes).
+
+**ES**
+
+> - Cincuenta y seis relojes más: la línea Forerunner moderna al completo
+>   (165, 170, 245, 255, 570, 645, 935, 970 y sus versiones Music), Venu,
+>   Venu 2 Plus, Venu 3S, Venu 4, vívoactive 3 Music, 4S y 6, Instinct 3
+>   AMOLED, la familia MARQ entera, los Descent, los D2 y los Approach.
+> - Con la app llega también el campo de datos del margen a todos ellos.
+
+**EN**
+
+> - Fifty-six more watches: the whole modern Forerunner line (165, 170, 245,
+>   255, 570, 645, 935, 970 and their Music versions), Venu, Venu 2 Plus,
+>   Venu 3S, Venu 4, vívoactive 3 Music, 4S and 6, Instinct 3 AMOLED, the
+>   full MARQ family, the Descent, D2 and Approach ranges.
+> - The margin data field reaches all of them too.
 
 ---
 
@@ -208,8 +246,9 @@ versión = actualizarla ahí y regenerar el `.iq`.
 
 ## El icono del lanzador — resuelto
 
-Cada dispositivo pide su tamaño de icono (35, 36, 40, 56, 60, 62, 65, 70 px).
-Ya se generó el icono en los **ocho tamaños** (en `shared/resources-icon<N>/`) y
+Cada dispositivo pide su tamaño de icono (30, 35, 36, 38, 40, 40x33, 54, 56,
+60, 62, 65, 70 px). Ya se generó el icono en las **doce tallas** (en
+`shared/resources-icon<N>/`) y
 cada reloj mapea al suyo en los `monkey.jungle`. Los `.iq` compilan **sin
 ningún aviso de icono** — máxima calidad en todos los relojes, sin depender del
 escalado de Garmin.
@@ -218,13 +257,18 @@ Grupos por tamaño de icono:
 
 | px | dispositivos |
 |---|---|
-| 35 | vivoactive4 |
+| 30 | vivoactive4s, legacyherocaptainmarvel, legacysagarey |
+| 35 | vivoactive4, legacyherofirstavenger, legacysagadarthvader |
 | 36 | fenix5s, fenixchronos |
-| 40 | fenix5/5x, fenix5plus/5splus/5xplus, fenix6/6pro/6s/6spro/6xpro, fenix7/7s/7x, fenix7pro/7spro/7xpro (+nowifi), fenix8solar47mm/51mm, enduro, enduro3, fr255/255s, fr745, fr945/945lte, fr955 |
-| 56 | vivoactive5 |
-| 60 | fenix843mm, fenixe, epix2, epix2pro42mm/47mm/51mm, fr265/265s |
+| 38 | instinctcrossoveramoled |
+| 40 | fenix5/5x, fenix5plus/5splus/5xplus, fenix6/6pro/6s/6spro/6xpro, fenix7/7s/7x, fenix7pro/7spro/7xpro (+nowifi), fenix8solar47mm/51mm, enduro, enduro3, fr245/245m, fr255/255s/255m/255sm, fr645/645m, fr745, fr935, fr945/945lte, fr955, marq (los 8), d2delta/deltas, descentmk1/mk2/mk2s |
+| 40x33 | vivoactive3m, vivoactive3mlte — **el único no cuadrado** |
+| 54 | fr165/165m, fr170/170m, fr57042mm, fr70, venu441mm, vivoactive6 |
+| 56 | vivoactive5, approachs50 |
+| 60 | fenix843mm, fenixe, epix2, epix2pro42mm/47mm/51mm, fr265/265s, venu, venud, marq2, marq2aviator, d2air, d2mach1, descentg2, descentmk343mm/mk351mm, approachs7042mm, instinct3amoled45mm/50mm |
 | 62 | instinct2 |
-| 65 | fenix847mm, fenix8pro47mm, fr965 |
-| 70 | venu2, venu3 |
+| 65 | fenix847mm, fenix8pro47mm, fr965, fr57047mm, fr970, venu445mm, d2mach2, d2mach2pro |
+| 70 | venu2, venu3, venu2plus, venu3s, d2airx10, approachs7047mm |
 
-Hecho el 21 de agosto de 2026 (commit `837c51f`).
+Hecho el 21 de agosto de 2026 (commit `837c51f`) y ampliado el 26 de agosto
+con las cuatro tallas del barrido de dispositivos (30, 38, 54 y 40x33).

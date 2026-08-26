@@ -106,3 +106,83 @@ instinct2.resourcePath = $(base.resourcePath);resources-small;../shared/resource
 # 70 px (emblema large)
 venu2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
 venu3.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
+
+# --- Los relojes que entraron con la 1.4.0 ---
+# Mismo criterio de siempre: el icono va por dispositivo y el emblema por
+# familia de pantalla, y cuando hay linea de dispositivo hay que repetir el
+# emblema, porque la linea reemplaza a la regla de familia.
+
+# 30 px (emblema small)
+legacyherocaptainmarvel.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon30
+legacysagarey.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon30
+vivoactive4s.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon30
+
+# 35 px
+legacyherofirstavenger.resourcePath = $(base.resourcePath);../shared/resources-icon35
+legacysagadarthvader.resourcePath = $(base.resourcePath);../shared/resources-icon35
+
+# 38 px (emblema large)
+instinctcrossoveramoled.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon38
+
+# 40 px
+d2delta.resourcePath = $(base.resourcePath);../shared/resources-icon40
+d2deltas.resourcePath = $(base.resourcePath);../shared/resources-icon40
+descentmk1.resourcePath = $(base.resourcePath);../shared/resources-icon40
+descentmk2.resourcePath = $(base.resourcePath);../shared/resources-icon40
+descentmk2s.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr245.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr245m.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr255m.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fr935.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqadventurer.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqathlete.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqaviator.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqcaptain.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqcommander.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqdriver.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqexpedition.resourcePath = $(base.resourcePath);../shared/resources-icon40
+marqgolfer.resourcePath = $(base.resourcePath);../shared/resources-icon40
+
+# 40 px (emblema small)
+fr255sm.resourcePath = $(base.resourcePath);resources-small;../shared/resources-icon40
+
+# 40x33 px
+vivoactive3m.resourcePath = $(base.resourcePath);../shared/resources-icon40x33
+vivoactive3mlte.resourcePath = $(base.resourcePath);../shared/resources-icon40x33
+
+# 54 px (emblema large)
+fr165.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+fr165m.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+fr170.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+fr170m.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+fr57042mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+fr70.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+venu441mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+vivoactive6.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon54
+
+# 56 px (emblema large)
+approachs50.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon56
+
+# 60 px (emblema large)
+approachs7042mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+d2air.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+d2mach1.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+descentg2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+descentmk343mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+descentmk351mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+instinct3amoled45mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+instinct3amoled50mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+marq2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+marq2aviator.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+venu.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+venud.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+
+# 65 px: como el fenix847mm y el fr965, se llevan el icono por defecto de
+# shared/resources y el emblema por familia, asi que no llevan linea. Son el
+# D2 Mach 2 y Mach 2 Pro, el fr570 de 47 mm, el fr970 y el Venu 4 de 45 mm.
+
+# 70 px (emblema large)
+approachs7047mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
+d2airx10.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
+venu2plus.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
+venu3s.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon70
