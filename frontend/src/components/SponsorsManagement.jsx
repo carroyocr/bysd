@@ -5,8 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import {
-  Plus, Edit, Trash2, Save, X, Upload, Instagram,
-  Building2, ExternalLink, Image, Phone, Mail, Globe, User,
+  Plus, Edit, Trash2, Save, X, Upload,
+  Building2, Image, Phone, Mail, Globe, User,
   NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight,
   History, Check
 } from 'lucide-react';
@@ -64,8 +64,6 @@ const parseMontoInput = (str) => (str || '').replace(/,/g, '').replace(/[^0-9.]/
 
 const EMPTY_FORM = {
   name: '',
-  description: '',
-  instagram: '',
   razon_social: '',
   rnc: '',
   nombre_contacto: '',
@@ -188,8 +186,6 @@ export default function SponsorsManagement() {
 
   const buildPayload = () => ({
     name: formData.name,
-    description: formData.description,
-    instagram: formData.instagram || null,
     razon_social: formData.razon_social || null,
     rnc: formData.rnc || null,
     nombre_contacto: formData.nombre_contacto || null,
@@ -208,8 +204,8 @@ export default function SponsorsManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.description.trim()) {
-      toast.error('Nombre y descripción son requeridos');
+    if (!formData.name.trim()) {
+      toast.error('El nombre es requerido');
       return;
     }
     if (formData.propuesta_monto !== '' && isNaN(parseFloat(formData.propuesta_monto))) {
@@ -270,8 +266,6 @@ export default function SponsorsManagement() {
     setEditingSponsor(sponsor.name);
     setFormData({
       name: sponsor.name,
-      description: sponsor.description,
-      instagram: sponsor.instagram || '',
       razon_social: sponsor.razon_social || '',
       rnc: sponsor.rnc || '',
       nombre_contacto: sponsor.nombre_contacto || '',
@@ -645,45 +639,23 @@ export default function SponsorsManagement() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre del Patrocinador *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Ej: Café Santo Domingo"
-                    disabled={!!editingSponsor}
-                    data-testid="sponsor-name-input"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="instagram">Instagram (URL completa)</Label>
-                  <div className="relative">
-                    <Instagram className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="instagram"
-                      value={formData.instagram}
-                      onChange={(e) => setFormData(prev => ({ ...prev, instagram: e.target.value }))}
-                      placeholder="https://www.instagram.com/usuario/"
-                      className="pl-10"
-                      data-testid="sponsor-instagram-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-2">
-                <Label htmlFor="description">Descripción *</Label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción del patrocinador..."
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-md bg-background resize-none"
-                  data-testid="sponsor-description-input"
+                <Label htmlFor="name">Nombre del Patrocinador *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ej: Café Santo Domingo"
+                  disabled={!!editingSponsor}
+                  data-testid="sponsor-name-input"
                 />
+                {!editingSponsor && (
+                  <p className="text-xs text-muted-foreground">
+                    Al guardar se le crea su ficha en Publicidad, apagada y a la
+                    espera de las imágenes. La descripción y el Instagram se
+                    llenan allí.
+                  </p>
+                )}
               </div>
 
               {/* Datos comerciales */}
@@ -975,18 +947,6 @@ export default function SponsorsManagement() {
                             {sponsor.rnc ? `RNC: ${sponsor.rnc}` : ''}
                           </div>
                         )}
-                        {sponsor.instagram && (
-                          <a
-                            href={sponsor.instagram}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-pink-500 hover:text-pink-600 flex items-center gap-1 mt-1"
-                          >
-                            <Instagram className="w-3 h-3" />
-                            Instagram
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
                       </div>
 
                       {/* Actions */}
@@ -1026,10 +986,6 @@ export default function SponsorsManagement() {
                         </Button>
                       </div>
                     </div>
-
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                      {sponsor.description}
-                    </p>
 
                     {/* Contact + proposal summary */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">

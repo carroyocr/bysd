@@ -21,7 +21,7 @@ solo_sponsors = Depends(require_permission("sponsors"))
 PUBLIC_FIELDS = {
     "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
     "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
-    "mostrar_marca": 1,
+    "mostrar_marca": 1, "description": 1, "instagram": 1,
 }
 
 # banner_url: PNG del tamano exacto de la barra (1200x240, proporcion 5:1).
@@ -50,6 +50,11 @@ class BannerCreate(BaseModel):
     text: Optional[str] = None
     link_url: Optional[str] = None
     race_code: str
+    # La descripcion y el Instagram viven aqui, no en la ficha del
+    # patrocinador: alli solo queda lo comercial. No son el texto ni el enlace
+    # del banner, que son de una linea y del tamano de la barra.
+    description: Optional[str] = None
+    instagram: Optional[str] = None
     weight: int = Field(default=1, ge=1, le=10)
     start_at: Optional[str] = None   # ISO; vigencia opcional
     end_at: Optional[str] = None
@@ -63,6 +68,8 @@ class BannerUpdate(BaseModel):
     name: Optional[str] = None
     text: Optional[str] = None
     link_url: Optional[str] = None
+    description: Optional[str] = None
+    instagram: Optional[str] = None
     weight: Optional[int] = Field(default=None, ge=1, le=10)
     start_at: Optional[str] = None
     end_at: Optional[str] = None
@@ -93,6 +100,55 @@ def _vigente(banner: dict, now: datetime) -> bool:
     if end and now > end:
         return False
     return True
+
+
+def nuevo_banner(
+    race_code: str,
+    name: str,
+    *,
+    order: int,
+    description: Optional[str] = None,
+    instagram: Optional[str] = None,
+    text: Optional[str] = None,
+    link_url: Optional[str] = None,
+    weight: int = 1,
+    start_at: Optional[str] = None,
+    end_at: Optional[str] = None,
+    is_active: bool = True,
+    mostrar_marca: bool = True,
+) -> dict:
+    """El documento de una ficha de publicidad recien nacida.
+
+    Vive aqui y no en el endpoint porque el alta de un patrocinador tambien
+    estrena la suya, y las dos tienen que salir con la misma forma: si una se
+    queda sin un campo, el panel lo lee como vacio y nadie se entera.
+
+    La ficha se ata a su patrocinador por nombre y carrera, que es como se
+    direcciona un patrocinador en todo el backend: no tiene campo `id`.
+    """
+    ahora = datetime.now(timezone.utc)
+    return {
+        "id": str(uuid.uuid4()),
+        "race_code": race_code.upper(),
+        "name": name.strip(),
+        "text": (text or "").strip(),
+        "link_url": (link_url or "").strip(),
+        "description": (description or "").strip(),
+        "instagram": (instagram or "").strip(),
+        "logo_url": None,
+        "banner_url": None,
+        "detail_url": None,
+        "weight": weight,
+        "start_at": start_at,
+        "end_at": end_at,
+        "is_active": is_active,
+        "mostrar_marca": mostrar_marca,
+        "order": order,
+        "impressions": 0,
+        "clicks": 0,
+        "created_at": ahora,
+        "updated_at": ahora,
+    }
 
 
 @router.get("/public")
@@ -196,27 +252,20 @@ async def create_banner(data: BannerCreate, db=Depends(get_db)):
     _parse_iso(data.start_at)
     _parse_iso(data.end_at)
     count = await db.ad_banners.count_documents({"race_code": data.race_code.upper()})
-    now = datetime.now(timezone.utc)
-    doc = {
-        "id": str(uuid.uuid4()),
-        "race_code": data.race_code.upper(),
-        "name": data.name.strip(),
-        "text": (data.text or "").strip(),
-        "link_url": (data.link_url or "").strip(),
-        "logo_url": None,
-        "banner_url": None,
-        "detail_url": None,
-        "weight": data.weight,
-        "start_at": data.start_at,
-        "end_at": data.end_at,
-        "is_active": data.is_active,
-        "mostrar_marca": data.mostrar_marca,
-        "order": count,
-        "impressions": 0,
-        "clicks": 0,
-        "created_at": now,
-        "updated_at": now,
-    }
+    doc = nuevo_banner(
+        data.race_code,
+        data.name,
+        order=count,
+        description=data.description,
+        instagram=data.instagram,
+        text=data.text,
+        link_url=data.link_url,
+        weight=data.weight,
+        start_at=data.start_at,
+        end_at=data.end_at,
+        is_active=data.is_active,
+        mostrar_marca=data.mostrar_marca,
+    )
     await db.ad_banners.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -235,7 +284,7 @@ async def update_banner(banner_id: str, data: BannerUpdate, db=Depends(get_db)):
     _parse_iso(data.end_at)
     updates = {k: v for k, v in data.model_dump().items() if v is not None}
     # Permitir borrar la vigencia mandando cadena vacia.
-    for campo in ("start_at", "end_at", "text", "link_url"):
+    for campo in ("start_at", "end_at", "text", "link_url", "description", "instagram"):
         valor = getattr(data, campo)
         if valor == "":
             updates[campo] = None
