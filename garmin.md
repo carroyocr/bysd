@@ -305,13 +305,11 @@ avisos que quedan al compilar, 20 de los 24 relojes. Pero un icono escalado a
 ojo se nota en la lista del reloj, y además el actual es un recorte automático
 del emblema. Merece que lo dibuje alguien.
 
-## 5. Publicar
+## 5. Publicar — hecho, y solo la app
 
-Falta decidir si va a la Connect IQ Store —es gratis, pero pasa una revisión de
-Garmin— o si se reparte el `.prg` a mano. Ahora que la app no es de una sola
-carrera, la tienda tiene bastante más sentido que antes. Si va a la tienda, son
-**dos fichas**: la app y el campo de datos son aplicaciones distintas con su
-propio id.
+La app está en la Connect IQ Store desde el 24 de agosto de 2026, y la 1.4.0
+desde el 26. El **campo de datos no se publica**: se decidió el 26 de agosto.
+Se queda compilando y en el repo, pero sin ficha propia.
 
 Una cosa a mirar antes: el emblema de BYSD sigue siendo la pantalla de entrada
 de una app que se llama «Backyard» y que sirve para cualquier carrera. Funciona

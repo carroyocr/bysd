@@ -1,7 +1,11 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía para subir los dos productos a la tienda de Garmin. Actualizado
-el 26 de agosto de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 26 de agosto de 2026.
+
+**Solo va a la tienda la app de reloj.** El campo de datos se compila y
+funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
+en el repo, sin ficha. Los textos que había preparados para su ficha siguen
+abajo por si algún día cambia la decisión.
 
 ## Estado — la 1.4.0, publicada
 
@@ -19,7 +23,8 @@ inglés y en español, y pesa 136 KB.
 
 - La **app** (`backyard.iq`) y el **campo de datos** (`backyard-margen.iq`)
   compilan para los **174 builds** de los 104 dispositivos, **sin un solo
-  error**. Los paquetes de tienda están en `garmin/build/*.iq`.
+  error**. Los paquetes de tienda están en `garmin/build/*.iq`. A la tienda
+  sube solo el primero.
 - Firma con la developer key de `~/Proyectos/bysd-secretos/garmin/`.
 - **Sin un solo aviso**, tampoco los del icono del lanzador: hay un icono por
   talla y cada reloj mapea al suyo. Ver la sección al final.
@@ -38,9 +43,9 @@ inglés y en español, y pesa 136 KB.
 3. Subir cada `.iq`, rellenar la ficha, aceptar los términos y **enviar a
    revisión**. La revisión de Garmin tarda unos días.
 
-Son **dos fichas separadas**: la app y el campo de datos son productos
+Serían **dos fichas separadas**: la app y el campo de datos son productos
 distintos con su propio id. Comparten la mitad del código, pero en la tienda
-van por separado.
+irían por separado. Hoy solo hay ficha de la app.
 
 ## Pasos en el portal (para cada producto)
 
@@ -85,6 +90,24 @@ dos arreglos de relojes viejos (`SPORT_RUNNING` y las ruedas de ajustes).
 >   Venu 2 Plus, Venu 3S, Venu 4, vívoactive 3 Music, 4S y 6, Instinct 3
 >   AMOLED, la familia MARQ entera, los Descent, los D2 y los Approach.
 > - Con la app llega también el campo de datos del margen a todos ellos.
+
+**Ojo, esta segunda línea hay que quitarla de la ficha ya publicada:** el campo
+de datos no se publicó, así que promete algo que nadie puede descargar. El
+texto corregido, para pegar en el portal, está justo debajo.
+
+**ES (corregido)**
+
+> - Cincuenta y seis relojes más: la línea Forerunner moderna al completo
+>   (165, 170, 245, 255, 570, 645, 935, 970 y sus versiones Music), Venu,
+>   Venu 2 Plus, Venu 3S, Venu 4, vívoactive 3 Music, 4S y 6, Instinct 3
+>   AMOLED, la familia MARQ entera, los Descent, los D2 y los Approach.
+
+**EN (corregido)**
+
+> - Fifty-six more watches: the whole modern Forerunner line (165, 170, 245,
+>   255, 570, 645, 935, 970 and their Music versions), Venu, Venu 2 Plus,
+>   Venu 3S, Venu 4, vívoactive 3 Music, 4S and 6, Instinct 3 AMOLED, the
+>   full MARQ family, the Descent, D2 and Approach ranges.
 
 **EN**
 
@@ -232,7 +255,10 @@ versión = actualizarla ahí y regenerar el `.iq`.
 > la duración y la distancia de la vuelta desde el teléfono o desde el propio
 > reloj.
 
-### Campo de datos — «Backyard Margen» (data field)
+### Campo de datos — «Backyard Margen» (data field) — SIN PUBLICAR
+
+*Decidido el 26-ago-2026: este producto no va a la tienda. Lo que sigue queda
+escrito por si la decisión cambia.*
 
 **Resumen (una línea)**
 - ES: El margen de tu backyard —cuánto descanso tendrás al ritmo actual— dentro de tu actividad de correr.
