@@ -56,6 +56,31 @@ Serían **dos fichas separadas**: la app y el campo de datos son productos
 distintos con su propio id. Comparten la mitad del código, pero en la tienda
 irían por separado. Hoy solo hay ficha de la app.
 
+## El manual, y donde se enlaza
+
+El manual del corredor vive en el sitio, no en la tienda:
+
+- `backyardultrasantodomingo.com/garmin` — español
+- `backyardultrasantodomingo.com/garmin/en` — inglés
+
+Se genera desde `garmin/manual/` con `python3 generar.py`, que escribe a la vez
+la versión del sitio (en `frontend/public/garmin/`) y la de Artifact. Las dos
+salen del mismo fuente, así que no pueden separarse. Publicarlo es desplegar el
+frontend: los archivos viajan en el build de CRA, y `render.yaml` lleva las
+reglas de reescritura por delante del comodín de la SPA.
+
+**Dónde poner el enlace en la ficha**, y conviene que sea en los dos sitios:
+
+1. **En la descripción**, una línea al final: «Manual completo:
+   backyardultrasantodomingo.com/garmin». Es lo único que se ve seguro.
+2. **En el campo de sitio web / soporte del portal**, que la tienda muestra
+   como enlace en la ficha. El nombre exacto del campo hay que verlo en el
+   portal — no está comprobado aquí.
+
+Lo que **no** hay que enlazar es la URL de Artifact: es privada por defecto,
+vive en `claude.ai` y puede pedir sesión. Sirve para revisar el manual, no
+para enseñárselo a un corredor.
+
 ## Pasos en el portal (para cada producto)
 
 1. Entra a https://apps.garmin.com/developer con tu cuenta.

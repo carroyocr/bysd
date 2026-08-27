@@ -64,6 +64,23 @@ services:
       - key: REACT_APP_BACKEND_URL
         sync: false          # se pega en el dashboard (URL del backend en Render)
     routes:
+      # El manual de la app de Garmin son paginas sueltas, no rutas de la SPA.
+      # Van DELANTE del comodin a proposito: las reglas se evaluan en orden, y
+      # si /* llega primero se traga tambien esto y el corredor aterriza en la
+      # portada de la carrera. Con la regla explicita da igual que Render mire
+      # el archivo antes o despues.
+      - type: rewrite
+        source: /garmin
+        destination: /garmin/index.html
+      - type: rewrite
+        source: /garmin/
+        destination: /garmin/index.html
+      - type: rewrite
+        source: /garmin/en
+        destination: /garmin/en/index.html
+      - type: rewrite
+        source: /garmin/en/
+        destination: /garmin/en/index.html
       - type: rewrite
         source: /*
         destination: /index.html
