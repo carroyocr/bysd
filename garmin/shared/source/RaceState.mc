@@ -29,11 +29,15 @@ class RaceState {
     static const DURACION_VUELTA = 3600;
     static const KM_POR_VUELTA = 6.7;
 
-    // Por debajo de este kilometraje el margen saltaria minutos enteros de
-    // una zancada a otra: extrapola lo que falta al ritmo que se lleva, y
-    // con trescientos metros hechos ese ritmo no vale para multiplicar.
-    // Mejor un guion.
-    static const KM_MINIMOS_PARA_MARGEN = 1.0;
+    // El kilometraje a partir del cual el ritmo de la vuelta se basta solo
+    // para el margen. Por debajo, el ritmo de la vuelta todavia da tumbos -con
+    // trescientos metros hechos, multiplicarlo por los seis que faltan salta
+    // minutos enteros de una zancada a otra-, asi que el margen se apoya
+    // ademas en el ritmo medio de la carrera y va cediendole el sitio al de
+    // la vuelta segun se acumula distancia (ver ritmoParaMargen). Antes esto
+    // era un mutismo: hasta el kilometro no habia margen, y eso son ocho
+    // minutos de cada hora sin la cifra que justifica la app.
+    static const KM_RITMO_PLENO = 1.0;
 
     // Mostrar el ritmo no es extrapolarlo, y por eso tiene su propio minimo,
     // mucho mas bajo: en cuanto hay un minuto de carrera la cifra ya orienta,
@@ -539,16 +543,40 @@ class RaceState {
         return t.toFloat() / km;
     }
 
+    // El ritmo con el que se proyecta lo que falta. No es el que se ensena:
+    // ese es siempre el de la vuelta, crudo, porque el corredor quiere saber a
+    // como va AHORA. Este es el que se multiplica, y multiplicar exige un
+    // ritmo asentado.
+    //
+    // Al abrir la vuelta el mejor dato disponible no es la vuelta -que no
+    // tiene nada- sino lo que este corredor lleva corriendo todo el dia. Asi
+    // que se mezclan los dos con un peso que es la propia distancia recorrida:
+    // en el metro cero manda la media de la carrera, y en KM_RITMO_PLENO manda
+    // el de la vuelta y nada mas. La transicion es continua y en el kilometro
+    // el resultado vale exactamente lo que valia antes de existir esta mezcla.
+    //
+    // En la vuelta 1 no hay media de la que tirar: alli la media ES la vuelta
+    // en curso -kmDeVueltas todavia vale cero- y la mezcla se resuelve sola en
+    // el ritmo crudo, temblor incluido. Es lo que hay: el primer margen de la
+    // carrera se gana corriendo.
+    function ritmoParaMargen() {
+        var ritmo = ritmoSegPorKm();
+        if (ritmo == null) { return null; }
+        var km = kmEnLaVuelta();
+        if (km == null || km >= KM_RITMO_PLENO) { return ritmo; }
+        var medio = ritmoMedioVueltas();
+        if (medio == null) { return ritmo; }
+        var peso = km / KM_RITMO_PLENO;
+        return (ritmo * peso) + (medio * (1.0 - peso));
+    }
+
     // El margen: segundos que sobran (o faltan) para cerrar la vuelta antes de
     // la campana, al ritmo que se lleva. Positivo es descanso.
     function margenSegundos() {
         var r = restante();
         var km = kmEnLaVuelta();
-        var ritmo = ritmoSegPorKm();
+        var ritmo = ritmoParaMargen();
         if (r == null || km == null || ritmo == null) { return null; }
-        // El minimo del margen es suyo, aparte del que deja ver el ritmo: la
-        // cifra se ensena antes de que sirva para multiplicar por lo que falta.
-        if (km < KM_MINIMOS_PARA_MARGEN) { return null; }
 
         var faltan = kmObjetivo() - km;
         if (faltan < 0) { faltan = 0.0; }

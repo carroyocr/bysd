@@ -276,7 +276,8 @@ Cómo: en el simulador, *Simulation → Activity Data → Play a FIT file* (o
 - que `kmMedidosUltimaVuelta` se queda con lo medido solo cuando se parece a
   una vuelta (el filtro del 0.8–1.2);
 - que el margen cambia de signo y de color al cruzar el ritmo necesario;
-- que por debajo de 1 km sigue saliendo el guion en vez de saltar minutos;
+- que el margen sale al minuto de la campana y se asienta durante el primer
+  kilometro, sin saltar minutos enteros (la mezcla de `ritmoParaMargen`);
 - y que al guardar, el FIT queda con sus vueltas y sube a Garmin Connect.
 
 La aritmética en sí ya está verificada con un puerto a Python (la campana

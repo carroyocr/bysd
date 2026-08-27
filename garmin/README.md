@@ -87,9 +87,15 @@ margen       = restan_de_vuelta - falta
 Positivo es descanso previsto; negativo es que a ese ritmo no se llega. Dos
 detalles que no son adorno:
 
-- **Por debajo de un kilómetro no se muestra.** Con trescientos metros hechos
-  el ritmo medio da tumbos y el margen saltaría minutos enteros de una zancada
-  a otra. Hasta el primer kilómetro sale un guion.
+- **El ritmo que se multiplica no es el que se enseña.** Con trescientos
+  metros hechos, el ritmo de la vuelta da tumbos y multiplicarlo por los seis
+  que faltan saltaría minutos enteros de una zancada a otra. Así que el margen
+  proyecta con una mezcla: en el metro cero manda el ritmo medio de la carrera
+  —lo que este corredor lleva corriendo todo el día— y en el primer kilómetro
+  manda ya solo el de la vuelta, con la transición pesada por la propia
+  distancia recorrida. El ritmo que se lee en pantalla, en cambio, es siempre
+  el crudo de la vuelta. El guion dura solo el primer minuto, hasta que hay
+  distancia de la que sacar un ritmo.
 - **El objetivo se calibra solo.** El GPS puede medir 6.85 km en un circuito
   de 6.7, y sobre treinta vueltas eso descuadra la cuenta. Al cerrarse cada
   vuelta se guarda lo que midió el reloj y se usa como referencia en la
