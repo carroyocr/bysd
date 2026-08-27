@@ -29,9 +29,18 @@ class RaceState {
     static const DURACION_VUELTA = 3600;
     static const KM_POR_VUELTA = 6.7;
 
-    // Por debajo de este kilometraje el ritmo medio da tumbos y el margen
-    // saltaria minutos enteros de una zancada a otra. Mejor un guion.
+    // Por debajo de este kilometraje el margen saltaria minutos enteros de
+    // una zancada a otra: extrapola lo que falta al ritmo que se lleva, y
+    // con trescientos metros hechos ese ritmo no vale para multiplicar.
+    // Mejor un guion.
     static const KM_MINIMOS_PARA_MARGEN = 1.0;
+
+    // Mostrar el ritmo no es extrapolarlo, y por eso tiene su propio minimo,
+    // mucho mas bajo: en cuanto hay un minuto de carrera la cifra ya orienta,
+    // y el corredor prefiere un ritmo que se asienta a un guion durante el
+    // primer kilometro de cada vuelta. (Era el mismo 1.0 del margen, prestado,
+    // y dejaba los dos ritmos en blanco ocho minutos de cada hora.)
+    static const KM_MINIMOS_PARA_RITMO = 0.15;
 
     // Los tres avisos del corral, en segundos antes de la campana.
     static const AVISOS_CORRAL = [180, 120, 60];
@@ -63,10 +72,10 @@ class RaceState {
     // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
     // 4 reloj, 5 datos de vuelta). Lo montan los ajustes pageLap..pageClock;
     // el campo de datos no lo usa. MainView tiene los mismos ids en su enum.
-    // De fabrica: datos del yard, datos totales, margen, proxima salida,
+    // De fabrica: margen, datos del yard, datos totales, proxima salida,
     // total y hora — lo deciden los defectos de properties.xml, no este
     // literal, que solo los refleja.
-    var ordenPaginas = [5, 2, 1, 0, 3, 4];
+    var ordenPaginas = [1, 5, 2, 0, 3, 4];
 
     // El ancla: epoch de la campana de la vuelta 1. Solo la app lo pone, al
     // dar la salida; en el campo de datos se queda en null y manda la
@@ -526,7 +535,7 @@ class RaceState {
     function ritmoSegPorKm() {
         var km = kmEnLaVuelta();
         var t = segundosEnLaVuelta();
-        if (km == null || t == null || km < KM_MINIMOS_PARA_MARGEN) { return null; }
+        if (km == null || t == null || km < KM_MINIMOS_PARA_RITMO) { return null; }
         return t.toFloat() / km;
     }
 
@@ -537,6 +546,9 @@ class RaceState {
         var km = kmEnLaVuelta();
         var ritmo = ritmoSegPorKm();
         if (r == null || km == null || ritmo == null) { return null; }
+        // El minimo del margen es suyo, aparte del que deja ver el ritmo: la
+        // cifra se ensena antes de que sirva para multiplicar por lo que falta.
+        if (km < KM_MINIMOS_PARA_MARGEN) { return null; }
 
         var faltan = kmObjetivo() - km;
         if (faltan < 0) { faltan = 0.0; }
@@ -580,12 +592,14 @@ class RaceState {
         return s;
     }
 
-    // El ritmo medio de todas las vueltas, con el mismo minimo que el margen
-    // para no ensenar un promedio que da tumbos.
+    // El ritmo medio de todas las vueltas. En la vuelta 1 el acumulado ES la
+    // vuelta en curso -kmDeVueltas todavia vale cero-, asi que este campo
+    // heredaba entero el minimo de la vuelta; de la vuelta 2 en adelante lleva
+    // kilometros de sobra y el minimo no lo toca nunca.
     function ritmoMedioVueltas() {
         var km = kmTotalesDeVueltas();
         var s = segTotalesDeVueltas();
-        if (km < KM_MINIMOS_PARA_MARGEN || s <= 0) { return null; }
+        if (km < KM_MINIMOS_PARA_RITMO || s <= 0) { return null; }
         return s.toFloat() / km;
     }
 

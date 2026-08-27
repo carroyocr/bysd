@@ -33,9 +33,9 @@
       huecos no rompen nada: RaceState ordena por posicion y a igualdad por
       este orden de fabrica.
     -->
-    <property id="pageDataLap" type="number">1</property>
-    <property id="pageData" type="number">2</property>
-    <property id="pageMargin" type="number">3</property>
+    <property id="pageMargin" type="number">1</property>
+    <property id="pageDataLap" type="number">2</property>
+    <property id="pageData" type="number">3</property>
     <property id="pageLap" type="number">4</property>
     <property id="pageTotal" type="number">5</property>
     <property id="pageClock" type="number">6</property>

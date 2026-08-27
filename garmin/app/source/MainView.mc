@@ -369,7 +369,9 @@ class MainView extends Ui.View {
 
         // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
         // con el ritmo, y lo que falta con el tiempo que costara al ritmo que
-        // se lleva. El "≈" solo aparece cuando hay ritmo del que fiarse.
+        // se lleva. El ritmo se ensena en cuanto lo hay -su minimo es bajo-,
+        // pero el "≈" cuelga del margen: multiplicar lo que falta por un ritmo
+        // de trescientos metros da un numero que salta minutos enteros.
         var ritmo = _estado.ritmoSegPorKm();
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
@@ -380,7 +382,7 @@ class MainView extends Ui.View {
             if (faltan < 0) { faltan = 0.0; }
         }
         var linea = _s[:toGo] + " " + Fmt.distancia(faltan) + " " + Fmt.unidad();
-        if (faltan != null && ritmo != null) {
+        if (faltan != null && ritmo != null && margen != null) {
             linea = linea + " ≈ " + Fmt.reloj((faltan * ritmo).toNumber());
         }
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
