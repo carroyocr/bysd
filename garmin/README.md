@@ -98,6 +98,12 @@ detalles que no son adorno:
   distancia recorrida. El ritmo que se lee en pantalla, en cambio, es siempre
   el crudo de la vuelta. El guion dura solo el primer minuto, hasta que hay
   distancia de la que sacar un ritmo.
+- **El punto de meta se repesca en la campana.** Se fija al dar la salida,
+  desde la última posición conocida; si el GPS no había fijado todavía se
+  quedaba en nada y la meta automática no marcaba en toda la carrera, en
+  silencio. Ahora se intenta también en cada campana mientras falte: a la hora
+  en punto el corredor está en la línea por definición, que es mejor
+  referencia que dónde estaba al pulsar START.
 - **El objetivo se calibra solo.** El GPS puede medir 6.85 km en un circuito
   de 6.7, y sobre treinta vueltas eso descuadra la cuenta. Al cerrarse cada
   vuelta se guarda lo que midió el reloj y se usa como referencia en la

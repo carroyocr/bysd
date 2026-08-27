@@ -198,6 +198,10 @@ class BackyardApp extends App.AppBase {
         if (v == null || v <= _vueltaVista) { return; }
         _vueltaVista = v;
         _session.addLap();
+        // Si la salida se dio sin fijar el GPS, el punto de meta se quedo sin
+        // poner y la vuelta automatica no marcaria nunca. A la campana el
+        // corredor esta en la linea: se repesca aqui, antes de guardar.
+        estado.fijarMetaEnLaCampana();
         // Se guarda en cada campana para que un cierre justo despues no
         // pierda la cuenta. (La calibracion ya no ocurre aqui: se toma al
         // marcar la vuelta, y esa marca guarda por su lado.)

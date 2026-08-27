@@ -357,6 +357,28 @@ class RaceState {
         _lon = rad[1];
     }
 
+    // El punto de meta para la vuelta automatica, repescado en la campana.
+    //
+    // Se fija al dar la salida, pero alli sale de la ultima posicion conocida:
+    // si el GPS todavia no habia fijado -y al pulsar START a menudo no ha
+    // fijado- se quedaba en null, y entonces la meta automatica no marcaba en
+    // toda la carrera sin decir nada (tocaMarcarSola corta en seco con
+    // _latSalida == null). Con el ajuste apagado de fabrica eso era cosa de
+    // quien lo encendia a sabiendas; puesto, le pasaria a quien ni sabe que
+    // existe.
+    //
+    // La campana es el mejor sitio para repescarlo, y no solo el ultimo: a la
+    // hora en punto el corredor esta en la linea de salida por definicion -esa
+    // es la regla de la carrera-, mientras que al pulsar START podia estar en
+    // la carpa diez minutos antes. Se intenta en todas las campanas y solo
+    // hace algo mientras falte el punto, asi que un GPS que fija tarde queda
+    // cubierto por la campana siguiente.
+    function fijarMetaEnLaCampana() {
+        if (_latSalida != null || _lat == null) { return; }
+        _latSalida = _lat;
+        _lonSalida = _lon;
+    }
+
     // Marca el termino de la vuelta en curso. Devuelve true solo si la marca
     // vale: la primera de cada vuelta, con la carrera andando. Las demas se
     // ignoran sin ruido.
