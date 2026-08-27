@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
-"""Genera el manual publicable a partir del fuente.
+"""Genera los manuales publicables a partir de sus fuentes.
 
-El fuente (`manual-es.src.html`) se escribe en UTF-8, como cualquier texto en
-español. El publicable (`manual-es.html`) sale en ASCII puro, con cada acento
-convertido a referencia numérica.
+Piezas:
 
-Por qué: la página se sirve sin declarar juego de caracteres, y el navegador
-entonces lee el UTF-8 como Latin-1 y parte cada acento en dos ("CÃ³mo se
-calcula"). En ASCII puro no hay nada que malinterpretar, lo declare el
-servidor como lo declare.
+    estilos.css           el diseño, compartido por todos los idiomas
+    acentos.js            la recomposición de acentos, compartida
+    manual-<idioma>.src.html  el texto, con {{ESTILOS}} y {{GUION}}
+    manual-<idioma>.html      lo que se publica
 
-Los comentarios del CSS son la excepción: ahí las entidades no valen —el
-navegador no las resuelve dentro de <style>—, así que se escriben sin acentos
-en el propio fuente y este script comprueba que así sea.
+Lo compartido está fuera de los fuentes a propósito: son dos manuales que
+tienen que verse igual, y con el CSS copiado en cada uno se separan a la
+primera corrección que se haga en uno solo.
+
+Los fuentes se escriben en UTF-8, como cualquier texto. El publicable sale en
+ASCII puro, con cada acento convertido a referencia numérica: la página se
+sirve sin declarar juego de caracteres, y así no hay nada que malinterpretar.
+(El navegador igualmente decodifica esas referencias y vuelve a servirlas mal,
+y para eso está `acentos.js`; las entidades cubren el caso de que algún día no
+haga falta.)
+
+Dentro de <style> las entidades no valen —el navegador no las resuelve ahí—,
+así que `estilos.css` tiene que venir ya en ASCII y este script lo comprueba.
 
     python3 generar.py
 """
@@ -21,29 +29,47 @@ import pathlib
 import sys
 
 AQUI = pathlib.Path(__file__).parent
-FUENTE = AQUI / "manual-es.src.html"
-SALIDA = AQUI / "manual-es.html"
+IDIOMAS = ["es", "en"]
+
+
+def ascii_o_morir(texto, de_donde):
+    sobran = sorted({c for c in texto if ord(c) > 127})
+    if sobran:
+        sys.exit(
+            "%s lleva caracteres no ASCII y ahi no valen entidades. "
+            "Quitalos: %s" % (de_donde, " ".join(sobran))
+        )
 
 
 def main():
-    texto = FUENTE.read_text(encoding="utf-8")
+    css = (AQUI / "estilos.css").read_text(encoding="utf-8").strip("\n")
+    guion = (AQUI / "acentos.js").read_text(encoding="utf-8").strip("\n")
+    ascii_o_morir(css, "estilos.css")
+    ascii_o_morir(guion, "acentos.js")
 
-    # El bloque de estilos tiene que venir ya en ASCII: dentro de <style> las
-    # referencias numericas se quedan sin resolver y saldrian tal cual.
-    fin = texto.find("</style>")
-    if fin < 0:
-        sys.exit("No encuentro el bloque <style> en el fuente.")
-    css = texto[:fin]
-    sobran = sorted({c for c in css if ord(c) > 127})
-    if sobran:
-        sys.exit(
-            "El bloque <style> lleva caracteres no ASCII y ahi no valen "
-            "entidades. Quitalos del fuente: " + " ".join(sobran)
-        )
+    for idioma in IDIOMAS:
+        fuente = AQUI / ("manual-%s.src.html" % idioma)
+        if not fuente.exists():
+            print("(sin fuente para %s, se salta)" % idioma)
+            continue
 
-    cuerpo = "".join(c if ord(c) < 128 else "&#%d;" % ord(c) for c in texto[fin:])
-    SALIDA.write_text('<meta charset="utf-8">\n' + css + cuerpo, encoding="ascii")
-    print("%s escrito, %d bytes ASCII" % (SALIDA.name, SALIDA.stat().st_size))
+        texto = fuente.read_text(encoding="utf-8")
+        for marca in ("{{ESTILOS}}", "{{GUION}}"):
+            if marca not in texto:
+                sys.exit("%s no tiene la marca %s." % (fuente.name, marca))
+
+        texto = texto.replace("{{ESTILOS}}", "<style>\n%s\n</style>" % css)
+        texto = texto.replace("{{GUION}}", "<script>\n%s\n</script>" % guion)
+
+        # El <style> ya viene comprobado; el resto pasa a referencias numericas.
+        fin = texto.find("</style>")
+        cabeza = texto[:fin]
+        ascii_o_morir(cabeza, "%s (antes de </style>)" % fuente.name)
+        cuerpo = "".join(c if ord(c) < 128 else "&#%d;" % ord(c) for c in texto[fin:])
+
+        salida = AQUI / ("manual-%s.html" % idioma)
+        salida.write_text('<meta charset="utf-8">\n' + cabeza + cuerpo, encoding="ascii")
+        print("%s escrito, %d bytes ASCII" % (salida.name, salida.stat().st_size))
 
 
 if __name__ == "__main__":
