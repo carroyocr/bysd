@@ -1057,3 +1057,43 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 </main>
 </div>
 </div>
+<script>
+// Recomposicion de acentos.
+//
+// La pagina se sirve dentro de un iframe cuyo contenido se vuelve a
+// serializar por el camino: eso decodifica cualquier entidad a caracter real
+// y lo emite en UTF-8 sin declarar el juego de caracteres a tiempo -el <meta>
+// de arriba acaba pasado el primer kilobyte, donde ya no cuenta-. El
+// navegador entonces lee esos bytes como Latin-1 y cada acento llega partido
+// en dos: "cuAAnto", "versiA3n", "aEUR" por la raya.
+//
+// Aqui se rehace la operacion al reves: el texto se vuelve a bytes con
+// escape() y se decodifica como UTF-8. Y es seguro en los dos sentidos: si la
+// pagina llego bien, decodeURIComponent lanza sobre esos mismos bytes y el
+// texto se queda como estaba. El dia que el servidor declare el juego de
+// caracteres, esto no hara nada.
+(function () {
+  var roto = /[\u00C2\u00C3\u00E2][\u0080-\u00BF]/;
+  function rehacer(t) {
+    if (!roto.test(t)) { return t; }
+    try { return decodeURIComponent(escape(t)); } catch (e) { return t; }
+  }
+  var paso = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var nodo, pendientes = [];
+  while ((nodo = paso.nextNode())) {
+    if (roto.test(nodo.nodeValue)) { pendientes.push(nodo); }
+  }
+  for (var i = 0; i < pendientes.length; i++) {
+    pendientes[i].nodeValue = rehacer(pendientes[i].nodeValue);
+  }
+  // Y los rotulos que no son texto visible: el titulo de la pestana y las
+  // descripciones de las esferas para el lector de pantalla.
+  document.title = rehacer(document.title);
+  var etiquetados = document.querySelectorAll("[aria-label]");
+  for (var j = 0; j < etiquetados.length; j++) {
+    etiquetados[j].setAttribute("aria-label",
+      rehacer(etiquetados[j].getAttribute("aria-label")));
+  }
+})();
+</script>
+
