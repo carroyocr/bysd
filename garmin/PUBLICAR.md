@@ -7,17 +7,14 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.4.1, lista para subir
+## Estado — la 1.4.1, publicada
 
-La **1.4.1 está empaquetada y sin subir**: `build/backyard.iq`, 174 builds de
-los 104 relojes, sin un solo error ni aviso. Es la primera versión desde la
-1.1.0 que cambia el comportamiento de la app y no la lista de relojes: el
-margen deja de callarse el primer kilómetro de cada vuelta, Margen pasa a ser
-la primera pantalla y la meta automática viene puesta. Las novedades para el
-portal, más abajo.
-
-**Lo que falta, y solo lo puede hacer Cristhian:** subir el `.iq` al portal,
-pegar el texto de novedades y enviar a revisión.
+La **1.4.1 salió a la Connect IQ Store el 27 de agosto de 2026**:
+`build/backyard.iq`, 174 builds de los 104 relojes, sin un solo error ni aviso.
+Es la primera versión desde la 1.1.0 que cambia el comportamiento de la app y
+no la lista de relojes: el margen deja de callarse el primer kilómetro de cada
+vuelta, Margen pasa a ser la primera pantalla y la meta automática viene
+puesta. Las novedades tal como se pegaron en el portal, más abajo.
 
 ## Estado — la 1.4.0, publicada
 
