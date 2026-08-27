@@ -39,8 +39,10 @@ reglas son las de una backyard de verdad:
   hora en el FIT y el tramo de meta a campana separado si se marcó el LAP.
 
 El resto sale de cuatro ajustes puestos una vez desde el teléfono: cuánto dura
-la vuelta, cuánto mide, si vibra el corral y si la vuelta se marca sola. No
-hay botón de pausa: la campana no espera a nadie.
+la vuelta, cuánto mide, si vibra el corral y si la vuelta se marca sola —esto
+último viene puesto: el circuito de una backyard acaba donde empezó, y marcar
+a mano treinta veces son treinta ocasiones de olvidarlo—. No hay botón de
+pausa: la campana no espera a nadie.
 
 ## Las pantallas
 
@@ -87,9 +89,21 @@ margen       = restan_de_vuelta - falta
 Positivo es descanso previsto; negativo es que a ese ritmo no se llega. Dos
 detalles que no son adorno:
 
-- **Por debajo de un kilómetro no se muestra.** Con trescientos metros hechos
-  el ritmo medio da tumbos y el margen saltaría minutos enteros de una zancada
-  a otra. Hasta el primer kilómetro sale un guion.
+- **El ritmo que se multiplica no es el que se enseña.** Con trescientos
+  metros hechos, el ritmo de la vuelta da tumbos y multiplicarlo por los seis
+  que faltan saltaría minutos enteros de una zancada a otra. Así que el margen
+  proyecta con una mezcla: en el metro cero manda el ritmo medio de la carrera
+  —lo que este corredor lleva corriendo todo el día— y en el primer kilómetro
+  manda ya solo el de la vuelta, con la transición pesada por la propia
+  distancia recorrida. El ritmo que se lee en pantalla, en cambio, es siempre
+  el crudo de la vuelta. El guion dura solo el primer minuto, hasta que hay
+  distancia de la que sacar un ritmo.
+- **El punto de meta se repesca en la campana.** Se fija al dar la salida,
+  desde la última posición conocida; si el GPS no había fijado todavía se
+  quedaba en nada y la meta automática no marcaba en toda la carrera, en
+  silencio. Ahora se intenta también en cada campana mientras falte: a la hora
+  en punto el corredor está en la línea por definición, que es mejor
+  referencia que dónde estaba al pulsar START.
 - **El objetivo se calibra solo.** El GPS puede medir 6.85 km en un circuito
   de 6.7, y sobre treinta vueltas eso descuadra la cuenta. Al cerrarse cada
   vuelta se guarda lo que midió el reloj y se usa como referencia en la
@@ -233,6 +247,17 @@ añadiendo `-r -O 2` al comando de arriba (y `-d fenix847mm` para el fenix 8 de
 no es cosmético: la build debug sin optimizar se nota en el reloj real, con
 los botones respondiendo tarde al pasar de pantalla.
 
+Y el **paquete de tienda**, que es otra cosa: `-e` compila para *todos* los
+productos del `manifest.xml` de una vez y empaqueta los 174 builds en un solo
+`.iq`, que es el archivo que se sube al portal. Tarda unos minutos.
+
+```
+cd app && monkeyc -e -f monkey.jungle -o ../build/backyard.iq -y <developer_key.der> -w -r
+cd datafield && monkeyc -e -f monkey.jungle -o ../build/backyard-margen.iq -y <developer_key.der> -w -r
+```
+
+`build/` está en `.gitignore`: los `.iq` no van al repo, se regeneran.
+
 ## Idiomas
 
 Están español, inglés, francés, alemán, italiano y portugués. El reloj elige
@@ -271,7 +296,7 @@ millas aunque tenga el reloj en español.
 | Vuelta (minutos) | Cuánto dura una vuelta | 60 |
 | Vuelta (km) | Cuánto mide, **siempre en kilómetros** | 6.7 |
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
-| Vuelta auto | Marcar el LAP solo al llegar al punto de salida | no |
+| Yard auto Meta | Marcar el LAP solo al llegar al punto de salida | **sí** |
 
 Los valores por defecto son los de la backyard clásica.
 

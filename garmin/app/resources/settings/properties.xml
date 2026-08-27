@@ -21,7 +21,11 @@
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
-    <property id="autoLap" type="boolean">false</property>
+    <!-- La meta automatica viene puesta: en una backyard el circuito acaba
+         donde empezo, y marcar a mano treinta veces es treinta ocasiones de
+         olvidarlo. El boton LAP sigue funcionando igual para el que prefiera
+         marcarla el. -->
+    <property id="autoLap" type="boolean">true</property>
     <property id="autoLapKm" type="boolean">false</property>
     <property id="lapOff" type="boolean">false</property>
     <property id="vibration" type="boolean">true</property>
@@ -33,9 +37,9 @@
       huecos no rompen nada: RaceState ordena por posicion y a igualdad por
       este orden de fabrica.
     -->
-    <property id="pageDataLap" type="number">1</property>
-    <property id="pageData" type="number">2</property>
-    <property id="pageMargin" type="number">3</property>
+    <property id="pageMargin" type="number">1</property>
+    <property id="pageDataLap" type="number">2</property>
+    <property id="pageData" type="number">3</property>
     <property id="pageLap" type="number">4</property>
     <property id="pageTotal" type="number">5</property>
     <property id="pageClock" type="number">6</property>

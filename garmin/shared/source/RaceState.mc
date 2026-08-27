@@ -29,9 +29,22 @@ class RaceState {
     static const DURACION_VUELTA = 3600;
     static const KM_POR_VUELTA = 6.7;
 
-    // Por debajo de este kilometraje el ritmo medio da tumbos y el margen
-    // saltaria minutos enteros de una zancada a otra. Mejor un guion.
-    static const KM_MINIMOS_PARA_MARGEN = 1.0;
+    // El kilometraje a partir del cual el ritmo de la vuelta se basta solo
+    // para el margen. Por debajo, el ritmo de la vuelta todavia da tumbos -con
+    // trescientos metros hechos, multiplicarlo por los seis que faltan salta
+    // minutos enteros de una zancada a otra-, asi que el margen se apoya
+    // ademas en el ritmo medio de la carrera y va cediendole el sitio al de
+    // la vuelta segun se acumula distancia (ver ritmoParaMargen). Antes esto
+    // era un mutismo: hasta el kilometro no habia margen, y eso son ocho
+    // minutos de cada hora sin la cifra que justifica la app.
+    static const KM_RITMO_PLENO = 1.0;
+
+    // Mostrar el ritmo no es extrapolarlo, y por eso tiene su propio minimo,
+    // mucho mas bajo: en cuanto hay un minuto de carrera la cifra ya orienta,
+    // y el corredor prefiere un ritmo que se asienta a un guion durante el
+    // primer kilometro de cada vuelta. (Era el mismo 1.0 del margen, prestado,
+    // y dejaba los dos ritmos en blanco ocho minutos de cada hora.)
+    static const KM_MINIMOS_PARA_RITMO = 0.15;
 
     // Los tres avisos del corral, en segundos antes de la campana.
     static const AVISOS_CORRAL = [180, 120, 60];
@@ -47,7 +60,9 @@ class RaceState {
     // el ancla se deduce de la hora a la que se pulsa START.
     var horaSalida = -1;
     var avisoCorral = true;
-    var autoLap = false;
+    // La meta automatica viene puesta de fabrica (ver properties.xml). El
+    // campo de datos no marca vueltas y no la mira.
+    var autoLap = true;
     var autoLapKm = false;
     // LAP apagado: para quien va totalmente automatico y no quiere marcar
     // por error con un roce del boton. Solo silencia el boton del corredor;
@@ -63,10 +78,10 @@ class RaceState {
     // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
     // 4 reloj, 5 datos de vuelta). Lo montan los ajustes pageLap..pageClock;
     // el campo de datos no lo usa. MainView tiene los mismos ids en su enum.
-    // De fabrica: datos del yard, datos totales, margen, proxima salida,
+    // De fabrica: margen, datos del yard, datos totales, proxima salida,
     // total y hora — lo deciden los defectos de properties.xml, no este
     // literal, que solo los refleja.
-    var ordenPaginas = [5, 2, 1, 0, 3, 4];
+    var ordenPaginas = [1, 5, 2, 0, 3, 4];
 
     // El ancla: epoch de la campana de la vuelta 1. Solo la app lo pone, al
     // dar la salida; en el campo de datos se queda en null y manda la
@@ -139,7 +154,7 @@ class RaceState {
         }
 
         avisoCorral = _ajuste("corralAlert", true);
-        autoLap = _ajuste("autoLap", false);
+        autoLap = _ajuste("autoLap", true);
         autoLapKm = _ajuste("autoLapKm", false);
         lapApagado = _ajuste("lapOff", false);
         vibracion = _ajuste("vibration", true);
@@ -342,6 +357,28 @@ class RaceState {
         _lon = rad[1];
     }
 
+    // El punto de meta para la vuelta automatica, repescado en la campana.
+    //
+    // Se fija al dar la salida, pero alli sale de la ultima posicion conocida:
+    // si el GPS todavia no habia fijado -y al pulsar START a menudo no ha
+    // fijado- se quedaba en null, y entonces la meta automatica no marcaba en
+    // toda la carrera sin decir nada (tocaMarcarSola corta en seco con
+    // _latSalida == null). Con el ajuste apagado de fabrica eso era cosa de
+    // quien lo encendia a sabiendas; puesto, le pasaria a quien ni sabe que
+    // existe.
+    //
+    // La campana es el mejor sitio para repescarlo, y no solo el ultimo: a la
+    // hora en punto el corredor esta en la linea de salida por definicion -esa
+    // es la regla de la carrera-, mientras que al pulsar START podia estar en
+    // la carpa diez minutos antes. Se intenta en todas las campanas y solo
+    // hace algo mientras falte el punto, asi que un GPS que fija tarde queda
+    // cubierto por la campana siguiente.
+    function fijarMetaEnLaCampana() {
+        if (_latSalida != null || _lat == null) { return; }
+        _latSalida = _lat;
+        _lonSalida = _lon;
+    }
+
     // Marca el termino de la vuelta en curso. Devuelve true solo si la marca
     // vale: la primera de cada vuelta, con la carrera andando. Las demas se
     // ignoran sin ruido.
@@ -526,8 +563,35 @@ class RaceState {
     function ritmoSegPorKm() {
         var km = kmEnLaVuelta();
         var t = segundosEnLaVuelta();
-        if (km == null || t == null || km < KM_MINIMOS_PARA_MARGEN) { return null; }
+        if (km == null || t == null || km < KM_MINIMOS_PARA_RITMO) { return null; }
         return t.toFloat() / km;
+    }
+
+    // El ritmo con el que se proyecta lo que falta. No es el que se ensena:
+    // ese es siempre el de la vuelta, crudo, porque el corredor quiere saber a
+    // como va AHORA. Este es el que se multiplica, y multiplicar exige un
+    // ritmo asentado.
+    //
+    // Al abrir la vuelta el mejor dato disponible no es la vuelta -que no
+    // tiene nada- sino lo que este corredor lleva corriendo todo el dia. Asi
+    // que se mezclan los dos con un peso que es la propia distancia recorrida:
+    // en el metro cero manda la media de la carrera, y en KM_RITMO_PLENO manda
+    // el de la vuelta y nada mas. La transicion es continua y en el kilometro
+    // el resultado vale exactamente lo que valia antes de existir esta mezcla.
+    //
+    // En la vuelta 1 no hay media de la que tirar: alli la media ES la vuelta
+    // en curso -kmDeVueltas todavia vale cero- y la mezcla se resuelve sola en
+    // el ritmo crudo, temblor incluido. Es lo que hay: el primer margen de la
+    // carrera se gana corriendo.
+    function ritmoParaMargen() {
+        var ritmo = ritmoSegPorKm();
+        if (ritmo == null) { return null; }
+        var km = kmEnLaVuelta();
+        if (km == null || km >= KM_RITMO_PLENO) { return ritmo; }
+        var medio = ritmoMedioVueltas();
+        if (medio == null) { return ritmo; }
+        var peso = km / KM_RITMO_PLENO;
+        return (ritmo * peso) + (medio * (1.0 - peso));
     }
 
     // El margen: segundos que sobran (o faltan) para cerrar la vuelta antes de
@@ -535,7 +599,7 @@ class RaceState {
     function margenSegundos() {
         var r = restante();
         var km = kmEnLaVuelta();
-        var ritmo = ritmoSegPorKm();
+        var ritmo = ritmoParaMargen();
         if (r == null || km == null || ritmo == null) { return null; }
 
         var faltan = kmObjetivo() - km;
@@ -580,12 +644,14 @@ class RaceState {
         return s;
     }
 
-    // El ritmo medio de todas las vueltas, con el mismo minimo que el margen
-    // para no ensenar un promedio que da tumbos.
+    // El ritmo medio de todas las vueltas. En la vuelta 1 el acumulado ES la
+    // vuelta en curso -kmDeVueltas todavia vale cero-, asi que este campo
+    // heredaba entero el minimo de la vuelta; de la vuelta 2 en adelante lleva
+    // kilometros de sobra y el minimo no lo toca nunca.
     function ritmoMedioVueltas() {
         var km = kmTotalesDeVueltas();
         var s = segTotalesDeVueltas();
-        if (km < KM_MINIMOS_PARA_MARGEN || s <= 0) { return null; }
+        if (km < KM_MINIMOS_PARA_RITMO || s <= 0) { return null; }
         return s.toFloat() / km;
     }
 

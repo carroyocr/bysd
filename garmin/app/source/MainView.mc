@@ -358,9 +358,10 @@ class MainView extends Ui.View {
              vuelta < 1 ? _s[:warmup] : _s[:margin]);
 
         if (margen == null) {
-            // El primer kilometro miente: con trescientos metros hechos el
-            // ritmo medio da tumbos y el margen saltaria minutos enteros de
-            // una zancada a otra. Hasta entonces, un guion.
+            // El guion dura ahora lo que tarda el reloj en medir el primer
+            // minuto de la vuelta: sin distancia no hay ritmo, y sin ritmo no
+            // hay nada que proyectar. A partir de ahi la cifra ya sale, aunque
+            // se asiente durante el primer kilometro (ver ritmoParaMargen).
             _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_DK_GRAY, "--:--");
         } else {
             _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
@@ -369,8 +370,12 @@ class MainView extends Ui.View {
 
         // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
         // con el ritmo, y lo que falta con el tiempo que costara al ritmo que
-        // se lleva. El "≈" solo aparece cuando hay ritmo del que fiarse.
+        // se lleva. Son dos ritmos distintos a proposito: el que se ENSENA es
+        // el crudo de la vuelta -a como se va ahora-, y el que se MULTIPLICA
+        // por lo que falta es el asentado, el mismo del margen, para que las
+        // dos cifras de la pantalla cuenten la misma historia.
         var ritmo = _estado.ritmoSegPorKm();
+        var ritmoProyectado = _estado.ritmoParaMargen();
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
              Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
              + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + " /" + Fmt.unidad());
@@ -380,8 +385,8 @@ class MainView extends Ui.View {
             if (faltan < 0) { faltan = 0.0; }
         }
         var linea = _s[:toGo] + " " + Fmt.distancia(faltan) + " " + Fmt.unidad();
-        if (faltan != null && ritmo != null) {
-            linea = linea + " ≈ " + Fmt.reloj((faltan * ritmo).toNumber());
+        if (faltan != null && ritmoProyectado != null) {
+            linea = linea + " ≈ " + Fmt.reloj((faltan * ritmoProyectado).toNumber());
         }
         _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
     }
