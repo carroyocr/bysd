@@ -247,6 +247,17 @@ añadiendo `-r -O 2` al comando de arriba (y `-d fenix847mm` para el fenix 8 de
 no es cosmético: la build debug sin optimizar se nota en el reloj real, con
 los botones respondiendo tarde al pasar de pantalla.
 
+Y el **paquete de tienda**, que es otra cosa: `-e` compila para *todos* los
+productos del `manifest.xml` de una vez y empaqueta los 174 builds en un solo
+`.iq`, que es el archivo que se sube al portal. Tarda unos minutos.
+
+```
+cd app && monkeyc -e -f monkey.jungle -o ../build/backyard.iq -y <developer_key.der> -w -r
+cd datafield && monkeyc -e -f monkey.jungle -o ../build/backyard-margen.iq -y <developer_key.der> -w -r
+```
+
+`build/` está en `.gitignore`: los `.iq` no van al repo, se regeneran.
+
 ## Idiomas
 
 Están español, inglés, francés, alemán, italiano y portugués. El reloj elige

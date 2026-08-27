@@ -1,11 +1,23 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 26 de agosto de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 27 de agosto de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.4.1, lista para subir
+
+La **1.4.1 está empaquetada y sin subir**: `build/backyard.iq`, 174 builds de
+los 104 relojes, sin un solo error ni aviso. Es la primera versión desde la
+1.1.0 que cambia el comportamiento de la app y no la lista de relojes: el
+margen deja de callarse el primer kilómetro de cada vuelta, Margen pasa a ser
+la primera pantalla y la meta automática viene puesta. Las novedades para el
+portal, más abajo.
+
+**Lo que falta, y solo lo puede hacer Cristhian:** subir el `.iq` al portal,
+pegar el texto de novedades y enviar a revisión.
 
 ## Estado — la 1.4.0, publicada
 
@@ -60,6 +72,66 @@ irían por separado. Hoy solo hay ficha de la app.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.4.1 (para el campo "What's New")
+
+La primera versión desde la 1.1.0 que cambia cómo se comporta la app en vez de
+a cuántos relojes llega. Todo sale de una salida de prueba del 27 de agosto:
+los dos campos de ritmo salían vacíos durante mucho rato y no se entendía por
+qué. La razón era un umbral prestado —el margen no se muestra por debajo de un
+kilómetro, porque extrapola, y ese mismo mínimo estaba tapando también la
+*visualización* del ritmo—, y de ahí salió el resto.
+
+El margen ya no calla ese primer kilómetro: proyecta con una mezcla del ritmo
+de la vuelta y el ritmo medio de la carrera, pesada por la distancia recorrida,
+así que la cifra sale al minuto y se asienta sola. En el kilómetro vale
+exactamente lo que valía antes.
+
+Y un fallo que la publicación de la meta automática dejaba al descubierto: el
+punto de meta se tomaba solo al pulsar START, cuando el GPS a menudo no ha
+fijado todavía; si no había fijado, la meta automática no marcaba en toda la
+carrera y no lo decía. Ahora se repesca en la campana, que es cuando el
+corredor está en la línea por definición.
+
+**ES**
+
+> - La pantalla de **Margen** es ahora la primera: es la que se mira mientras
+>   se corre.
+> - El **ritmo** aparece al minuto de empezar el yard, no al kilómetro. Antes,
+>   los dos campos de ritmo se quedaban en blanco los primeros ocho minutos de
+>   cada hora.
+> - El **margen** también sale al minuto. Mientras el ritmo del yard se
+>   asienta, se apoya en el ritmo medio de tu carrera, así que la cifra no
+>   salta minutos enteros de una zancada a otra.
+> - **Yard auto Meta viene activado**: el circuito de una backyard acaba donde
+>   empezó, y marcarlo a mano treinta veces son treinta ocasiones de
+>   olvidarlo. El botón LAP sigue funcionando igual.
+> - Arreglado: si al dar la salida el GPS todavía no había fijado, la meta
+>   automática no marcaba en toda la carrera. Ahora el punto se toma en la
+>   campana, contigo en la línea.
+> - Si ya tenías la app, estos dos valores de fábrica no tocan tu
+>   configuración: se cambian desde los ajustes.
+
+**EN**
+
+> - The **Margin** screen now comes first: it's the one you look at while
+>   running.
+> - **Pace** now appears a minute into the yard instead of a kilometre in.
+>   Both pace fields used to sit blank for the first eight minutes of every
+>   hour.
+> - The **margin** appears a minute in too. While the yard's own pace settles,
+>   it leans on your average race pace, so the figure no longer jumps whole
+>   minutes from one stride to the next.
+> - **Auto yard at the finish line is now on by default**: a backyard course
+>   ends where it started, and marking it by hand thirty times is thirty
+>   chances to forget. The LAP button works exactly as before.
+> - Fixed: if GPS hadn't locked when you started the race, the automatic
+>   finish line never marked a single yard. The point is now taken at the
+>   bell, with you standing on the line.
+> - If you already had the app, these two new defaults don't touch your
+>   settings — change them from Settings.
 
 ---
 
