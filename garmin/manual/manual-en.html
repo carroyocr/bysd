@@ -1,0 +1,1172 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backyard Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root {
+  --ground: #EEF1F3;
+  --surface: #FFFFFF;
+  --surface-2: #E4E9EC;
+  --ink: #141A1E;
+  --ink-2: #45525A;
+  --ink-3: #6E7D86;
+  --rule: #D3DBE0;
+  --rule-2: #BFCAD1;
+  --accent: #C9520F;
+  --ok: #1F7D45;
+  --warn: #A8720C;
+  --bad: #B33222;
+  --shadow: 0 1px 2px rgba(20,26,30,.06), 0 8px 24px -12px rgba(20,26,30,.18);
+
+  /* La esfera se queda negra en los dos temas: es el aparato, no la pagina. */
+  --face-bg: #08090B;
+  --face-ink: #FFFFFF;
+  --face-dim: #8A959B;
+  --face-dark: #4A545A;
+  --face-orange: #F2762A;
+  --face-green: #35C46B;
+  --face-red: #E8493A;
+  --face-blue: #4FA3DC;
+
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --pad: 20px;
+  --tira: 57px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0B0E10;
+    --surface: #14181B;
+    --surface-2: #1D2328;
+    --ink: #E6EAEC;
+    --ink-2: #A9B4BA;
+    --ink-3: #7C888F;
+    --rule: #262D32;
+    --rule-2: #333C42;
+    --accent: #FF8A3D;
+    --ok: #46C97C;
+    --warn: #E0A62B;
+    --bad: #FF7361;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -16px rgba(0,0,0,.8);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #0B0E10;
+  --surface: #14181B;
+  --surface-2: #1D2328;
+  --ink: #E6EAEC;
+  --ink-2: #A9B4BA;
+  --ink-3: #7C888F;
+  --rule: #262D32;
+  --rule-2: #333C42;
+  --accent: #FF8A3D;
+  --ok: #46C97C;
+  --warn: #E0A62B;
+  --bad: #FF7361;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -16px rgba(0,0,0,.8);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-wrap: break-word;
+}
+
+.page { max-width: 1180px; margin: 0 auto; padding: 0 var(--pad) 72px; }
+
+/* ---------- portada ---------- */
+
+.hero {
+  display: grid;
+  gap: 30px;
+  padding: 34px 0 30px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.eyebrow {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+
+h1 {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: clamp(46px, 13vw, 88px);
+  line-height: .95;
+  letter-spacing: -.03em;
+  margin: 0 0 10px;
+  text-wrap: balance;
+}
+
+.hero .sub {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: clamp(20px, 5.4vw, 25px);
+  line-height: 1.28;
+  letter-spacing: -.01em;
+  color: var(--ink-2);
+  margin: 0 0 22px;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.hero p.lede { margin: 0; max-width: 46ch; color: var(--ink-2); }
+
+.hero-face {
+  order: -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ---------- indice: tira de fichas arriba, fija ---------- */
+
+/* La columna se declara con minimo cero, y la tira del indice ademas se
+   protege sola: es un elemento de grid, su minimo automatico es su ancho de
+   contenido, y como las fichas no parten palabra ese minimo son 1745 px. Sin
+   esto la columna entera se estira a esa medida y arrastra al texto con
+   ella, que es scroll horizontal en todas las secciones. El overflow-x del
+   <ol> no basta: el elemento de grid es el <nav>, no la lista. */
+.body { display: grid; grid-template-columns: minmax(0, 1fr); }
+
+nav.toc {
+  min-width: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(var(--pad) * -1) 26px;
+  padding: 9px 0;
+  background: var(--ground);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+}
+
+nav.toc .toc-title { display: none; }
+
+nav.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--pad);
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+nav.toc ol::-webkit-scrollbar { display: none; }
+nav.toc li { flex: none; margin: 0; }
+
+nav.toc a {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+  color: var(--ink-2);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+}
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-color: var(--accent); }
+
+main { min-width: 0; }
+
+section { margin-bottom: 52px; scroll-margin-top: var(--tira); }
+
+h2 {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(27px, 7vw, 34px);
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+
+h2 + .section-note {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 20px;
+}
+
+h3 {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -.01em;
+  margin: 32px 0 8px;
+  text-wrap: balance;
+}
+
+h4 {
+  font-family: var(--f-mono);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 26px 0 8px;
+}
+
+p { margin: 0 0 15px; }
+main ul, main ol { margin: 0 0 15px; padding-left: 20px; }
+main li { margin-bottom: 8px; }
+
+strong { font-weight: 600; }
+em { font-style: italic; }
+a { color: var(--accent); text-underline-offset: 2px; }
+
+kbd {
+  font-family: var(--f-mono);
+  font-size: .8em;
+  font-weight: 600;
+  letter-spacing: .03em;
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+code {
+  font-family: var(--f-mono);
+  font-size: .82em;
+  background: var(--surface-2);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+/* ---------- figuras de esfera ---------- */
+
+.face { width: 100%; max-width: 288px; height: auto; display: block; border-radius: 50%; }
+.face text { font-family: var(--f-mono); }
+
+figure.screen {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+figcaption {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-3);
+  text-align: center;
+  max-width: 34ch;
+}
+
+.screen-row {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  margin: 24px 0;
+  padding: 22px 18px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.screen-row .txt { justify-self: stretch; }
+.screen-row .txt > *:last-child { margin-bottom: 0; }
+.screen-row h3 { margin-top: 0; }
+
+.screen-trio {
+  display: grid;
+  gap: 30px;
+  margin: 26px 0;
+  justify-items: center;
+}
+
+/* ---------- tablas: fichas apiladas en el movil ---------- */
+
+.table-wrap { margin: 18px 0 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 16px; }
+
+.table-wrap table { display: block; }
+.table-wrap thead { display: none; }
+.table-wrap tbody { display: block; }
+
+.table-wrap tr {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 9px;
+}
+.table-wrap tr:last-child { margin-bottom: 0; }
+
+.table-wrap td {
+  display: block;
+  border: none;
+  padding: 0;
+  white-space: normal;
+}
+.table-wrap td + td { margin-top: 8px; }
+
+.table-wrap td[data-l]::before {
+  content: attr(data-l);
+  display: block;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 1px;
+}
+
+td.k {
+  font-family: var(--f-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+td.v { font-family: var(--f-mono); font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+/* ---------- avisos ---------- */
+
+.note {
+  border-left: 3px solid var(--rule-2);
+  padding: 2px 0 2px 16px;
+  margin: 20px 0;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+.note.warn { border-left-color: var(--warn); }
+.note.key { border-left-color: var(--accent); }
+.note > *:last-child { margin-bottom: 0; }
+.note .lbl {
+  display: block;
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+
+/* ---------- pasos numerados ---------- */
+
+ol.steps { list-style: none; padding: 0; margin: 22px 0; counter-reset: paso; display: flex; flex-direction: column; gap: 24px; }
+ol.steps > li { counter-increment: paso; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; margin: 0; }
+ol.steps > li::before {
+  content: counter(paso, decimal-leading-zero);
+  font-family: var(--f-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+ol.steps h3 { margin: 0 0 6px; font-size: 18px; }
+ol.steps > li > div > *:last-child { margin-bottom: 0; }
+
+/* ---------- semaforo del corral ---------- */
+
+.corral-key { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 22px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+  padding: 6px 13px 6px 9px;
+  background: var(--surface);
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+
+/* ---------- cierre ---------- */
+
+footer {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--ink-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- de la tableta hacia arriba ---------- */
+
+@media (min-width: 700px) {
+  :root { --pad: 24px; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .table-wrap table { display: table; font-size: 15px; }
+  .table-wrap thead { display: table-header-group; }
+  .table-wrap tbody { display: table-row-group; }
+  .table-wrap tr { display: table-row; background: none; border: none; border-radius: 0; padding: 0; margin: 0; }
+  .table-wrap th, .table-wrap td {
+    display: table-cell;
+    text-align: left;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .table-wrap tr:last-child td { border-bottom: none; }
+  .table-wrap th {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .table-wrap td + td { margin-top: 0; }
+  .table-wrap td[data-l]::before { display: none; }
+  .table-wrap td.k, .table-wrap td.v { font-size: 13.5px; white-space: nowrap; }
+  .table-wrap td.k { font-weight: 400; }
+
+  .screen-row { grid-template-columns: 250px minmax(0, 1fr); align-items: center; gap: 28px; padding: 24px; }
+  .screen-row .face { max-width: 250px; }
+  .screen-trio { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .screen-trio .face { max-width: 100%; }
+
+  footer { flex-direction: row; flex-wrap: wrap; gap: 8px 28px; }
+  ol.steps > li { grid-template-columns: 38px minmax(0, 1fr); gap: 16px; }
+}
+
+/* ---------- escritorio: el indice vuelve a ser un rail ---------- */
+
+@media (min-width: 1000px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 48px;
+    align-items: center;
+    padding: 72px 0 56px;
+  }
+  .hero-face { order: 0; }
+
+  .body { grid-template-columns: 210px minmax(0, 1fr); gap: 56px; align-items: start; padding-top: 52px; }
+
+  nav.toc {
+    top: 24px;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+  nav.toc .toc-title {
+    display: block;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+  nav.toc ol { flex-direction: column; gap: 9px; overflow: visible; padding: 0; }
+  nav.toc a {
+    display: block;
+    min-height: 0;
+    white-space: normal;
+    padding: 0 0 0 10px;
+    background: none;
+    border: none;
+    border-left: 2px solid var(--rule);
+    border-radius: 0;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { border-left-color: var(--accent); }
+
+  main { max-width: 68ch; }
+  section { scroll-margin-top: 24px; }
+  .page { padding-bottom: 96px; }
+}
+</style>
+
+<div class="page">
+
+<header class="hero">
+  <div>
+    <p class="eyebrow">Runner's manual &#183; version 1.4.1</p>
+    <h1>Backyard</h1>
+    <p class="sub">Your yard, your pace, and how long you'll get to rest.</p>
+    <p class="lede">A Garmin watch app for running a backyard ultra &#8212; any of them. It records your activity, anchors the bells to the top of the hour, and tells you, yard after yard, whether the pace you're holding will get you back in time to sit down. No server, no bib number, no connection needed.</p>
+  </div>
+  <div class="hero-face">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Margin screen: plus eight minutes twenty-four seconds, in green">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <circle cx="120" cy="120" r="104" fill="none" stroke="var(--face-dim)" stroke-width="7" stroke-dasharray="359 654" transform="rotate(-90 120 120)"/>
+      <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
+      <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margin</text>
+      <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
+      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km &#183; 7:32 /km</text>
+      <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">To go 2.6 km &#8776; 19:35</text>
+    </svg>
+    <figcaption>The Margin screen, the first one you see while running.</figcaption>
+  </div>
+</header>
+
+<div class="body">
+
+<nav class="toc" aria-label="Contents">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#instalar">Install</a></li>
+    <li><a href="#ajustes">Settings</a></li>
+    <li><a href="#carrera">Running a race</a></li>
+    <li><a href="#pantallas">The six screens</a></li>
+    <li><a href="#corral">The corral</a></li>
+    <li><a href="#marcar">Marking the yard</a></li>
+    <li><a href="#margen">How the margin works</a></li>
+    <li><a href="#terminar">Finishing and saving</a></li>
+    <li><a href="#reanudar">If the watch dies</a></li>
+    <li><a href="#problemas">Common confusions</a></li>
+    <li><a href="#ficha">Specifications</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section id="instalar">
+  <h2>Install</h2>
+  <p class="section-note">Connect IQ Store &#183; free &#183; 104 watches</p>
+
+  <p>Backyard installs like any other Connect IQ app, from your phone:</p>
+  <ol>
+    <li>Open the <strong>Connect IQ Store</strong> app (or <code>apps.garmin.com</code> in a browser).</li>
+    <li>Search for <strong>Backyard</strong> and pick the listing &#171;Backyard Ultra &#8212; lap, pace &amp; rest&#187;.</li>
+    <li>Tap <strong>Download</strong> and wait for the watch to sync.</li>
+  </ol>
+  <p>It then shows up in the watch's <strong>activity</strong> list, next to Run and Bike &#8212; not among the widgets or watch faces. It is an activity like any other: you open it, press START, and the watch records.</p>
+
+  <div class="note">
+    <span class="lbl">Language</span>
+    <p>The app speaks English, Spanish, French, German, Italian and Portuguese, and picks one by itself from your watch's language setting. There is no language menu. If your watch is set to a language we don't carry, you get English.</p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Units</span>
+    <p>Kilometres or miles, whatever your watch says. The one exception is the <em>yard distance</em> setting, which is <strong>always written in kilometres</strong> even with the watch in miles &#8212; the setting's label says so. That's deliberate: if that one setting changed units, the factory 6.7 would mean 10.8 km of yard for half the world.</p>
+  </div>
+</section>
+
+<section id="ajustes">
+  <h2>Settings</h2>
+  <p class="section-note">From the phone, or from the watch on the start line</p>
+
+  <p>Everything can be set in both places and lands in the same store, so it makes no difference which one you use. The usual thing is to get it ready from the phone back at the tent, and keep the watch for a last-minute change.</p>
+
+  <h3>From the phone</h3>
+  <p>In Garmin Connect: <strong>Devices &#8594; your watch &#8594; Connect IQ Apps &#8594; Backyard &#8594; Settings</strong>.</p>
+
+  <h3>From the watch</h3>
+  <p>On the <strong>start line</strong> (before you press START) or during the <strong>warm-up</strong>, hold the menu button &#8212; long <kbd>UP</kbd> on most Garmins &#8212; or, on touch watches, press and hold the screen. That opens &#171;Yard settings&#187;.</p>
+
+  <div class="note warn">
+    <span class="lbl">Only before the first bell</span>
+    <p>Once the yard 1 bell rings, the menu stops opening. Changing the yard duration mid-race would move every bell after it, and the bell is not up for discussion.</p>
+  </div>
+
+  <h3>What's in there</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Setting</th><th>What it does</th><th>Factory</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="k">Start time</td>
+          <td>Sets the time of day the yard 1 bell rings. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
+          <td class="v">Auto</td>
+        </tr>
+        <tr>
+          <td class="k">Yard duration</td>
+          <td>How long a yard lasts. From 1 to 120 minutes.</td>
+          <td class="v">60</td>
+        </tr>
+        <tr>
+          <td class="k">Yard distance</td>
+          <td>How long the loop is. From 1.0 to 20.0 km, <strong>always in kilometres</strong>.</td>
+          <td class="v">6.7</td>
+        </tr>
+        <tr>
+          <td class="k">Corral alert</td>
+          <td>Buzz and tone at 3, 2 and 1 minute before every bell.</td>
+          <td class="v">Yes</td>
+        </tr>
+        <tr>
+          <td class="k">Auto yard at finish line</td>
+          <td>Marks the yard by itself when you return to the start point, by GPS.</td>
+          <td class="v">Yes</td>
+        </tr>
+        <tr>
+          <td class="k">Auto yard by distance</td>
+          <td>Marks the yard by itself once its distance is covered.</td>
+          <td class="v">No</td>
+        </tr>
+        <tr>
+          <td class="k">LAP button off</td>
+          <td>For anyone running fully automatic who doesn't want a brush of the button to mark. Automatic marks keep working.</td>
+          <td class="v">No</td>
+        </tr>
+        <tr>
+          <td class="k">Vibration</td>
+          <td>Turns off every buzz: bells, marks and corral.</td>
+          <td class="v">Yes</td>
+        </tr>
+        <tr>
+          <td class="k">Sound</td>
+          <td>Turns off every tone. It also obeys the watch's system sounds.</td>
+          <td class="v">Yes</td>
+        </tr>
+        <tr>
+          <td class="k">Race screens</td>
+          <td>Which ones you see, and in what order. See below.</td>
+          <td class="v">All six</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Start time: Auto or set</h3>
+  <p>With a <strong>set time</strong> &#8212; say 7:00 &#8212; the yard 1 bell is that time of day, no matter when you press START. Everything before it is warm-up. It's the safest option when you know your race's start time.</p>
+  <p>On <strong>Auto</strong>, the watch looks at when you press START and decides: if you've just passed an hour mark &#8212; within a grace period of one sixth of a yard, capped at 10 minutes &#8212; it takes the bell as already rung and puts you in yard 1. Otherwise it counts down to the next mark. Pressing at 8:03 leaves you running the 8:00 yard; pressing at 8:40 leaves you warming up until 9:00.</p>
+
+  <h3>Choosing your screens</h3>
+  <p>On the watch, <strong>Yard settings &#8594; Race screens</strong> opens a catalogue: every screen is drawn <em>in full</em>, with sample data, so you decide by looking rather than by guessing from a name. <kbd>UP</kbd> and <kbd>DOWN</kbd> walk through them, <kbd>START</kbd> shows or hides, <kbd>BACK</kbd> goes back.</p>
+  <p>The <strong>order</strong> &#8212; which one comes first &#8212; can only be changed from the phone: each screen has a position setting from 1 to 6, and <strong>0 hides it</strong>. A watch face is no place to drag a list around.</p>
+  <p>Hide all of them and the app keeps the Yard screen: it never leaves you with nothing.</p>
+
+  <div class="note">
+    <span class="lbl">If you already had the app</span>
+    <p>Factory values only apply to fresh installs. Coming from an earlier version, your configuration is left exactly as it was &#8212; including &#171;Auto yard at finish line&#187; switched off and Margin sitting third. Change them by hand if you want the new defaults.</p>
+  </div>
+</section>
+
+<section id="carrera">
+  <h2>Running a race</h2>
+  <p class="section-note">From opening the app to the last bell you make</p>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <h3>Open the app and let it find GPS</h3>
+        <p>Open it from the activity list. The emblem fills the screen for five seconds &#8212; any button skips it &#8212; and behind it comes the <strong>start line</strong>: the yard you're about to run, with its distance and its minutes, and the state of the GPS.</p>
+        <p>Open it early, back at the tent. The GPS starts searching the moment you do, and whatever it takes to lock is better spent there than on the line.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Check what the screen says</h3>
+        <p>If the top of it doesn't show your loop's distance and your yard's minutes, <em>now</em> is when to fix it: long <kbd>UP</kbd> opens the settings. And wait for <strong>&#171;GPS ready&#187;</strong> in green at the bottom: while it says &#171;Searching GPS&#187; in grey, the watch still doesn't know where you are.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Press START</h3>
+        <p><kbd>START</kbd> starts the race without asking anything &#8212; with the race director counting down out loud, a confirmation dialog is in the way. From there on the watch is recording.</p>
+        <p>If you pressed before the hour, you get the <strong>Warm-up</strong> screen counting down to your bell. It is not yard 1: in the activity file it stays in a lap of its own and never gets added to your first yard.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Run the yard</h3>
+        <p>The bell rings &#8212; a long buzz and a tone &#8212; and for five seconds the screen announces the yard that's starting. After that you're in charge: <kbd>UP</kbd> and <kbd>DOWN</kbd> (or swiping up and down on touch watches) move through your screens.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Mark it as you cross</h3>
+        <p>When you get in, press the lap button &#8212; <kbd>LAP</kbd>, bottom right on most Garmins &#8212; or let the automatic finish line do it for you. The screen turns <strong>green</strong>: you made it, go sit down. Below, the time to the next bell and what you've piled up so far.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>Get back to the line before the bell</h3>
+        <p>Three minutes out, the <strong>corral</strong> screen takes over whatever you were looking at. When the bell rings, the next yard opens by itself. No button opens a yard: the clock does.</p>
+      </div>
+    </li>
+    <li>
+      <div>
+        <h3>And when it's over, save</h3>
+        <p><kbd>START</kbd> opens the finish menu. See <a href="#terminar">Finishing and saving</a>.</p>
+      </div>
+    </li>
+  </ol>
+
+  <h3>The buttons, at a glance</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Button</th><th>Before the start</th><th>In the race</th></tr></thead>
+      <tbody>
+        <tr><td class="k">START</td><td>Starts the race</td><td>Finish menu</td></tr>
+        <tr><td class="k">LAP</td><td>&#8212;</td><td>Marks the yard as done</td></tr>
+        <tr><td class="k">UP / DOWN</td><td>&#8212;</td><td>Changes screen</td></tr>
+        <tr><td class="k">Long UP</td><td>Yard settings</td><td>Nothing (warm-up only)</td></tr>
+        <tr><td class="k">BACK</td><td>Leaves the app</td><td>Nothing: no going back mid-race</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>On touch watches, swiping up and down does the same as <kbd>UP</kbd> and <kbd>DOWN</kbd>. Run in gloves and you use the buttons; run without and you swipe.</p>
+</section>
+
+<section id="pantallas">
+  <h2>The six screens</h2>
+  <p class="section-note">In the order they come from the factory</p>
+
+  <p>Every screen has <em>one</em> big number. Twenty hours in, in the dark, with tired eyes, the only thing you actually read is whatever fills half the face; everything else is context for when you have time to spare, and in a backyard you never do.</p>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Margin screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <circle cx="120" cy="120" r="104" fill="none" stroke="var(--face-dim)" stroke-width="7" stroke-dasharray="359 654" transform="rotate(-90 120 120)"/>
+      <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
+      <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margin</text>
+      <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
+      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km &#183; 7:32 /km</text>
+      <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">To go 2.6 km &#8776; 19:35</text>
+    </svg>
+    <div class="txt">
+      <h3>Margin</h3>
+      <p>The reason the app exists. The big number is the time you'll have <strong>left over</strong> &#8212; or be short by &#8212; to close the loop before the bell, at the pace you're holding. <span style="color:var(--ok)"><strong>Green</strong></span> and you get to rest; <span style="color:var(--bad)"><strong>red</strong></span> and you push.</p>
+      <p>The two rings say the same thing without a single digit: the outer grey one is the <strong>time</strong> used up in the yard, the inner coloured one the <strong>distance</strong> covered. When the inner ring overtakes the outer one, you're getting in before the bell.</p>
+      <p>Underneath: distance done against the target with your current pace, and what's left with what it's going to cost you.</p>
+    </div>
+  </div>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Data per yard screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <circle cx="120" cy="120" r="114" fill="none" stroke="var(--face-orange)" stroke-width="4"/>
+      <rect x="86" y="14" width="68" height="19" rx="9.5" fill="var(--face-bg)" stroke="var(--face-orange)" stroke-width="2"/>
+      <text x="120" y="27" fill="var(--face-orange)" font-size="11" text-anchor="middle">Yard 7</text>
+      <line x1="34" y1="101" x2="206" y2="101" stroke="var(--face-dark)" stroke-width="1"/>
+      <line x1="34" y1="156" x2="206" y2="156" stroke="var(--face-dark)" stroke-width="1"/>
+      <line x1="120" y1="101" x2="120" y2="156" stroke="var(--face-dark)" stroke-width="1"/>
+      <text x="120" y="55" fill="var(--face-dim)" font-size="10" text-anchor="middle">Distance</text>
+      <text x="120" y="80" fill="var(--face-ink)" font-size="22" text-anchor="middle">4.1</text>
+      <text x="76" y="115" fill="var(--face-dim)" font-size="10" text-anchor="middle">Pace</text>
+      <text x="76" y="140" fill="var(--face-ink)" font-size="22" text-anchor="middle">7:32</text>
+      <text x="164" y="115" fill="var(--face-dim)" font-size="10" text-anchor="middle">HR</text>
+      <text x="164" y="140" fill="var(--face-ink)" font-size="22" text-anchor="middle">142</text>
+      <text x="120" y="172" fill="var(--face-dim)" font-size="10" text-anchor="middle">Remaining</text>
+      <text x="120" y="197" fill="var(--face-ink)" font-size="22" text-anchor="middle">28:07</text>
+    </svg>
+    <div class="txt">
+      <h3>Data per yard</h3>
+      <p>The classic running grid, but about <strong>this yard only</strong>: distance covered since the bell, your pace in this yard, your heart rate right now, and the time left to the next bell.</p>
+      <p>Orange ring &#8212; orange is the colour of the yard throughout the app.</p>
+    </div>
+  </div>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Total data screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <circle cx="120" cy="120" r="114" fill="none" stroke="var(--face-blue)" stroke-width="4"/>
+      <rect x="92" y="14" width="56" height="19" rx="9.5" fill="var(--face-bg)" stroke="var(--face-blue)" stroke-width="2"/>
+      <text x="120" y="27" fill="var(--face-blue)" font-size="11" text-anchor="middle">Total</text>
+      <line x1="34" y1="101" x2="206" y2="101" stroke="var(--face-dark)" stroke-width="1"/>
+      <line x1="34" y1="156" x2="206" y2="156" stroke="var(--face-dark)" stroke-width="1"/>
+      <line x1="120" y1="101" x2="120" y2="156" stroke="var(--face-dark)" stroke-width="1"/>
+      <text x="120" y="55" fill="var(--face-dim)" font-size="10" text-anchor="middle">Distance</text>
+      <text x="120" y="80" fill="var(--face-ink)" font-size="22" text-anchor="middle">44.3</text>
+      <text x="76" y="115" fill="var(--face-dim)" font-size="10" text-anchor="middle">Pace</text>
+      <text x="76" y="140" fill="var(--face-ink)" font-size="22" text-anchor="middle">7:48</text>
+      <text x="164" y="115" fill="var(--face-dim)" font-size="10" text-anchor="middle">HR</text>
+      <text x="164" y="140" fill="var(--face-ink)" font-size="22" text-anchor="middle">138</text>
+      <text x="120" y="172" fill="var(--face-dim)" font-size="10" text-anchor="middle">Time</text>
+      <text x="120" y="197" fill="var(--face-ink)" font-size="22" text-anchor="middle">6:31</text>
+    </svg>
+    <div class="txt">
+      <h3>Total data</h3>
+      <p>The whole-race twin, in blue. With one difference that matters: distance, pace and heart rate count <strong>only what you ran inside the yards</strong> &#8212; bell to mark &#8212; with the rests left out. That way the average pace is your running pace, not something watered down by sitting.</p>
+      <p><strong>Time</strong>, on the other hand, adds up everything: yards and rests. It's how long you've been in the race.</p>
+    </div>
+  </div>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Yard screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <circle cx="120" cy="120" r="104" fill="none" stroke="var(--face-orange)" stroke-width="7" stroke-dasharray="274 654" transform="rotate(-90 120 120)"/>
+      <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Next start</text>
+      <text x="120" y="132" fill="var(--face-ink)" font-size="46" text-anchor="middle">28:07</text>
+      <text x="120" y="165" fill="var(--face-ink)" font-size="11" text-anchor="middle">Yard 7 &#183; running</text>
+    </svg>
+    <div class="txt">
+      <h3>Yard</h3>
+      <p>How long until the next bell, with the ring emptying as the clock runs: what's left of the ring is what's left of the yard. Same number as the middle, readable without reading.</p>
+      <p>Below, which yard you're on and what you're doing: <em>running</em> or <em>resting</em>.</p>
+    </div>
+  </div>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Total screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Total</text>
+      <text x="120" y="134" fill="var(--face-ink)" font-size="52" text-anchor="middle">6</text>
+      <text x="120" y="165" fill="var(--face-ink)" font-size="11" text-anchor="middle">yards done</text>
+      <text x="120" y="190" fill="var(--face-dark)" font-size="11" text-anchor="middle">6:31 &#183; 40.2 km</text>
+    </svg>
+    <div class="txt">
+      <h3>Total</h3>
+      <p>The yards you've closed &#8212; the number that gets counted when this is over. The yard in progress joins the tally the moment you mark it, even though the hour hasn't closed yet.</p>
+      <p>Below, time in the race and the distance, worked out from the loop length.</p>
+    </div>
+  </div>
+
+  <div class="screen-row">
+    <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Clock screen">
+      <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+      <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Clock</text>
+      <text x="120" y="134" fill="var(--face-ink)" font-size="46" text-anchor="middle">1:43</text>
+      <text x="120" y="165" fill="var(--face-ink)" font-size="11" text-anchor="middle">Battery 62%</text>
+      <text x="120" y="190" fill="var(--face-dark)" font-size="11" text-anchor="middle">AM</text>
+    </svg>
+    <div class="txt">
+      <h3>Clock</h3>
+      <p>Time of day and battery. In a thirty-hour race, knowing whether the battery will make it through the night is race information, not a luxury: under 20 % the percentage turns red, which is when you decide between changing the power mode and finding the charger.</p>
+    </div>
+  </div>
+
+  <h3>The ones that take over</h3>
+  <p>On top of the six there are four screens that show up without being asked and leave on their own. They can't be hidden: they're the ones you need to see.</p>
+
+  <div class="screen-trio">
+    <figure class="screen">
+      <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Warm-up screen">
+        <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+        <circle cx="120" cy="120" r="104" fill="none" stroke="var(--face-dark)" stroke-width="4"/>
+        <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Warm-up</text>
+        <text x="120" y="132" fill="var(--face-ink)" font-size="44" text-anchor="middle">12:40</text>
+        <text x="120" y="163" fill="var(--face-orange)" font-size="11" text-anchor="middle">Start 7:00 AM</text>
+        <text x="120" y="186" fill="var(--face-dark)" font-size="10" text-anchor="middle">6:47 AM &#183; Battery 98%</text>
+        <path d="M104 202 l4 5 l9 -10" fill="none" stroke="var(--face-green)" stroke-width="3"/>
+        <text x="130" y="205" fill="var(--face-green)" font-size="11" text-anchor="middle">GPS</text>
+      </svg>
+      <figcaption><strong>Warm-up.</strong> Before your first bell. Countdown, bell time and the GPS check.</figcaption>
+    </figure>
+    <figure class="screen">
+      <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Corral screen in the final minute">
+        <circle cx="120" cy="120" r="120" fill="var(--face-red)"/>
+        <text x="120" y="70" fill="#08090B" font-size="12" text-anchor="middle">To the line</text>
+        <text x="120" y="140" fill="#08090B" font-size="56" font-weight="600" text-anchor="middle">0:38</text>
+        <text x="120" y="175" fill="#08090B" font-size="11" text-anchor="middle">Yard 8</text>
+      </svg>
+      <figcaption><strong>Corral.</strong> The last three minutes. The final one, giant black on red.</figcaption>
+    </figure>
+    <figure class="screen">
+      <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Rest screen">
+        <circle cx="120" cy="120" r="120" fill="var(--face-bg)"/>
+        <circle cx="120" cy="120" r="98" fill="none" stroke="var(--face-green)" stroke-width="16"/>
+        <text x="120" y="70" fill="var(--face-green)" font-size="12" text-anchor="middle">Rest</text>
+        <text x="120" y="138" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">9:12</text>
+        <text x="120" y="168" fill="var(--face-dim)" font-size="11" text-anchor="middle">7 Yards</text>
+        <text x="120" y="190" fill="var(--face-dim)" font-size="11" text-anchor="middle">46.9 km</text>
+      </svg>
+      <figcaption><strong>Rest.</strong> The moment you mark the yard. How long until the next bell.</figcaption>
+    </figure>
+  </div>
+
+  <p>The fourth is the <strong>starting notice</strong>: five seconds at every bell with the number of the yard beginning and a reminder of how long and how far it runs. Changing screen skips it.</p>
+</section>
+
+<section id="corral">
+  <h2>The corral</h2>
+  <p class="section-note">The last three minutes of every yard</p>
+
+  <p>The corral isn't a screen you pick: it <strong>takes over</strong>. In the last three minutes of any countdown &#8212; the start included &#8212; it jumps on top of whatever you were looking at, because at that point what's urgent is getting to the line, not your pace. It leaves on its own when the bell rings.</p>
+
+  <div class="corral-key">
+    <span class="chip"><span class="dot" style="background:var(--warn)"></span>3 min &#8212; yellow</span>
+    <span class="chip"><span class="dot" style="background:var(--accent)"></span>2 min &#8212; orange</span>
+    <span class="chip"><span class="dot" style="background:var(--bad)"></span>1 min &#8212; full red</span>
+  </div>
+
+  <p>At three and two minutes it's a wide coloured ring on black: you catch the colour at a glance with most of the screen switched off, which on an AMOLED is where the battery goes. Only the <strong>final minute</strong> floods red edge to edge, with the countdown in giant black. It's the most urgent warning and the shortest, and there the cost is worth it.</p>
+
+  <h3>Warnings you can feel blind</h3>
+  <p>You know how long is left without lifting your wrist, because each warning buzzes differently:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>When</th><th>Buzz</th><th>Tone</th></tr></thead>
+      <tbody>
+        <tr><td class="k">3 minutes</td><td>Three short</td><td class="v">Alert</td></tr>
+        <tr><td class="k">2 minutes</td><td>Two short</td><td class="v">Alert</td></tr>
+        <tr><td class="k">1 minute</td><td>One long</td><td class="v">Alarm</td></tr>
+        <tr><td class="k">The bell</td><td>One long</td><td class="v">Alarm</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Glance at the watch with a minute to go and you get that warning and only that one &#8212; not all three in a row.</p>
+
+  <div class="note">
+    <span class="lbl">Running at night</span>
+    <p>Vibration and sound have their own switches in the settings. Sleeping next to your crew, you kill the sound and keep the buzz; want neither, kill both. The tone also obeys the watch's system sounds.</p>
+  </div>
+</section>
+
+<section id="marcar">
+  <h2>Marking the yard</h2>
+  <p class="section-note">What closes a yard, and what doesn't</p>
+
+  <p>One rule runs through the whole app, and it's worth getting straight: <strong>marking doesn't open the next yard</strong>. Marking says the yard <em>ended</em> &#8212; you got in, your rest starts now. The next one is opened by the clock, on its own, wherever the bell finds you.</p>
+  <p>Only the <strong>first mark of each yard</strong> counts. The rest are ignored without a sound, so one extra press breaks nothing.</p>
+
+  <h3>The three ways to mark</h3>
+
+  <h4>The LAP button</h4>
+  <p>The usual thing: you press as you cross. On most Garmins it's the bottom-right button.</p>
+
+  <h4>Auto yard at finish line &#8212; on by default</h4>
+  <p>The mark falls by itself when you come back within 30 metres of the <strong>start point</strong>: wider than a finish arch, narrower than the tent area. So it doesn't mark you on the way out &#8212; which is also &#171;near the start&#187; &#8212; it requires at least half a loop covered first.</p>
+  <p>The watch fixes that point when you start the race, and if the GPS hadn't locked yet, it picks it up at the first bell: at the top of the hour you're standing on the line by definition.</p>
+
+  <h4>Auto yard by distance</h4>
+  <p>The mark falls once the yard's distance is covered as <em>your</em> watch measures it. It can run alongside the finish-line one: whichever comes first does it.</p>
+
+  <div class="note key">
+    <span class="lbl">Fully automatic</span>
+    <p>With the automatic marks on and <strong>LAP button off</strong> enabled, the button stops marking and there's no way to ruin a yard with a stray press. The automatic marks carry on as normal.</p>
+  </div>
+
+  <h3>The target calibrates itself</h3>
+  <p>Your watch might measure 6.85 km on a 6.7 km loop, and over thirty yards that gap throws the margin off. So every time you mark, the app keeps whatever it had measured &#8212; you're on the line, so that <em>is</em> the loop as this watch measures it &#8212; and uses it as the target for the next yard.</p>
+  <p>With a sanity filter: it only calibrates if what it measured looks like a yard, between 80 % and 120 % of the target. A loop you never finished doesn't move the reference.</p>
+</section>
+
+<section id="margen">
+  <h2>How the margin works</h2>
+  <p class="section-note">The arithmetic the app is built on</p>
+
+  <p>The margin is a subtraction: the time left until the bell, minus how long it'll take you to close what's left of the loop at the pace you're holding.</p>
+
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td class="k">pace</td><td class="v">yard time &#247; yard distance</td></tr>
+        <tr><td class="k">to go</td><td class="v">(target &#8722; yard distance) &#215; pace</td></tr>
+        <tr><td class="k">margin</td><td class="v">time until the bell &#8722; to go</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Positive is rest you can count on. Negative means you don't get in at that pace.</p>
+
+  <h3>The pace shown isn't the pace multiplied</h3>
+  <p>Three hundred metres in, your yard pace is still all over the place, and multiplying it by the six kilometres left would make the margin jump whole minutes from one stride to the next. The app used to handle that by keeping quiet: no margin until the first kilometre, which is eight minutes out of every hour without the number that matters most.</p>
+  <p>Now it leans on something better. When a yard opens, the best predictor of your pace isn't the yard &#8212; which has nothing in it &#8212; but <strong>what you've been running all day</strong>. So the projection mixes the two, weighted by the distance covered:</p>
+  <ul>
+    <li>At metre zero, your <strong>average race pace</strong> rules.</li>
+    <li>At <strong>one kilometre</strong>, this yard's pace rules, and nothing else.</li>
+    <li>In between, the handover is continuous.</li>
+  </ul>
+  <p>The pace you <em>read</em> on screen, though, is always this yard's raw pace: how you're going right now. The mix is only used for multiplying &#8212; the margin and the &#171;to go X &#8776; Y&#187; line.</p>
+  <p>In yard 1 there's no average to lean on, so there the margin is the raw pace from the first minute, wobble and all. The first margin of the race is earned by running.</p>
+
+  <div class="note">
+    <span class="lbl">Why the dashes</span>
+    <p>Until the watch has enough distance to work out a pace &#8212; around a minute in &#8212; the margin and the pace show as <code>--:--</code>. There's nothing to calculate from, and a made-up number wearing that much confidence would be worse than a dash.</p>
+  </div>
+</section>
+
+<section id="terminar">
+  <h2>Finishing and saving</h2>
+  <p class="section-note">There are thirty hours recording underneath</p>
+
+  <p><kbd>START</kbd> opens the finish menu, with three options:</p>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td class="k">Resume</td><td>Closes the menu and carries on. The way out with no consequences.</td></tr>
+        <tr><td class="k">Save</td><td>Closes the activity, stores it on the watch and uploads it to Garmin Connect like any other race.</td></tr>
+        <tr><td class="k">Discard</td><td>Throws the activity away. <strong>It asks for confirmation</strong> &#8212; the only option in the menu that does.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>During the race <kbd>BACK</kbd> does nothing, deliberately: there's an activity recording underneath and a backyard doesn't offer second starts. This menu is the only door.</p>
+
+  <h3>What lands in Garmin Connect</h3>
+  <p>An ordinary running activity, with its laps: <strong>every bell closes one lap and opens the next</strong>, so the file's laps are your yards, hour by hour. The warm-up &#8212; whatever you ran or waited through before your first bell &#8212; sits in a lap of its own and never gets added to yard 1.</p>
+  <p>It syncs to Garmin Connect by itself, and on to Strava or wherever else you have connected, like any other activity.</p>
+</section>
+
+<section id="reanudar">
+  <h2>If the watch dies</h2>
+  <p class="section-note">Flat battery, a reboot, an accidental exit</p>
+
+  <p>Over eighty or a hundred hours it happens. The app saves what matters at every bell and every mark, so when you open it again it asks:</p>
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td class="k">Resume</td><td>Carries on where the race was. Since the anchor is the clock, the yard count comes back exact even if the watch was off for a while.</td></tr>
+        <tr><td class="k">New race</td><td>Throws away the saved one and takes you to the start line.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Resuming opens a <strong>new recording</strong>: Connect IQ won't let the old one continue, so in Garmin Connect you'll see the race split into two activities. The race count, though, stays exact &#8212; it's driven by the wall clock, not by the stopwatch.</p>
+  <p>You have to answer: this question can't be skipped with <kbd>BACK</kbd>.</p>
+</section>
+
+<section id="problemas">
+  <h2>Common confusions</h2>
+  <p class="section-note">What tends to throw people</p>
+
+  <h3>The margin shows <code>--:--</code> and won't budge</h3>
+  <p>Not enough distance yet. For the first long minute of every yard there's nothing to work a pace out of. If it's still like that several minutes in, the watch isn't measuring distance: check that the GPS locked.</p>
+
+  <h3>The automatic finish line never marks</h3>
+  <p>Check that <strong>Auto yard at finish line</strong> is on in the settings, and that the GPS had locked. It also needs at least half a loop covered before it marks, so it doesn't catch you on the way out.</p>
+
+  <h3>I marked the yard and the next one hasn't started</h3>
+  <p>That's right: marking closes the yard, it doesn't open the next one. The bell opens the next one, at the top of the hour. Until then you're resting &#8212; that's the green screen.</p>
+
+  <h3>I pressed START late and I think everything's off</h3>
+  <p>It isn't. The yard 1 bell anchors to the top of the hour, not to the moment you press. Starting at 8:03 leaves you running the 8:00 to 9:00 yard, with its bell nailed to 9:00. And if you'd set a fixed start time, there was nothing to work out in the first place.</p>
+
+  <h3>The settings won't open</h3>
+  <p>They only open before the yard 1 bell &#8212; on the start line or during the warm-up. After that they close on purpose: changing the yard duration mid-race would move every bell after it.</p>
+
+  <h3>The watch distance doesn't match the loop</h3>
+  <p>That's normal, and the app is built for it: it calibrates the target with what <em>your</em> watch measures every time you mark a yard. Let the first yard go by and you'll see the margin settle itself.</p>
+
+  <h3>I can't find the app on the watch</h3>
+  <p>It isn't a widget or a watch face: it's in the <strong>activity</strong> list, with Run and Bike. If it isn't there either, sync the watch with your phone again.</p>
+</section>
+
+<section id="ficha">
+  <h2>Specifications</h2>
+  <p class="section-note">What's worth knowing before you trust it</p>
+
+  <div class="table-wrap">
+    <table>
+      <tbody>
+        <tr><td class="k">Version</td><td>1.4.1 &#8212; also on the watch, under Settings &#8594; About</td></tr>
+        <tr><td class="k">Watches</td><td>104 models: f&#275;nix, epix, Forerunner, Venu, v&#237;voactive, Instinct AMOLED, MARQ, Descent, D2 and Approach</td></tr>
+        <tr><td class="k">Permissions</td><td>Activity recording (FIT) and position (GPS)</td></tr>
+        <tr><td class="k">Network</td><td>None. It doesn't reach the internet, doesn't send data, and doesn't need your phone to run</td></tr>
+        <tr><td class="k">Duration</td><td>Built for activities of up to 120 hours</td></tr>
+        <tr><td class="k">Languages</td><td>English, Spanish, French, German, Italian and Portuguese</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <span class="lbl">Before your first race</span>
+    <p>Try it on a training run with the yard set to 5 or 10 minutes and a short distance. In one go you see the bell, the corral, the mark and the rest, and you turn up to the real start line knowing what's about to happen. A backyard is no place to find out how an app works.</p>
+  </div>
+
+</section>
+
+<footer>
+  <span>Backyard 1.4.1 &#183; English manual</span>
+  <span>Connect IQ Store &#183; apps.garmin.com</span>
+  <span>backyardultrasantodomingo.com</span>
+</footer>
+
+</main>
+</div>
+</div>
+<script>
+// Recomposicion de acentos.
+//
+// La pagina se sirve dentro de un iframe cuyo contenido se vuelve a
+// serializar por el camino: eso decodifica cualquier entidad a caracter real
+// y lo emite en UTF-8 sin declarar el juego de caracteres a tiempo -el <meta>
+// de arriba acaba pasado el primer kilobyte, donde ya no cuenta-. El
+// navegador lee esos bytes como Windows-1252 y cada acento llega partido.
+//
+// Aqui se rehace al reves: cada caracter vuelve a su byte y el conjunto se
+// decodifica como UTF-8. La vuelta a byte no es la identidad, y ahi estuvo el
+// primer intento fallido: Windows-1252 mete puntuacion en 0x80-0x9F -la raya
+// larga acaba en "a", "euro", "comilla"- y esos caracteres estan por encima
+// de U+00FF, asi que hace falta la tabla. Sin ella se arreglaban las
+// palabras sueltas y se quedaban rotos justo los parrafos con raya.
+//
+// Es seguro en los dos sentidos: el decodificador va en modo estricto, y un
+// texto que ya llego bien no forma UTF-8 valido al volver a bytes, asi que
+// lanza y se queda como estaba. El dia que el servidor declare el juego de
+// caracteres, esto no hara nada.
+(function () {
+  var lector;
+  try { lector = new TextDecoder("utf-8", { fatal: true }); } catch (e) { return; }
+
+  var W1252 = {
+    0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85,
+    0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A,
+    0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92,
+    0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97,
+    0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C,
+    0x017E: 0x9E, 0x0178: 0x9F
+  };
+  var noAscii = /[^\x00-\x7F]/;
+
+  function rehacer(t) {
+    if (!t || !noAscii.test(t)) { return t; }
+    var bytes = new Uint8Array(t.length);
+    for (var i = 0; i < t.length; i++) {
+      var c = t.charCodeAt(i);
+      if (c < 0x100) { bytes[i] = c; }
+      else if (W1252[c] !== undefined) { bytes[i] = W1252[c]; }
+      else { return t; }
+    }
+    try { return lector.decode(bytes); } catch (e) { return t; }
+  }
+
+  var paso = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var nodo, pendientes = [];
+  while ((nodo = paso.nextNode())) { pendientes.push(nodo); }
+  for (var i = 0; i < pendientes.length; i++) {
+    var sano = rehacer(pendientes[i].nodeValue);
+    if (sano !== pendientes[i].nodeValue) { pendientes[i].nodeValue = sano; }
+  }
+
+  // Y los rotulos que no son texto visible: el titulo de la pestana y las
+  // descripciones de las esferas para el lector de pantalla.
+  document.title = rehacer(document.title);
+  var etiquetados = document.querySelectorAll("[aria-label]");
+  for (var j = 0; j < etiquetados.length; j++) {
+    etiquetados[j].setAttribute("aria-label",
+      rehacer(etiquetados[j].getAttribute("aria-label")));
+  }
+})();
+</script>

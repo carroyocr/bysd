@@ -6,14 +6,13 @@ La 1.3.0 sí llegó a la tienda antes (versión inicial, 24 de agosto). La
 versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están
 en `garmin/PUBLICAR.md`.
 
-**La 1.4.1 está empaquetada y sin subir** (`garmin/build/backyard.iq`, 174
-builds, sin error ni aviso). Es la primera desde la 1.1.0 que cambia el
+**La 1.4.1 está publicada** (27 de agosto de 2026; `garmin/build/backyard.iq`,
+174 builds, sin error ni aviso). Es la primera desde la 1.1.0 que cambia el
 comportamiento y no la lista de relojes: Margen pasa a ser la primera
 pantalla, el ritmo y el margen salen al minuto en vez de al kilómetro —el
 margen se apoya mientras tanto en el ritmo medio de la carrera—, «Yard auto
 Meta» viene puesto de fábrica y el punto de meta se repesca en la campana, que
-antes se perdía entero si el GPS no había fijado al dar la salida. Falta
-subirlo al portal y pasar revisión.
+antes se perdía entero si el GPS no había fijado al dar la salida.
 
 La app de reloj y el campo de datos **compilan sin errores ni avisos** para los
 104 relojes de la lista. La arquitectura, cómo se compila y qué está comprobado
@@ -40,6 +39,20 @@ automática. El emblema se queda. Está todo explicado en el README.
 Contra el boceto original (el artifact «BYSD en tu muñeca»), las únicas
 vistas que no están son «Quedan en pie» y el punto de sincronía: necesitaban
 red y se descartaron a propósito con el servidor. Decisión del 17 de agosto.
+
+## El manual del corredor
+
+Vive en el sitio, no en la tienda: `backyardultrasantodomingo.com/garmin` y
+`/garmin/en`. Se genera desde `garmin/manual/` con `python3 generar.py`, que
+escribe a la vez la versión del sitio (`frontend/public/garmin/`) y la de
+Artifact, del mismo fuente. Publicarlo es desplegar el frontend.
+
+**El QR de «Acerca de» se queda apuntando a la raíz del sitio.** Se propuso
+llevarlo a `/garmin` —quien escanea desde el reloj busca ayuda de la app— y se
+descartó el 27 de agosto de 2026: no compensa un PNG nuevo, una versión y otra
+revisión de Garmin. No volver a proponerlo.
+
+Dónde enlazarlo en la ficha de la tienda, en `garmin/PUBLICAR.md`.
 
 ## Para retomar
 

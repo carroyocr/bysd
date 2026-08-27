@@ -7,17 +7,14 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.4.1, lista para subir
+## Estado — la 1.4.1, publicada
 
-La **1.4.1 está empaquetada y sin subir**: `build/backyard.iq`, 174 builds de
-los 104 relojes, sin un solo error ni aviso. Es la primera versión desde la
-1.1.0 que cambia el comportamiento de la app y no la lista de relojes: el
-margen deja de callarse el primer kilómetro de cada vuelta, Margen pasa a ser
-la primera pantalla y la meta automática viene puesta. Las novedades para el
-portal, más abajo.
-
-**Lo que falta, y solo lo puede hacer Cristhian:** subir el `.iq` al portal,
-pegar el texto de novedades y enviar a revisión.
+La **1.4.1 salió a la Connect IQ Store el 27 de agosto de 2026**:
+`build/backyard.iq`, 174 builds de los 104 relojes, sin un solo error ni aviso.
+Es la primera versión desde la 1.1.0 que cambia el comportamiento de la app y
+no la lista de relojes: el margen deja de callarse el primer kilómetro de cada
+vuelta, Margen pasa a ser la primera pantalla y la meta automática viene
+puesta. Las novedades tal como se pegaron en el portal, más abajo.
 
 ## Estado — la 1.4.0, publicada
 
@@ -58,6 +55,31 @@ inglés y en español, y pesa 136 KB.
 Serían **dos fichas separadas**: la app y el campo de datos son productos
 distintos con su propio id. Comparten la mitad del código, pero en la tienda
 irían por separado. Hoy solo hay ficha de la app.
+
+## El manual, y donde se enlaza
+
+El manual del corredor vive en el sitio, no en la tienda:
+
+- `backyardultrasantodomingo.com/garmin` — español
+- `backyardultrasantodomingo.com/garmin/en` — inglés
+
+Se genera desde `garmin/manual/` con `python3 generar.py`, que escribe a la vez
+la versión del sitio (en `frontend/public/garmin/`) y la de Artifact. Las dos
+salen del mismo fuente, así que no pueden separarse. Publicarlo es desplegar el
+frontend: los archivos viajan en el build de CRA, y `render.yaml` lleva las
+reglas de reescritura por delante del comodín de la SPA.
+
+**Dónde poner el enlace en la ficha**, y conviene que sea en los dos sitios:
+
+1. **En la descripción**, una línea al final: «Manual completo:
+   backyardultrasantodomingo.com/garmin». Es lo único que se ve seguro.
+2. **En el campo de sitio web / soporte del portal**, que la tienda muestra
+   como enlace en la ficha. El nombre exacto del campo hay que verlo en el
+   portal — no está comprobado aquí.
+
+Lo que **no** hay que enlazar es la URL de Artifact: es privada por defecto,
+vive en `claude.ai` y puede pedir sesión. Sirve para revisar el manual, no
+para enseñárselo a un corredor.
 
 ## Pasos en el portal (para cada producto)
 
