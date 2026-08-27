@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Manual de Backyard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,13 +16,12 @@
   --rule: #D3DBE0;
   --rule-2: #BFCAD1;
   --accent: #C9520F;
-  --accent-soft: #FBEDE4;
   --ok: #1F7D45;
   --warn: #A8720C;
   --bad: #B33222;
-  --info: #21618F;
   --shadow: 0 1px 2px rgba(20,26,30,.06), 0 8px 24px -12px rgba(20,26,30,.18);
 
+  /* La esfera se queda negra en los dos temas: es el aparato, no la pagina. */
   --face-bg: #08090B;
   --face-ink: #FFFFFF;
   --face-dim: #8A959B;
@@ -29,12 +29,14 @@
   --face-orange: #F2762A;
   --face-green: #35C46B;
   --face-red: #E8493A;
-  --face-amber: #E9B23C;
   --face-blue: #4FA3DC;
 
   --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
   --f-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --pad: 20px;
+  --tira: 57px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,11 +50,9 @@
     --rule: #262D32;
     --rule-2: #333C42;
     --accent: #FF8A3D;
-    --accent-soft: #2A1B10;
     --ok: #46C97C;
     --warn: #E0A62B;
     --bad: #FF7361;
-    --info: #63B2E8;
     --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -16px rgba(0,0,0,.8);
   }
 }
@@ -67,11 +67,9 @@
   --rule: #262D32;
   --rule-2: #333C42;
   --accent: #FF8A3D;
-  --accent-soft: #2A1B10;
   --ok: #46C97C;
   --warn: #E0A62B;
   --bad: #FF7361;
-  --info: #63B2E8;
   --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -16px rgba(0,0,0,.8);
 }
 
@@ -83,106 +81,120 @@ body {
   color: var(--ink);
   font-family: var(--f-body);
   font-size: 17px;
-  line-height: 1.65;
+  line-height: 1.62;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-wrap: break-word;
 }
 
-.page {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 0 24px 96px;
-}
+.page { max-width: 1180px; margin: 0 auto; padding: 0 var(--pad) 72px; }
 
 /* ---------- portada ---------- */
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 48px;
-  align-items: center;
-  padding: 72px 0 56px;
+  gap: 30px;
+  padding: 34px 0 30px;
   border-bottom: 1px solid var(--rule);
 }
 
 .eyebrow {
   font-family: var(--f-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--accent);
-  margin: 0 0 20px;
+  margin: 0 0 14px;
 }
 
 h1 {
   font-family: var(--f-display);
   font-weight: 800;
-  font-size: clamp(48px, 9vw, 88px);
+  font-size: clamp(46px, 13vw, 88px);
   line-height: .95;
   letter-spacing: -.03em;
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   text-wrap: balance;
 }
 
 .hero .sub {
   font-family: var(--f-display);
   font-weight: 500;
-  font-size: clamp(19px, 2.4vw, 25px);
-  line-height: 1.3;
+  font-size: clamp(20px, 5.4vw, 25px);
+  line-height: 1.28;
   letter-spacing: -.01em;
   color: var(--ink-2);
-  margin: 0 0 28px;
-  max-width: 26ch;
+  margin: 0 0 22px;
+  max-width: 24ch;
   text-wrap: balance;
 }
 
-.hero p.lede {
-  margin: 0;
-  max-width: 46ch;
-  color: var(--ink-2);
+.hero p.lede { margin: 0; max-width: 46ch; color: var(--ink-2); }
+
+.hero-face {
+  order: -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
-.hero-face { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+/* ---------- indice: tira de fichas arriba, fija ---------- */
 
-/* ---------- cuerpo con indice ---------- */
-
-.body {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 56px;
-  align-items: start;
-  padding-top: 56px;
-}
+.body { display: grid; }
 
 nav.toc {
   position: sticky;
-  top: 24px;
+  top: 0;
+  z-index: 20;
+  margin: 0 calc(var(--pad) * -1) 26px;
+  padding: 9px 0;
+  background: var(--ground);
+  border-bottom: 1px solid var(--rule);
   font-family: var(--f-mono);
   font-size: 12.5px;
-  line-height: 1.5;
 }
 
-nav.toc .toc-title {
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  font-size: 11px;
-  margin-bottom: 14px;
+nav.toc .toc-title { display: none; }
+
+nav.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--pad);
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+nav.toc ol::-webkit-scrollbar { display: none; }
+nav.toc li { flex: none; margin: 0; }
 
-nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-nav.toc a { color: var(--ink-2); text-decoration: none; border-left: 2px solid var(--rule); padding-left: 10px; display: block; }
-nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); }
+nav.toc a {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  white-space: nowrap;
+  color: var(--ink-2);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+}
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-color: var(--accent); }
 
-main { max-width: 68ch; min-width: 0; }
+main { min-width: 0; }
 
-section { padding-top: 8px; margin-bottom: 60px; scroll-margin-top: 24px; }
+section { margin-bottom: 52px; scroll-margin-top: var(--tira); }
 
 h2 {
   font-family: var(--f-display);
   font-weight: 700;
-  font-size: clamp(26px, 3.4vw, 34px);
-  line-height: 1.12;
+  font-size: clamp(27px, 7vw, 34px);
+  line-height: 1.1;
   letter-spacing: -.02em;
   margin: 0 0 6px;
   text-wrap: balance;
@@ -190,11 +202,12 @@ h2 {
 
 h2 + .section-note {
   font-family: var(--f-mono);
-  font-size: 12px;
-  letter-spacing: .1em;
+  font-size: 11.5px;
+  line-height: 1.45;
+  letter-spacing: .09em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin: 0 0 22px;
+  margin: 0 0 20px;
 }
 
 h3 {
@@ -202,7 +215,7 @@ h3 {
   font-weight: 600;
   font-size: 20px;
   letter-spacing: -.01em;
-  margin: 36px 0 8px;
+  margin: 32px 0 8px;
   text-wrap: balance;
 }
 
@@ -213,35 +226,34 @@ h4 {
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin: 28px 0 8px;
+  margin: 26px 0 8px;
 }
 
-p { margin: 0 0 16px; }
-main ul, main ol { margin: 0 0 16px; padding-left: 22px; }
+p { margin: 0 0 15px; }
+main ul, main ol { margin: 0 0 15px; padding-left: 20px; }
 main li { margin-bottom: 8px; }
 
 strong { font-weight: 600; }
 em { font-style: italic; }
-
 a { color: var(--accent); text-underline-offset: 2px; }
 
 kbd {
   font-family: var(--f-mono);
-  font-size: .82em;
+  font-size: .8em;
   font-weight: 600;
-  letter-spacing: .04em;
+  letter-spacing: .03em;
   background: var(--surface);
   border: 1px solid var(--rule-2);
   border-bottom-width: 2px;
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   color: var(--ink);
   white-space: nowrap;
 }
 
 code {
   font-family: var(--f-mono);
-  font-size: .84em;
+  font-size: .82em;
   background: var(--surface-2);
   border-radius: 3px;
   padding: 1px 5px;
@@ -249,7 +261,7 @@ code {
 
 /* ---------- figuras de esfera ---------- */
 
-.face { width: 100%; max-width: 250px; height: auto; display: block; border-radius: 50%; }
+.face { width: 100%; max-width: 288px; height: auto; display: block; border-radius: 50%; }
 .face text { font-family: var(--f-mono); }
 
 figure.screen {
@@ -263,59 +275,87 @@ figure.screen {
 figcaption {
   font-family: var(--f-mono);
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--ink-3);
   text-align: center;
-  max-width: 30ch;
+  max-width: 34ch;
 }
 
 .screen-row {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 28px;
-  align-items: center;
-  margin: 28px 0;
-  padding: 24px;
+  justify-items: center;
+  gap: 22px;
+  margin: 24px 0;
+  padding: 22px 18px;
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: var(--shadow);
 }
+.screen-row .txt { justify-self: stretch; }
 .screen-row .txt > *:last-child { margin-bottom: 0; }
 .screen-row h3 { margin-top: 0; }
 
 .screen-trio {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  margin: 28px 0;
+  gap: 30px;
+  margin: 26px 0;
+  justify-items: center;
 }
-.screen-trio .face { max-width: 100%; }
 
-/* ---------- tablas ---------- */
+/* ---------- tablas: fichas apiladas en el movil ---------- */
 
-.table-wrap { overflow-x: auto; margin: 20px 0 24px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
-table { border-collapse: collapse; width: 100%; font-size: 15px; }
-th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-th {
+.table-wrap { margin: 18px 0 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 16px; }
+
+.table-wrap table { display: block; }
+.table-wrap thead { display: none; }
+.table-wrap tbody { display: block; }
+
+.table-wrap tr {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 9px;
+}
+.table-wrap tr:last-child { margin-bottom: 0; }
+
+.table-wrap td {
+  display: block;
+  border: none;
+  padding: 0;
+  white-space: normal;
+}
+.table-wrap td + td { margin-top: 8px; }
+
+.table-wrap td[data-l]::before {
+  content: attr(data-l);
+  display: block;
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-3);
-  white-space: nowrap;
+  margin-bottom: 1px;
 }
-td.k { font-family: var(--f-mono); font-size: 13.5px; white-space: nowrap; }
-td.v { font-family: var(--f-mono); font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink-2); }
+
+td.k {
+  font-family: var(--f-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+td.v { font-family: var(--f-mono); font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 
 /* ---------- avisos ---------- */
 
 .note {
   border-left: 3px solid var(--rule-2);
-  padding: 2px 0 2px 18px;
-  margin: 22px 0;
+  padding: 2px 0 2px 16px;
+  margin: 20px 0;
   color: var(--ink-2);
   font-size: 16px;
 }
@@ -325,7 +365,7 @@ td.v { font-family: var(--f-mono); font-size: 13.5px; font-variant-numeric: tabu
 .note .lbl {
   display: block;
   font-family: var(--f-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -334,15 +374,15 @@ td.v { font-family: var(--f-mono); font-size: 13.5px; font-variant-numeric: tabu
 
 /* ---------- pasos numerados ---------- */
 
-ol.steps { list-style: none; padding: 0; margin: 24px 0; counter-reset: paso; display: flex; flex-direction: column; gap: 26px; }
-ol.steps > li { counter-increment: paso; display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 16px; margin: 0; }
+ol.steps { list-style: none; padding: 0; margin: 22px 0; counter-reset: paso; display: flex; flex-direction: column; gap: 24px; }
+ol.steps > li { counter-increment: paso; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; margin: 0; }
 ol.steps > li::before {
   content: counter(paso, decimal-leading-zero);
   font-family: var(--f-mono);
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
-  padding-top: 5px;
+  padding-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 ol.steps h3 { margin: 0 0 6px; font-size: 18px; }
@@ -350,7 +390,7 @@ ol.steps > li > div > *:last-child { margin-bottom: 0; }
 
 /* ---------- semaforo del corral ---------- */
 
-.corral-key { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 24px; }
+.corral-key { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 22px; }
 .chip {
   display: inline-flex;
   align-items: center;
@@ -359,7 +399,7 @@ ol.steps > li > div > *:last-child { margin-bottom: 0; }
   font-size: 12.5px;
   border: 1px solid var(--rule-2);
   border-radius: 999px;
-  padding: 5px 13px 5px 9px;
+  padding: 6px 13px 6px 9px;
   background: var(--surface);
 }
 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
@@ -367,36 +407,111 @@ ol.steps > li > div > *:last-child { margin-bottom: 0; }
 /* ---------- cierre ---------- */
 
 footer {
-  margin-top: 20px;
-  padding-top: 28px;
+  margin-top: 8px;
+  padding-top: 24px;
   border-top: 1px solid var(--rule);
   font-family: var(--f-mono);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.7;
   color: var(--ink-3);
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 28px;
+  flex-direction: column;
+  gap: 3px;
 }
 
 a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
-@media (max-width: 1000px) {
-  .body { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  nav.toc { position: static; margin-bottom: 44px; padding-bottom: 28px; border-bottom: 1px solid var(--rule); }
-  nav.toc ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 18px; }
+/* ---------- de la tableta hacia arriba ---------- */
+
+@media (min-width: 700px) {
+  :root { --pad: 24px; }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .table-wrap table { display: table; font-size: 15px; }
+  .table-wrap thead { display: table-header-group; }
+  .table-wrap tbody { display: table-row-group; }
+  .table-wrap tr { display: table-row; background: none; border: none; border-radius: 0; padding: 0; margin: 0; }
+  .table-wrap th, .table-wrap td {
+    display: table-cell;
+    text-align: left;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .table-wrap tr:last-child td { border-bottom: none; }
+  .table-wrap th {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .table-wrap td + td { margin-top: 0; }
+  .table-wrap td[data-l]::before { display: none; }
+  .table-wrap td.k, .table-wrap td.v { font-size: 13.5px; white-space: nowrap; }
+  .table-wrap td.k { font-weight: 400; }
+
+  .screen-row { grid-template-columns: 250px minmax(0, 1fr); align-items: center; gap: 28px; padding: 24px; }
+  .screen-row .face { max-width: 250px; }
+  .screen-trio { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .screen-trio .face { max-width: 100%; }
+
+  footer { flex-direction: row; flex-wrap: wrap; gap: 8px 28px; }
+  ol.steps > li { grid-template-columns: 38px minmax(0, 1fr); gap: 16px; }
 }
 
-@media (max-width: 760px) {
-  .page { padding: 0 20px 72px; }
-  .hero { grid-template-columns: minmax(0, 1fr); gap: 36px; padding: 48px 0 40px; }
-  .hero-face { order: -1; align-items: flex-start; }
-  .screen-row { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 20px; }
-  .screen-row .txt { justify-self: stretch; }
-  .screen-trio { grid-template-columns: minmax(0, 1fr); max-width: 250px; margin-inline: auto; }
-  main { max-width: none; }
+/* ---------- escritorio: el indice vuelve a ser un rail ---------- */
+
+@media (min-width: 1000px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 48px;
+    align-items: center;
+    padding: 72px 0 56px;
+  }
+  .hero-face { order: 0; }
+
+  .body { grid-template-columns: 210px minmax(0, 1fr); gap: 56px; align-items: start; padding-top: 52px; }
+
+  nav.toc {
+    top: 24px;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+  nav.toc .toc-title {
+    display: block;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-size: 11px;
+    margin-bottom: 14px;
+  }
+  nav.toc ol { flex-direction: column; gap: 9px; overflow: visible; padding: 0; }
+  nav.toc a {
+    display: block;
+    min-height: 0;
+    padding: 0 0 0 10px;
+    background: none;
+    border: none;
+    border-left: 2px solid var(--rule);
+    border-radius: 0;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { border-left-color: var(--accent); }
+
+  main { max-width: 68ch; }
+  section { scroll-margin-top: 24px; }
+  .page { padding-bottom: 96px; }
 }
 </style>
 
@@ -486,61 +601,21 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <h3>Qu&#233; hay dentro</h3>
   <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>Ajuste</th><th>Qu&#233; hace</th><th>De f&#225;brica</th></tr>
+    <table role="table">
+      <thead role="rowgroup">
+        <tr role="row"><th role="columnheader">Ajuste</th><th role="columnheader">Qu&#233; hace</th><th role="columnheader">De f&#225;brica</th></tr>
       </thead>
-      <tbody>
-        <tr>
-          <td class="k">Hora de salida</td>
-          <td>Fija la hora del d&#237;a a la que suena la campana del yard 1. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td>
-          <td class="v">Auto</td>
-        </tr>
-        <tr>
-          <td class="k">Yard (minutos)</td>
-          <td>Cu&#225;nto dura un yard. De 1 a 120 minutos.</td>
-          <td class="v">60</td>
-        </tr>
-        <tr>
-          <td class="k">Yard (km)</td>
-          <td>Cu&#225;nto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kil&#243;metros</strong>.</td>
-          <td class="v">6.7</td>
-        </tr>
-        <tr>
-          <td class="k">Aviso de corral</td>
-          <td>Vibraci&#243;n y tono a los 3, 2 y 1 minuto antes de cada campana.</td>
-          <td class="v">S&#237;</td>
-        </tr>
-        <tr>
-          <td class="k">Yard auto Meta</td>
-          <td>Marca el yard solo al volver al punto de salida, por GPS.</td>
-          <td class="v">S&#237;</td>
-        </tr>
-        <tr>
-          <td class="k">Yard auto por distancia</td>
-          <td>Marca el yard solo al completar su distancia.</td>
-          <td class="v">No</td>
-        </tr>
-        <tr>
-          <td class="k">Apagar bot&#243;n LAP</td>
-          <td>Para quien va totalmente autom&#225;tico y no quiere marcar por un roce. Las marcas autom&#225;ticas siguen funcionando.</td>
-          <td class="v">No</td>
-        </tr>
-        <tr>
-          <td class="k">Vibraci&#243;n</td>
-          <td>Apaga todas las vibraciones: campanas, marcas y corral.</td>
-          <td class="v">S&#237;</td>
-        </tr>
-        <tr>
-          <td class="k">Sonido</td>
-          <td>Apaga todos los tonos. Obedece adem&#225;s a los Sonidos del sistema.</td>
-          <td class="v">S&#237;</td>
-        </tr>
-        <tr>
-          <td class="k">Pantallas de carrera</td>
-          <td>Cu&#225;les se ven y en qu&#233; orden. Ver abajo.</td>
-          <td class="v">Las seis</td>
-        </tr>
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qu&#233; hace">Fija la hora del d&#237;a a la que suena la campana del yard 1. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De f&#225;brica">Auto</td></tr>
+        <tr role="row"><td role="cell" class="k">Yard (minutos)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto dura un yard. De 1 a 120 minutos.</td><td role="cell" class="v" data-l="De f&#225;brica">60</td></tr>
+        <tr role="row"><td role="cell" class="k">Yard (km)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kil&#243;metros</strong>.</td><td role="cell" class="v" data-l="De f&#225;brica">6.7</td></tr>
+        <tr role="row"><td role="cell" class="k">Aviso de corral</td><td role="cell" data-l="Qu&#233; hace">Vibraci&#243;n y tono a los 3, 2 y 1 minuto antes de cada campana.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
+        <tr role="row"><td role="cell" class="k">Yard auto Meta</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al volver al punto de salida, por GPS.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
+        <tr role="row"><td role="cell" class="k">Yard auto por distancia</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al completar su distancia.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
+        <tr role="row"><td role="cell" class="k">Apagar bot&#243;n LAP</td><td role="cell" data-l="Qu&#233; hace">Para quien va totalmente autom&#225;tico y no quiere marcar por un roce. Las marcas autom&#225;ticas siguen funcionando.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
+        <tr role="row"><td role="cell" class="k">Vibraci&#243;n</td><td role="cell" data-l="Qu&#233; hace">Apaga todas las vibraciones: campanas, marcas y corral.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
+        <tr role="row"><td role="cell" class="k">Sonido</td><td role="cell" data-l="Qu&#233; hace">Apaga todos los tonos. Obedece adem&#225;s a los Sonidos del sistema.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
+        <tr role="row"><td role="cell" class="k">Pantallas de carrera</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;les se ven y en qu&#233; orden. Ver abajo.</td><td role="cell" class="v" data-l="De f&#225;brica">Las seis</td></tr>
       </tbody>
     </table>
   </div>
@@ -613,14 +688,14 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <h3>Los botones, de un vistazo</h3>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Bot&#243;n</th><th>Antes de salir</th><th>En carrera</th></tr></thead>
-      <tbody>
-        <tr><td class="k">START</td><td>Da la salida</td><td>Men&#250; de terminar</td></tr>
-        <tr><td class="k">LAP</td><td>&#8212;</td><td>Marca el yard terminado</td></tr>
-        <tr><td class="k">UP / DOWN</td><td>&#8212;</td><td>Cambia de pantalla</td></tr>
-        <tr><td class="k">UP largo</td><td>Ajustes del yard</td><td>Nada (solo en calentamiento)</td></tr>
-        <tr><td class="k">BACK</td><td>Sale de la app</td><td>Nada: en carrera no hay retroceso</td></tr>
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Bot&#243;n</th><th role="columnheader">Antes de salir</th><th role="columnheader">En carrera</th></tr></thead>
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">START</td><td role="cell" data-l="Antes de salir">Da la salida</td><td role="cell" data-l="En carrera">Men&#250; de terminar</td></tr>
+        <tr role="row"><td role="cell" class="k">LAP</td><td role="cell" data-l="Antes de salir">&#8212;</td><td role="cell" data-l="En carrera">Marca el yard terminado</td></tr>
+        <tr role="row"><td role="cell" class="k">UP / DOWN</td><td role="cell" data-l="Antes de salir">&#8212;</td><td role="cell" data-l="En carrera">Cambia de pantalla</td></tr>
+        <tr role="row"><td role="cell" class="k">UP largo</td><td role="cell" data-l="Antes de salir">Ajustes del yard</td><td role="cell" data-l="En carrera">Nada (solo en calentamiento)</td></tr>
+        <tr role="row"><td role="cell" class="k">BACK</td><td role="cell" data-l="Antes de salir">Sale de la app</td><td role="cell" data-l="En carrera">Nada: en carrera no hay retroceso</td></tr>
       </tbody>
     </table>
   </div>
@@ -804,13 +879,13 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <h3>Avisos que se sienten a ciegas</h3>
   <p>Sin levantar la mu&#241;eca sabes cu&#225;nto queda, porque cada aviso vibra distinto:</p>
   <div class="table-wrap">
-    <table>
-      <thead><tr><th>Momento</th><th>Vibraci&#243;n</th><th>Tono</th></tr></thead>
-      <tbody>
-        <tr><td class="k">3 minutos</td><td>Tres toques cortos</td><td class="v">Alerta</td></tr>
-        <tr><td class="k">2 minutos</td><td>Dos toques cortos</td><td class="v">Alerta</td></tr>
-        <tr><td class="k">1 minuto</td><td>Uno largo</td><td class="v">Alarma</td></tr>
-        <tr><td class="k">La campana</td><td>Uno largo</td><td class="v">Alarma</td></tr>
+    <table role="table">
+      <thead role="rowgroup"><tr role="row"><th role="columnheader">Momento</th><th role="columnheader">Vibraci&#243;n</th><th role="columnheader">Tono</th></tr></thead>
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">3 minutos</td><td role="cell" data-l="Vibraci&#243;n">Tres toques cortos</td><td role="cell" class="v" data-l="Tono">Alerta</td></tr>
+        <tr role="row"><td role="cell" class="k">2 minutos</td><td role="cell" data-l="Vibraci&#243;n">Dos toques cortos</td><td role="cell" class="v" data-l="Tono">Alerta</td></tr>
+        <tr role="row"><td role="cell" class="k">1 minuto</td><td role="cell" data-l="Vibraci&#243;n">Uno largo</td><td role="cell" class="v" data-l="Tono">Alarma</td></tr>
+        <tr role="row"><td role="cell" class="k">La campana</td><td role="cell" data-l="Vibraci&#243;n">Uno largo</td><td role="cell" class="v" data-l="Tono">Alarma</td></tr>
       </tbody>
     </table>
   </div>
@@ -858,11 +933,11 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>El margen es una resta: el tiempo que queda para la campana, menos lo que vas a tardar en cerrar lo que falta del circuito al ritmo que llevas.</p>
 
   <div class="table-wrap">
-    <table>
-      <tbody>
-        <tr><td class="k">ritmo</td><td class="v">tiempo del yard &#247; distancia del yard</td></tr>
-        <tr><td class="k">falta</td><td class="v">(objetivo &#8722; distancia del yard) &#215; ritmo</td></tr>
-        <tr><td class="k">margen</td><td class="v">tiempo hasta la campana &#8722; falta</td></tr>
+    <table role="table">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">ritmo</td><td role="cell" class="v">tiempo del yard &#247; distancia del yard</td></tr>
+        <tr role="row"><td role="cell" class="k">falta</td><td role="cell" class="v">(objetivo &#8722; distancia del yard) &#215; ritmo</td></tr>
+        <tr role="row"><td role="cell" class="k">margen</td><td role="cell" class="v">tiempo hasta la campana &#8722; falta</td></tr>
       </tbody>
     </table>
   </div>
@@ -892,11 +967,11 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <p><kbd>START</kbd> abre el men&#250; de terminar, con tres opciones:</p>
   <div class="table-wrap">
-    <table>
-      <tbody>
-        <tr><td class="k">Reanudar</td><td>Cierra el men&#250; y sigue la carrera. Es la salida sin consecuencias.</td></tr>
-        <tr><td class="k">Guardar</td><td>Cierra la actividad, la guarda en el reloj y la sube a Garmin Connect como cualquier carrera.</td></tr>
-        <tr><td class="k">Descartar</td><td>Tira la actividad. <strong>Pide confirmaci&#243;n</strong> &#8212; es la &#250;nica del men&#250; que la pide.</td></tr>
+    <table role="table">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">Reanudar</td><td role="cell">Cierra el men&#250; y sigue la carrera. Es la salida sin consecuencias.</td></tr>
+        <tr role="row"><td role="cell" class="k">Guardar</td><td role="cell">Cierra la actividad, la guarda en el reloj y la sube a Garmin Connect como cualquier carrera.</td></tr>
+        <tr role="row"><td role="cell" class="k">Descartar</td><td role="cell">Tira la actividad. <strong>Pide confirmaci&#243;n</strong> &#8212; es la &#250;nica del men&#250; que la pide.</td></tr>
       </tbody>
     </table>
   </div>
@@ -913,10 +988,10 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <p>En una carrera de ochenta o cien horas puede pasar. La app guarda lo esencial en cada campana y en cada marca, as&#237; que al volver a abrirla te pregunta:</p>
   <div class="table-wrap">
-    <table>
-      <tbody>
-        <tr><td class="k">Reanudar</td><td>Sigue la carrera donde estaba. Como el ancla es la hora, la cuenta de yards se recupera exacta aunque el reloj haya estado apagado un rato.</td></tr>
-        <tr><td class="k">Carrera nueva</td><td>Descarta la guardada y te lleva a la l&#237;nea de salida.</td></tr>
+    <table role="table">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">Reanudar</td><td role="cell">Sigue la carrera donde estaba. Como el ancla es la hora, la cuenta de yards se recupera exacta aunque el reloj haya estado apagado un rato.</td></tr>
+        <tr role="row"><td role="cell" class="k">Carrera nueva</td><td role="cell">Descarta la guardada y te lleva a la l&#237;nea de salida.</td></tr>
       </tbody>
     </table>
   </div>
@@ -955,14 +1030,14 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p class="section-note">Lo que conviene saber antes de fiarte de ella</p>
 
   <div class="table-wrap">
-    <table>
-      <tbody>
-        <tr><td class="k">Versi&#243;n</td><td>1.4.1 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
-        <tr><td class="k">Relojes</td><td>104 modelos: f&#275;nix, epix, Forerunner, Venu, v&#237;voactive, Instinct AMOLED, MARQ, Descent, D2 y Approach</td></tr>
-        <tr><td class="k">Permisos</td><td>Grabaci&#243;n de actividad (FIT) y posici&#243;n (GPS)</td></tr>
-        <tr><td class="k">Red</td><td>Ninguna. No sale a internet, no manda datos y no necesita el tel&#233;fono para correr</td></tr>
-        <tr><td class="k">Duraci&#243;n</td><td>Pensada para actividades de hasta 120 horas</td></tr>
-        <tr><td class="k">Idiomas</td><td>Espa&#241;ol, ingl&#233;s, franc&#233;s, alem&#225;n, italiano y portugu&#233;s</td></tr>
+    <table role="table">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell" class="k">Versi&#243;n</td><td role="cell">1.4.1 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
+        <tr role="row"><td role="cell" class="k">Relojes</td><td role="cell">104 modelos: f&#275;nix, epix, Forerunner, Venu, v&#237;voactive, Instinct AMOLED, MARQ, Descent, D2 y Approach</td></tr>
+        <tr role="row"><td role="cell" class="k">Permisos</td><td role="cell">Grabaci&#243;n de actividad (FIT) y posici&#243;n (GPS)</td></tr>
+        <tr role="row"><td role="cell" class="k">Red</td><td role="cell">Ninguna. No sale a internet, no manda datos y no necesita el tel&#233;fono para correr</td></tr>
+        <tr role="row"><td role="cell" class="k">Duraci&#243;n</td><td role="cell">Pensada para actividades de hasta 120 horas</td></tr>
+        <tr role="row"><td role="cell" class="k">Idiomas</td><td role="cell">Espa&#241;ol, ingl&#233;s, franc&#233;s, alem&#225;n, italiano y portugu&#233;s</td></tr>
       </tbody>
     </table>
   </div>
@@ -972,12 +1047,13 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <p>Pru&#233;bala en un entrenamiento, con el yard puesto en 5 o 10 minutos y una distancia corta. En una pasada ves la campana, el corral, la marca y el descanso, y llegas a la salida de verdad sabiendo lo que va a pasar. Una backyard no es sitio para descubrir c&#243;mo funciona una app.</p>
   </div>
 
-  <footer>
-    <span>Backyard 1.4.1 &#183; manual en espa&#241;ol</span>
-    <span>Connect IQ Store</span>
-    <span>backyardultrasantodomingo.com</span>
-  </footer>
 </section>
+
+<footer>
+  <span>Backyard 1.4.1 &#183; manual en espa&#241;ol</span>
+  <span>Connect IQ Store &#183; apps.garmin.com</span>
+  <span>backyardultrasantodomingo.com</span>
+</footer>
 
 </main>
 </div>
