@@ -585,9 +585,14 @@ class NumeroPickerDelegate {
 class PantallasView extends Ui.View {
 
     // Ids de pantalla en el orden de fabrica, con su propiedad y su
-    // posicion (los mismos de RaceState.AJUSTES_PAGINAS y properties.xml).
-    static const IDS = [5, 2, 1, 0, 3, 4];
-    static const CLAVES = ["pageDataLap", "pageData", "pageMargin",
+    // posicion. Las tres listas van en paralelo y en el mismo orden que los
+    // defectos de properties.xml, de donde salen las posiciones: por eso
+    // POSICIONES es 1..6 seguido. Si alli cambia el orden de fabrica -Margen
+    // paso a ser la primera en la 1.4.1-, hay que reordenar estas tres y los
+    // nombres de onLayout a la vez, o mostrar una pantalla oculta la
+    // devolveria a su sitio viejo.
+    static const IDS = [1, 5, 2, 0, 3, 4];
+    static const CLAVES = ["pageMargin", "pageDataLap", "pageData",
                            "pageLap", "pageTotal", "pageClock"];
     static const POSICIONES = [1, 2, 3, 4, 5, 6];
 
@@ -608,10 +613,11 @@ class PantallasView extends Ui.View {
 
     function onLayout(dc) {
         _lienzo.onLayout(dc);
+        // En el mismo orden que IDS/CLAVES/POSICIONES, arriba.
         _nombres = [
+            Ui.loadResource(Rez.Strings.margin),
             Ui.loadResource(Rez.Strings.screenDataLap),
             Ui.loadResource(Rez.Strings.screenData),
-            Ui.loadResource(Rez.Strings.margin),
             Ui.loadResource(Rez.Strings.lap),
             Ui.loadResource(Rez.Strings.total),
             Ui.loadResource(Rez.Strings.clock)
