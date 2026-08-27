@@ -21,7 +21,11 @@
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
-    <property id="autoLap" type="boolean">false</property>
+    <!-- La meta automatica viene puesta: en una backyard el circuito acaba
+         donde empezo, y marcar a mano treinta veces es treinta ocasiones de
+         olvidarlo. El boton LAP sigue funcionando igual para el que prefiera
+         marcarla el. -->
+    <property id="autoLap" type="boolean">true</property>
     <property id="autoLapKm" type="boolean">false</property>
     <property id="lapOff" type="boolean">false</property>
     <property id="vibration" type="boolean">true</property>

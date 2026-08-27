@@ -60,7 +60,9 @@ class RaceState {
     // el ancla se deduce de la hora a la que se pulsa START.
     var horaSalida = -1;
     var avisoCorral = true;
-    var autoLap = false;
+    // La meta automatica viene puesta de fabrica (ver properties.xml). El
+    // campo de datos no marca vueltas y no la mira.
+    var autoLap = true;
     var autoLapKm = false;
     // LAP apagado: para quien va totalmente automatico y no quiere marcar
     // por error con un roce del boton. Solo silencia el boton del corredor;
@@ -152,7 +154,7 @@ class RaceState {
         }
 
         avisoCorral = _ajuste("corralAlert", true);
-        autoLap = _ajuste("autoLap", false);
+        autoLap = _ajuste("autoLap", true);
         autoLapKm = _ajuste("autoLapKm", false);
         lapApagado = _ajuste("lapOff", false);
         vibracion = _ajuste("vibration", true);

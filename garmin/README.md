@@ -39,8 +39,10 @@ reglas son las de una backyard de verdad:
   hora en el FIT y el tramo de meta a campana separado si se marcó el LAP.
 
 El resto sale de cuatro ajustes puestos una vez desde el teléfono: cuánto dura
-la vuelta, cuánto mide, si vibra el corral y si la vuelta se marca sola. No
-hay botón de pausa: la campana no espera a nadie.
+la vuelta, cuánto mide, si vibra el corral y si la vuelta se marca sola —esto
+último viene puesto: el circuito de una backyard acaba donde empezó, y marcar
+a mano treinta veces son treinta ocasiones de olvidarlo—. No hay botón de
+pausa: la campana no espera a nadie.
 
 ## Las pantallas
 
@@ -277,7 +279,7 @@ millas aunque tenga el reloj en español.
 | Vuelta (minutos) | Cuánto dura una vuelta | 60 |
 | Vuelta (km) | Cuánto mide, **siempre en kilómetros** | 6.7 |
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
-| Vuelta auto | Marcar el LAP solo al llegar al punto de salida | no |
+| Yard auto Meta | Marcar el LAP solo al llegar al punto de salida | **sí** |
 
 Los valores por defecto son los de la backyard clásica.
 
