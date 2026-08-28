@@ -30,8 +30,10 @@ const PRESENTACION = {
     grid: 'grid-cols-1 max-w-2xl mx-auto',
     logo: 'h-40',
     nombre: 'text-3xl sm:text-4xl',
-    tono: 'bg-foreground text-background border-transparent shadow-strong',
-    fondoLogo: 'bg-background/95',
+    // Sin marco: el naming no necesita una placa negra que lo encierre, y
+    // sobre el fondo claro del sitio el logo de la marca se lee mejor solo.
+    tono: 'bg-transparent border-transparent shadow-none',
+    fondoLogo: 'bg-transparent',
   },
   platino: {
     grid: 'sm:grid-cols-2',
@@ -142,25 +144,23 @@ function PresentedByCard({ raceCode }) {
   if (!marca) return null;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="rounded-xl border border-transparent bg-foreground text-background p-6 sm:p-8 shadow-strong space-y-5 text-center">
-        <span className="block text-xs font-semibold italic uppercase tracking-[0.2em] text-primary">
-          {ETIQUETA_PRESENTING}
-        </span>
-        <a
-          href={marca.web}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block rounded-lg bg-background/95 p-6 transition-opacity hover:opacity-90"
-        >
-          <img
-            src={marca.logo}
-            alt={marca.descripcion}
-            className="h-24 sm:h-28 w-auto mx-auto object-contain"
-          />
-        </a>
-        <h3 className="font-display text-3xl sm:text-4xl leading-tight">{marca.nombre}</h3>
-      </div>
+    <div className="max-w-2xl mx-auto text-center space-y-5">
+      <span className="block text-xs font-semibold italic uppercase tracking-[0.2em] text-primary">
+        {ETIQUETA_PRESENTING}
+      </span>
+      <a
+        href={marca.web}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block transition-opacity hover:opacity-80"
+      >
+        <img
+          src={marca.logo}
+          alt={marca.descripcion}
+          className="h-24 sm:h-28 w-auto mx-auto object-contain"
+        />
+      </a>
+      <h3 className="font-display text-3xl sm:text-4xl leading-tight text-foreground">{marca.nombre}</h3>
     </div>
   );
 }
