@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
 from datetime import datetime
 from services.email_service import EMAILS_ACTIVOS
+from services import marca
 
 GMAIL_USER = get_env("GMAIL_USER")
 GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
@@ -78,6 +79,7 @@ def get_volunteer_reminder_template(volunteer_name: str, assignment: Dict) -> st
                 <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO 2026</p>
             </div>
+            {marca.bloque_html()}
             
             <!-- Alert Banner -->
             <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 24px; margin: 0;">
@@ -213,6 +215,7 @@ def get_volunteer_assignments_template(volunteer_name: str, assignments: List[Di
                 <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO 2026</p>
             </div>
+            {marca.bloque_html()}
             
             <!-- Content -->
             <div style="padding: 32px 24px;">

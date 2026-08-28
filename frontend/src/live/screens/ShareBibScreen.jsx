@@ -5,6 +5,7 @@ import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
+import { cargarPresenting, dibujarPresenting } from '../../lib/presentingCanvas';
 
 // Lienzo 9:16 (1080x1920): tamaño nativo de las historias de Instagram
 const W = 1080;
@@ -13,7 +14,7 @@ const H = 1920;
 /** Dorsal siempre a tres cifras, como va impreso en la carrera (001). */
 const bibDe3 = (bib) => String(bib ?? '').trim().padStart(3, '0');
 
-function drawBibCard(ctx, { profile, raceName, siteUrl }) {
+function drawBibCard(ctx, { profile, raceName, siteUrl, presenting }) {
   // Fondo Linterna Nocturna
   ctx.fillStyle = '#0C0C0C';
   ctx.fillRect(0, 0, W, H);
@@ -90,9 +91,11 @@ function drawBibCard(ctx, { profile, raceName, siteUrl }) {
   ctx.font = '800 44px -apple-system, Helvetica, Arial';
   ctx.fillText(siteUrl, W / 2, 1575);
 
+  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1640 });
+
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
-  ctx.fillText('#BYSD #BackyardUltra #UltraRunning', W / 2, 1800);
+  ctx.fillText('#BYSD #BackyardUltra #UltraRunning', W / 2, 1860);
 }
 
 /**
@@ -112,6 +115,13 @@ export default function ShareBibScreen() {
   const canvasRef = useRef(null);
   const [profile, setProfile] = useState(contexto?.profile || null);
   const [sharing, setSharing] = useState(false);
+  // El naming de la carrera va en la tarjeta: se carga aparte y, cuando llega,
+  // se vuelve a dibujar. Si no llega, la tarjeta sale igual sin ese bloque.
+  const [presenting, setPresenting] = useState(null);
+
+  useEffect(() => {
+    cargarPresenting(raceCode).then(setPresenting);
+  }, [raceCode]);
 
   useEffect(() => {
     getJson(`/api/athletes/public-profile/${bib}?race_code=${raceCode}`)
@@ -126,8 +136,9 @@ export default function ShareBibScreen() {
       profile,
       raceName: race?.name || 'Backyard Ultra Santo Domingo',
       siteUrl: 'backyardultrasantodomingo.com/live',
+      presenting,
     });
-  }, [profile, race]);
+  }, [profile, race, presenting]);
 
   const toBlob = useCallback(
     () => new Promise((resolve) => canvasRef.current.toBlob(resolve, 'image/png')),

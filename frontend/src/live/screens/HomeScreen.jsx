@@ -4,6 +4,7 @@ import { Menu, Radio, Trophy, MessageCircle, Clock, Activity } from 'lucide-reac
 import { API, getJson, raceStartMs } from '../liveApi';
 import { useRace } from '../LiveApp';
 import AdFooter from '../components/AdFooter';
+import PresentedBy from '../../components/PresentedBy';
 
 /**
  * Home de la carrera: imagen del evento a pantalla completa, logo centrado,
@@ -112,6 +113,8 @@ export default function HomeScreen() {
               {race?.name || 'Backyard Ultra Santo Domingo'}
             </h1>
           )}
+          <PresentedBy raceCode={raceCode} size="sm" fondo="oscuro" className="mt-4" />
+
           {started && hasWinner === false && (
             <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-widest bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-green-400">
               <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_#4ade80] animate-pulse" /> EN VIVO

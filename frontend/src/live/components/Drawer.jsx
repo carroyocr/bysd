@@ -9,6 +9,7 @@ import { useLiveTheme } from '../liveTheme';
 import { zonasAbiertas, cerrarSesion, haySesion } from '../sesion';
 import { guardarCarrera, agruparCarreras } from '../carrera';
 import { VERSION_CORTA } from '../version';
+import PresentedBy from '../../components/PresentedBy';
 
 /**
  * Menú lateral expandible de izquierda a derecha (estilo app de maratón).
@@ -206,6 +207,12 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
         <p className={`px-4 pt-4 pb-1 text-[10px] ${T.subtle}`}>
           Backyard Ultra Santo Domingo
         </p>
+        <PresentedBy
+          raceCode={raceCode}
+          size="xs"
+          fondo={T.name === 'dark' ? 'oscuro' : 'claro'}
+          className="px-4 pb-2"
+        />
         {/* La versión a la vista: cuando alguien reporta algo, es lo primero
             que hace falta saber. */}
         <p className={`px-4 pb-4 text-[10px] font-mono ${T.subtle}`}>{VERSION_CORTA}</p>
