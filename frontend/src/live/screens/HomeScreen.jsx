@@ -62,9 +62,6 @@ export default function HomeScreen() {
       .catch(() => {});
   }, [race, raceCode]);
 
-  const logo = race?.logo_home_url || race?.logo_url;
-  const logoSrc = logo ? (logo.startsWith('/api') ? `${API}${logo}` : logo) : null;
-
   const quickActions = [
     { label: 'Seguimiento', Icon: Radio, to: `/live/${raceCode}/seguimiento` },
     { label: 'Tablero', Icon: Activity, to: `/live/${raceCode}/tablero` },
@@ -104,16 +101,13 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {/* Logo / nombre del evento */}
+        {/* Nombre del evento. Va en texto para todas las carreras: el sello
+            solo lo tienen algunas, y sobre la foto competia con el naming. */}
         <div className="relative z-10 flex flex-col items-center mt-6 px-6">
-          {logoSrc ? (
-            <img src={logoSrc} alt={race?.name} className="max-h-40 max-w-[70%] object-contain drop-shadow-[0_4px_18px_rgba(0,0,0,0.6)]" />
-          ) : (
-            <h1 className="text-3xl font-extrabold text-center drop-shadow-lg">
-              {race?.name || 'Backyard Ultra Santo Domingo'}
-            </h1>
-          )}
-          <PresentedBy raceCode={raceCode} size="sm" fondo="oscuro" className="mt-4" />
+          <h1 className="text-3xl font-extrabold text-center drop-shadow-lg">
+            {race?.name || 'Backyard Ultra Santo Domingo'}
+          </h1>
+          <PresentedBy raceCode={raceCode} size="md" fondo="oscuro" className="mt-4" />
 
           {started && hasWinner === false && (
             <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-widest bg-black/50 backdrop-blur px-3 py-1.5 rounded-full text-green-400">

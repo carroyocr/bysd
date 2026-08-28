@@ -54,7 +54,7 @@ export default function PresentedBy({
     <span
       className={`font-semibold italic uppercase leading-none whitespace-nowrap ${
         TAMANO_ETIQUETA[size]
-      } ${oscuro ? 'text-primary/90' : 'text-primary'}`}
+      } ${oscuro ? 'text-primary drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]' : 'text-primary'}`}
     >
       {ETIQUETA_PRESENTING}
     </span>
@@ -71,7 +71,7 @@ export default function PresentedBy({
   );
 
   const logoConFondo = oscuro ? (
-    <span className="inline-flex items-center rounded-md bg-white px-2 py-1.5">{logo}</span>
+    <span className="inline-flex items-center rounded bg-white px-1.5 py-1">{logo}</span>
   ) : (
     logo
   );

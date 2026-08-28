@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame } from 'lucide-react';
 import { VERSION_CORTA } from '../version';
 import { rutaDeEntrada } from '../sesion';
 import PresentedBy from '../../components/PresentedBy';
@@ -33,9 +32,14 @@ export default function WelcomeScreen() {
       className="min-h-[100dvh] bg-[#0C0C0C] text-white flex flex-col items-center justify-center px-8 cursor-pointer"
       onClick={() => navigate(destino, { replace: true })}
     >
-      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-[#E77622] to-[#F5A623] flex items-center justify-center shadow-[0_0_60px_rgba(231,118,34,0.45)] animate-pulse">
-        <Flame className="w-12 h-12 text-white" strokeWidth={2.2} />
-      </div>
+      {/* El sello de la carrera, no un icono generico. Va el archivo que
+          viaja dentro de la app: esta pantalla se ve antes de hablar con el
+          servidor, asi que no puede depender de la red. */}
+      <img
+        src="/icon-bu.png"
+        alt="Backyard Ultra Santo Domingo"
+        className="w-28 h-28 drop-shadow-[0_0_60px_rgba(231,118,34,0.45)] animate-pulse"
+      />
       <h1 className="mt-8 text-3xl font-extrabold tracking-wide text-center">
         BYSD <span className="text-[#E77622]">LIVE</span>
       </h1>
