@@ -732,7 +732,7 @@ export default function RaceConfigPanel() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Aparece en la página principal</p>
-                      <p className="text-xs font-medium text-blue-600">Recomendado: 400×400px PNG transparente</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 1024×1024px PNG transparente</p>
                     </div>
                     <label className="block">
                       <input
@@ -776,7 +776,7 @@ export default function RaceConfigPanel() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Aparece en la barra de navegación</p>
-                      <p className="text-xs font-medium text-blue-600">Recomendado: 48×48px PNG transparente</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 256×256px PNG transparente</p>
                     </div>
                     <label className="block">
                       <input
@@ -820,7 +820,7 @@ export default function RaceConfigPanel() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Icono en la pestaña del navegador</p>
-                      <p className="text-xs font-medium text-blue-600">Recomendado: 32×32px PNG o ICO</p>
+                      <p className="text-xs font-medium text-blue-600">Recomendado: 180×180px PNG</p>
                     </div>
                     <label className="block">
                       <input

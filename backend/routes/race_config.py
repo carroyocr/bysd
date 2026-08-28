@@ -526,9 +526,10 @@ async def upload_race_image(
     Upload a specific image for a race.
     
     Image types:
-    - home: Logo for home page hero section (recommended: 400x400px PNG, transparent background)
-    - menu: Logo for navigation menu (recommended: 48x48px PNG, transparent background)  
-    - favicon: Browser tab icon (recommended: 32x32px PNG or ICO)
+    - home: Logo for home page hero section (recommended: 1024x1024px PNG, transparent background)
+    - menu: Logo for navigation menu (recommended: 256x256px PNG, transparent background;
+      se dibuja a 64px, que en una pantalla retina son 192px reales)
+    - favicon: Browser tab icon (recommended: 180x180px PNG)
     - portada: Foto de fondo del Home de BYSD Live (recomendado: 1080x1920px JPG)
     """
     from server import db as database

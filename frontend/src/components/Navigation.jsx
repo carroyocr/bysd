@@ -169,7 +169,7 @@ export default function Navigation() {
             onClick={handleLinkClick}
             className="flex items-center gap-3 group shrink-0"
           >
-            <div className="w-12 h-12 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300 shrink-0">
+            <div className="w-16 h-16 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300 shrink-0">
               <img
                 src={menuLogo}
                 alt="Backyard Ultra Icon"
@@ -178,9 +178,11 @@ export default function Navigation() {
             </div>
             <div className="hidden md:block whitespace-nowrap">
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
-              <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO {getYear()}</div>
+              <div className="text-xs text-muted-foreground font-semibold tracking-wider leading-none mt-1.5">SANTO DOMINGO {getYear()}</div>
               {/* El naming va apilado bajo el nombre: ocupa alto, no ancho, y
-                  la fila de la marca no crece aunque el menú apriete. */}
+                  la fila de la marca no crece aunque el menú apriete. El
+                  margen es el mismo que el de la línea de arriba: las tres
+                  líneas tienen que leerse como un solo bloque. */}
               <PresentedBy size="xs" className="mt-1.5" />
             </div>
           </Link>
@@ -329,7 +331,7 @@ export default function Navigation() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] sm:w-[320px] flex flex-col">
               <div className="flex items-center gap-3 pb-4 border-b border-border">
-                <div className="w-12 h-12 rounded-full overflow-hidden">
+                <div className="w-14 h-14 rounded-full overflow-hidden">
                   <img 
                     src="/icon-bu.png" 
                     alt="Backyard Ultra Icon" 
@@ -338,7 +340,7 @@ export default function Navigation() {
                 </div>
                 <div>
                   <div className="font-display text-lg text-foreground leading-none">BACKYARD ULTRA</div>
-                  <div className="text-xs text-muted-foreground font-semibold">SANTO DOMINGO</div>
+                  <div className="text-xs text-muted-foreground font-semibold leading-none mt-1.5">SANTO DOMINGO</div>
                   <PresentedBy size="xs" className="mt-1.5" />
                 </div>
               </div>

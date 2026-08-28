@@ -34,12 +34,17 @@ export default function Hero() {
                 {getEditionLabel()}
               </Badge>
               
-              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl text-foreground leading-none tracking-tight">
-                BACKYARD ULTRA
-                <span className="block text-primary mt-2">SANTO DOMINGO</span>
-              </h1>
+              {/* Titulo y naming van juntos en un mismo bloque: si los separa
+                  el `space-y` de la columna, el naming deja de leerse como
+                  parte de la marca y parece una linea suelta. */}
+              <div>
+                <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl text-foreground leading-none tracking-tight">
+                  BACKYARD ULTRA
+                  <span className="block text-primary mt-2">SANTO DOMINGO</span>
+                </h1>
 
-              <PresentedBy size="md" className="justify-center lg:justify-start" />
+                <PresentedBy size="md" className="justify-center lg:justify-start mt-3" />
+              </div>
 
               {/* Bajar la app: pegado al título, se ve sin hacer scroll */}
               <DescargarApp />
