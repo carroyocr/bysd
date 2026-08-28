@@ -67,7 +67,6 @@ export default function PresentedBy({
       src={marca.logo}
       alt={marca.descripcion}
       className={`${ALTURA_LOGO[size]} w-auto ${oscuro ? '' : 'object-contain'}`}
-      loading="lazy"
     />
   );
 

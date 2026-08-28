@@ -22,13 +22,16 @@ ETIQUETA = "PRESENTED BY"
 # panel, correos de cuenta). Es la edicion en curso.
 CARRERA_POR_DEFECTO = "BYSD-2027"
 
+CEDIMAT = {
+    "nombre": "CEDIMAT",
+    "descripcion": "CEDIMAT Plaza de la Salud",
+    "logo": "/sponsors/cedimat.png",
+    "web": "https://cedimat.com",
+}
+
 PRESENTING_POR_CARRERA = {
-    "BYSD-2027": {
-        "nombre": "CEDIMAT",
-        "descripcion": "CEDIMAT Plaza de la Salud",
-        "logo": "/sponsors/cedimat.png",
-        "web": "https://cedimat.com",
-    },
+    "BYSD-2027": CEDIMAT,
+    "MUNDIAL-2026": CEDIMAT,
 }
 
 
