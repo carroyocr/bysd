@@ -3,6 +3,7 @@ import { Calendar, MapPin, Clock, UserPlus } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import DescargarApp from './DescargarApp';
+import PresentedBy from './PresentedBy';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -37,6 +38,8 @@ export default function Hero() {
                 BACKYARD ULTRA
                 <span className="block text-primary mt-2">SANTO DOMINGO</span>
               </h1>
+
+              <PresentedBy size="md" className="justify-center lg:justify-start" />
 
               {/* Bajar la app: pegado al título, se ve sin hacer scroll */}
               <DescargarApp />

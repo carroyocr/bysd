@@ -7,6 +7,7 @@ import smtplib
 import os
 
 from services.env_utils import get_env
+from services import marca
 import html
 import re
 import time
@@ -180,13 +181,21 @@ async def send_templated_email_with_error(
     to_email: str,
     subject: str,
     html_content: str,
-    is_plain: bool = False
+    is_plain: bool = False,
+    race_code: str = None
 ) -> tuple:
     """
     Send an email and report why it failed.
 
     Returns (success, error_message). error_message is "" on success.
+
+    El naming de la carrera se pega aqui, al final del correo, y no dentro de
+    las plantillas: las plantillas las edita el panel y no tienen por que
+    cargar con la marca del patrocinador ni repetirla en cada una.
     """
+
+    if not is_plain:
+        html_content += marca.bloque_html(race_code)
 
     missing = [
         name for name, value in (("GMAIL_USER", GMAIL_USER), ("GMAIL_APP_PASSWORD", GMAIL_APP_PASSWORD))
@@ -237,11 +246,14 @@ async def send_templated_email(
     to_email: str,
     subject: str,
     html_content: str,
-    is_plain: bool = False
+    is_plain: bool = False,
+    race_code: str = None
 ) -> bool:
     """Send an email with rendered HTML content (or plain text if is_plain=True)"""
 
-    success, _ = await send_templated_email_with_error(to_email, subject, html_content, is_plain)
+    success, _ = await send_templated_email_with_error(
+        to_email, subject, html_content, is_plain, race_code
+    )
     return success
 
 
@@ -287,7 +299,9 @@ async def send_email_with_template(
         rendered_subject = f"{subject_prefix} {rendered_subject}"
     
     # Send email
-    return await send_templated_email(to_email, rendered_subject, rendered_content)
+    return await send_templated_email(
+        to_email, rendered_subject, rendered_content, race_code=data.get("race_code")
+    )
 
 
 def build_race_data(race_config: Dict) -> Dict[str, str]:

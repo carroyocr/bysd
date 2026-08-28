@@ -4,6 +4,7 @@ import { API, getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { openExternal } from '../../lib/nativeExport';
+import PresentedBy from '../../components/PresentedBy';
 
 /**
  * Patrocinadores de la carrera seleccionada, tal como los publica el panel.
@@ -24,6 +25,19 @@ export default function SponsorsScreen() {
   return (
     <Screen title="Patrocinadores">
       <div className="px-4 py-4">
+        {/* El naming de la edición encabeza la lista. Si ya viene cargado como
+            patrocinador Título desde el panel, se deja a la lista enseñarlo y
+            no se repite. */}
+        {sponsors !== null && !sponsors.some((s) => s.propuesta_categoria === 'titulo') && (
+          <div className={`rounded-2xl px-4 py-5 mb-4 flex justify-center ${T.card}`}>
+            <PresentedBy
+              raceCode={raceCode}
+              size="lg"
+              fondo={T.name === 'dark' ? 'oscuro' : 'claro'}
+            />
+          </div>
+        )}
+
         {sponsors === null && (
           <div className={`flex justify-center py-16 ${T.muted}`}>
             <Loader2 className="w-6 h-6 animate-spin" />

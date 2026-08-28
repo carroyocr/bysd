@@ -5,6 +5,7 @@ import { Separator } from './ui/separator';
 import { IconSeguir } from './icons';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { SPONSOR_CATEGORIES, getCategory } from '../lib/sponsorCategories';
+import { getPresenting, ETIQUETA_PRESENTING } from '../lib/presenting';
 
 // Cómo se ve cada categoría en la vitrina. Es la segmentación hecha diseño:
 // mientras más alta la categoría, más ancho ocupa la marca, más grande va su
@@ -132,6 +133,38 @@ function TarjetaPatrocinador({ sponsor, estilo }) {
   );
 }
 
+// El naming de la edición cuando todavía no está cargado como patrocinador en
+// el panel: sale del catálogo del sitio (`lib/presenting.js`) para que la marca
+// que da nombre al evento no falte en su propia página. En cuanto se registra
+// en el panel con categoría Título, manda la vitrina y esta ficha se retira.
+function PresentedByCard({ raceCode }) {
+  const marca = getPresenting(raceCode);
+  if (!marca) return null;
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="rounded-xl border border-transparent bg-foreground text-background p-6 sm:p-8 shadow-strong space-y-5 text-center">
+        <span className="block text-xs font-semibold italic uppercase tracking-[0.2em] text-primary">
+          {ETIQUETA_PRESENTING}
+        </span>
+        <a
+          href={marca.web}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-lg bg-background/95 p-6 transition-opacity hover:opacity-90"
+        >
+          <img
+            src={marca.logo}
+            alt={marca.descripcion}
+            className="h-24 sm:h-28 w-auto mx-auto object-contain"
+          />
+        </a>
+        <h3 className="font-display text-3xl sm:text-4xl leading-tight">{marca.nombre}</h3>
+      </div>
+    </div>
+  );
+}
+
 function GrupoCategoria({ titulo, subtitulo, nota, sponsors, estilo }) {
   // El grupo centrado no lleva la línea que cierra el encabezado: esa línea
   // marca el ancho de una cuadrícula, y aquí no hay cuadrícula que marcar.
@@ -234,6 +267,10 @@ export default function SponsorsSection({ raceCode }) {
 
   const sinCategoria = sponsors.filter((s) => !getCategory(s.categoria));
 
+  // Si el naming ya está cargado como patrocinador, la vitrina lo enseña con
+  // el tratamiento de la categoría Título y no hace falta la ficha de arriba.
+  const hayTitulo = sponsors.some((s) => s.categoria === 'titulo');
+
   if (loading) {
     return (
       <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
@@ -264,6 +301,11 @@ export default function SponsorsSection({ raceCode }) {
               </Badge>
             )}
           </div>
+
+          {/* Naming de la edición: sale del catálogo de la carrera y no de la
+              lista de patrocinadores, así que se ve aunque la vitrina todavía
+              esté vacía o el patrocinador no se haya publicado. */}
+          {!hayTitulo && <PresentedByCard raceCode={displayRaceCode} />}
 
           {/* Show message if no sponsors */}
           {sponsors.length === 0 ? (

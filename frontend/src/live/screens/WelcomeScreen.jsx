@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Flame } from 'lucide-react';
 import { VERSION_CORTA } from '../version';
 import { rutaDeEntrada } from '../sesion';
+import PresentedBy from '../../components/PresentedBy';
 
 /**
  * Pantalla de bienvenida: marca a pantalla completa y pase automático a la
@@ -45,6 +46,7 @@ export default function WelcomeScreen() {
       <p className="mt-10 text-[11px] tracking-[0.25em] text-[#666666] uppercase">
         Last One Standing
       </p>
+      <PresentedBy size="sm" fondo="oscuro" className="mt-8" />
     </div>
   );
 }

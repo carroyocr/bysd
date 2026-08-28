@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Instagram, Mail, MapPin, Phone } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import PresentedBy from './PresentedBy';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -118,6 +119,12 @@ export default function Footer() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Naming de la edición: fuera del bloque que se oculta en celular,
+              para que la marca que presenta se vea en todas las pantallas. */}
+          <div className="flex justify-center pt-4 sm:pt-10">
+            <PresentedBy size="md" enlace />
           </div>
 
           <Separator className="my-8 hidden sm:block" />

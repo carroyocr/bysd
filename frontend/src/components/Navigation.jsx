@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { isNative } from '../lib/platform';
+import PresentedBy from './PresentedBy';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -178,6 +179,9 @@ export default function Navigation() {
             <div className="hidden md:block whitespace-nowrap">
               <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
               <div className="text-xs text-muted-foreground font-semibold tracking-wider">SANTO DOMINGO {getYear()}</div>
+              {/* El naming va apilado bajo el nombre: ocupa alto, no ancho, y
+                  la fila de la marca no crece aunque el menú apriete. */}
+              <PresentedBy size="xs" className="mt-1.5" />
             </div>
           </Link>
 
@@ -335,6 +339,7 @@ export default function Navigation() {
                 <div>
                   <div className="font-display text-lg text-foreground leading-none">BACKYARD ULTRA</div>
                   <div className="text-xs text-muted-foreground font-semibold">SANTO DOMINGO</div>
+                  <PresentedBy size="xs" className="mt-1.5" />
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto py-6">

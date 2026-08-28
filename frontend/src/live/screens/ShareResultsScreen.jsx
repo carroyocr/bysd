@@ -5,11 +5,12 @@ import { getJson, getAthleteProfile, formatDuration, statusLabel } from '../live
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
+import { cargarPresenting, dibujarPresenting } from '../../lib/presentingCanvas';
 
 const W = 1080;
 const H = 1920;
 
-function drawResultsCard(ctx, { profile, laps, raceName, siteUrl }) {
+function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) {
   ctx.fillStyle = '#0C0C0C';
   ctx.fillRect(0, 0, W, H);
   const glow = ctx.createRadialGradient(W / 2, 700, 100, W / 2, 700, 900);
@@ -77,9 +78,11 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl }) {
   ctx.font = '800 44px -apple-system, Helvetica, Arial';
   ctx.fillText(siteUrl, W / 2, 1555);
 
+  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1640 });
+
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
-  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1800);
+  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1860);
 }
 
 /**
@@ -95,6 +98,13 @@ export default function ShareResultsScreen() {
   const canvasRef = useRef(null);
   const [data, setData] = useState(null);
   const [sharing, setSharing] = useState(false);
+  // Igual que en la tarjeta del dorsal: el naming se carga aparte y la tarjeta
+  // se redibuja cuando llega.
+  const [presenting, setPresenting] = useState(null);
+
+  useEffect(() => {
+    cargarPresenting(raceCode).then(setPresenting);
+  }, [raceCode]);
 
   useEffect(() => {
     Promise.all([
@@ -112,8 +122,9 @@ export default function ShareResultsScreen() {
       ...data,
       raceName: race?.name || 'Backyard Ultra Santo Domingo',
       siteUrl: 'backyardultrasantodomingo.com/live',
+      presenting,
     });
-  }, [data, race]);
+  }, [data, race, presenting]);
 
   const toBlob = useCallback(
     () => new Promise((resolve) => canvasRef.current.toBlob(resolve, 'image/png')),

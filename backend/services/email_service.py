@@ -2,6 +2,7 @@ import smtplib
 import os
 
 from services.env_utils import get_env
+from services import marca
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
@@ -92,10 +93,11 @@ def get_email_template(subject: str, content: str, athletes_data: List[Dict], un
         <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff;">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 24px 16px; text-align: center;">
-                <img src="https://admin-dashboard-v2-66.preview.emergentagent.com/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
+                <img src="{base_url}/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
                 <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
             </div>
+            {marca.bloque_html()}
             
             <!-- Content -->
             <div style="padding: 20px 16px;">
@@ -392,6 +394,7 @@ def get_manual_notification_template(
                 <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
                 <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO</p>
             </div>
+            {marca.bloque_html()}
             
             <!-- Announcement Banner -->
             <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 24px; margin: 0;">
