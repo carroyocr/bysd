@@ -350,9 +350,13 @@ export default function RunnersSection() {
                     </p>
                   </div>
                 </div>
+                {/* La ruta de la carrera que se está enseñando, si la
+                    organización la cargó por el panel; si no, el archivo de
+                    2026 que viene con el sitio, que es lo único que había
+                    antes de que las rutas se pudieran subir. */}
                 <a
-                  href="/ruta-backyard-ultra.gpx"
-                  download="Backyard-Ultra-Santo-Domingo-Ruta.gpx"
+                  href={config?.gpx_dia_url ? `${API_URL}${config.gpx_dia_url}` : '/ruta-backyard-ultra.gpx'}
+                  download={`Backyard-Ultra-Santo-Domingo-${config?.code || 'Ruta'}.gpx`}
                   className="flex-shrink-0"
                 >
                   <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300">

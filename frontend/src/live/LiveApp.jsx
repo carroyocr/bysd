@@ -25,6 +25,7 @@ import ShareResultsScreen from './screens/ShareResultsScreen';
 import CheerScreen from './screens/CheerScreen';
 import WinnersScreen from './screens/WinnersScreen';
 import RaceInfoScreen from './screens/RaceInfoScreen';
+import RutaScreen from './screens/RutaScreen';
 import SponsorsScreen from './screens/SponsorsScreen';
 import PatrocinadorScreen from './screens/PatrocinadorScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -152,6 +153,7 @@ function RaceShell() {
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
+        <Route path="ruta" element={<RutaScreen />} />
         <Route path="reglas" element={<ReglasScreen />} />
         <Route path="logistica" element={<LogisticaScreen />} />
         <Route path="faq" element={<FaqScreen />} />

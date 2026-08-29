@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Home, Radio, Info, User, Building2, Settings, Trophy, X, ShieldCheck, LogIn,
-  LogOut, BadgeInfo, ChevronDown, Loader2, CalendarDays,
+  LogOut, BadgeInfo, ChevronDown, Loader2, CalendarDays, Route,
 } from 'lucide-react';
 import { getJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
@@ -106,6 +106,7 @@ export default function Drawer({ open, onClose, raceCode, raceName }) {
     { evento: true },
     { label: 'Seguimiento', Icon: Radio, action: () => go(`${base}/seguimiento`) },
     { label: 'Información de la Carrera', Icon: Info, action: () => go(`${base}/info`) },
+    { label: 'Ruta', Icon: Route, action: () => go(`${base}/ruta`) },
     ...accesos,
     hayPatrocinadores && { label: 'Patrocinadores', Icon: Building2, action: () => go(`${base}/patrocinadores`) },
     hayGanador && { label: 'Ganadores', Icon: Trophy, action: () => go(`${base}/ganadores`) },
