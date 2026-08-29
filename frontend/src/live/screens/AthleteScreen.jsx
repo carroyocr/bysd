@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Share2 } from 'lucide-react';
 import { getJson, formatDuration, formatPace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 
@@ -176,6 +177,7 @@ function RestChart({ laps, ventanaSeg, T }) {
  */
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
+  const navigate = useNavigate();
   const { profile, raceCode, race, bib } = useOutletContext();
   // La ventana de la vuelta: lo que no se corre, se descansa. Por defecto la
   // hora de un backyard, que es lo que usa el backend cuando la carrera no lo
@@ -200,7 +202,20 @@ export default function AthleteScreen() {
   return (
     <>
           {/* Vueltas y kilómetros como protagonistas */}
-          <div className={`mx-4 rounded-2xl p-4 ${T.card}`}>
+          <div className={`relative mx-4 rounded-2xl p-4 ${T.card}`}>
+            {/* Compartir lo que se está viendo. Va en la esquina, sin robarle
+                sitio a las cifras ni al gráfico: lleva a la imagen 9:16 lista
+                para una historia de Instagram. Antes esto solo existía en el
+                perfil de uno mismo; presumir de cómo va otro corredor -o
+                enseñar cómo va el tuyo- es la mitad de lo que se comparte
+                durante una carrera. */}
+            <button
+              onClick={() => navigate(`/live/${raceCode}/atleta/${bib}/resultados`)}
+              aria-label="Compartir"
+              className={`absolute top-2.5 right-2.5 w-9 h-9 rounded-full flex items-center justify-center ${T.actionChip}`}
+            >
+              <Share2 className="w-4 h-4 text-[#E77622]" />
+            </button>
             {/* El estado ya se ve arriba, junto al país: aquí ocupaba una fila
                 entera y era lo que dejaba la tarjeta sin sitio para el gráfico. */}
             <div className="flex items-center justify-center gap-10">

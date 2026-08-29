@@ -21,6 +21,9 @@ const CEDIMAT = {
 export const PRESENTING_POR_CARRERA = {
   'BYSD-2027': CEDIMAT,
   'MUNDIAL-2026': CEDIMAT,
+  // La carrera de demostración lleva el mismo naming: si se enseña la app a
+  // alguien, tiene que verse como la de verdad, marca incluida.
+  DEMO: CEDIMAT,
 };
 
 // El rótulo va en inglés porque así está el arte oficial de la carrera.

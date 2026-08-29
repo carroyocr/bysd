@@ -10,6 +10,75 @@ import { cargarPresenting, dibujarPresenting } from '../../lib/presentingCanvas'
 const W = 1080;
 const H = 1920;
 
+// Miniatura del ritmo dentro de la tarjeta: la linea de todas las vueltas con
+// su area debajo. Es lo que cuenta la historia de la carrera de un vistazo -se
+// ve donde apreto y donde se le hizo cuesta arriba- y lo que distingue a esta
+// imagen de un cartel con dos numeros.
+function drawPaceSpark(ctx, laps, { x, y, w, h }) {
+  const puntos = (laps || []).filter((l) => l.pace_seg_km != null);
+  if (puntos.length < 2) return false;
+
+  const ritmos = puntos.map((p) => p.pace_seg_km);
+  const min = Math.min(...ritmos);
+  const max = Math.max(...ritmos);
+  const rango = Math.max(max - min, 30);
+  const px = (i) => x + (i * w) / (puntos.length - 1);
+  // El ritmo mas rapido arriba, como en las apps de corredores.
+  const py = (ritmo) => y + ((ritmo - min) / rango) * h;
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+
+  // Dos guias: la del mejor ritmo y la del peor.
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 2;
+  [min, max].forEach((r) => {
+    ctx.beginPath();
+    ctx.moveTo(x, py(r));
+    ctx.lineTo(x + w, py(r));
+    ctx.stroke();
+  });
+
+  // El area bajo la linea, que es lo que le da cuerpo en una historia.
+  const relleno = ctx.createLinearGradient(0, y, 0, y + h);
+  relleno.addColorStop(0, 'rgba(231,118,34,0.45)');
+  relleno.addColorStop(1, 'rgba(231,118,34,0.02)');
+  ctx.beginPath();
+  ctx.moveTo(px(0), py(puntos[0].pace_seg_km));
+  puntos.forEach((p, i) => ctx.lineTo(px(i), py(p.pace_seg_km)));
+  ctx.lineTo(px(puntos.length - 1), y + h);
+  ctx.lineTo(px(0), y + h);
+  ctx.closePath();
+  ctx.fillStyle = relleno;
+  ctx.fill();
+
+  ctx.beginPath();
+  puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(px(i), py(p.pace_seg_km)) : ctx.lineTo(px(i), py(p.pace_seg_km))));
+  ctx.strokeStyle = '#E77622';
+  ctx.lineWidth = 5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // La vuelta mas rapida, marcada: es el dato del que uno presume.
+  const iMejor = ritmos.indexOf(min);
+  ctx.beginPath();
+  ctx.arc(px(iMejor), py(min), 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+
+  ctx.fillStyle = '#9a9a9a';
+  ctx.font = '600 30px -apple-system, Helvetica, Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${fmt(min)}/km`, x, y - 16);
+  ctx.textAlign = 'right';
+  ctx.fillText(`${fmt(max)}/km`, x + w, y - 16);
+  ctx.textAlign = 'center';
+  ctx.fillText(`V1`, px(0), y + h + 38);
+  ctx.fillText(`V${puntos[puntos.length - 1].lap}`, px(puntos.length - 1), y + h + 38);
+  ctx.restore();
+  return true;
+}
+
 function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) {
   ctx.fillStyle = '#0C0C0C';
   ctx.fillRect(0, 0, W, H);
@@ -33,20 +102,20 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) 
   // Nombre y dorsal
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 72px -apple-system, Helvetica, Arial';
-  ctx.fillText(`${profile.nombre} ${profile.apellidos}`, W / 2, 420, W - 140);
+  ctx.fillText(`${profile.nombre} ${profile.apellidos}`, W / 2, 400, W - 140);
   ctx.fillStyle = '#E77622';
   ctx.font = '800 52px -apple-system, Helvetica, Arial';
-  ctx.fillText(`#${profile.bib} · ${statusLabel(profile.status).toUpperCase()}`, W / 2, 505);
+  ctx.fillText(`#${profile.bib} · ${statusLabel(profile.status).toUpperCase()}`, W / 2, 480);
 
   // Vueltas gigante
   ctx.fillStyle = '#E77622';
-  ctx.font = '900 380px -apple-system, Helvetica, Arial';
-  ctx.fillText(`${profile.laps_completed || 0}`, W / 2, 950);
+  ctx.font = '900 320px -apple-system, Helvetica, Arial';
+  ctx.fillText(`${profile.laps_completed || 0}`, W / 2, 800);
   ctx.fillStyle = '#9a9a9a';
   ctx.font = '700 52px -apple-system, Helvetica, Arial';
-  ctx.fillText('VUELTAS COMPLETADAS', W / 2, 1030);
+  ctx.fillText('VUELTAS COMPLETADAS', W / 2, 880);
 
-  // Métricas
+  // Metricas
   const totalSeg = laps.reduce((acc, l) => acc + (l.duracion_seg || 0), 0);
   const metrics = [
     { label: 'KILÓMETROS', value: `${(profile.total_km || 0).toFixed(1)}` },
@@ -57,32 +126,40 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) 
     const cx = 150 + colW * i + colW / 2;
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '800 90px -apple-system, Helvetica, Arial';
-    ctx.fillText(m.value, cx, 1220);
+    ctx.fillText(m.value, cx, 1010);
     ctx.fillStyle = '#777777';
     ctx.font = '700 34px -apple-system, Helvetica, Arial';
-    ctx.fillText(m.label, cx, 1280);
+    ctx.fillText(m.label, cx, 1070);
   });
 
-  // Línea divisoria
+  // Grafico de ritmo
+  ctx.fillStyle = '#777777';
+  ctx.font = '700 34px -apple-system, Helvetica, Arial';
+  ctx.fillText('RITMO POR VUELTA', W / 2, 1160);
+  drawPaceSpark(ctx, laps, { x: 140, y: 1230, w: W - 280, h: 210 });
+
+  // Linea divisoria
   ctx.strokeStyle = 'rgba(231,118,34,0.4)';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(200, 1370);
-  ctx.lineTo(W - 200, 1370);
+  ctx.moveTo(200, 1530);
+  ctx.lineTo(W - 200, 1530);
   ctx.stroke();
 
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 52px -apple-system, Helvetica, Arial';
-  ctx.fillText('Sigue la carrera en vivo', W / 2, 1480);
+  ctx.fillText('Sigue la carrera en vivo', W / 2, 1610);
   ctx.fillStyle = '#E77622';
   ctx.font = '800 44px -apple-system, Helvetica, Arial';
-  ctx.fillText(siteUrl, W / 2, 1555);
+  ctx.fillText(siteUrl, W / 2, 1675);
 
-  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1640 });
+  // El naming, con su placa: acaba en 1850 y deja aire hasta los hashtags.
+  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1730 });
 
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
-  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1860);
+  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1890);
 }
 
 /**
