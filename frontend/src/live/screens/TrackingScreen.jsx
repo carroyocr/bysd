@@ -158,16 +158,19 @@ export default function TrackingScreen() {
           />
         </div>
 
-        {/* Filtros: compactos para caber en una fila sin scroll horizontal */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        {/* Filtros en una sola fila. Antes envolvian: seis filtros no cabian y
+            "Fav" se caia a una segunda linea que empujaba la lista hacia abajo.
+            Ahora van mas justos y, si la carrera enseña mas filtros de los que
+            caben, la fila se desplaza a lo ancho en vez de partirse. */}
+        <div className="flex flex-nowrap gap-1 mb-3 overflow-x-auto no-scrollbar">
           {visibleFilters.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`flex flex-col items-center leading-tight px-3 py-1.5 rounded-xl whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
+              className={`shrink-0 flex flex-col items-center leading-tight px-2 py-1 rounded-lg whitespace-nowrap ${filter === key ? T.chipOn : T.chip}`}
             >
-              <span className="text-[10px] font-semibold text-center">{label}</span>
-              <span className="text-[11px] font-bold opacity-70 text-center">({counts[key]})</span>
+              <span className="text-[9px] font-semibold text-center">{label}</span>
+              <span className="text-[10px] font-bold opacity-70 text-center">({counts[key]})</span>
             </button>
           ))}
         </div>
