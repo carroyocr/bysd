@@ -10,7 +10,7 @@ import {
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
   Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info, Bell,
-  Handshake
+  Handshake, Route
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -411,6 +411,57 @@ export default function RaceConfigPanel() {
       toast.error(error.message);
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  // Rutas del anillo. Son dos, día y noche, porque hay sedes donde el
+  // recorrido cambia al oscurecer; la que no se suba, no se enseña.
+  const handleGpxUpload = async (e, momento) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!activeRace?.code || activeRace.is_default) {
+      toast.error('Primero debe crear una carrera');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    setUploadingLogo(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/race-config/upload-gpx/${activeRace.code}/${momento}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'No se pudo subir la ruta');
+      }
+      toast.success(`Ruta ${momento === 'dia' ? 'diurna' : 'nocturna'} subida`);
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleGpxDelete = async (momento) => {
+    if (!activeRace?.code) return;
+    if (!window.confirm(`¿Quitar la ruta ${momento === 'dia' ? 'diurna' : 'nocturna'} de ${activeRace.code}?`)) return;
+    try {
+      const response = await adminFetch(`${API_URL}/api/race-config/gpx/${activeRace.code}/${momento}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('No se pudo quitar la ruta');
+      toast.success('Ruta retirada');
+      await loadData();
+    } catch (error) {
+      toast.error(error.message);
     }
   };
 
@@ -888,6 +939,81 @@ export default function RaceConfigPanel() {
                       </span>
                     </Button>
                   </label>
+                </div>
+              </div>
+
+              {/* Rutas del anillo */}
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2 text-lg">
+                  <Route className="w-5 h-5" />
+                  Rutas del Anillo (GPX)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  El recorrido de la vuelta. La app lo dibuja en la pantalla <strong>Ruta</strong> y
+                  permite descargarlo al reloj; el sitio lo ofrece en la sección de corredores.
+                  Se cargan dos porque hay sedes donde el trazado cambia al oscurecer: si esta
+                  carrera tiene uno solo, deja la nocturna vacía.
+                </p>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  {[
+                    { momento: 'dia', titulo: 'Ruta diurna', campo: 'gpx_dia_url' },
+                    { momento: 'noche', titulo: 'Ruta nocturna', campo: 'gpx_noche_url' },
+                  ].map(({ momento, titulo, campo }) => (
+                    <div key={momento} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{titulo}</h4>
+                        {activeRace?.[campo] ? (
+                          <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Cargada
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Sin ruta</Badge>
+                        )}
+                      </div>
+
+                      {activeRace?.[campo] && (
+                        <a
+                          href={`${API_URL}${activeRace[campo]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs text-blue-600 hover:underline break-all"
+                        >
+                          Descargar el archivo cargado
+                        </a>
+                      )}
+
+                      <div className="flex gap-2">
+                        <label className="flex-1">
+                          <input
+                            type="file"
+                            accept=".gpx,application/gpx+xml"
+                            className="hidden"
+                            onChange={(e) => handleGpxUpload(e, momento)}
+                            disabled={uploadingLogo}
+                          />
+                          <Button type="button" variant="outline" size="sm" className="w-full" asChild>
+                            <span className="cursor-pointer">
+                              <Upload className="w-3 h-3 mr-2" />
+                              {activeRace?.[campo] ? 'Reemplazar' : 'Subir GPX'}
+                            </span>
+                          </Button>
+                        </label>
+                        {activeRace?.[campo] && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleGpxDelete(momento)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

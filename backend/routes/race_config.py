@@ -11,6 +11,9 @@ router = APIRouter(prefix="/api/race-config", tags=["race-config"])
 LOGOS_DIR = Path(__file__).parent.parent / "static" / "logos"
 LOGOS_DIR.mkdir(parents=True, exist_ok=True)
 
+ROUTES_DIR = Path(__file__).parent.parent / "static" / "routes"
+ROUTES_DIR.mkdir(parents=True, exist_ok=True)
+
 MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -71,6 +74,11 @@ class RaceConfigUpdate(BaseModel):
     timezone_gmt: Optional[str] = None  # e.g., "GMT-4"
     estado: Optional[str] = None  # borrador | inscripcion | en_carrera | cerrada
     km_por_vuelta: Optional[float] = None
+    # Rutas GPX del anillo. Son dos porque algunas sedes cambian el recorrido
+    # al caer la noche (el mundial, sin ir mas lejos); una carrera con un solo
+    # trazado deja la nocturna vacia y la app enseña solo la de dia.
+    gpx_dia_url: Optional[str] = None
+    gpx_noche_url: Optional[str] = None
     # Payment info
     payment_account_name: Optional[str] = None
     payment_account_id: Optional[str] = None
@@ -591,6 +599,84 @@ async def upload_race_image(
         "field": field_map[image_type],
         "recommendation": size_recommendations[image_type]
     }
+
+
+# ============= RUTAS DEL ANILLO (GPX) =============
+#
+# Cada carrera puede tener dos: la de dia y la de noche. No es un capricho de
+# la app: hay sedes donde al oscurecer el recorrido cambia -se evita un tramo
+# sin luz, se acorta por seguridad- y el corredor necesita saber cual va a
+# correr. La que falte simplemente no se ensena.
+
+MOMENTOS_RUTA = {"dia": "gpx_dia_url", "noche": "gpx_noche_url"}
+
+
+@router.post("/upload-gpx/{code}/{momento}", dependencies=[solo_config])
+async def upload_gpx(code: str, momento: str, file: UploadFile = File(...)):
+    """Sube el GPX de la ruta diurna o nocturna de una carrera."""
+    from server import db as database
+
+    if momento not in MOMENTOS_RUTA:
+        raise HTTPException(status_code=400, detail="La ruta es 'dia' o 'noche'")
+
+    existing = await database.race_configurations.find_one({"code": code})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Carrera no encontrada")
+
+    contenido = await file.read()
+    # El GPX es XML y se sirve desde el dominio del backend. Se comprueba por
+    # dentro y no por el nombre: un archivo cualquiera renombrado a .gpx haria
+    # que la app se quedara con una ruta vacia sin decir por que.
+    if not file.filename.lower().endswith(".gpx"):
+        raise HTTPException(status_code=400, detail="El archivo tiene que ser un .gpx")
+    cabeza = contenido[:2000].lower()
+    if b"<gpx" not in cabeza or b"<trkpt" not in contenido[:200000].lower():
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo no parece un GPX con recorrido (no se encontraron puntos de track)",
+        )
+    if len(contenido) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="El GPX no puede pasar de 8 MB")
+
+    from services import file_storage
+
+    filename = f"ruta_{momento}_{code}.gpx"
+    await file_storage.save(filename, contenido, "application/gpx+xml", file_storage.FOLDER_ROUTES)
+
+    url = f"/api/race-config/gpx/{filename}"
+    await database.race_configurations.update_one(
+        {"code": code},
+        {"$set": {MOMENTOS_RUTA[momento]: url, "updated_at": datetime.utcnow()}},
+    )
+    return {"message": f"Ruta {momento} subida", "url": url, "field": MOMENTOS_RUTA[momento]}
+
+
+@router.delete("/gpx/{code}/{momento}", dependencies=[solo_config])
+async def delete_gpx(code: str, momento: str):
+    """Retira la ruta diurna o nocturna de una carrera."""
+    from server import db as database
+    from services import file_storage
+
+    if momento not in MOMENTOS_RUTA:
+        raise HTTPException(status_code=400, detail="La ruta es 'dia' o 'noche'")
+
+    await file_storage.delete(f"ruta_{momento}_{code}.gpx")
+    await database.race_configurations.update_one(
+        {"code": code},
+        {"$set": {MOMENTOS_RUTA[momento]: None, "updated_at": datetime.utcnow()}},
+    )
+    return {"message": f"Ruta {momento} retirada"}
+
+
+@router.get("/gpx/{filename}")
+async def get_gpx(filename: str):
+    """Sirve un GPX (publico: lo piden la app y el sitio)."""
+    from services import file_storage
+
+    # Cache corta, como los logos: el nombre no cambia al reemplazar el archivo.
+    return await file_storage.serve(
+        filename, disk_dir=ROUTES_DIR, media_type="application/gpx+xml", max_age=300
+    )
 
 
 @router.get("/logo/{filename}")

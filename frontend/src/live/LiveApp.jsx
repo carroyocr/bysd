@@ -7,6 +7,7 @@ import { migrarSesionHeredada } from './sesion';
 import useSwipeBack from './useSwipeBack';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
+import AvisoActualizacion from './components/AvisoActualizacion';
 import AdFooter from './components/AdFooter';
 import WelcomeScreen from './screens/WelcomeScreen';
 import EntradaScreen from './screens/EntradaScreen';
@@ -24,6 +25,7 @@ import ShareResultsScreen from './screens/ShareResultsScreen';
 import CheerScreen from './screens/CheerScreen';
 import WinnersScreen from './screens/WinnersScreen';
 import RaceInfoScreen from './screens/RaceInfoScreen';
+import RutaScreen from './screens/RutaScreen';
 import SponsorsScreen from './screens/SponsorsScreen';
 import PatrocinadorScreen from './screens/PatrocinadorScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -151,6 +153,7 @@ function RaceShell() {
         <Route path="animo" element={<CheerScreen />} />
         <Route path="ganadores" element={<WinnersScreen />} />
         <Route path="info" element={<RaceInfoScreen />} />
+        <Route path="ruta" element={<RutaScreen />} />
         <Route path="reglas" element={<ReglasScreen />} />
         <Route path="logistica" element={<LogisticaScreen />} />
         <Route path="faq" element={<FaqScreen />} />
@@ -249,6 +252,9 @@ function StandaloneScreen({ title, back = false, children, showAds = false }) {
 export default function LiveApp() {
   return (
     <LiveThemeProvider>
+      {/* Va fuera de las rutas: el aviso de version nueva se comprueba una
+          sola vez al abrir, caiga la app donde caiga. */}
+      <AvisoActualizacion />
       <Routes>
         <Route index element={<WelcomeScreen />} />
         {/* Decide con qué carrera abrir (la guardada o la más próxima). El

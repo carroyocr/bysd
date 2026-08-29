@@ -43,6 +43,7 @@ FOLDER_ADS = "ads"
 FOLDER_LIVE_PHOTOS = "live_photos"
 FOLDER_LOGOS = "logos"
 FOLDER_MANUALS = "manuals"
+FOLDER_ROUTES = "routes"
 
 
 def _bucket():

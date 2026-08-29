@@ -24,21 +24,24 @@ export function cargarPresenting(raceCode) {
 /**
  * Pinta el bloque centrado en `x`, con `y` como línea base del rótulo. El logo
  * va sobre una placa blanca: las tarjetas son negras y el logo es azul oscuro.
+ *
+ * Los tamaños se pueden apretar (`anchoLogo`, `rotulo`, `margen`, `separacion`)
+ * para cuando el bloque no cierra la tarjeta, sino que es una línea pequeña
+ * bajo el nombre de la carrera.
  */
-export function dibujarPresenting(ctx, cargado, { x, y, anchoLogo = 280 }) {
+export function dibujarPresenting(ctx, cargado, { x, y, anchoLogo = 280, rotulo = 28, margen = 24, separacion = 22 }) {
   if (!cargado) return;
 
   const { img } = cargado;
   const alto = (img.height / img.width) * anchoLogo;
-  const margen = 24;
 
   ctx.save();
   ctx.textAlign = 'center';
   ctx.fillStyle = '#9a9a9a';
-  ctx.font = '700 28px -apple-system, Helvetica, Arial';
+  ctx.font = `700 ${rotulo}px -apple-system, Helvetica, Arial`;
   ctx.fillText(ETIQUETA_PRESENTING, x, y);
 
-  const placaY = y + 22;
+  const placaY = y + separacion;
   ctx.beginPath();
   ctx.roundRect(x - anchoLogo / 2 - margen, placaY, anchoLogo + margen * 2, alto + margen, 16);
   ctx.fillStyle = '#FFFFFF';

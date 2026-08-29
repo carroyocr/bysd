@@ -1,7 +1,38 @@
 import React, { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { Share2 } from 'lucide-react';
 import { getJson, formatDuration, formatPace } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
+
+// Cuántas etiquetas del eje X caben sin que se toquen, y cada cuántas vueltas
+// hay que poner una. Con 45 vueltas y 272 px de ancho no caben las 45: se
+// pintaban una encima de otra y el eje quedaba en una mancha ilegible.
+const ETIQUETA_ANCHO = 20;   // px que ocupa "V45" con su aire
+
+function pasoDeEtiquetas(total, ancho) {
+  const caben = Math.max(1, Math.floor(ancho / ETIQUETA_ANCHO));
+  if (total <= caben) return 1;
+  // Se sube al siguiente paso "redondo" (2, 5, 10, 20...) en vez de a un 3 o un
+  // 7: leer de cinco en cinco es más fácil que de siete en siete.
+  const bonitos = [1, 2, 5, 10, 20, 25, 50];
+  const minimo = Math.ceil(total / caben);
+  return bonitos.find((p) => p >= minimo) || minimo;
+}
+
+/** Índices que llevan etiqueta: la primera, las del paso, y siempre la última. */
+function indicesConEtiqueta(total, ancho) {
+  const paso = pasoDeEtiquetas(total, ancho);
+  const indices = [];
+  for (let i = 0; i < total; i += paso) indices.push(i);
+  const ultimo = total - 1;
+  if (indices[indices.length - 1] !== ultimo) {
+    // Si la última quedaría pegada a la anterior, esa anterior se retira: entre
+    // las dos, la que importa es la última vuelta.
+    if (ultimo - indices[indices.length - 1] < paso * 0.6) indices.pop();
+    indices.push(ultimo);
+  }
+  return new Set(indices);
+}
 
 /**
  * Gráfico de línea: ritmo promedio por vuelta.
@@ -30,6 +61,7 @@ function PaceChart({ laps, T }) {
 
   const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.pace_seg_km).toFixed(1)}`).join(' ');
   const fmtPaceShort = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const etiquetadas = indicesConEtiqueta(points.length, W - PAD.left - PAD.right);
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
@@ -44,12 +76,95 @@ function PaceChart({ laps, T }) {
       <path d={line} fill="none" stroke="#E77622" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {points.map((p, i) => (
         <g key={p.lap}>
-          <circle cx={x(i)} cy={y(p.pace_seg_km)} r="3" fill="#E77622" />
-          <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="8.5" fill="currentColor" opacity="0.55">
-            V{p.lap}
+          <circle cx={x(i)} cy={y(p.pace_seg_km)} r={points.length > 25 ? 2 : 3} fill="#E77622" />
+          {etiquetadas.has(i) && (
+            <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="8.5" fill="currentColor" opacity="0.55">
+              V{p.lap}
+            </text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Gráfico de barras: en qué se le fue la hora a cada vuelta.
+ *
+ * En un backyard cada vuelta arranca en punto: lo que el corredor no gasta
+ * corriendo se lo queda de descanso, y ese reparto es media carrera. La barra
+ * de abajo es el tiempo en ruta y la de arriba lo que le sobró; cuando la
+ * naranja va comiéndose la hora, el corredor está al límite.
+ */
+function RestChart({ laps, ventanaSeg, T }) {
+  const datos = laps.filter((l) => l.duracion_seg != null);
+  if (!datos.length) {
+    return (
+      <p className={`text-xs text-center px-4 ${T.muted}`}>
+        Aún no hay vueltas cronometradas para el gráfico.
+      </p>
+    );
+  }
+
+  const W = 320;
+  const H = 230;
+  const PAD = { top: 10, right: 8, bottom: 22, left: 34 };
+  const alto = H - PAD.top - PAD.bottom;
+  const ancho = W - PAD.left - PAD.right;
+
+  // La escala llega hasta la hora completa aunque nadie la haya apurado: es la
+  // referencia de la carrera, y sin ella no se ve cuánto margen queda.
+  const tope = Math.max(ventanaSeg, ...datos.map((l) => l.duracion_seg));
+  const largo = (seg) => (seg / tope) * alto;
+  const paso = ancho / datos.length;
+  const grosor = Math.max(1.5, Math.min(14, paso * 0.72));
+  const x = (i) => PAD.left + paso * i + (paso - grosor) / 2;
+  const base = PAD.top + alto;
+
+  const etiquetadas = indicesConEtiqueta(datos.length, ancho);
+  const marcas = [0, ventanaSeg / 2, ventanaSeg];
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+      {marcas.map((seg) => (
+        <g key={seg}>
+          <line
+            x1={PAD.left} x2={W - PAD.right}
+            y1={base - largo(seg)} y2={base - largo(seg)}
+            stroke="currentColor" strokeOpacity={seg === ventanaSeg ? 0.28 : 0.12}
+            strokeDasharray={seg === ventanaSeg ? '3 3' : undefined}
+          />
+          <text x={PAD.left - 6} y={base - largo(seg) + 3} textAnchor="end" fontSize="8.5" fill="currentColor" opacity="0.55">
+            {Math.round(seg / 60)}′
           </text>
         </g>
       ))}
+
+      {datos.map((l, i) => {
+        const ruta = Math.min(l.duracion_seg, tope);
+        const descanso = Math.max(0, ventanaSeg - l.duracion_seg);
+        return (
+          <g key={l.lap}>
+            {descanso > 0 && (
+              <rect
+                x={x(i)} y={base - largo(ruta) - largo(descanso)}
+                width={grosor} height={largo(descanso)}
+                fill="currentColor" opacity="0.22" rx={grosor > 4 ? 1.5 : 0}
+              />
+            )}
+            <rect
+              x={x(i)} y={base - largo(ruta)}
+              width={grosor} height={largo(ruta)}
+              fill="#E77622" rx={grosor > 4 ? 1.5 : 0}
+            />
+            {etiquetadas.has(i) && (
+              <text x={x(i) + grosor / 2} y={H - 8} textAnchor="middle" fontSize="8.5" fill="currentColor" opacity="0.55">
+                V{l.lap}
+              </text>
+            )}
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -62,7 +177,12 @@ function PaceChart({ laps, T }) {
  */
 export default function AthleteScreen() {
   const { T } = useLiveTheme();
-  const { profile, raceCode, bib } = useOutletContext();
+  const navigate = useNavigate();
+  const { profile, raceCode, race, bib } = useOutletContext();
+  // La ventana de la vuelta: lo que no se corre, se descansa. Por defecto la
+  // hora de un backyard, que es lo que usa el backend cuando la carrera no lo
+  // dice.
+  const ventanaSeg = (race?.minutos_por_vuelta || 60) * 60;
 
   const [laps, setLaps] = useState([]);
   const [tab, setTab] = useState('grafico');
@@ -82,7 +202,20 @@ export default function AthleteScreen() {
   return (
     <>
           {/* Vueltas y kilómetros como protagonistas */}
-          <div className={`mx-4 rounded-2xl p-4 ${T.card}`}>
+          <div className={`relative mx-4 rounded-2xl p-4 ${T.card}`}>
+            {/* Compartir lo que se está viendo. Va en la esquina, sin robarle
+                sitio a las cifras ni al gráfico: lleva a la imagen 9:16 lista
+                para una historia de Instagram. Antes esto solo existía en el
+                perfil de uno mismo; presumir de cómo va otro corredor -o
+                enseñar cómo va el tuyo- es la mitad de lo que se comparte
+                durante una carrera. */}
+            <button
+              onClick={() => navigate(`/live/${raceCode}/atleta/${bib}/resultados`)}
+              aria-label="Compartir"
+              className={`absolute top-2.5 right-2.5 w-9 h-9 rounded-full flex items-center justify-center ${T.actionChip}`}
+            >
+              <Share2 className="w-4 h-4 text-[#E77622]" />
+            </button>
             {/* El estado ya se ve arriba, junto al país: aquí ocupaba una fila
                 entera y era lo que dejaba la tarjeta sin sitio para el gráfico. */}
             <div className="flex items-center justify-center gap-10">
@@ -103,7 +236,11 @@ export default function AthleteScreen() {
 
             {/* Tabs Gráfico / Vueltas */}
             <div className={`flex mt-4 border-b ${T.divider}`}>
-              {[{ key: 'grafico', label: 'Gráfico' }, { key: 'vueltas', label: 'Vueltas' }].map(({ key, label }) => (
+              {[
+                { key: 'grafico', label: 'Ritmo' },
+                { key: 'descanso', label: 'Descanso' },
+                { key: 'vueltas', label: 'Vueltas' },
+              ].map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setTab(key)}
@@ -137,6 +274,21 @@ export default function AthleteScreen() {
                 <div className="h-full flex flex-col justify-center">
                   <p className={`text-[10px] tracking-widest text-center mb-1 ${T.subtle}`}>RITMO PROMEDIO POR VUELTA</p>
                   <PaceChart laps={laps} T={T} />
+                </div>
+              )}
+
+              {tab === 'descanso' && (
+                <div className="h-full flex flex-col justify-center">
+                  <p className={`text-[10px] tracking-widest text-center ${T.subtle}`}>EN QUÉ SE FUE CADA VUELTA</p>
+                  <div className={`flex items-center justify-center gap-4 mt-1 mb-0.5 text-[10px] ${T.muted}`}>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-[#E77622]" /> En ruta
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-current opacity-25" /> Descanso
+                    </span>
+                  </div>
+                  <RestChart laps={laps} ventanaSeg={ventanaSeg} T={T} />
                 </div>
               )}
 

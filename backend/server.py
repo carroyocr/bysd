@@ -450,6 +450,10 @@ app.include_router(push_router)
 from routes.staff_account import router as staff_account_router
 app.include_router(staff_account_router)
 
+# Version publicada de la app movil (la app pregunta al abrir)
+from routes.app_version import router as app_version_router
+app.include_router(app_version_router)
+
 cors_origins = [o.strip() for o in (get_env('CORS_ORIGINS', '*') or '*').split(',') if o.strip()]
 
 app.add_middleware(
