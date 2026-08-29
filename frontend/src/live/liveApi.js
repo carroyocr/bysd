@@ -46,6 +46,12 @@ export function raceIsPast(race) {
   if (!race) return false;
   if (race.is_active) return false;
   if (race.archived_at) return true;
+  // Una carrera que ya arrancó y todavía no ha cerrado no es pasada, aunque su
+  // fecha sea de ayer: un backyard dura más de un día, y en el segundo día es
+  // justo cuando más falta hacen los ánimos. Sin esto, cualquier carrera que
+  // no fuese la publicada -el Campeonato, sin ir más lejos- perdía el botón de
+  // "Enviar ánimo" a la mañana siguiente de su propia salida.
+  if (race.started_at && !race.finished_at) return false;
   const today = new Date().toISOString().slice(0, 10);
   return !!race.date && race.date < today;
 }
