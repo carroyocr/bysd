@@ -1047,33 +1047,13 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
     if not code:
         raise HTTPException(status_code=404, detail="No hay carrera activa")
 
-    # Campeonato: la ficha sale de la nomina de seleccionados
-    config_doc = await database.race_configurations.find_one({"code": code}, {"es_campeonato": 1})
-    if config_doc and config_doc.get("es_campeonato"):
-        bib_str = str(bib).zfill(3)
-        sel = await database.campeonato_seleccionados.find_one(
-            {"bib": {"$in": [bib_str, bib_str.lstrip("0"), bib]}}, {"_id": 0}
-        )
-        if not sel:
-            raise HTTPException(status_code=404, detail="Atleta no encontrado")
-        return {
-            "bib": str(sel.get("bib")).zfill(3) if sel.get("bib") else None,
-            "nombre": sel.get("nombre"),
-            "apellidos": sel.get("apellidos"),
-            "sexo": sel.get("sexo"),
-            "nacionalidad": sel.get("nacionalidad"),
-            "ciudad_residencia": None,
-            "photo_url": None,
-            "status": sel.get("status") or "registered",
-            "laps_completed": 0,
-            "total_km": 0.0,
-            "retired_at_lap": None,
-            "anos_experiencia": None,
-            "maxima_distancia_km": None,
-            "categoria": sel.get("categoria"),
-            "itra_url": None,
-            "itra_snapshot": None,
-        }
+    # El campeonato no lleva camino aparte. Lo llevaba: la ficha salia de la
+    # nomina de seleccionados buscando por dorsal, y el dorsal de la nomina es
+    # el del evento clasificatorio, no el del campeonato. Con eso, pedir el
+    # dorsal 022 del Mundial devolvia al atleta que llevo el 022 en 2027: la
+    # ficha de otra persona. Los seleccionados se inscriben en el campeonato
+    # como cualquier corredor (ver `inscribir_en_el_mundial`), con su dorsal y
+    # su categoria, asi que el camino normal de abajo ya los sirve bien.
 
     # Carreras historicas: los resultados viven en la coleccion legada
     # `participants`, no en `registrations`.
@@ -1142,6 +1122,8 @@ async def get_public_athlete_profile(bib: str, race_code: Optional[str] = None):
         "retired_at_lap": registration.get("retired_at_lap"),
         "anos_experiencia": registration.get("anos_experiencia"),
         "maxima_distancia_km": registration.get("maxima_distancia_km"),
+        # Titular o reserva: solo lo llevan las inscripciones del campeonato.
+        "categoria": registration.get("categoria"),
         "itra_url": None,
         "itra_snapshot": None,
         "instagram_url": None,

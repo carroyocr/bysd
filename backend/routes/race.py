@@ -362,6 +362,10 @@ async def get_participants(
                     # Confirmado = pago verificado. Es lo que separa
                     # "Confirmados" de "Inscritos" en la app.
                     "confirmado": reg.get("payment_status") == "paid",
+                    # Titular o reserva de la seleccion. Solo lo llevan las
+                    # inscripciones del campeonato, y es lo que la app pinta
+                    # bajo el nombre en la lista de Seguimiento.
+                    "categoria": reg.get("categoria"),
                     "personalizacion_camiseta": reg.get("personalizacion_camiseta"),
                     "talla_camiseta": reg.get("talla_camiseta")
                 })
