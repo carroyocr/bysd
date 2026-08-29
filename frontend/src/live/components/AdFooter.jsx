@@ -50,6 +50,15 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
     banners.forEach((b) => {
       for (let i = 0; i < Math.max(1, b.weight || 1); i++) list.push(b);
     });
+    // Barajada. El pie arrancaba siempre por el primero de la lista y seguía
+    // el mismo orden en todos los teléfonos: quien abría la app un minuto veía
+    // a los dos primeros patrocinadores y a nadie más, y el último de la lista
+    // no se veía nunca. El peso se sigue respetando -sale más veces quien más
+    // pesa-, pero el turno se reparte al azar.
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
     return list;
   }, [banners]);
 

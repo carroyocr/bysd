@@ -6,6 +6,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
 import { cargarPresenting, dibujarPresenting } from '../../lib/presentingCanvas';
+import { cargarAnuncio, dibujarAnuncio } from '../../lib/adCanvas';
 
 const W = 1080;
 const H = 1920;
@@ -79,7 +80,7 @@ function drawPaceSpark(ctx, laps, { x, y, w, h }) {
   return true;
 }
 
-function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) {
+function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting, anuncio }) {
   ctx.fillStyle = '#0C0C0C';
   ctx.fillRect(0, 0, W, H);
   const glow = ctx.createRadialGradient(W / 2, 700, 100, W / 2, 700, 900);
@@ -99,13 +100,20 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) 
   ctx.font = '600 38px -apple-system, Helvetica, Arial';
   ctx.fillText(raceName, W / 2, 248, W - 160);
 
-  // Nombre y dorsal
+  // El naming, pequeño y pegado al nombre de la carrera: acompaña a la marca
+  // del evento, no compite con el dato del corredor.
+  dibujarPresenting(ctx, presenting, {
+    x: W / 2, y: 292, anchoLogo: 150, rotulo: 18, margen: 12, separacion: 14,
+  });
+
+  // Nombre y dorsal. Empiezan en 430 y no en 400: la placa del naming termina
+  // en 358 y con el nombre más arriba se le montaba encima.
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 72px -apple-system, Helvetica, Arial';
-  ctx.fillText(`${profile.nombre} ${profile.apellidos}`, W / 2, 400, W - 140);
+  ctx.fillText(`${profile.nombre} ${profile.apellidos}`, W / 2, 430, W - 140);
   ctx.fillStyle = '#E77622';
   ctx.font = '800 52px -apple-system, Helvetica, Arial';
-  ctx.fillText(`#${profile.bib} · ${statusLabel(profile.status).toUpperCase()}`, W / 2, 480);
+  ctx.fillText(`#${profile.bib} · ${statusLabel(profile.status).toUpperCase()}`, W / 2, 505);
 
   // Vueltas gigante
   ctx.fillStyle = '#E77622';
@@ -149,17 +157,19 @@ function drawResultsCard(ctx, { profile, laps, raceName, siteUrl, presenting }) 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 52px -apple-system, Helvetica, Arial';
-  ctx.fillText('Sigue la carrera en vivo', W / 2, 1610);
+  ctx.fillText('Sigue la carrera en vivo', W / 2, 1600);
   ctx.fillStyle = '#E77622';
   ctx.font = '800 44px -apple-system, Helvetica, Arial';
-  ctx.fillText(siteUrl, W / 2, 1675);
-
-  // El naming, con su placa: acaba en 1850 y deja aire hasta los hashtags.
-  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1730 });
+  ctx.fillText(siteUrl, W / 2, 1660);
 
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
-  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1890);
+  ctx.fillText('#BYSD #BackyardUltra #LastOneStanding', W / 2, 1712);
+
+  // El patrocinador cierra la tarjeta, en la misma proporción 5:1 del pie de
+  // la app. Si la carrera no tiene publicidad, aquí no se dibuja nada y el
+  // resto de la tarjeta queda igual.
+  dibujarAnuncio(ctx, anuncio, { x: (W - 700) / 2, y: 1750, w: 700, h: 140 });
 }
 
 /**
@@ -178,9 +188,13 @@ export default function ShareResultsScreen() {
   // Igual que en la tarjeta del dorsal: el naming se carga aparte y la tarjeta
   // se redibuja cuando llega.
   const [presenting, setPresenting] = useState(null);
+  // El patrocinador de la banda: uno al azar entre los publicados, sorteado
+  // cada vez que se abre la pantalla.
+  const [anuncio, setAnuncio] = useState(null);
 
   useEffect(() => {
     cargarPresenting(raceCode).then(setPresenting);
+    cargarAnuncio(raceCode).then(setAnuncio);
   }, [raceCode]);
 
   useEffect(() => {
@@ -200,8 +214,9 @@ export default function ShareResultsScreen() {
       raceName: race?.name || 'Backyard Ultra Santo Domingo',
       siteUrl: 'backyardultrasantodomingo.com/live',
       presenting,
+      anuncio,
     });
-  }, [data, race, presenting]);
+  }, [data, race, presenting, anuncio]);
 
   const toBlob = useCallback(
     () => new Promise((resolve) => canvasRef.current.toBlob(resolve, 'image/png')),
