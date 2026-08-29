@@ -7,6 +7,7 @@ import { migrarSesionHeredada } from './sesion';
 import useSwipeBack from './useSwipeBack';
 import TopBar from './components/TopBar';
 import Drawer from './components/Drawer';
+import AvisoActualizacion from './components/AvisoActualizacion';
 import AdFooter from './components/AdFooter';
 import WelcomeScreen from './screens/WelcomeScreen';
 import EntradaScreen from './screens/EntradaScreen';
@@ -249,6 +250,9 @@ function StandaloneScreen({ title, back = false, children, showAds = false }) {
 export default function LiveApp() {
   return (
     <LiveThemeProvider>
+      {/* Va fuera de las rutas: el aviso de version nueva se comprueba una
+          sola vez al abrir, caiga la app donde caiga. */}
+      <AvisoActualizacion />
       <Routes>
         <Route index element={<WelcomeScreen />} />
         {/* Decide con qué carrera abrir (la guardada o la más próxima). El
