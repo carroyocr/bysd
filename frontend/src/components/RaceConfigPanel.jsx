@@ -20,6 +20,10 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function RaceConfigPanel() {
   const [activeRace, setActiveRace] = useState(null);
+  // Las rutas no son solo de la carrera publicada: el Campeonato tiene las
+  // suyas y hay que poder cargarlas sin publicarlo. El resto de esta pantalla
+  // sigue trabajando sobre la activa; aqui se elige.
+  const [rutaCarrera, setRutaCarrera] = useState('');
   const [allRaces, setAllRaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -416,13 +420,13 @@ export default function RaceConfigPanel() {
 
   // Rutas del anillo. Son dos, día y noche, porque hay sedes donde el
   // recorrido cambia al oscurecer; la que no se suba, no se enseña.
-  const handleGpxUpload = async (e, momento) => {
+  const handleGpxUpload = async (e, momento, codigo) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
-    if (!activeRace?.code || activeRace.is_default) {
-      toast.error('Primero debe crear una carrera');
+    if (!codigo) {
+      toast.error('Primero elige la carrera');
       return;
     }
 
@@ -431,7 +435,7 @@ export default function RaceConfigPanel() {
 
     setUploadingLogo(true);
     try {
-      const response = await adminFetch(`${API_URL}/api/race-config/upload-gpx/${activeRace.code}/${momento}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/upload-gpx/${codigo}/${momento}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -449,11 +453,11 @@ export default function RaceConfigPanel() {
     }
   };
 
-  const handleGpxDelete = async (momento) => {
-    if (!activeRace?.code) return;
-    if (!window.confirm(`¿Quitar la ruta ${momento === 'dia' ? 'diurna' : 'nocturna'} de ${activeRace.code}?`)) return;
+  const handleGpxDelete = async (momento, codigo) => {
+    if (!codigo) return;
+    if (!window.confirm(`¿Quitar la ruta ${momento === 'dia' ? 'diurna' : 'nocturna'} de ${codigo}?`)) return;
     try {
-      const response = await adminFetch(`${API_URL}/api/race-config/gpx/${activeRace.code}/${momento}`, {
+      const response = await adminFetch(`${API_URL}/api/race-config/gpx/${codigo}/${momento}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -692,6 +696,13 @@ export default function RaceConfigPanel() {
       setSaving(false);
     }
   };
+
+  // La carrera sobre la que se cargan las rutas: la elegida a mano o, mientras
+  // no se elija ninguna, la publicada.
+  const carreraDeRutas =
+    allRaces.find((r) => r.code === rutaCarrera) ||
+    allRaces.find((r) => r.code === activeRace?.code) ||
+    activeRace;
 
   if (loading) {
     return (
@@ -951,9 +962,27 @@ export default function RaceConfigPanel() {
                 <p className="text-xs text-muted-foreground">
                   El recorrido de la vuelta. La app lo dibuja en la pantalla <strong>Ruta</strong> y
                   permite descargarlo al reloj; el sitio lo ofrece en la sección de corredores.
-                  Se cargan dos porque hay sedes donde el trazado cambia al oscurecer: si esta
+                  Se cargan dos porque hay sedes donde el trazado cambia al oscurecer: si esa
                   carrera tiene uno solo, deja la nocturna vacía.
                 </p>
+
+                {/* Aquí sí se elige la carrera. El resto de esta pantalla
+                    trabaja sobre la publicada, pero las rutas del Campeonato
+                    hay que poder cargarlas sin publicarlo. */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap">Carrera:</Label>
+                  <select
+                    value={carreraDeRutas?.code || ''}
+                    onChange={(e) => setRutaCarrera(e.target.value)}
+                    className="border rounded-md px-2 py-1.5 text-sm bg-background"
+                  >
+                    {allRaces.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.code} — {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   {[
@@ -963,7 +992,7 @@ export default function RaceConfigPanel() {
                     <div key={momento} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">{titulo}</h4>
-                        {activeRace?.[campo] ? (
+                        {carreraDeRutas?.[campo] ? (
                           <Badge variant="default" className="bg-green-100 text-green-800 text-xs">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Cargada
@@ -973,9 +1002,9 @@ export default function RaceConfigPanel() {
                         )}
                       </div>
 
-                      {activeRace?.[campo] && (
+                      {carreraDeRutas?.[campo] && (
                         <a
-                          href={`${API_URL}${activeRace[campo]}`}
+                          href={`${API_URL}${carreraDeRutas[campo]}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block text-xs text-blue-600 hover:underline break-all"
@@ -990,22 +1019,22 @@ export default function RaceConfigPanel() {
                             type="file"
                             accept=".gpx,application/gpx+xml"
                             className="hidden"
-                            onChange={(e) => handleGpxUpload(e, momento)}
+                            onChange={(e) => handleGpxUpload(e, momento, carreraDeRutas?.code)}
                             disabled={uploadingLogo}
                           />
                           <Button type="button" variant="outline" size="sm" className="w-full" asChild>
                             <span className="cursor-pointer">
                               <Upload className="w-3 h-3 mr-2" />
-                              {activeRace?.[campo] ? 'Reemplazar' : 'Subir GPX'}
+                              {carreraDeRutas?.[campo] ? 'Reemplazar' : 'Subir GPX'}
                             </span>
                           </Button>
                         </label>
-                        {activeRace?.[campo] && (
+                        {carreraDeRutas?.[campo] && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleGpxDelete(momento)}
+                            onClick={() => handleGpxDelete(momento, carreraDeRutas.code)}
                             className="text-red-600"
                           >
                             <Trash2 className="w-3 h-3" />
