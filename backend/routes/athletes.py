@@ -2571,11 +2571,12 @@ async def admin_update_athlete_profile(
 # ==================== ADMIN: EMAIL COMPOSER ====================
 
 class EmailRecipientFilter(BaseModel):
-    filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'press', 'sponsors', 'manual'
+    filter_type: str  # 'all_athletes', 'inscribed', 'not_inscribed', 'volunteers', 'press', 'sponsors', 'activity', 'manual'
     race_code: Optional[str] = None
     manual_emails: Optional[list] = None
     reg_status: Optional[str] = None  # estado de la inscripción (solo filtro 'inscribed')
     payment: Optional[str] = None  # 'paid', 'pending', 'in_review' (solo filtro 'inscribed')
+    activity_id: Optional[str] = None  # actividad concreta (solo filtro 'activity'; vacío = todas)
     media_type: Optional[str] = None  # tipo de medio (solo filtro 'press')
     sponsor_status: Optional[str] = None  # etapa del pipeline (solo filtro 'sponsors')
     sponsor_category: Optional[str] = None  # categoría de la propuesta (solo filtro 'sponsors')
@@ -2699,8 +2700,12 @@ async def admin_email_recipient_options(authorization: str = Header(None)):
     from routes.sponsors import SPONSOR_STATUSES, STATUS_LABELS
 
     _verify_email_admin(authorization)
+    from routes.capacitaciones import TIPOS_ACTIVIDAD, _tipo_valido
 
     categorias = await database.sponsors.distinct("propuesta_categoria")
+    actividades = await database.capacitaciones.find(
+        {}, {"name": 1, "datetime": 1, "tipo": 1}
+    ).sort("datetime", -1).to_list(500)
     return {
         "media_types": list(TIPOS_MEDIO),
         "sponsor_statuses": [{"value": s, "label": STATUS_LABELS.get(s, s)} for s in SPONSOR_STATUSES],
@@ -2708,6 +2713,15 @@ async def admin_email_recipient_options(authorization: str = Header(None)):
             {c.strip() for c in categorias if isinstance(c, str) and c.strip()},
             key=str.lower,
         ),
+        "activities": [
+            {
+                "id": str(a["_id"]),
+                "name": a.get("name", ""),
+                "tipo_label": TIPOS_ACTIVIDAD[_tipo_valido(a.get("tipo"))],
+                "datetime": a.get("datetime", ""),
+            }
+            for a in actividades
+        ],
     }
 
 
@@ -2785,6 +2799,50 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         for s in sponsors:
             fallback = s.get("name") or s.get("razon_social") or ""
             recipients.append(_contact_recipient(s.get("correo"), s.get("nombre_contacto"), fallback, "patrocinador"))
+        return _dedupe_recipients(recipients)
+
+    if data.filter_type == "activity":
+        from bson import ObjectId
+
+        query = {}
+        if data.activity_id:
+            try:
+                act_oid = ObjectId(data.activity_id)
+            except Exception:
+                raise HTTPException(status_code=400, detail="ID de actividad inválido")
+            if not await database.capacitaciones.find_one({"_id": act_oid}, {"_id": 1}):
+                raise HTTPException(status_code=404, detail="Actividad no encontrada")
+            query["capacitacion_id"] = data.activity_id
+        regs = await database.capacitacion_registrations.find(
+            query, {"_id": 0, "athlete_id": 1, "email": 1, "nombre_completo": 1}
+        ).sort("created_at", 1).to_list(2000)
+
+        # La inscripción guarda el nombre en un solo campo; el perfil del
+        # atleta trae nombre y apellidos por separado para {{nombre}}.
+        oids = []
+        for r in regs:
+            try:
+                oids.append(ObjectId(r.get("athlete_id")))
+            except Exception:
+                pass
+        perfiles = await database.athletes.find(
+            {"_id": {"$in": oids}}, {"_id": 1, "email": 1, "nombre": 1, "apellidos": 1}
+        ).to_list(2000)
+        por_id = {str(a["_id"]): a for a in perfiles}
+        for r in regs:
+            a = por_id.get(r.get("athlete_id"))
+            if a and a.get("email"):
+                nombre = a.get("nombre", "") or ""
+                apellidos = a.get("apellidos", "") or ""
+                recipients.append({
+                    "email": a["email"],
+                    "nombre": nombre,
+                    "apellidos": apellidos,
+                    "nombre_completo": f"{nombre} {apellidos}".strip(),
+                    "source": "actividad",
+                })
+            else:
+                recipients.append(_contact_recipient(r.get("email"), r.get("nombre_completo"), "", "actividad"))
         return _dedupe_recipients(recipients)
 
     # Athletes-based filters
@@ -3004,6 +3062,7 @@ async def admin_email_history(authorization: str = Header(None)):
         "volunteers": "Voluntarios",
         "press": "Prensa",
         "sponsors": "Patrocinadores",
+        "activity": "Inscritos a actividades",
         "manual": "Correos específicos",
     }
 

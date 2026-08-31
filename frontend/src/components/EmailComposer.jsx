@@ -8,7 +8,7 @@ import { RichTextEditor } from './RichTextEditor';
 import {
   Send, Eye, Users, UserCheck, UserX, HandHelping, Mail, Loader2,
   AtSign, X, ChevronDown, History, CheckCircle2, XCircle, Download,
-  Newspaper, Handshake
+  Newspaper, Handshake, CalendarCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { token as sesionToken } from '../lib/sesion';
@@ -22,6 +22,7 @@ const FILTER_OPTIONS = [
   { key: 'volunteers', label: 'Voluntarios', icon: HandHelping, color: 'text-purple-600' },
   { key: 'press', label: 'Prensa', icon: Newspaper, color: 'text-sky-600' },
   { key: 'sponsors', label: 'Patrocinadores', icon: Handshake, color: 'text-emerald-600' },
+  { key: 'activity', label: 'Inscritos a actividades', icon: CalendarCheck, color: 'text-rose-600' },
   { key: 'manual', label: 'Correos específicos', icon: AtSign, color: 'text-gray-600' },
 ];
 
@@ -60,8 +61,9 @@ export default function EmailComposer() {
   const [mediaType, setMediaType] = useState('');
   const [sponsorStatus, setSponsorStatus] = useState('');
   const [sponsorCategory, setSponsorCategory] = useState('');
+  const [activityId, setActivityId] = useState('');
   const [recipientOptions, setRecipientOptions] = useState({
-    media_types: [], sponsor_statuses: [], sponsor_categories: [],
+    media_types: [], sponsor_statuses: [], sponsor_categories: [], activities: [],
   });
   const [manualEmails, setManualEmails] = useState('');
   const [recipients, setRecipients] = useState([]);
@@ -154,6 +156,7 @@ export default function EmailComposer() {
         media_types: data?.media_types || [],
         sponsor_statuses: data?.sponsor_statuses || [],
         sponsor_categories: data?.sponsor_categories || [],
+        activities: data?.activities || [],
       }))
       .catch(() => {});
   }, [token]);
@@ -184,8 +187,9 @@ export default function EmailComposer() {
     media_type: filterType === 'press' ? mediaType || null : null,
     sponsor_status: filterType === 'sponsors' ? sponsorStatus || null : null,
     sponsor_category: filterType === 'sponsors' ? sponsorCategory || null : null,
+    activity_id: filterType === 'activity' ? activityId || null : null,
     manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
-  }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, manualEmails]);
+  }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, activityId, manualEmails]);
 
   const loadRecipients = useCallback(async () => {
     setLoadingRecipients(true);
@@ -384,6 +388,31 @@ export default function EmailComposer() {
                   {recipientOptions.sponsor_categories.length === 0 && (
                     <p className="text-xs text-gray-400">
                       Las categorías salen del campo «Categoría» de la propuesta en Patrocinadores.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {filterType === 'activity' && (
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={activityId}
+                    onChange={(e) => setActivityId(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="activity-select"
+                  >
+                    <option value="">Todas las actividades</option>
+                    {recipientOptions.activities.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                        {a.datetime ? ` — ${new Date(a.datetime).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' })}` : ''}
+                        {a.tipo_label ? ` (${a.tipo_label})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {recipientOptions.activities.length === 0 && (
+                    <p className="text-xs text-gray-400">
+                      Aún no hay actividades creadas en la sección Actividades.
                     </p>
                   )}
                 </div>
