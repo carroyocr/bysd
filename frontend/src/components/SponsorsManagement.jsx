@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -6,9 +6,9 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import {
   Plus, Edit, Trash2, Save, X, Upload,
-  Building2, Image, Phone, Mail, Globe, User,
+  Building2, Image, Phone, Mail, Globe, User, Smartphone,
   NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight,
-  History, Check
+  History, Megaphone, MousePointerClick, Instagram, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
@@ -31,27 +31,32 @@ const STATUS_OPTIONS = [
   { value: 'declinado', label: 'Declinado', badgeClass: 'bg-red-100 text-red-700' },
 ];
 
-// Orden del pipeline (sin "declinado", que nunca se publica). Cada
-// patrocinador se publica al alcanzar el momento elegido en publicar_desde
-// (por defecto "cierre").
 const PIPELINE_ORDER = STATUS_OPTIONS.filter((s) => s.value !== 'declinado').map((s) => s.value);
 const DEFAULT_PUBLICAR_DESDE = 'cierre';
 
 const getStatusInfo = (status) =>
   STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
 
-// Si el proceso comercial ya llegó al momento de publicar. No dice dónde se
-// ve: eso lo deciden los interruptores de su ficha, en Publicidad. Aquí solo
-// se sabe si el proceso deja de estorbar.
+// Si el proceso comercial ya llegó al momento de publicar. Es la puerta
+// comercial —«no lo enseñes hasta que firme»—, distinta de los interruptores
+// de dónde se ve. Las dos tienen que dar el visto bueno.
 const procesoPermitePublicar = (sponsor) => {
   if (!sponsor.is_active) return false;
-  // Publicación apagada por defecto: sin status cuenta como "prospecto"
   const idx = PIPELINE_ORDER.indexOf(sponsor.status || 'prospecto');
   if (idx === -1) return false; // declinado
-  let threshold = PIPELINE_ORDER.indexOf(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE);
-  if (threshold === -1) threshold = PIPELINE_ORDER.indexOf(DEFAULT_PUBLICAR_DESDE);
-  return idx >= threshold;
+  let desde = PIPELINE_ORDER.indexOf(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE);
+  if (desde === -1) desde = PIPELINE_ORDER.indexOf(DEFAULT_PUBLICAR_DESDE);
+  return idx >= desde;
 };
+
+// Las tres piezas gráficas, con lo que hay que saber al subir cada una.
+const PIEZAS = [
+  { tipo: 'logo', campo: 'logo_url', label: 'Logo', ayuda: 'El cuadrado de la marca. Sirve a la vitrina del sitio y al pie de la app: es un solo archivo.' },
+  { tipo: 'banner', campo: 'banner_url', label: 'Banner 1200×240', ayuda: 'Ocupa la barra completa del pie. Cuando existe, sustituye al logo y al texto.' },
+  { tipo: 'detail', campo: 'detail_url', label: 'Imagen ampliada', ayuda: 'Se abre dentro de la app al tocar el banner. 1080 px de ancho, alto libre.' },
+];
+
+const tienePieza = (s) => PIEZAS.some((p) => s[p.campo]);
 
 // Separador de miles para el campo de monto (se guarda sin comas)
 const formatMontoInput = (value) => {
@@ -63,8 +68,12 @@ const formatMontoInput = (value) => {
 
 const parseMontoInput = (str) => (str || '').replace(/,/g, '').replace(/[^0-9.]/g, '');
 
+// datetime-local usa "YYYY-MM-DDTHH:MM"; el backend guarda ISO tal cual
+const toInputValue = (iso) => (iso ? iso.slice(0, 16) : '');
+
 const EMPTY_FORM = {
   name: '',
+  // Comercial
   razon_social: '',
   rnc: '',
   nombre_contacto: '',
@@ -76,6 +85,18 @@ const EMPTY_FORM = {
   propuesta_monto: '',
   status: 'prospecto',
   publicar_desde: DEFAULT_PUBLICAR_DESDE,
+  // Marca
+  description: '',
+  instagram: '',
+  text: '',
+  link_url: '',
+  // Publicación
+  publicar_web: true,
+  publicar_app: true,
+  mostrar_marca: true,
+  weight: 1,
+  start_at: '',
+  end_at: '',
 };
 
 const formatFechaHora = (iso) => {
@@ -95,6 +116,12 @@ const formatMonto = (monto) => {
   return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(monto);
 };
 
+const vigenciaLabel = (s) => {
+  if (!s.start_at && !s.end_at) return 'Todo el evento';
+  const fmt = (iso) => (iso ? new Date(iso).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '…');
+  return `${fmt(s.start_at)} → ${fmt(s.end_at)}`;
+};
+
 export default function SponsorsManagement() {
   const { raceCode } = useRaceConfig();
   // El panel abre en la carrera activa, pero se puede mirar cualquier edición:
@@ -111,15 +138,21 @@ export default function SponsorsManagement() {
   const [importSelected, setImportSelected] = useState([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [importing, setImporting] = useState(false);
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSponsor, setEditingSponsor] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(null);
 
-  // Bitácora (acordeón dentro de la tarjeta)
-  const [expandedBitacora, setExpandedBitacora] = useState(null); // sponsor.name
+  // Un solo acordeón abierto por tarjeta: "bitacora" o "publicidad".
+  const [abierto, setAbierto] = useState({ name: null, panel: null });
   const [bitacoraNota, setBitacoraNota] = useState('');
   const [savingNota, setSavingNota] = useState(false);
+
+  // Las tres piezas comparten un único input de archivo, que recuerda para
+  // cuál se abrió.
+  const [subiendo, setSubiendo] = useState(null); // `${name}:${tipo}`
+  const destinoSubida = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState(EMPTY_FORM);
   // Categoría escrita a mano antes de que existiera el esquema: se muestra
@@ -187,19 +220,29 @@ export default function SponsorsManagement() {
 
   const buildPayload = () => ({
     name: formData.name,
-    razon_social: formData.razon_social || null,
-    rnc: formData.rnc || null,
-    nombre_contacto: formData.nombre_contacto || null,
-    posicion_contacto: formData.posicion_contacto || null,
-    telefono: formData.telefono || null,
-    correo: formData.correo || null,
-    pagina_web: formData.pagina_web || null,
+    razon_social: formData.razon_social || '',
+    rnc: formData.rnc || '',
+    nombre_contacto: formData.nombre_contacto || '',
+    posicion_contacto: formData.posicion_contacto || '',
+    telefono: formData.telefono || '',
+    correo: formData.correo || '',
+    pagina_web: formData.pagina_web || '',
     // Vacío viaja como cadena, no como null: null lo descarta el backend y
     // no habría forma de quitarle la categoría a un patrocinador.
     propuesta_categoria: formData.propuesta_categoria || '',
     propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
     status: formData.status || 'prospecto',
     publicar_desde: formData.publicar_desde || DEFAULT_PUBLICAR_DESDE,
+    description: formData.description || '',
+    instagram: formData.instagram || '',
+    text: formData.text || '',
+    link_url: formData.link_url || '',
+    publicar_web: formData.publicar_web,
+    publicar_app: formData.publicar_app,
+    mostrar_marca: formData.mostrar_marca,
+    weight: Number(formData.weight) || 1,
+    start_at: formData.start_at || '',
+    end_at: formData.end_at || '',
   });
 
   const handleSubmit = async (e) => {
@@ -216,41 +259,28 @@ export default function SponsorsManagement() {
 
     setSaving(true);
     try {
-      if (editingSponsor) {
-        // Update existing sponsor
-        const response = await adminFetch(
+      const response = editingSponsor
+        ? await adminFetch(
           `${API_URL}/api/sponsors/update/${encodeURIComponent(editingSponsor)}?race_code=${selectedRace}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildPayload())
+            body: JSON.stringify(buildPayload()),
           }
-        );
-
-        if (response.ok) {
-          toast.success('Patrocinador actualizado');
-          loadSponsors();
-          resetForm();
-        } else {
-          const error = await response.json();
-          toast.error(error.detail || 'Error al actualizar');
-        }
-      } else {
-        // Create new sponsor
-        const response = await adminFetch(`${API_URL}/api/sponsors/create`, {
+        )
+        : await adminFetch(`${API_URL}/api/sponsors/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...buildPayload(), race_code: selectedRace })
+          body: JSON.stringify({ ...buildPayload(), race_code: selectedRace }),
         });
 
-        if (response.ok) {
-          toast.success('Patrocinador creado');
-          loadSponsors();
-          resetForm();
-        } else {
-          const error = await response.json();
-          toast.error(error.detail || 'Error al crear');
-        }
+      if (response.ok) {
+        toast.success(editingSponsor ? 'Patrocinador actualizado' : 'Patrocinador creado');
+        loadSponsors();
+        resetForm();
+      } else {
+        const error = await response.json().catch(() => ({}));
+        toast.error(error.detail || 'Error al guardar');
       }
     } catch (error) {
       console.error('Error saving sponsor:', error);
@@ -278,36 +308,57 @@ export default function SponsorsManagement() {
       propuesta_monto: sponsor.propuesta_monto ?? '',
       status: sponsor.status || 'prospecto',
       publicar_desde: sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE,
+      description: sponsor.description || '',
+      instagram: sponsor.instagram || '',
+      text: sponsor.text || '',
+      link_url: sponsor.link_url || '',
+      publicar_web: sponsor.publicar_web !== false,
+      publicar_app: sponsor.publicar_app !== false,
+      mostrar_marca: sponsor.mostrar_marca !== false,
+      weight: sponsor.weight || 1,
+      start_at: toInputValue(sponsor.start_at),
+      end_at: toInputValue(sponsor.end_at),
     });
     setShowAddForm(true);
   };
 
-  const handleStatusChange = async (sponsor, status) => {
-    if ((sponsor.status || 'prospecto') === status) return;
+  /* --------- Cambios sueltos desde la propia tarjeta, sin abrir el form --------- */
+
+  const parchear = async (sponsor, cambios, mensaje) => {
     try {
       const response = await adminFetch(
         `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${selectedRace}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
+          body: JSON.stringify(cambios),
         }
       );
       if (response.ok) {
-        const info = getStatusInfo(status);
-        toast.success(`Status actualizado a "${info.label}"`);
+        if (mensaje) toast.success(mensaje);
         loadSponsors();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Error al actualizar status');
+        const error = await response.json().catch(() => ({}));
+        toast.error(error.detail || 'No se pudo guardar el cambio');
       }
     } catch {
       toast.error('Error de conexión');
     }
   };
 
+  const handleStatusChange = (sponsor, status) => {
+    if ((sponsor.status || 'prospecto') === status) return;
+    parchear(sponsor, { status }, `Status actualizado a "${getStatusInfo(status).label}"`);
+  };
+
+  // Dónde se ve. Un interruptor por destino, en la misma tarjeta donde se
+  // lleva el proceso comercial: antes vivían en la otra pestaña y el estado
+  // de la vitrina del sitio se decidía desde la ficha de publicidad.
+  const cambiarDonde = (sponsor, campo) =>
+    parchear(sponsor, { [campo]: sponsor[campo] === false });
+
   const handleDelete = async (sponsorName) => {
-    if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Se borran también sus imágenes. Esta acción no se puede deshacer.`)) return;
 
     try {
       const response = await adminFetch(
@@ -317,8 +368,7 @@ export default function SponsorsManagement() {
 
       if (response.ok) {
         toast.success('Patrocinador eliminado permanentemente');
-        // Update local state immediately for better UX
-        setSponsors(prev => prev.filter(s => s.name !== sponsorName));
+        setSponsors((prev) => prev.filter((s) => s.name !== sponsorName));
       } else {
         toast.error('Error al eliminar');
       }
@@ -328,42 +378,97 @@ export default function SponsorsManagement() {
     }
   };
 
-  const handleLogoUpload = async (sponsorName, file) => {
-    if (!file) return;
+  /* ---------------- Piezas gráficas ---------------- */
 
-    setUploadingLogo(sponsorName);
+  const pedirImagen = (sponsorName, tipo) => {
+    destinoSubida.current = { sponsorName, tipo };
+    fileInputRef.current?.click();
+  };
 
-    const formData = new FormData();
-    formData.append('file', file);
+  const handleImageFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    const destino = destinoSubida.current;
+    if (!file || !destino) return;
+    const { sponsorName, tipo } = destino;
+    const etiqueta = PIEZAS.find((p) => p.tipo === tipo)?.label || 'Imagen';
 
+    setSubiendo(`${sponsorName}:${tipo}`);
+    const body = new FormData();
+    body.append('file', file);
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/upload-logo/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
-        {
-          method: 'POST',
-          body: formData
-        }
+        `${API_URL}/api/sponsors/imagen/${tipo}/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
+        { method: 'POST', body }
       );
-
       if (response.ok) {
-        toast.success('Logo subido exitosamente');
+        toast.success(`${etiqueta} subido`);
         loadSponsors();
       } else {
-        const error = await response.json();
-        toast.error(error.detail || 'Error al subir logo');
+        const error = await response.json().catch(() => ({}));
+        toast.error(error.detail || 'No se pudo subir la imagen');
       }
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      toast.error('Error al subir logo');
+    } catch {
+      toast.error('Error de conexión al subir la imagen');
     } finally {
-      setUploadingLogo(null);
+      setSubiendo(null);
+    }
+  };
+
+  const quitarImagen = async (sponsorName, tipo) => {
+    const etiqueta = PIEZAS.find((p) => p.tipo === tipo)?.label || 'la imagen';
+    if (!window.confirm(`¿Quitar ${etiqueta.toLowerCase()} de "${sponsorName}"?`)) return;
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/sponsors/imagen/${tipo}/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
+        { method: 'DELETE' }
+      );
+      if (response.ok) {
+        toast.success('Imagen quitada');
+        loadSponsors();
+      } else {
+        toast.error('No se pudo quitar la imagen');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    }
+  };
+
+  /* ---------------- Orden ---------------- */
+
+  const mover = async (index, direccion) => {
+    const destino = index + direccion;
+    if (destino < 0 || destino >= sponsors.length) return;
+    const reordenados = [...sponsors];
+    [reordenados[index], reordenados[destino]] = [reordenados[destino], reordenados[index]];
+    setSponsors(reordenados);
+    try {
+      const response = await adminFetch(
+        `${API_URL}/api/sponsors/reorder?race_code=${selectedRace}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reordenados.map((s, i) => ({ name: s.name, order: i + 1 }))),
+        }
+      );
+      if (!response.ok) {
+        toast.error('No se pudo guardar el orden');
+        loadSponsors();
+      }
+    } catch {
+      toast.error('Error de conexión');
+      loadSponsors();
     }
   };
 
   /* ---------------- Bitácora ---------------- */
 
-  const toggleBitacora = (sponsor) => {
-    setExpandedBitacora(expandedBitacora === sponsor.name ? null : sponsor.name);
+  const togglePanel = (sponsor, panel) => {
+    setAbierto((prev) => (
+      prev.name === sponsor.name && prev.panel === panel
+        ? { name: null, panel: null }
+        : { name: sponsor.name, panel }
+    ));
     setBitacoraNota('');
   };
 
@@ -379,7 +484,7 @@ export default function SponsorsManagement() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nota: bitacoraNota })
+          body: JSON.stringify({ nota: bitacoraNota }),
         }
       );
       if (response.ok) {
@@ -387,7 +492,7 @@ export default function SponsorsManagement() {
         setBitacoraNota('');
         loadSponsors();
       } else {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         toast.error(error.detail || 'Error al registrar contacto');
       }
     } catch {
@@ -399,8 +504,7 @@ export default function SponsorsManagement() {
 
   const ultimoContacto = (sponsor) => {
     const entradas = sponsor.bitacora || [];
-    if (entradas.length === 0) return null;
-    return entradas[entradas.length - 1];
+    return entradas.length ? entradas[entradas.length - 1] : null;
   };
 
   /* ---------------- Traer de otra edición ---------------- */
@@ -413,7 +517,6 @@ export default function SponsorsManagement() {
     setShowImport(true);
   };
 
-  // Los que ya están en esta carrera se muestran, pero no se pueden marcar
   const yaEstaEnEstaCarrera = (name) => sponsors.some((s) => s.name === name);
 
   const loadCandidates = useCallback(async (fromRace) => {
@@ -483,6 +586,11 @@ export default function SponsorsManagement() {
     && categoriaElegida.cupos != null
     && tomadosEnCategoria >= categoriaElegida.cupos;
 
+  // Los que de verdad se están viendo en cada sitio, para el resumen de
+  // arriba: proceso cumplido, interruptor encendido y —en la app— con pieza.
+  const enElSitio = sponsors.filter((s) => procesoPermitePublicar(s) && s.publicar_web !== false);
+  const enLaApp = sponsors.filter((s) => procesoPermitePublicar(s) && s.publicar_app !== false && tienePieza(s));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -493,13 +601,20 @@ export default function SponsorsManagement() {
 
   return (
     <div className="space-y-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={handleImageFile}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Patrocinadores</h2>
+          <h2 className="text-2xl font-bold">Patrocinios y Publicidad</h2>
           <p className="text-muted-foreground">
-            Gestiona los patrocinadores y su proceso de cierre • {sponsors.length} registrados •{' '}
-            {sponsors.filter(procesoPermitePublicar).length} listos para publicar
+            {sponsors.length} registrados • {enElSitio.length} en el sitio • {enLaApp.length} en el pie de la app
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -526,78 +641,57 @@ export default function SponsorsManagement() {
         </div>
       </div>
 
-      {/* Traer patrocinadores de otra edición */}
+      {/* Traer de otra edición */}
       {showImport && (
-        <Card className="border-primary/30">
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <History className="w-4 h-4 text-[#E8772E]" />
-              Traer patrocinadores a {races.find((r) => r.code === selectedRace)?.name || selectedRace}
+              <History className="w-4 h-4" />
+              Traer patrocinadores de otra edición
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="import-from">Edición de origen</Label>
+            <p className="text-sm text-muted-foreground">
+              Llegan los contactos, el logo, la descripción y el Instagram. El proceso
+              empieza de nuevo en «Prospecto» y la copia nace apagada en los dos destinos:
+              una edición que aún no ha empezado a vender no debería estrenar vitrina con
+              las marcas del año pasado.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label className="text-sm">Desde</Label>
               <select
-                id="import-from"
                 value={importFrom}
                 onChange={(e) => setImportFrom(e.target.value)}
-                className="w-full md:w-96 px-3 py-2 border rounded-md bg-background"
-                data-testid="import-from-select"
+                className="px-3 py-2 border rounded-md bg-background text-sm"
               >
                 {races.filter((r) => r.code !== selectedRace).map((r) => (
                   <option key={r.code} value={r.code}>{r.name}</option>
                 ))}
               </select>
-              <p className="text-xs text-muted-foreground">
-                Llegan con su descripción, logo y datos de contacto, pero el proceso vuelve a
-                empezar en "Prospecto": no se publican hasta que cierres el patrocinio.
-              </p>
             </div>
 
             {loadingCandidates ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              </div>
+              <p className="text-sm text-muted-foreground">Cargando…</p>
             ) : importCandidates.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic py-2">
-                Esa edición no tiene patrocinadores registrados
-              </p>
+              <p className="text-sm text-muted-foreground">Esa edición no tiene patrocinadores.</p>
             ) : (
-              <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
+              <div className="grid sm:grid-cols-2 gap-1.5 max-h-72 overflow-y-auto">
                 {importCandidates.map((c) => {
-                  const repetido = yaEstaEnEstaCarrera(c.name);
-                  const marcado = importSelected.includes(c.name);
+                  const yaEsta = yaEstaEnEstaCarrera(c.name);
                   return (
                     <label
                       key={c.name}
-                      className={`flex items-center gap-3 px-3 py-2 ${repetido ? 'opacity-50' : 'cursor-pointer hover:bg-muted/50'}`}
+                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded border ${yaEsta ? 'opacity-50' : 'cursor-pointer hover:bg-muted/50'}`}
                     >
                       <input
                         type="checkbox"
-                        checked={marcado}
-                        disabled={repetido}
+                        disabled={yaEsta}
+                        checked={importSelected.includes(c.name)}
                         onChange={() => toggleImportSelected(c.name)}
-                        className="w-4 h-4"
-                        data-testid={`import-check-${c.name}`}
                       />
-                      {c.logo_url ? (
-                        <img
-                          src={`${API_URL}${c.logo_url}`}
-                          alt={c.name}
-                          className="w-9 h-9 object-contain bg-white rounded border"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded border border-dashed flex items-center justify-center">
-                          <Image className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <span className="flex-1 min-w-0 text-sm truncate">{c.name}</span>
-                      {repetido && (
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          <Check className="w-3 h-3 mr-1" />Ya está
-                        </Badge>
+                      <span className="truncate">{c.name}</span>
+                      {yaEsta && (
+                        <Badge variant="outline" className="text-[10px] ml-auto shrink-0">ya está</Badge>
                       )}
                     </label>
                   );
@@ -630,7 +724,7 @@ export default function SponsorsManagement() {
         </Card>
       )}
 
-      {/* Add/Edit Form */}
+      {/* Alta / edición */}
       {showAddForm && (
         <Card>
           <CardHeader className="pb-3">
@@ -645,16 +739,14 @@ export default function SponsorsManagement() {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                   placeholder="Ej: Café Santo Domingo"
                   disabled={!!editingSponsor}
                   data-testid="sponsor-name-input"
                 />
                 {!editingSponsor && (
                   <p className="text-xs text-muted-foreground">
-                    Al guardar se le crea su ficha en Publicidad, apagada y a la
-                    espera de las imágenes. La descripción y el Instagram se
-                    llenan allí.
+                    Las imágenes se suben después, desde su tarjeta.
                   </p>
                 )}
               </div>
@@ -671,7 +763,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="razon_social"
                       value={formData.razon_social}
-                      onChange={(e) => setFormData(prev => ({ ...prev, razon_social: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, razon_social: e.target.value }))}
                       placeholder="Ej: Industrias Banilejas, S.A.S."
                       data-testid="sponsor-razon-social-input"
                     />
@@ -681,7 +773,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="rnc"
                       value={formData.rnc}
-                      onChange={(e) => setFormData(prev => ({ ...prev, rnc: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, rnc: e.target.value }))}
                       placeholder="1-01-00000-0"
                       data-testid="sponsor-rnc-input"
                     />
@@ -691,7 +783,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="nombre_contacto"
                       value={formData.nombre_contacto}
-                      onChange={(e) => setFormData(prev => ({ ...prev, nombre_contacto: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, nombre_contacto: e.target.value }))}
                       placeholder="Persona con quien se gestiona"
                     />
                   </div>
@@ -700,7 +792,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="posicion_contacto"
                       value={formData.posicion_contacto}
-                      onChange={(e) => setFormData(prev => ({ ...prev, posicion_contacto: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, posicion_contacto: e.target.value }))}
                       placeholder="Ej: Gerente de Mercadeo"
                       data-testid="sponsor-posicion-input"
                     />
@@ -710,7 +802,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="telefono"
                       value={formData.telefono}
-                      onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, telefono: e.target.value }))}
                       placeholder="809-000-0000"
                     />
                   </div>
@@ -720,7 +812,7 @@ export default function SponsorsManagement() {
                       id="correo"
                       type="email"
                       value={formData.correo}
-                      onChange={(e) => setFormData(prev => ({ ...prev, correo: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, correo: e.target.value }))}
                       placeholder="contacto@empresa.com"
                     />
                   </div>
@@ -729,7 +821,7 @@ export default function SponsorsManagement() {
                     <Input
                       id="pagina_web"
                       value={formData.pagina_web}
-                      onChange={(e) => setFormData(prev => ({ ...prev, pagina_web: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, pagina_web: e.target.value }))}
                       placeholder="www.empresa.com"
                     />
                   </div>
@@ -748,7 +840,7 @@ export default function SponsorsManagement() {
                     <select
                       id="propuesta_categoria"
                       value={formData.propuesta_categoria}
-                      onChange={(e) => setFormData(prev => ({ ...prev, propuesta_categoria: e.target.value }))}
+                      onChange={(e) => setFormData((p) => ({ ...p, propuesta_categoria: e.target.value }))}
                       className="w-full px-3 py-2 border rounded-md bg-background"
                       data-testid="sponsor-categoria-input"
                     >
@@ -789,7 +881,7 @@ export default function SponsorsManagement() {
                       onChange={(e) => {
                         const raw = parseMontoInput(e.target.value);
                         if ((raw.match(/\./g) || []).length > 1) return;
-                        setFormData(prev => ({ ...prev, propuesta_monto: raw }));
+                        setFormData((p) => ({ ...p, propuesta_monto: raw }));
                       }}
                       placeholder="100,000.00"
                       data-testid="sponsor-monto-input"
@@ -798,14 +890,14 @@ export default function SponsorsManagement() {
                 </div>
               </div>
 
-              {/* Status + publicación */}
+              {/* Proceso */}
               <div className="pt-3 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status del Proceso de Cierre</Label>
                   <select
                     id="status"
                     value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                    onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md bg-background"
                     data-testid="sponsor-status-select"
                   >
@@ -815,11 +907,11 @@ export default function SponsorsManagement() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="publicar_desde">Publicar en el sitio a partir de</Label>
+                  <Label htmlFor="publicar_desde">Publicar a partir de</Label>
                   <select
                     id="publicar_desde"
                     value={formData.publicar_desde}
-                    onChange={(e) => setFormData(prev => ({ ...prev, publicar_desde: e.target.value }))}
+                    onChange={(e) => setFormData((p) => ({ ...p, publicar_desde: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md bg-background"
                     data-testid="sponsor-publicar-desde-select"
                   >
@@ -828,11 +920,124 @@ export default function SponsorsManagement() {
                     ))}
                   </select>
                   <p className="text-xs text-muted-foreground">
-                    El patrocinador aparece en la página de patrocinadores cuando el proceso alcanza este momento.
+                    Hasta que el proceso no llegue aquí, no se publica en ningún sitio,
+                    aunque los interruptores estén encendidos.
                   </p>
                 </div>
               </div>
 
+              {/* Marca y publicidad */}
+              <div className="pt-3 border-t">
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <Megaphone className="w-4 h-4" />
+                  Marca y Publicidad
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="text">Texto del banner</Label>
+                    <Input
+                      id="text"
+                      value={formData.text}
+                      maxLength={80}
+                      onChange={(e) => setFormData((p) => ({ ...p, text: e.target.value }))}
+                      placeholder="Hidratación oficial del BYSD"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="link_url">Enlace (al tocar el banner)</Label>
+                    <Input
+                      id="link_url"
+                      value={formData.link_url}
+                      onChange={(e) => setFormData((p) => ({ ...p, link_url: e.target.value }))}
+                      placeholder="https://empresa.do"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram">Instagram</Label>
+                    <Input
+                      id="instagram"
+                      value={formData.instagram}
+                      onChange={(e) => setFormData((p) => ({ ...p, instagram: e.target.value }))}
+                      placeholder="https://www.instagram.com/usuario/"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="weight">Peso de rotación (1–10)</Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={formData.weight}
+                      onChange={(e) => setFormData((p) => ({ ...p, weight: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="description">Descripción</Label>
+                    <textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+                      placeholder="Qué es y qué aporta al evento…"
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="start_at">Vigencia — desde (opcional)</Label>
+                    <Input
+                      id="start_at"
+                      type="datetime-local"
+                      value={formData.start_at}
+                      onChange={(e) => setFormData((p) => ({ ...p, start_at: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_at">Vigencia — hasta (opcional)</Label>
+                    <Input
+                      id="end_at"
+                      type="datetime-local"
+                      value={formData.end_at}
+                      onChange={(e) => setFormData((p) => ({ ...p, end_at: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-medium">Dónde se ve</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.publicar_web}
+                      onChange={(e) => setFormData((p) => ({ ...p, publicar_web: e.target.checked }))}
+                    />
+                    Sitio — página de patrocinadores
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formData.publicar_app}
+                      onChange={(e) => setFormData((p) => ({ ...p, publicar_app: e.target.checked }))}
+                    />
+                    App — vitrina de patrocinadores y rotación del pie
+                  </label>
+                  <label className="flex items-start gap-2 text-sm pt-1">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={formData.mostrar_marca}
+                      onChange={(e) => setFormData((p) => ({ ...p, mostrar_marca: e.target.checked }))}
+                    />
+                    <span>
+                      Marcar como «Patrocinador» sobre el banner
+                      <span className="block text-xs text-muted-foreground">
+                        Distingue la publicidad del contenido de la app. Quítalo solo si la
+                        propia pieza ya deja claro de quién es.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving}>
@@ -849,8 +1054,8 @@ export default function SponsorsManagement() {
         </Card>
       )}
 
-      {/* Sponsors List (oculta mientras el formulario está abierto, para
-          concentrar la vista en el patrocinador que se edita) */}
+      {/* Lista (oculta mientras el formulario está abierto, para concentrar la
+          vista en el patrocinador que se edita) */}
       {!showAddForm && !showImport && (
       <div className="grid gap-4">
         {sponsors.length === 0 ? (
@@ -864,15 +1069,38 @@ export default function SponsorsManagement() {
             </CardContent>
           </Card>
         ) : (
-          sponsors.map((sponsor) => {
+          sponsors.map((sponsor, index) => {
             const statusInfo = getStatusInfo(sponsor.status);
             const publicado = procesoPermitePublicar(sponsor);
             const ultima = ultimoContacto(sponsor);
             const categoria = getCategory(sponsor.propuesta_categoria);
+            const panelAbierto = abierto.name === sponsor.name ? abierto.panel : null;
+            const enWeb = publicado && sponsor.publicar_web !== false;
+            const enApp = publicado && sponsor.publicar_app !== false && tienePieza(sponsor);
             return (
             <Card key={sponsor.name} className={!sponsor.is_active ? 'opacity-50' : ''}>
               <CardContent className="py-4">
                 <div className="flex items-start gap-4">
+                  {/* Orden */}
+                  <div className="flex flex-col gap-0.5 pt-1">
+                    <button
+                      className="text-muted-foreground disabled:opacity-30"
+                      disabled={index === 0}
+                      onClick={() => mover(index, -1)}
+                      aria-label="Subir"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      className="text-muted-foreground disabled:opacity-30"
+                      disabled={index === sponsors.length - 1}
+                      onClick={() => mover(index, 1)}
+                      aria-label="Bajar"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
                   {/* Logo */}
                   <div className="flex-shrink-0">
                     {sponsor.logo_url ? (
@@ -889,24 +1117,18 @@ export default function SponsorsManagement() {
                         <Image className="w-8 h-8 text-muted-foreground" />
                       </div>
                     )}
-
-                    {/* Logo Upload */}
-                    <label className="block mt-2 cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleLogoUpload(sponsor.name, e.target.files[0])}
-                        disabled={uploadingLogo === sponsor.name}
-                      />
-                      <div className={`w-full text-xs px-2 py-1.5 border rounded-md flex items-center justify-center gap-1 transition-colors ${uploadingLogo === sponsor.name ? 'opacity-50 cursor-not-allowed' : 'hover:bg-muted cursor-pointer'}`}>
-                        <Upload className="w-3 h-3" />
-                        {uploadingLogo === sponsor.name ? 'Subiendo...' : 'Subir Logo'}
-                      </div>
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() => pedirImagen(sponsor.name, 'logo')}
+                      disabled={subiendo === `${sponsor.name}:logo`}
+                      className="mt-2 w-full text-xs px-2 py-1.5 border rounded-md flex items-center justify-center gap-1 transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      <Upload className="w-3 h-3" />
+                      {subiendo === `${sponsor.name}:logo` ? 'Subiendo...' : (sponsor.logo_url ? 'Cambiar' : 'Subir Logo')}
+                    </button>
                   </div>
 
-                  {/* Content */}
+                  {/* Contenido */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -920,7 +1142,6 @@ export default function SponsorsManagement() {
                               {categoria.label}
                             </Badge>
                           )}
-                          {/* Categoría escrita antes del esquema: se marca para corregirla */}
                           {!categoria && sponsor.propuesta_categoria && (
                             <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
                               {sponsor.propuesta_categoria}
@@ -929,12 +1150,10 @@ export default function SponsorsManagement() {
                           <Badge className={`text-xs ${statusInfo.badgeClass} hover:${statusInfo.badgeClass}`}>
                             {statusInfo.label}
                           </Badge>
-                          {/* El proceso, no el resultado: dónde se ve de verdad
-                              lo mandan los interruptores de su ficha, en Publicidad. */}
                           {publicado ? (
                             <Badge className="text-xs bg-green-600 text-white hover:bg-green-600 flex items-center gap-1">
                               <Eye className="w-3 h-3" />
-                              Listo para publicar
+                              Proceso cumplido
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="text-xs text-muted-foreground flex items-center gap-1">
@@ -952,12 +1171,27 @@ export default function SponsorsManagement() {
                         )}
                       </div>
 
-                      {/* Actions */}
+                      {/* Acciones */}
                       <div className="flex gap-1 shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleBitacora(sponsor)}
+                          onClick={() => togglePanel(sponsor, 'publicidad')}
+                          title="Piezas gráficas, vigencia y métricas"
+                          data-testid={`publicidad-sponsor-${sponsor.name}`}
+                        >
+                          <Megaphone className="w-4 h-4" />
+                          <span className="ml-1 text-xs hidden md:inline">Publicidad</span>
+                          {panelAbierto === 'publicidad' ? (
+                            <ChevronDown className="w-3 h-3 ml-1" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 ml-1" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => togglePanel(sponsor, 'bitacora')}
                           title="Bitácora de contactos"
                           data-testid={`bitacora-sponsor-${sponsor.name}`}
                         >
@@ -965,7 +1199,7 @@ export default function SponsorsManagement() {
                           <span className="ml-1 text-xs hidden md:inline">
                             Bitácora{(sponsor.bitacora || []).length > 0 ? ` (${sponsor.bitacora.length})` : ''}
                           </span>
-                          {expandedBitacora === sponsor.name ? (
+                          {panelAbierto === 'bitacora' ? (
                             <ChevronDown className="w-3 h-3 ml-1" />
                           ) : (
                             <ChevronRight className="w-3 h-3 ml-1" />
@@ -990,7 +1224,7 @@ export default function SponsorsManagement() {
                       </div>
                     </div>
 
-                    {/* Contact + proposal summary */}
+                    {/* Contacto y propuesta */}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
                       {sponsor.nombre_contacto && (
                         <span className="flex items-center gap-1">
@@ -1019,7 +1253,16 @@ export default function SponsorsManagement() {
                           <Globe className="w-3 h-3" />{sponsor.pagina_web}
                         </a>
                       )}
-                      {/* La categoría ya sale como etiqueta junto al nombre */}
+                      {sponsor.instagram && (
+                        <a
+                          href={sponsor.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 hover:underline"
+                        >
+                          <Instagram className="w-3 h-3" />Instagram
+                        </a>
+                      )}
                       {sponsor.propuesta_monto != null && (
                         <span className="flex items-center gap-1 font-medium text-foreground">
                           <BadgeDollarSign className="w-3 h-3" />
@@ -1028,8 +1271,9 @@ export default function SponsorsManagement() {
                       )}
                     </div>
 
-                    {/* Status quick-change + último contacto */}
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 mt-3">
+                    {/* Proceso e interruptores, juntos: lo que hace falta para
+                        saber de un vistazo si esta marca se está viendo. */}
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
                       <select
                         value={sponsor.status || 'prospecto'}
                         onChange={(e) => handleStatusChange(sponsor, e.target.value)}
@@ -1040,20 +1284,163 @@ export default function SponsorsManagement() {
                           <option key={s.value} value={s.value}>{s.label}</option>
                         ))}
                       </select>
+
+                      <Button
+                        size="sm"
+                        variant={sponsor.publicar_web === false ? 'outline' : 'secondary'}
+                        onClick={() => cambiarDonde(sponsor, 'publicar_web')}
+                        title="Página de patrocinadores del sitio"
+                        data-testid={`web-toggle-${sponsor.name}`}
+                      >
+                        <Globe className="w-3.5 h-3.5 mr-1" />
+                        Sitio {sponsor.publicar_web === false ? 'no' : 'sí'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={sponsor.publicar_app === false ? 'outline' : 'secondary'}
+                        onClick={() => cambiarDonde(sponsor, 'publicar_app')}
+                        title="Vitrina de BYSD Live y rotación del pie"
+                        data-testid={`app-toggle-${sponsor.name}`}
+                      >
+                        <Smartphone className="w-3.5 h-3.5 mr-1" />
+                        App {sponsor.publicar_app === false ? 'no' : 'sí'}
+                      </Button>
+
                       {!publicado && sponsor.status !== 'declinado' && (
                         <span className="text-xs text-muted-foreground">
-                          Se publica al llegar a: <strong>{getStatusInfo(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE).label}</strong>
+                          Se publica al llegar a <strong>{getStatusInfo(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE).label}</strong>
                         </span>
                       )}
-                      {ultima && (
-                        <span className="text-xs text-muted-foreground">
-                          Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}
+                      {publicado && sponsor.publicar_app !== false && !tienePieza(sponsor) && (
+                        <span className="text-xs text-amber-600">
+                          Sin imágenes: no se pinta en el pie de la app
                         </span>
                       )}
                     </div>
 
+                    {ultima && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}
+                      </p>
+                    )}
+
+                    {/* Publicidad (acordeón) */}
+                    {panelAbierto === 'publicidad' && (
+                      <div className="mt-3 pt-3 border-t space-y-3" data-testid={`publicidad-panel-${sponsor.name}`}>
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                          <Megaphone className="w-4 h-4 text-[#E8772E]" />
+                          Piezas gráficas
+                        </h4>
+
+                        <div className="grid sm:grid-cols-3 gap-3">
+                          {PIEZAS.map((pieza) => (
+                            <div key={pieza.tipo} className="border rounded-lg p-3 space-y-2">
+                              <p className="text-xs font-semibold">{pieza.label}</p>
+                              {sponsor[pieza.campo] ? (
+                                <img
+                                  src={`${API_URL}${sponsor[pieza.campo]}`}
+                                  alt={`${pieza.label} de ${sponsor.name}`}
+                                  className={`w-full bg-white border rounded object-contain ${pieza.tipo === 'banner' ? 'aspect-[5/1]' : 'h-20'}`}
+                                />
+                              ) : (
+                                <div className={`w-full border border-dashed rounded flex items-center justify-center bg-muted/40 text-[10px] text-muted-foreground ${pieza.tipo === 'banner' ? 'aspect-[5/1]' : 'h-20'}`}>
+                                  sin imagen
+                                </div>
+                              )}
+                              <p className="text-[10px] text-muted-foreground leading-snug">{pieza.ayuda}</p>
+                              <div className="flex gap-1.5">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1"
+                                  disabled={subiendo === `${sponsor.name}:${pieza.tipo}`}
+                                  onClick={() => pedirImagen(sponsor.name, pieza.tipo)}
+                                >
+                                  <Upload className="w-3 h-3 mr-1" />
+                                  {subiendo === `${sponsor.name}:${pieza.tipo}` ? '…' : (sponsor[pieza.campo] ? 'Cambiar' : 'Subir')}
+                                </Button>
+                                {sponsor[pieza.campo] && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-500 hover:text-red-600"
+                                    onClick={() => quitarImagen(sponsor.name, pieza.tipo)}
+                                    title="Quitar"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span>Vigencia: {vigenciaLabel(sponsor)}</span>
+                          <span>Peso: {sponsor.weight || 1}×</span>
+                          <span>Marca «Patrocinador»: {sponsor.mostrar_marca === false ? 'no' : 'sí'}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> {sponsor.impressions || 0} impresiones
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <MousePointerClick className="w-3 h-3" /> {sponsor.clicks || 0} clics
+                          </span>
+                        </div>
+
+                        {sponsor.text && (
+                          <p className="text-xs text-muted-foreground">Texto: «{sponsor.text}»</p>
+                        )}
+
+                        <p className="text-xs text-muted-foreground">
+                          El texto, el enlace, la descripción, la vigencia y el peso se
+                          cambian desde <strong>Editar</strong>.
+                        </p>
+
+                        {/* Vista previa del pie, en el negro de la app */}
+                        {(enApp || tienePieza(sponsor)) && (
+                          <div>
+                            <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                              Vista previa del pie
+                            </p>
+                            {sponsor.banner_url ? (
+                              <img
+                                src={`${API_URL}${sponsor.banner_url}`}
+                                alt={`Banner de ${sponsor.name}`}
+                                className="rounded-xl border border-[#262626] max-w-md w-full aspect-[5/1] object-cover bg-[#161616]"
+                              />
+                            ) : (
+                              <div className="rounded-xl bg-[#161616] border border-[#262626] h-[72px] flex items-center gap-3 px-4 relative max-w-md">
+                                {sponsor.mostrar_marca !== false && (
+                                  <span className="absolute top-1 right-3 text-[8px] tracking-widest uppercase text-[#777777]">
+                                    Patrocinador
+                                  </span>
+                                )}
+                                {sponsor.logo_url ? (
+                                  <img
+                                    src={`${API_URL}${sponsor.logo_url}`}
+                                    alt={sponsor.name}
+                                    className="w-12 h-12 rounded-xl object-contain bg-white"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold">
+                                    {sponsor.name.slice(0, 6)}
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <p className="text-[13px] font-bold text-white truncate">{sponsor.name}</p>
+                                  {sponsor.text && (
+                                    <p className="text-[11px] text-[#999999] truncate">{sponsor.text}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Bitácora (acordeón) */}
-                    {expandedBitacora === sponsor.name && (
+                    {panelAbierto === 'bitacora' && (
                       <div className="mt-3 pt-3 border-t space-y-3" data-testid={`bitacora-panel-${sponsor.name}`}>
                         <h4 className="text-sm font-semibold flex items-center gap-2">
                           <NotebookPen className="w-4 h-4 text-[#E8772E]" />
