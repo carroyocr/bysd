@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
-import { getPresenting, ETIQUETA_PRESENTING } from '../lib/presenting';
+import { getPresenting, logoPara, ETIQUETA_PRESENTING } from '../lib/presenting';
 
 // El bloque "PRESENTED BY <marca>" que acompaña al logo de la carrera en todo
 // el sitio. Quién es esa marca sale de `lib/presenting.js`, por código de
@@ -60,20 +60,16 @@ export default function PresentedBy({
     </span>
   );
 
-  // Sobre fondo oscuro el logo va en una placa blanca: el azul de la marca
-  // desaparece contra el negro de la app y no existe versión en blanco.
+  // Cada fondo lleva su versión de la marca: la de color sobre claro y la
+  // blanca sobre oscuro. Antes, a falta de versión en blanco, el logo iba
+  // sobre una placa blanca; con el arte en blanco el logo se apoya directo en
+  // el fondo, que es como está pensada la marca.
   const logo = (
     <img
-      src={marca.logo}
+      src={logoPara(marca, { oscuro })}
       alt={marca.descripcion}
-      className={`${ALTURA_LOGO[size]} w-auto ${oscuro ? '' : 'object-contain'}`}
+      className={`${ALTURA_LOGO[size]} w-auto object-contain`}
     />
-  );
-
-  const logoConFondo = oscuro ? (
-    <span className="inline-flex items-center rounded bg-white px-1.5 py-1">{logo}</span>
-  ) : (
-    logo
   );
 
   const logoFinal = enlace ? (
@@ -84,10 +80,10 @@ export default function PresentedBy({
       aria-label={marca.descripcion}
       className="inline-flex items-center transition-opacity hover:opacity-80"
     >
-      {logoConFondo}
+      {logo}
     </a>
   ) : (
-    logoConFondo
+    logo
   );
 
   return (
