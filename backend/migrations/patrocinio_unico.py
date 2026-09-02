@@ -28,8 +28,18 @@ Que se lleva de cada lado:
 Un patrocinador sin ficha queda encendido en los dos destinos, que es
 exactamente como se comporta hoy: sin ficha que lo apagara, salia.
 
-Las fichas huerfanas —sin patrocinador detras— no se tocan ni se pierden: se
-listan al final para decidir a mano que se hace con ellas.
+Las fichas huerfanas —sin patrocinador detras— se listan al final. Una ficha
+queda huerfana cuando alguien renombro al patrocinador (el enlace era el
+nombre) o cuando se monto a mano con el nombre mal escrito. Para engancharlas
+esta `--renombrar`, que corrige el nombre del patrocinador ANTES de fundir,
+para que la ficha lo encuentre:
+
+    --renombrar "BYSD-2027:BackSquad=BlackSquad"
+
+En un patrocinador renombrado asi mandan las imagenes de la ficha, tambien el
+logo: pedir el enganche es decir que esa ficha es la buena. El logo anterior
+del patrocinador se queda sin usar en GridFS; se avisa al final por si hay que
+borrarlo.
 
 Se puede correr mas de una vez sin miedo.
 
@@ -81,8 +91,12 @@ POR_DEFECTO_SIN_FICHA = {
 }
 
 
-def cambios_para(sponsor: dict, ficha: dict | None) -> dict:
-    """Lo que hay que escribirle a este patrocinador. Vacio si ya esta al dia."""
+def cambios_para(sponsor: dict, ficha: dict | None, *, enganchado: bool = False) -> dict:
+    """Lo que hay que escribirle a este patrocinador. Vacio si ya esta al dia.
+
+    `enganchado` marca al que acaba de renombrarse para alcanzar una ficha
+    huerfana: ahi manda el logo de la ficha, no el suyo.
+    """
     nuevos: dict = {}
 
     def poner(campo, valor):
@@ -108,7 +122,8 @@ def cambios_para(sponsor: dict, ficha: dict | None) -> dict:
         poner(campo, defecto if valor is None else valor)
 
     # Un solo logo: manda el del patrocinador, que es el que esta cargado.
-    if not sponsor.get("logo_url") and ficha.get("logo_url"):
+    # Salvo en un enganche pedido a mano, donde la ficha es la buena.
+    if ficha.get("logo_url") and (enganchado or not sponsor.get("logo_url")):
         poner("logo_url", ficha["logo_url"])
 
     # Descripcion e Instagram: manda lo que la app esta ensenando hoy.
@@ -118,7 +133,39 @@ def cambios_para(sponsor: dict, ficha: dict | None) -> dict:
     return nuevos
 
 
-async def migrar(escribir: bool) -> int:
+def parsear_renombrados(valores: list[str]) -> dict:
+    """De ["CARRERA:Viejo=Nuevo"] a {("CARRERA", "Viejo"): "Nuevo"}."""
+    mapa = {}
+    for valor in valores or []:
+        if ":" not in valor or "=" not in valor:
+            raise SystemExit(f'--renombrar mal escrito: {valor!r}. Use "CARRERA:Viejo=Nuevo".')
+        carrera, resto = valor.split(":", 1)
+        viejo, nuevo = resto.split("=", 1)
+        mapa[(carrera.strip().upper(), viejo.strip())] = nuevo.strip()
+    return mapa
+
+
+async def aplicar_renombrados(db, mapa: dict, escribir: bool) -> set:
+    """Renombra antes de fundir, para que la ficha huerfana lo encuentre."""
+    enganchados = set()
+    for (carrera, viejo), nuevo in mapa.items():
+        sponsor = await db.sponsors.find_one({"race_code": carrera, "name": viejo})
+        if not sponsor:
+            print(f"  aviso: no hay patrocinador {viejo!r} en {carrera}; no se renombra")
+            continue
+        if await db.sponsors.find_one({"race_code": carrera, "name": nuevo}):
+            print(f"  aviso: {carrera} ya tiene un patrocinador {nuevo!r}; no se renombra")
+            continue
+        print(f"  renombrado: {carrera} {viejo!r} -> {nuevo!r}")
+        if sponsor.get("logo_url"):
+            print(f"      su logo anterior queda sin usar: {sponsor['logo_url']}")
+        if escribir:
+            await db.sponsors.update_one({"_id": sponsor["_id"]}, {"$set": {"name": nuevo}})
+        enganchados.add((carrera, nuevo))
+    return enganchados
+
+
+async def migrar(escribir: bool, renombrados: dict | None = None) -> int:
     url = os.environ.get("MONGO_URL")
     if not url:
         print("Falta MONGO_URL en el entorno.")
@@ -127,7 +174,16 @@ async def migrar(escribir: bool) -> int:
     cliente = AsyncIOMotorClient(url)
     db = cliente.backyard_ultra
 
+    enganchados = await aplicar_renombrados(db, renombrados or {}, escribir)
+
     sponsors = await db.sponsors.find({}).to_list(1000)
+    # En ensayo la base no se toca, asi que el renombrado se simula aqui para
+    # que el resto del informe cuadre con lo que pasaria de verdad.
+    if not escribir:
+        for (carrera, viejo), nuevo in (renombrados or {}).items():
+            for doc in sponsors:
+                if doc.get("race_code") == carrera and doc.get("name") == viejo:
+                    doc["name"] = nuevo
     fichas = await db.ad_banners.find({}).to_list(1000)
     por_clave = {(f.get("race_code"), f.get("name")): f for f in fichas}
     usadas = set()
@@ -144,7 +200,7 @@ async def migrar(escribir: bool) -> int:
         else:
             sin_ficha += 1
 
-        nuevos = cambios_para(sponsor, ficha)
+        nuevos = cambios_para(sponsor, ficha, enganchado=clave in enganchados)
         if not nuevos:
             al_dia += 1
             continue
@@ -182,4 +238,11 @@ async def migrar(escribir: bool) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--escribir", action="store_true", help="aplica los cambios")
-    sys.exit(asyncio.run(migrar(parser.parse_args().escribir)))
+    parser.add_argument(
+        "--renombrar",
+        action="append",
+        metavar="CARRERA:Viejo=Nuevo",
+        help="renombra un patrocinador antes de fundir, para enganchar su ficha huerfana",
+    )
+    args = parser.parse_args()
+    sys.exit(asyncio.run(migrar(args.escribir, parsear_renombrados(args.renombrar))))
