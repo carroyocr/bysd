@@ -7,7 +7,7 @@ import {
 import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
-  Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper, Megaphone,
+  Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
   Bell, Radio, Eye, ShieldAlert
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
@@ -15,7 +15,6 @@ import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
 import SponsorsManagement from '../components/SponsorsManagement';
-import AdsManagement from '../components/AdsManagement';
 import VolunteerConfigManagement from '../components/VolunteerConfigManagement';
 import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsManagement';
 import VolunteerProfilesManagement from '../components/VolunteerProfilesManagement';
@@ -64,7 +63,6 @@ const TAB_PERMISSIONS = {
   'assignments': ['assignments', 'volunteers'],
   'volunteer-profiles': ['volunteer-profiles', 'volunteers'],
   'sponsors': ['sponsors'],
-  'ads': ['ads', 'sponsors'],
   'surveys': ['surveys'],
   'config': ['race-config', 'config'],
   'users': ['users'],
@@ -126,8 +124,7 @@ const ADMIN_SECTIONS = [
     label: 'Comercial',
     icon: Building2,
     items: [
-      { id: 'sponsors', label: 'Patrocinadores', icon: Building2 },
-      { id: 'ads', label: 'Publicidad', icon: Megaphone },
+      { id: 'sponsors', label: 'Patrocinios y Publicidad', icon: Building2 },
       { id: 'finances', label: 'Finanzas', icon: Wallet },
     ],
   },
@@ -189,7 +186,6 @@ const TAB_VIEWS = {
   'volunteers': () => <VolunteerConfigManagement />,
   'capacitaciones': () => <CapacitacionesManagement />,
   'sponsors': () => <SponsorsManagement />,
-  'ads': () => <AdsManagement />,
   'finances': () => <FinancesManagement />,
   'email-composer': () => <EmailComposer />,
   'whatsapp': () => <WhatsAppComposer />,
@@ -233,10 +229,13 @@ export default function AdminPage() {
         }
 
         // Set initial tab based on permissions
-        // El registro de vueltas dejo de ser un acceso propio y vive dentro de
-        // Control; los enlaces guardados siguen llevando alli.
+        // Dos accesos dejaron de existir por su cuenta y viven dentro de otro;
+        // los enlaces guardados siguen llevando al sitio correcto. El registro
+        // de vueltas esta en Control, y Publicidad se fundio con
+        // Patrocinadores: cada marca es una sola tarjeta.
+        const REUBICADOS = { 'lap-registry': 'control', ads: 'sponsors' };
         const pedido = searchParams.get('tab') || 'control';
-        const requestedTab = pedido === 'lap-registry' ? 'control' : pedido;
+        const requestedTab = REUBICADOS[pedido] || pedido;
         if (isAdminUser || permissions.includes('all') || canOpenTab(permissions, requestedTab)) {
           setActiveTab(requestedTab);
         } else {

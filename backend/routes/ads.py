@@ -1,39 +1,23 @@
-"""Banners publicitarios del pie de BYSD Live.
+"""Pie publicitario de BYSD Live: la cara de anuncio de un patrocinador.
 
-CRUD protegido con el permiso "sponsors" (quien administra patrocinadores
-administra tambien la publicidad). El listado publico solo expone lo que el
-banner necesita para pintarse; las metricas (impresiones/clics) se acumulan
-con endpoints publicos ligeros que no revelan nada.
+Este router ya no administra nada. Desde septiembre de 2026 un patrocinador es
+un solo documento en `sponsors` -comercial, marca y publicacion juntos- y su
+CRUD vive en `routes/sponsors.py`. Aqui quedan solo los tres endpoints
+publicos que consume la app, con **la misma forma de respuesta de siempre**:
+hay versiones instaladas (1.3.x en App Store y en Play) que los leen tal cual,
+y romperlas dejaria el pie vacio en telefonos que no podemos actualizar.
+
+La coleccion `ad_banners` quedo retirada; la migracion
+`migrations/patrocinio_unico.py` volco su contenido en `sponsors`.
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime, timezone
-import uuid
 
-from services.auth import require_permission
+from services import patrocinios
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
-
-solo_sponsors = Depends(require_permission("sponsors"))
-
-# Solo estos campos salen al publico; las metricas y fechas son del panel.
-PUBLIC_FIELDS = {
-    "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
-    "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
-    "mostrar_marca": 1, "description": 1, "instagram": 1,
-    "publicar_web": 1, "publicar_app": 1,
-}
-
-# banner_url: PNG del tamano exacto de la barra (1200x240, proporcion 5:1).
-# Cuando existe, sustituye al icono y al texto.
-# detail_url: imagen que se abre dentro de la app al tocar el banner, para que
-# el patrocinador pueda contar algo mas largo sin sacar al usuario de BYSD.
-IMAGENES = {
-    "logo": "logo_url",
-    "banner": "banner_url",
-    "detail": "detail_url",
-}
 
 
 def get_db():
@@ -46,342 +30,67 @@ async def _active_race_code(database) -> Optional[str]:
     return await get_active_race_code(database)
 
 
-class BannerCreate(BaseModel):
-    name: str
-    text: Optional[str] = None
-    link_url: Optional[str] = None
-    race_code: str
-    # Donde se ve esta ficha. Viven aqui y no en el patrocinador: alli queda
-    # solo lo comercial. "App" manda tambien en el pie publicitario, que antes
-    # tenia su propio "activo" y se pisaba con este.
-    publicar_web: bool = True
-    publicar_app: bool = True
-    # La descripcion y el Instagram viven aqui, no en la ficha del
-    # patrocinador: alli solo queda lo comercial. No son el texto ni el enlace
-    # del banner, que son de una linea y del tamano de la barra.
-    description: Optional[str] = None
-    instagram: Optional[str] = None
-    weight: int = Field(default=1, ge=1, le=10)
-    start_at: Optional[str] = None   # ISO; vigencia opcional
-    end_at: Optional[str] = None
-    # La nota "Patrocinador" sobre el banner. Se puede quitar cuando la propia
-    # pieza ya deja claro de quien es y la nota solo estorba.
-    mostrar_marca: bool = True
+async def _anuncios(db, race_code: str) -> list[dict]:
+    """Los patrocinadores de esa carrera que pueden salir como anuncio.
 
-
-class BannerUpdate(BaseModel):
-    name: Optional[str] = None
-    text: Optional[str] = None
-    link_url: Optional[str] = None
-    description: Optional[str] = None
-    instagram: Optional[str] = None
-    weight: Optional[int] = Field(default=None, ge=1, le=10)
-    start_at: Optional[str] = None
-    end_at: Optional[str] = None
-    order: Optional[int] = None
-    mostrar_marca: Optional[bool] = None
-    publicar_web: Optional[bool] = None
-    publicar_app: Optional[bool] = None
-
-
-class ReorderRequest(BaseModel):
-    ids: list[str]
-
-
-def _parse_iso(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Fecha de vigencia no válida (use ISO 8601)")
-
-
-def _vigente(banner: dict, now: datetime) -> bool:
-    start = _parse_iso(banner.get("start_at"))
-    end = _parse_iso(banner.get("end_at"))
-    if start and now < start:
-        return False
-    if end and now > end:
-        return False
-    return True
-
-
-def nuevo_banner(
-    race_code: str,
-    name: str,
-    *,
-    order: int,
-    description: Optional[str] = None,
-    instagram: Optional[str] = None,
-    text: Optional[str] = None,
-    link_url: Optional[str] = None,
-    weight: int = 1,
-    start_at: Optional[str] = None,
-    end_at: Optional[str] = None,
-    publicar_web: bool = True,
-    publicar_app: bool = True,
-    mostrar_marca: bool = True,
-) -> dict:
-    """El documento de una ficha de publicidad recien nacida.
-
-    Vive aqui y no en el endpoint porque el alta de un patrocinador tambien
-    estrena la suya, y las dos tienen que salir con la misma forma: si una se
-    queda sin un campo, el panel lo lee como vacio y nadie se entera.
-
-    La ficha se ata a su patrocinador por nombre y carrera, que es como se
-    direcciona un patrocinador en todo el backend: no tiene campo `id`.
+    Tienen que cumplir las cuatro: estar activos, tener encendido el
+    interruptor de la app, estar en vigencia y traer alguna pieza grafica.
+    A diferencia de antes, se les exige tambien haber llegado al momento
+    comercial de publicar: el pie es la vitrina mas visible que tenemos y no
+    deberia estrenar una marca que todavia no ha firmado.
     """
+    docs = await db.sponsors.find(
+        {"race_code": race_code.upper(), "is_active": True},
+        patrocinios.CAMPOS_ANUNCIO | {
+            "start_at": 1, "end_at": 1, "status": 1, "publicar_desde": 1,
+        },
+    ).sort("order", 1).to_list(200)
+
     ahora = datetime.now(timezone.utc)
-    return {
-        "id": str(uuid.uuid4()),
-        "race_code": race_code.upper(),
-        "name": name.strip(),
-        "text": (text or "").strip(),
-        "link_url": (link_url or "").strip(),
-        "description": (description or "").strip(),
-        "instagram": (instagram or "").strip(),
-        "logo_url": None,
-        "banner_url": None,
-        "detail_url": None,
-        "weight": weight,
-        "start_at": start_at,
-        "end_at": end_at,
-        "publicar_web": publicar_web,
-        "publicar_app": publicar_app,
-        "mostrar_marca": mostrar_marca,
-        "order": order,
-        "impressions": 0,
-        "clicks": 0,
-        "created_at": ahora,
-        "updated_at": ahora,
-    }
-
-
-def _tiene_pieza(banner: dict) -> bool:
-    """Si la ficha tiene con que pintarse en el pie.
-
-    Sin banner, sin logo y sin imagen de detalle no hay nada que ensenar, y un
-    hueco con un nombre dentro es peor que no ensenar nada. Por eso el pie las
-    salta aunque esten encendidas: encender es una intencion, tener pieza es
-    poder cumplirla.
-    """
-    return any(banner.get(campo) for campo in IMAGENES.values())
+    vigentes = [
+        d for d in docs
+        if patrocinios.sale_en(d, "app")
+        and patrocinios.vigente(d, ahora)
+        and patrocinios.tiene_pieza(d)
+    ]
+    for d in vigentes:
+        for campo in ("start_at", "end_at", "status", "publicar_desde"):
+            d.pop(campo, None)
+    return vigentes
 
 
 @router.get("/public")
 async def get_public_banners(race_code: Optional[str] = None, db=Depends(get_db)):
-    """Banners activos y vigentes para el pie de la vista en vivo (público)."""
+    """Anuncios vigentes de una carrera (publico)."""
     code = race_code or await _active_race_code(db)
     if not code:
         return []
-    banners = await db.ad_banners.find(
-        {"race_code": code.upper(), "publicar_app": {"$ne": False}},
-        PUBLIC_FIELDS | {"start_at": 1, "end_at": 1},
-    ).sort("order", 1).to_list(100)
-    now = datetime.now(timezone.utc)
-    vigentes = [b for b in banners if _vigente(b, now) and _tiene_pieza(b)]
-    for b in vigentes:
-        b.pop("start_at", None)
-        b.pop("end_at", None)
-    return vigentes
+    return await _anuncios(db, code)
 
 
 @router.get("/pie")
 async def pie_publicitario(race_code: Optional[str] = None, db=Depends(get_db)):
     """Lo que va en el pie de la app, ya resuelto. Publico.
 
-    El pie ensena fichas y nada mas. Hubo un respaldo que armaba banners con
-    los patrocinadores cuando la carrera no tenia publicidad montada; se retiro
-    el 26 de agosto de 2026, cuando cada patrocinador paso a estrenar su propia
-    ficha al darlo de alta: ya no existe la carrera sin publicidad montada que
-    justificaba el respaldo, y mantener dos caminos al mismo pie solo servia
-    para que pausar no sirviera de nada.
-
-    Entra la ficha que este encendida para la app, en vigencia y **con alguna
-    imagen**: sin pieza no hay nada que pintar.
+    `origen` distingue "no hay nada montado" de "lo hay, pero apagado, fuera
+    de fecha o sin pieza": la app lo usa para no dejar un hueco donde antes
+    habia una barra.
     """
     code = race_code or await _active_race_code(db)
     if not code:
         return {"banners": [], "origen": "vacio"}
     code = code.upper()
 
-    montados = await db.ad_banners.find(
-        {"race_code": code},
-        PUBLIC_FIELDS | {"start_at": 1, "end_at": 1},
-    ).sort("order", 1).to_list(100)
-
-    now = datetime.now(timezone.utc)
-    vigentes = [
-        b for b in montados
-        if b.get("publicar_app") is not False and _vigente(b, now) and _tiene_pieza(b)
-    ]
+    vigentes = await _anuncios(db, code)
     for b in vigentes:
-        for campo in ("start_at", "end_at", "publicar_web", "publicar_app"):
-            b.pop(campo, None)
+        b.pop("publicar_web", None)
+        b.pop("publicar_app", None)
 
     if vigentes:
         return {"banners": vigentes, "origen": "ads"}
-    if montados:
-        # Las tiene, pero apagadas, fuera de fecha o sin pieza: se respeta.
-        return {"banners": [], "origen": "pausados"}
-    return {"banners": [], "origen": "vacio"}
 
-
-@router.get("/admin", dependencies=[solo_sponsors])
-async def get_banners_admin(race_code: str, db=Depends(get_db)):
-    return await db.ad_banners.find(
-        {"race_code": race_code.upper()}, {"_id": 0}
-    ).sort("order", 1).to_list(200)
-
-
-@router.post("/", dependencies=[solo_sponsors])
-async def create_banner(data: BannerCreate, db=Depends(get_db)):
-    # Validar vigencia desde la creacion para no guardar fechas ilegibles.
-    _parse_iso(data.start_at)
-    _parse_iso(data.end_at)
-    count = await db.ad_banners.count_documents({"race_code": data.race_code.upper()})
-    doc = nuevo_banner(
-        data.race_code,
-        data.name,
-        order=count,
-        description=data.description,
-        instagram=data.instagram,
-        text=data.text,
-        link_url=data.link_url,
-        weight=data.weight,
-        start_at=data.start_at,
-        end_at=data.end_at,
-        publicar_web=data.publicar_web,
-        publicar_app=data.publicar_app,
-        mostrar_marca=data.mostrar_marca,
-    )
-    await db.ad_banners.insert_one(doc)
-    doc.pop("_id", None)
-    return doc
-
-
-@router.put("/reorder", dependencies=[solo_sponsors])
-async def reorder_banners(data: ReorderRequest, db=Depends(get_db)):
-    for idx, banner_id in enumerate(data.ids):
-        await db.ad_banners.update_one({"id": banner_id}, {"$set": {"order": idx}})
-    return {"message": "Orden actualizado"}
-
-
-@router.put("/{banner_id}", dependencies=[solo_sponsors])
-async def update_banner(banner_id: str, data: BannerUpdate, db=Depends(get_db)):
-    _parse_iso(data.start_at)
-    _parse_iso(data.end_at)
-    updates = {k: v for k, v in data.model_dump().items() if v is not None}
-    # Permitir borrar la vigencia mandando cadena vacia.
-    for campo in ("start_at", "end_at", "text", "link_url", "description", "instagram"):
-        valor = getattr(data, campo)
-        if valor == "":
-            updates[campo] = None
-    if not updates:
-        raise HTTPException(status_code=400, detail="Nada que actualizar")
-    updates["updated_at"] = datetime.now(timezone.utc)
-    result = await db.ad_banners.update_one({"id": banner_id}, {"$set": updates})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Banner no encontrado")
-    return await db.ad_banners.find_one({"id": banner_id}, {"_id": 0})
-
-
-@router.delete("/{banner_id}", dependencies=[solo_sponsors])
-async def delete_banner(banner_id: str, db=Depends(get_db)):
-    banner = await db.ad_banners.find_one({"id": banner_id})
-    if not banner:
-        raise HTTPException(status_code=404, detail="Banner no encontrado")
-    await db.ad_banners.delete_one({"id": banner_id})
-    # Limpiar las imagenes de GridFS para no acumular huerfanos.
-    from services import file_storage
-
-    for campo in IMAGENES.values():
-        url = banner.get(campo) or ""
-        if url.startswith("/api/uploads/ads/"):
-            await file_storage.delete(url.rsplit("/", 1)[-1])
-    return {"message": "Banner eliminado"}
-
-
-@router.post("/{banner_id}/imagen/{tipo}", dependencies=[solo_sponsors])
-async def upload_banner_image(
-    banner_id: str, tipo: str, file: UploadFile = File(...), db=Depends(get_db)
-):
-    """Sube una de las tres imagenes del banner.
-
-    - logo:   el icono cuadrado de siempre, junto al nombre y el texto.
-    - banner: la pieza completa que ocupa la barra entera (1200x240).
-    - detail: la imagen que se abre dentro de la app al tocar el banner.
-    """
-    campo = IMAGENES.get(tipo)
-    if not campo:
-        raise HTTPException(status_code=400, detail="Tipo de imagen no valido")
-
-    banner = await db.ad_banners.find_one({"id": banner_id})
-    if not banner:
-        raise HTTPException(status_code=404, detail="Banner no encontrado")
-
-    # Sin SVG: puede llevar JavaScript y se sirve desde nuestro origen.
-    allowed_types = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido. Use PNG, JPG o WEBP")
-
-    from services import file_storage
-
-    content = await file.read()
-    if len(content) > 8 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="La imagen no puede pasar de 8MB")
-
-    ext_original = file.filename.split(".")[-1] if file.filename and "." in file.filename else "png"
-
-    # El logo cuadrado puede pasar por la compresion normal; el banner y la
-    # imagen ampliada no, porque suelen ser PNG con transparencia y esa
-    # compresion los pasa a JPEG aplanando el alfa contra negro.
-    if tipo == "logo":
-        content, ext, content_type = file_storage.compress_image(content, ext_original, file.content_type)
-    else:
-        content, ext, content_type = file_storage.compress_banner(content, ext_original, file.content_type)
-
-    sufijo = "" if tipo == "logo" else f"_{tipo}"
-    filename = f"{banner['race_code']}_{banner_id}{sufijo}.{ext}"
-    await file_storage.save(filename, content, content_type, file_storage.FOLDER_ADS)
-
-    url = f"/api/uploads/ads/{filename}"
-    await db.ad_banners.update_one(
-        {"id": banner_id},
-        {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
-    )
-    return {"message": "Imagen subida exitosamente", "tipo": tipo, "url": url, campo: url}
-
-
-@router.delete("/{banner_id}/imagen/{tipo}", dependencies=[solo_sponsors])
-async def delete_banner_image(banner_id: str, tipo: str, db=Depends(get_db)):
-    """Quita una imagen: sirve para volver del banner completo al icono+texto."""
-    campo = IMAGENES.get(tipo)
-    if not campo:
-        raise HTTPException(status_code=400, detail="Tipo de imagen no valido")
-
-    banner = await db.ad_banners.find_one({"id": banner_id})
-    if not banner:
-        raise HTTPException(status_code=404, detail="Banner no encontrado")
-
-    url = banner.get(campo) or ""
-    if url.startswith("/api/uploads/ads/"):
-        from services import file_storage
-        await file_storage.delete(url.rsplit("/", 1)[-1])
-
-    await db.ad_banners.update_one(
-        {"id": banner_id},
-        {"$set": {campo: None, "updated_at": datetime.now(timezone.utc)}},
-    )
-    return {"message": "Imagen eliminada", "tipo": tipo}
-
-
-@router.post("/{banner_id}/logo", dependencies=[solo_sponsors])
-async def upload_banner_logo(banner_id: str, file: UploadFile = File(...), db=Depends(get_db)):
-    """Ruta antigua del logo. Se mantiene para no romper el panel ya publicado."""
-    return await upload_banner_image(banner_id, "logo", file, db)
+    hay_patrocinadores = await db.sponsors.count_documents({"race_code": code})
+    return {"banners": [], "origen": "pausados" if hay_patrocinadores else "vacio"}
 
 
 class TrackRequest(BaseModel):
@@ -391,9 +100,13 @@ class TrackRequest(BaseModel):
 
 @router.post("/track")
 async def track_banner_event(data: TrackRequest, db=Depends(get_db)):
-    """Acumula una impresión o clic (público, sin datos personales)."""
+    """Acumula una impresion o clic (publico, sin datos personales).
+
+    `banner_id` es el `id` del patrocinador, que la migracion heredo del de su
+    antigua ficha: los contadores que ya habia siguen sumando donde estaban.
+    """
     if data.event not in ("impression", "click"):
         raise HTTPException(status_code=400, detail="Evento no válido")
     field = "impressions" if data.event == "impression" else "clicks"
-    await db.ad_banners.update_one({"id": data.banner_id}, {"$inc": {field: 1}})
+    await db.sponsors.update_one({"id": data.banner_id}, {"$inc": {field: 1}})
     return {"ok": True}
