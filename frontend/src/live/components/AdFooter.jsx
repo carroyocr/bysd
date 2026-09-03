@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { API, getJson, postJson } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { openExternal } from '../../lib/nativeExport';
 
 const AD_ROTATE_MS = 8000;
+const DESLIZ_MINIMO = 45;   // px horizontales para contarlo como pasar de banner
 
 /**
  * Pie publicitario fijo: rota banners ponderados por peso y acumula métricas.
@@ -21,16 +24,24 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   const cardText = theme === 'dark' ? 'text-white' : 'text-[#232323]';
   const [banners, setBanners] = useState([]);
   const [index, setIndex] = useState(0);
+  // Cada pase a mano lo incrementa y con eso reinicia el reloj de la rotacion:
+  // si acabas de pasar tu al siguiente, lo ultimo que quieres es que se te
+  // cambie solo medio segundo despues.
+  const [giro, setGiro] = useState(0);
+  const gesto = useRef(null);
+  const arrastro = useRef(false);
   const impressionsSent = useRef(new Set());
 
   useEffect(() => {
     let cancel = false;
+    let ultimaCarga = 0;
     // Quién va en el pie lo decide el backend. Antes el respaldo a los
     // patrocinadores publicados se hacía aquí, y desde aquí no se distingue
     // "esta carrera no tiene publicidad" de "la tiene toda pausada": al pausar
     // el único banner, el pie resucitaba al mismo patrocinador y pausar no
     // servía de nada.
     const load = async () => {
+      ultimaCarga = Date.now();
       try {
         const { banners: lista } = await getJson(
           `/api/ads/pie${raceCode ? `?race_code=${raceCode}` : ''}`
@@ -41,8 +52,34 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
       }
     };
     load();
+
+    // Volver a la app es el momento en que la lista tiene de verdad
+    // posibilidades de haber cambiado: se toca un patrocinador en el panel y
+    // se pasa al telefono a mirarlo. Preguntar cada pocos segundos daria lo
+    // mismo a costa de que cada telefono abierto llame al backend todo el
+    // rato, y en carrera son cientos. El repaso periodico se queda de red,
+    // para el telefono que lleva horas encendido en la mesa de control.
+    const refrescar = () => { if (Date.now() - ultimaCarga > 10000) load(); };
+    const alVolver = () => { if (document.visibilityState === 'visible') refrescar(); };
+    document.addEventListener('visibilitychange', alVolver);
+
+    // En el movil el evento del sistema es mas fiable que el del documento:
+    // el WebView no siempre marca la pestana como oculta al minimizar.
+    let suscripcion;
+    let vivo = true;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener('appStateChange', ({ isActive }) => { if (isActive) refrescar(); })
+        .then((h) => { if (vivo) suscripcion = h; else h.remove(); });
+    }
+
     const id = setInterval(load, 5 * 60 * 1000);
-    return () => { cancel = true; clearInterval(id); };
+    return () => {
+      cancel = true;
+      vivo = false;
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', alVolver);
+      suscripcion?.remove();
+    };
   }, [raceCode]);
 
   const playlist = useMemo(() => {
@@ -66,7 +103,52 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
     if (playlist.length <= 1) return;
     const id = setInterval(() => setIndex((i) => (i + 1) % playlist.length), AD_ROTATE_MS);
     return () => clearInterval(id);
-  }, [playlist.length]);
+  }, [playlist.length, giro]);
+
+  // Pasar de banner con el dedo, en los dos sentidos. Salta las repeticiones
+  // del mismo patrocinador: la baraja lleva una carta por cada punto de peso,
+  // asi que el hueco siguiente suele ser el mismo de nuevo, y quien desliza el
+  // dedo espera ver otro anuncio, no el que ya estaba.
+  const pasar = (dir) => {
+    if (playlist.length <= 1) return;
+    setIndex((i) => {
+      const actual = playlist[i % playlist.length]?.id;
+      let n = i % playlist.length;
+      for (let k = 0; k < playlist.length; k++) {
+        n = (n + dir + playlist.length) % playlist.length;
+        if (playlist[n]?.id !== actual) break;
+      }
+      return n;
+    });
+    setGiro((g) => g + 1);
+  };
+
+  const alEmpezarGesto = (e) => {
+    arrastro.current = false;
+    gesto.current = e.touches.length === 1
+      ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      : null;
+  };
+
+  // Un segundo dedo (un pellizco sobre la pantalla) cancela el gesto.
+  const alMoverGesto = (e) => { if (e.touches.length > 1) gesto.current = null; };
+
+  const alSoltarGesto = (e) => {
+    const inicio = gesto.current;
+    gesto.current = null;
+    const t = e.changedTouches[0];
+    if (!inicio || !t) return;
+    const dx = t.clientX - inicio.x;
+    const dy = t.clientY - inicio.y;
+    if (Math.abs(dx) < DESLIZ_MINIMO || Math.abs(dx) <= Math.abs(dy)) return;
+    // El gesto se queda aqui. Sin cortarlo, el mismo deslizamiento abriria
+    // ademas la ficha del patrocinador, y empezando pegado a un borde tambien
+    // dispararia el "volver atras" de useSwipeBack, que escucha en la ventana.
+    e.stopPropagation();
+    e.preventDefault();
+    arrastro.current = true;
+    pasar(dx < 0 ? 1 : -1);
+  };
 
   const ad = playlist.length ? playlist[index % playlist.length] : null;
 
@@ -79,6 +161,8 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   if (!ad) return null;
 
   const handleClick = () => {
+    // El clic que el navegador manda despues de un deslizamiento no abre nada.
+    if (arrastro.current) { arrastro.current = false; return; }
     if (!ad.is_sponsor_fallback) {
       postJson('/api/ads/track', { banner_id: ad.id, event: 'click' }).catch(() => {});
     }
@@ -121,6 +205,13 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           quedaría suelto sobre la foto. */}
       <button
         onClick={handleClick}
+        onTouchStart={alEmpezarGesto}
+        onTouchMove={alMoverGesto}
+        onTouchEnd={alSoltarGesto}
+        onTouchCancel={() => { gesto.current = null; }}
+        // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
+        // que debajo del pie sigue habiendo contenido que desplazar.
+        style={{ touchAction: 'pan-y' }}
         className={`w-full aspect-[5/1] flex items-center gap-3 relative text-left rounded-2xl overflow-hidden ${bannerCompleto ? '' : 'px-3.5'} ${sobreFoto ? `shadow-lg ${T.card}` : ''} ${cardText}`}
       >
         {bannerCompleto ? (
