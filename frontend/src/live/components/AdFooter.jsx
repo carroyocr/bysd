@@ -7,6 +7,29 @@ import { useLiveTheme } from '../liveTheme';
 import { openExternal } from '../../lib/nativeExport';
 
 const AD_ROTATE_MS = 8000;
+const CACHE_PIE = 'bysd_ads_pie';
+
+// La lista del pie, guardada en el telefono. Sin esto el pie sale vacio cada
+// vez que se abre la app y no aparece nadie hasta que contesta el servidor;
+// las imagenes ya las tiene el navegador en su cache, asi que con la lista a
+// mano la publicidad se pinta al instante y el servidor solo confirma.
+const leerCache = (code) => {
+  try {
+    const crudo = localStorage.getItem(`${CACHE_PIE}_${code || 'activa'}`);
+    const lista = crudo ? JSON.parse(crudo) : null;
+    return Array.isArray(lista) ? lista : null;
+  } catch {
+    return null;   // navegacion privada, o un guardado de otra version
+  }
+};
+
+const guardarCache = (code, lista) => {
+  try {
+    localStorage.setItem(`${CACHE_PIE}_${code || 'activa'}`, JSON.stringify(lista));
+  } catch {
+    /* sin sitio o sin permiso: el pie sigue funcionando con la red */
+  }
+};
 const DESLIZ_MINIMO = 45;   // px horizontales para contarlo como pasar de banner
 
 /**
@@ -46,11 +69,17 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
         const { banners: lista } = await getJson(
           `/api/ads/pie${raceCode ? `?race_code=${raceCode}` : ''}`
         );
-        if (!cancel) setBanners(lista || []);
+        if (cancel) return;
+        setBanners(lista || []);
+        // Se guarda tambien la lista vacia: pausar al ultimo patrocinador
+        // tiene que vaciar el pie tambien en el proximo arranque.
+        guardarCache(raceCode, lista || []);
       } catch {
         /* sin publicidad no se rompe nada */
       }
     };
+    const guardado = leerCache(raceCode);
+    if (guardado) setBanners(guardado);
     load();
 
     // Volver a la app es el momento en que la lista tiene de verdad

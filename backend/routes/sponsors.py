@@ -100,6 +100,17 @@ def nombre_archivo(race_code: str, sponsor_name: str, tipo: str, ext: str = "png
     return f"{race_code.upper()}_{limpio}{sufijo}.{ext}"
 
 
+def archivo_de_url(url: str) -> str:
+    """El nombre del archivo dentro de una URL de pieza, sin la marca de version.
+
+    Las URLs se guardan con `?v=<fecha>` para que al reemplazar una pieza el
+    telefono no siga ensenando la vieja durante las 24 horas que dura su
+    cache. En GridFS el archivo se llama sin esa cola, asi que todo lo que
+    vaya a buscarlo por nombre tiene que quitarla.
+    """
+    return url.rsplit("/", 1)[-1].split("?", 1)[0]
+
+
 # Nombre anterior, cuando solo habia logos. Lo siguen usando las migraciones.
 def logo_filename(race_code: str, sponsor_name: str, ext: str = "png") -> str:
     return nombre_archivo(race_code, sponsor_name, "logo", ext)
@@ -297,7 +308,11 @@ async def subir_imagen(
     filename = nombre_archivo(race_code, sponsor_name, tipo, ext)
     await file_storage.save(filename, contenido, content_type, file_storage.FOLDER_SPONSORS)
 
-    url = f"/api/uploads/sponsors/{filename}"
+    # El nombre del archivo no cambia al reemplazar una pieza -se construye con
+    # la carrera y el nombre del patrocinador-, asi que sin esta marca el
+    # telefono seguiria ensenando la imagen vieja hasta que caducase su cache.
+    version = int(datetime.now(timezone.utc).timestamp())
+    url = f"/api/uploads/sponsors/{filename}?v={version}"
     await db.sponsors.update_one(
         {"name": sponsor_name, "race_code": race_code.upper()},
         {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
@@ -317,7 +332,7 @@ async def quitar_imagen(tipo: str, sponsor_name: str, race_code: str, db=Depends
     url = sponsor.get(campo) or ""
     if url.startswith("/api/uploads/"):
         from services import file_storage
-        await file_storage.delete(url.rsplit("/", 1)[-1])
+        await file_storage.delete(archivo_de_url(url))
 
     await db.sponsors.update_one(
         {"name": sponsor_name, "race_code": race_code.upper()},
@@ -360,7 +375,7 @@ async def hard_delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_
     for campo in patrocinios.IMAGENES.values():
         url = sponsor.get(campo) or ""
         if url.startswith("/api/uploads/"):
-            await file_storage.delete(url.rsplit("/", 1)[-1])
+            await file_storage.delete(archivo_de_url(url))
 
     await db.sponsors.delete_one({"name": sponsor_name, "race_code": race_code.upper()})
 
@@ -434,7 +449,7 @@ async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
             url_origen = fuente.get(campo)
             if not url_origen:
                 continue
-            archivo_origen = url_origen.rsplit("/", 1)[-1]
+            archivo_origen = archivo_de_url(url_origen)
             ext = archivo_origen.rsplit(".", 1)[-1] if "." in archivo_origen else "png"
             contenido = await file_storage.load(archivo_origen)
             if not contenido:
