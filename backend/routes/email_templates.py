@@ -214,7 +214,9 @@ DEFAULT_TEMPLATES = [
         "content": _correo(
             e.h1("Tu turno empieza en una hora"),
             e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
-            e.cifra("{{volunteer_puesto}}", "{{volunteer_hora_inicio}} a {{volunteer_hora_fin}}"),
+            e.h2("{{volunteer_puesto}}"),
+            e.linea("Horario", "{{volunteer_hora_inicio}} a {{volunteer_hora_fin}}"),
+            e.separador(),
             e.p("Acuérdate de la camiseta oficial de staff."),
             e.nota("{{race_name}}"),
         ),

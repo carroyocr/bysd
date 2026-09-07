@@ -65,7 +65,8 @@ def get_volunteer_reminder_template(volunteer_name: str, assignment: Dict) -> st
     cuerpo = "".join([
         estilo.h1("Tu turno empieza en una hora"),
         estilo.p(f"Hola <strong>{volunteer_name}</strong>,"),
-        estilo.cifra(puesto, f"{hora_inicio} a {hora_fin}"),
+        estilo.h2(puesto),
+        estilo.linea("Horario", f"{hora_inicio} a {hora_fin}"),
         estilo.linea("Turno", turno),
         estilo.linea("Fecha", dia),
         estilo.separador(),
