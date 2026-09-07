@@ -7,14 +7,11 @@ from email.mime.multipart import MIMEMultipart
 from typing import List, Dict, Optional
 from datetime import datetime
 from services.email_service import EMAILS_ACTIVOS
-from services import marca
 
 GMAIL_USER = get_env("GMAIL_USER")
 GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
 
 # Base URL for the application
-BASE_URL = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
-LOGO_URL = f"{BASE_URL}/icon-bu.png"
 
 # Hardcoded email mapping - BIB to Email
 RUNNER_EMAILS = {
@@ -118,34 +115,30 @@ def get_runner_email(bib: str) -> Optional[str]:
 
 
 def format_messages_html(messages: List[Dict]) -> str:
-    """Format cheer messages as HTML list"""
+    """Los mensajes de animo, como citas. Sin cajas: una linea fina a la
+    izquierda y el nombre de quien lo escribio debajo."""
+    from services import correo_estilo as estilo
+
     if not messages:
-        return "<p style='color: #6b7280; font-style: italic;'>No recibiste mensajes de ánimo durante la carrera.</p>"
-    
+        return estilo.p("No recibiste mensajes de ánimo durante la carrera.", apagado=True)
+
     html = ""
     for msg in messages:
         fan_name = msg.get("fan_name", "Anónimo")
         message_text = msg.get("message", "")
         created_at = msg.get("created_at", "")
-        
-        # Format date
         try:
             dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
             date_str = dt.strftime("%d/%m/%Y a las %I:%M %p")
-        except:
+        except Exception:
             date_str = created_at
-        
+
         html += f"""
-        <div style="background-color: #f9fafb; border-left: 4px solid #ea580c; padding: 12px 16px; margin-bottom: 12px; border-radius: 0 8px 8px 0;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="font-weight: 600; color: #1f2937;">{fan_name}</span>
-                <span style="color: #9ca3af; font-size: 12px;">•</span>
-                <span style="color: #6b7280; font-size: 12px;">{date_str}</span>
-            </div>
-            <p style="margin: 0; color: #374151; font-size: 14px;">"{message_text}"</p>
-        </div>
-        """
-    
+            <div style="margin: 0 0 22px 0; padding-left: 16px; border-left: 2px solid {estilo.LINEA};">
+                <p style="margin: 0 0 6px 0; font-size: 17px; line-height: 1.6; color: {estilo.TINTA};">{message_text}</p>
+                <p style="margin: 0; font-size: 13px; color: {estilo.APAGADO};">{fan_name} · {date_str}</p>
+            </div>"""
+
     return html
 
 
@@ -158,125 +151,32 @@ def get_runner_completion_template(
     cheer_messages: List[Dict],
     is_winner: bool = False
 ) -> str:
-    """Generate HTML email template for runner completion notification"""
-    
-    winner_badge = ""
-    if is_winner:
-        winner_badge = """
-        <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 16px; text-align: center; margin-bottom: 24px; border-radius: 12px;">
-            <span style="font-size: 48px;">🏆</span>
-            <p style="color: #78350f; font-size: 24px; font-weight: bold; margin: 8px 0 0 0;">¡CAMPEÓN DEL BACKYARD ULTRA!</p>
-        </div>
-        """
-    
-    messages_html = format_messages_html(cheer_messages)
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 32px 24px; text-align: center;">
-                <img src="{LOGO_URL}" alt="Backyard Ultra" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; border: 3px solid rgba(255,255,255,0.3);">
-                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO 2026</p>
-            </div>
-            {marca.bloque_html()}
-            
-            <!-- Content -->
-            <div style="padding: 32px 24px;">
-                {winner_badge}
-                
-                <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6;">
-                    Hola <strong>{runner_name}</strong>,
-                </p>
-                
-                <!-- Main Message -->
-                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin-bottom: 24px;">
-                    <p style="color: #92400e; font-size: 20px; font-weight: bold; margin: 0 0 16px 0; text-align: center;">
-                        ¡Felicidades! 🎉
-                    </p>
-                    <p style="color: #78350f; margin: 0; font-size: 15px; line-height: 1.8; text-align: center;">
-                        Completar este Backyard no es solo cruzar vueltas, es una decisión consciente de ir más allá del cansancio, de la duda y de los propios límites.
-                    </p>
-                    <p style="color: #78350f; margin: 16px 0 0 0; font-size: 15px; line-height: 1.8; text-align: center;">
-                        Gracias por aceptar el reto, por no rendirte y por demostrar que la verdadera carrera también se corre en la cabeza y en el corazón.
-                    </p>
-                    <p style="color: #78350f; margin: 16px 0 0 0; font-size: 15px; line-height: 1.8; text-align: center; font-weight: 600;">
-                        Hoy no solo terminaste un Backyard: te llevas una versión más fuerte de ti mismo. 🏃‍♂️🔥
-                    </p>
-                </div>
-                
-                <!-- Stats Summary -->
-                <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0; border-bottom: 2px solid #ea580c; padding-bottom: 8px;">
-                    📊 Tu Resumen de Carrera
-                </h2>
-                
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
-                    <!-- KM -->
-                    <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px; text-align: center;">
-                        <p style="margin: 0; font-size: 32px; font-weight: bold; color: #ea580c;">{total_km}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #92400e; text-transform: uppercase;">Kilómetros</p>
-                    </div>
-                    
-                    <!-- Laps -->
-                    <div style="background-color: #dbeafe; border-radius: 12px; padding: 16px; text-align: center;">
-                        <p style="margin: 0; font-size: 32px; font-weight: bold; color: #2563eb;">{laps_completed}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #1e40af; text-transform: uppercase;">Vueltas</p>
-                    </div>
-                    
-                    <!-- Followers -->
-                    <div style="background-color: #dcfce7; border-radius: 12px; padding: 16px; text-align: center;">
-                        <p style="margin: 0; font-size: 32px; font-weight: bold; color: #16a34a;">{followers_count}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #166534; text-transform: uppercase;">Seguidores</p>
-                    </div>
-                    
-                    <!-- Messages -->
-                    <div style="background-color: #f3e8ff; border-radius: 12px; padding: 16px; text-align: center;">
-                        <p style="margin: 0; font-size: 32px; font-weight: bold; color: #9333ea;">{messages_count}</p>
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b21a8; text-transform: uppercase;">Mensajes</p>
-                    </div>
-                </div>
-                
-                <!-- Cheer Messages Section -->
-                <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 16px 0; border-bottom: 2px solid #9333ea; padding-bottom: 8px;">
-                    💬 Mensajes de Ánimo Recibidos ({messages_count})
-                </h2>
-                
-                <div style="margin-bottom: 24px;">
-                    {messages_html}
-                </div>
-                
-                <!-- CTA -->
-                <div style="text-align: center; margin-top: 24px;">
-                    <a href="{BASE_URL}/comunidad" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600;">
-                        Ver Comunidad
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background-color: #1f2937; padding: 24px; text-align: center;">
-                <p style="color: #f97316; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
-                    ¡Gracias por ser parte del Backyard Ultra! 🧡
-                </p>
-                <p style="color: #9ca3af; margin: 0 0 12px 0; font-size: 13px;">
-                    Nos vemos en la próxima edición
-                </p>
-                <p style="color: #6b7280; margin: 0; font-size: 12px;">
-                    Backyard Ultra Santo Domingo 2026
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return html
+    """Lo que recibe el corredor al terminar: sus numeros y lo que le escribieron."""
+    from services import correo_estilo as estilo
+
+    titulo = "Campeón del Backyard Ultra" if is_winner else "Se acabó tu carrera"
+    entrada = (
+        "Aguantaste más que nadie. Eres el campeón."
+        if is_winner else
+        "Esto es lo que hiciste ahí fuera."
+    )
+
+    bloques = [
+        estilo.h1(titulo),
+        estilo.p(f"Hola <strong>{runner_name}</strong>,"),
+        estilo.p(entrada),
+        estilo.cifra("Vueltas", str(laps_completed)),
+        estilo.cifra("Kilómetros", f"{total_km:g}"),
+        estilo.separador(),
+        estilo.h2("Quién te acompañó"),
+        estilo.linea("Personas siguiéndote", str(followers_count)),
+        estilo.linea("Mensajes de ánimo", str(messages_count)),
+    ]
+    if messages_count:
+        bloques += [estilo.h2("Lo que te escribieron"), format_messages_html(cheer_messages)]
+
+    bloques.append(estilo.p("Gracias por correr con nosotros. Nos vemos en la próxima."))
+    return estilo.documento("".join(bloques), preheader=entrada)
 
 
 async def send_runner_completion_email(
@@ -296,8 +196,8 @@ async def send_runner_completion_email(
         return False
     
     try:
-        subject = "🏆 ¡CAMPEÓN! " if is_winner else "🎉 "
-        subject += f"Tu resumen del Backyard Ultra Santo Domingo 2026"
+        subject = "Campeón · " if is_winner else ""
+        subject += "Tu resumen del Backyard Ultra Santo Domingo 2026"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject

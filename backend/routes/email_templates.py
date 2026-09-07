@@ -99,6 +99,25 @@ MERGE_FIELDS = {
 }
 
 # Default email templates
+#
+# El contenido no se escribe a mano: se arma con las piezas de
+# `services.correo_estilo`, que es donde vive el diseno de los correos. Asi un
+# cambio de estilo (tipografia, color del boton, pie) se hace una vez y sale en
+# los treinta y uno, en vez de repetirse pegado en cada plantilla.
+#
+# Quien edite una plantilla desde el panel escribe HTML suelto y eso sigue
+# valiendo: esto es solo el punto de partida.
+from services import correo_estilo as e
+
+
+def _correo(*bloques: str) -> str:
+    """Junta los bloques y los envuelve. Fragmento y no documento completo:
+    `send_templated_email` pega detras la banda del patrocinador."""
+    return e.fragmento("".join(bloques))
+
+
+_PIE_CARRERA = "{{race_name}} · {{race_date}}"
+
 DEFAULT_TEMPLATES = [
     {
         "id": "athlete_waitlist_confirmation",
@@ -107,21 +126,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Estás en lista de espera - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Estás en Lista de Espera</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">¡Gracias por tu interés en <strong>{{race_name}}</strong>! En este momento hemos alcanzado el cupo máximo de participantes, por lo que tu registro ha quedado en nuestra <strong>lista de espera</strong>.</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #9ca3af;">
-            <p style="margin: 0; color: #374151; line-height: 1.6;">Si se libera un espacio (por ejemplo, una cancelación), te contactaremos por este mismo correo siguiendo el orden de la lista de espera para confirmar tu inscripción.</p></div>
-        <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">No necesitas hacer nada por ahora. Si necesitas modificar tus datos, usa este enlace:<br>
-            <a href="{{athlete_edit_link}}" style="color: #1f2937;">Editar mi registro</a></p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Estás en lista de espera"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Gracias por tu interés en <strong>{{race_name}}</strong>. Ahora mismo el cupo "
+                "está completo, así que tu registro queda en la <strong>lista de espera</strong>."),
+            e.p("Si se libera un lugar te escribimos a este mismo correo, siguiendo el orden de "
+                "la lista. No tienes que hacer nada por ahora."),
+            e.boton("Editar mi registro", "{{athlete_edit_link}}"),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "athlete_registration_confirmation",
@@ -130,19 +144,13 @@ DEFAULT_TEMPLATES = [
         "subject": "Registro confirmado - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Registro Confirmado!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        {{proximos_pasos}}
-        <p style="font-size: 14px; color: #6b7280;">Si necesitas modificar tu registro, usa este enlace:<br>
-            <a href="{{athlete_edit_link}}" style="color: #1f2937;">Editar mi registro</a></p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Registro confirmado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            "{{proximos_pasos}}",
+            e.boton("Editar mi registro", "{{athlete_edit_link}}"),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "volunteer_registration_confirmation",
@@ -151,21 +159,14 @@ DEFAULT_TEMPLATES = [
         "subject": "Registro de voluntario confirmado - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Gracias por ser Voluntario!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu registro como voluntario para <strong>{{race_name}}</strong> ha sido recibido.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4b5563;">
-            <p style="margin: 0; color: #374151;">Te contactaremos próximamente para confirmar tu asignación de turno.</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Para editar tu información:<br>
-            <a href="{{volunteer_edit_link}}" style="color: #1f2937;">Modificar mi registro</a></p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Gracias por ser voluntario"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Recibimos tu registro como voluntario para <strong>{{race_name}}</strong>. "
+                "Te escribimos próximamente para confirmarte el turno."),
+            e.boton("Modificar mi registro", "{{volunteer_edit_link}}"),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "volunteer_shift_assignment",
@@ -174,32 +175,18 @@ DEFAULT_TEMPLATES = [
         "subject": "Tu turno ha sido asignado - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Turno Asignado!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Te ha sido asignado el siguiente turno:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #9ca3af;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Puesto:</strong></td>
-                    <td style="text-align: right; color: #1f2937; font-weight: bold;">{{volunteer_puesto}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Turno:</strong></td>
-                    <td style="text-align: right;">{{volunteer_turno}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Fecha:</strong></td>
-                    <td style="text-align: right;">{{volunteer_dia}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Horario:</strong></td>
-                    <td style="text-align: right;">{{volunteer_hora_inicio}} - {{volunteer_hora_fin}}</td></tr></table></div>
-        <p style="font-size: 14px; color: #6b7280;">Recuerda llegar 15 minutos antes de tu turno.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Turno asignado"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Este es el turno que te toca:"),
+            e.h2("{{volunteer_puesto}}"),
+            e.linea("Turno", "{{volunteer_turno}}"),
+            e.linea("Fecha", "{{volunteer_dia}}"),
+            e.linea("Horario", "{{volunteer_hora_inicio}} a {{volunteer_hora_fin}}"),
+            e.separador(),
+            e.p("Llega 15 minutos antes y ponte la camiseta oficial de staff."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_shifts_assignment",
@@ -208,19 +195,14 @@ DEFAULT_TEMPLATES = [
         "subject": "Tus turnos han sido asignados - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Turnos Asignados!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Te han sido asignados <strong>{{volunteer_turnos_total}}</strong> turnos:</p>
-        {{volunteer_turnos}}
-        <p style="font-size: 14px; color: #6b7280;">Recuerda llegar 15 minutos antes de cada turno.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Turnos asignados"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Te tocan <strong>{{volunteer_turnos_total}}</strong> turnos:"),
+            "{{volunteer_turnos}}",
+            e.p("Llega 15 minutos antes de cada uno."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_shift_reminder",
@@ -229,21 +211,13 @@ DEFAULT_TEMPLATES = [
         "subject": "Tu turno comienza en 1 hora - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡1 Hora para tu Turno!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu turno está por comenzar:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 24px; font-weight: bold; color: #1f2937; margin: 0;">{{volunteer_puesto}}</p>
-            <p style="font-size: 18px; color: #1f2937; margin: 10px 0 0 0;">{{volunteer_hora_inicio}} - {{volunteer_hora_fin}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Recuerda usar la camiseta oficial de Staff</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 14px;">¡Gracias por ser parte del equipo!</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tu turno empieza en una hora"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.cifra("{{volunteer_puesto}}", "{{volunteer_hora_inicio}} a {{volunteer_hora_fin}}"),
+            e.p("Acuérdate de la camiseta oficial de staff."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "payment_reminder",
@@ -252,49 +226,24 @@ DEFAULT_TEMPLATES = [
         "subject": "Recordatorio: Pago pendiente - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Recordatorio de Pago</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Te recordamos que tu pago de inscripción para <strong>{{race_name}}</strong> está pendiente.</p>
-        
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 14px; color: #374151; margin: 0 0 10px 0;">Monto a pagar:</p>
-            <p style="font-size: 32px; font-weight: bold; color: #1f2937; margin: 0;">{{payment_amount}}</p></div>
-        
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0 0 15px 0;">Datos para el pago:</p>
-            <table style="width: 100%; font-size: 14px;">
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Banco:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_bank_name}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Titular:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_name}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Tipo de cuenta:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_type}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #1f2937;">{{payment_account_number}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Número de Pasaporte:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_id}}</td></tr></table></div>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{payment_upload_url}}" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Subir Comprobante de Pago</a></div>
-        
-        <p style="font-size: 14px; color: #6b7280; text-align: center;">Una vez realizado el pago, sube tu comprobante para confirmar tu inscripción.</p>
-        
-        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-        
-        <p style="font-size: 12px; color: #9ca3af; text-align: center;">Si no puedes participar, puedes <a href="{{payment_cancel_url}}" style="color: #1f2937;">cancelar tu registro aquí</a>.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tienes un pago pendiente"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu pago de inscripción para <strong>{{race_name}}</strong> sigue pendiente."),
+            e.cifra("Monto a pagar", "{{payment_amount}}"),
+            e.h2("Datos para el pago"),
+            e.linea("Banco", "{{payment_bank_name}}"),
+            e.linea("Titular", "{{payment_account_name}}"),
+            e.linea("Tipo de cuenta", "{{payment_account_type}}"),
+            e.linea("Número de cuenta", "{{payment_account_number}}"),
+            e.linea("Número de pasaporte", "{{payment_account_id}}"),
+            e.separador(),
+            e.p("Cuando pagues, sube el comprobante para que confirmemos tu inscripción."),
+            e.boton("Subir comprobante", "{{payment_upload_url}}"),
+            e.nota("Si al final no puedes participar, puedes "
+                   + e.enlace("cancelar tu registro", "{{payment_cancel_url}}") + "."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "payment_received",
@@ -303,29 +252,17 @@ DEFAULT_TEMPLATES = [
         "subject": "Pago recibido - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Pago Recibido</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Hemos recibido tu comprobante de pago para <strong>{{race_name}}</strong>.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Monto:</strong></td>
-                    <td style="text-align: right;">{{payment_amount}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Referencia:</strong></td>
-                    <td style="text-align: right;">{{payment_reference}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Estado:</strong></td>
-                    <td style="text-align: right; color: #6b7280;">En revisión</td></tr></table></div>
-        <p style="font-size: 14px; color: #6b7280;">Estamos procesando tu pago. Te notificaremos cuando sea confirmado.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Recibimos tu pago"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Nos llegó tu comprobante para <strong>{{race_name}}</strong>."),
+            e.linea("Monto", "{{payment_amount}}"),
+            e.linea("Referencia", "{{payment_reference}}"),
+            e.linea("Estado", "En revisión"),
+            e.separador(),
+            e.p("Lo estamos revisando. Te avisamos en cuanto quede confirmado."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "payment_receipt_received",
@@ -334,31 +271,18 @@ DEFAULT_TEMPLATES = [
         "subject": "Comprobante Recibido - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Comprobante Recibido</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">¡Hola <strong>{{athlete_nombre_completo}}</strong>!</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Hemos recibido tu comprobante de pago con los siguientes detalles:</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0; color: #6b7280;">Fecha de pago:</td>
-                    <td style="padding: 8px 0; color: #1f2937; font-weight: 600;">{{payment_date}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0; color: #6b7280;">Banco origen:</td>
-                    <td style="padding: 8px 0; color: #1f2937;">{{bank_origin}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0; color: #6b7280;">No. Transferencia:</td>
-                    <td style="padding: 8px 0; color: #1f2937;">{{transfer_number}}</td></tr></table></div>
-        <div style="background: #f3f4f6; border-radius: 8px; padding: 15px; margin: 20px 0;">
-            <p style="color: #374151; margin: 0; font-size: 14px;">
-                <strong>Estado:</strong>En revisión. Te notificaremos una vez que tu pago sea confirmado.</p></div></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Comprobante recibido"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Esto es lo que nos llegó:"),
+            e.linea("Fecha de pago", "{{payment_date}}"),
+            e.linea("Banco origen", "{{bank_origin}}"),
+            e.linea("No. de transferencia", "{{transfer_number}}"),
+            e.linea("Estado", "En revisión"),
+            e.separador(),
+            e.p("Te avisamos por correo en cuanto el pago quede confirmado."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "payment_confirmed",
@@ -367,29 +291,21 @@ DEFAULT_TEMPLATES = [
         "subject": "Pago confirmado - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Pago Confirmado!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu pago para <strong>{{race_name}}</strong> ha sido confirmado exitosamente.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4b5563;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Monto:</strong></td>
-                    <td style="text-align: right;">{{payment_amount}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Fecha:</strong></td>
-                    <td style="text-align: right;">{{payment_date}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Estado:</strong></td>
-                    <td style="text-align: right; color: #4b5563; font-weight: bold;">Confirmado</td></tr></table></div>
-        <p style="font-size: 14px; color: #6b7280;">Tu lugar en la carrera está asegurado. ¡Nos vemos en la línea de salida!</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #4b5563; margin: 0; font-size: 14px;">¡Gracias por tu inscripción!</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Pago confirmado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Confirmamos tu pago para <strong>{{race_name}}</strong>. Tu lugar en la carrera "
+                "está asegurado."),
+            e.linea("Monto", "{{payment_amount}}"),
+            e.linea("Fecha", "{{payment_date}}"),
+            e.linea("Estado", "Confirmado"),
+            e.separador(),
+            e.p("En tu perfil tienes tus datos, tu inscripción y las actividades a las que "
+                "puedes apuntarte."),
+            e.boton("Ir a mi perfil", "{{frontend_url}}/mi-perfil"),
+            e.nota("Guarda este correo: es tu comprobante de inscripción."),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "registration_courtesy",
@@ -402,32 +318,18 @@ DEFAULT_TEMPLATES = [
         "subject": "Inscripción confirmada - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Inscripción Confirmada!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu inscripción para <strong>{{race_name}}</strong> queda confirmada. Ya tienes tu lugar en la línea de salida.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #4b5563;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Carrera:</strong></td>
-                    <td style="text-align: right;">{{race_name}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Fecha:</strong></td>
-                    <td style="text-align: right;">{{race_date}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Estado:</strong></td>
-                    <td style="text-align: right; color: #4b5563; font-weight: bold;">Confirmada</td></tr></table></div>
-        <p style="font-size: 14px; color: #6b7280; line-height: 1.6;">No tienes ningún trámite pendiente. Revisa que tus datos estén correctos desde tu perfil:</p>
-        <div style="text-align: center; margin: 25px 0;">
-            <a href="{{frontend_url}}/mi-perfil" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Ir a mi Perfil</a></div>
-        <p style="font-size: 14px; color: #6b7280;">¡Nos vemos en la salida!</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Inscripción confirmada"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Ya tienes tu lugar en la línea de salida. No te queda ningún trámite pendiente."),
+            e.linea("Carrera", "{{race_name}}"),
+            e.linea("Fecha", "{{race_date}}"),
+            e.linea("Estado", "Confirmada"),
+            e.separador(),
+            e.p("Aprovecha para revisar que tus datos estén correctos."),
+            e.boton("Ir a mi perfil", "{{frontend_url}}/mi-perfil"),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "payment_period_opening",
@@ -436,59 +338,32 @@ DEFAULT_TEMPLATES = [
         "subject": "Inicia el período de pagos - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Inicia el Período de Pagos!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Te informamos que queda abierto el proceso de pagos de la inscripción para <strong>{{race_name}}</strong>.</p>
-
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; border: 2px solid #9ca3af;">
-            <p style="font-size: 14px; color: #374151; margin: 0 0 10px 0;">Tienes tiempo para completar tu pago hasta el:</p>
-            <p style="font-size: 28px; font-weight: bold; color: #1f2937; margin: 0;">15 de septiembre</p></div>
-
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0 0 15px 0;">Datos para el pago:</p>
-            <table style="width: 100%; font-size: 14px;">
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Monto:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #1f2937;">{{payment_amount}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Banco:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_bank_name}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Titular:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_name}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Tipo de cuenta:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_type}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Número de cuenta:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #1f2937;">{{payment_account_number}}</td></tr>
-                <tr>
-                    <td style="padding: 6px 0; color: #6b7280;">Número de Pasaporte:</td>
-                    <td style="padding: 6px 0; text-align: right; font-weight: 500;">{{payment_account_id}}</td></tr></table></div>
-
-        <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 25px 0 10px 0;">¿Cómo notificar tu pago?</p>
-        <ol style="font-size: 14px; color: #4b5563; line-height: 1.8; margin: 0; padding-left: 20px;">
-            <li>Realiza el pago con los datos indicados arriba.</li>
-            <li>Ingresa a tu <strong>perfil</strong> en nuestro sitio web.</li>
-            <li>Ve a la sección <strong>Carreras Inscritas</strong>.</li>
-            <li>Pulsa <strong>Notificar pago</strong> y adjunta tu comprobante de pago.</li></ol>
-
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{frontend_url}}/mi-perfil" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Ir a mi Perfil</a></div>
-
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
-            <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.6;">
-                 <strong>Importante:</strong> a partir del <strong>15 de septiembre</strong>, si no hemos recibido tu pago,
-                tu inscripción será <strong>cancelada</strong> y tu espacio se reasignará a las personas que se encuentran
-                en la lista de espera.</p></div></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Abre el período de pagos"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Ya puedes pagar tu inscripción para <strong>{{race_name}}</strong>."),
+            e.cifra("Tienes hasta el", "15 de septiembre"),
+            e.h2("Datos para el pago"),
+            e.linea("Monto", "{{payment_amount}}"),
+            e.linea("Banco", "{{payment_bank_name}}"),
+            e.linea("Titular", "{{payment_account_name}}"),
+            e.linea("Tipo de cuenta", "{{payment_account_type}}"),
+            e.linea("Número de cuenta", "{{payment_account_number}}"),
+            e.linea("Número de pasaporte", "{{payment_account_id}}"),
+            e.h2("Cómo notificar tu pago"),
+            e.lista([
+                "Haz el pago con los datos de arriba.",
+                "Entra a tu perfil en el sitio.",
+                "Ve a <strong>Carreras inscritas</strong>.",
+                "Pulsa <strong>Notificar pago</strong> y adjunta el comprobante.",
+            ]),
+            e.boton("Ir a mi perfil", "{{frontend_url}}/mi-perfil"),
+            e.separador(),
+            e.p("<strong>Importante:</strong> a partir del <strong>15 de septiembre</strong>, si no "
+                "hemos recibido tu pago, tu inscripción se cancela y el lugar pasa a la lista "
+                "de espera."),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "email_verification",
@@ -497,19 +372,12 @@ DEFAULT_TEMPLATES = [
         "subject": "Código de verificación - {{race_name}}",
         "category": "sistema",
         "merge_sources": ["race", "general"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Código de Verificación</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu código de verificación es:</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 36px; font-weight: bold; color: #1f2937; margin: 0; letter-spacing: 8px;">{{verification_code}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Este código expira en 30 minutos.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tu código de verificación"),
+            e.codigo("{{verification_code}}"),
+            e.p("Escríbelo en la página donde lo pediste. Caduca en 30 minutos."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "admin_credentials",
@@ -518,28 +386,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Tus credenciales de acceso - {{race_name}}",
         "category": "sistema",
         "merge_sources": ["race", "general"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Credenciales de Acceso</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Se ha creado una cuenta de administrador para ti en el panel de {{race_name}}.</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #e5e7eb;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Usuario:</strong></td>
-                    <td style="text-align: right; font-family: monospace;">{{username}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Contraseña:</strong></td>
-                    <td style="text-align: right; font-family: monospace;">{{password}}</td></tr></table></div>
-        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; border-left: 4px solid #9ca3af;">
-            <p style="margin: 0; color: #374151; font-size: 14px;">Por seguridad, te recomendamos cambiar tu contraseña después del primer inicio de sesión.</p></div>
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="{{frontend_url}}/admin" style="display: inline-block; background: #1f2937; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ir al Panel de Administración</a></div></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tus credenciales de acceso"),
+            e.p("Te creamos una cuenta en el panel de <strong>{{race_name}}</strong>."),
+            e.linea("Usuario", "{{username}}"),
+            e.linea("Contraseña", "{{password}}"),
+            e.separador(),
+            e.p("Cambia la contraseña la primera vez que entres."),
+            e.boton("Ir al panel", "{{frontend_url}}/admin"),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "bib_assignment",
@@ -548,21 +404,14 @@ DEFAULT_TEMPLATES = [
         "subject": "Tu número de BIB: #{{athlete_bib}} - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡BIB Asignado!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">¡Te ha sido asignado tu número de corredor para <strong>{{race_name}}</strong>!</p>
-        <div style="background: #f3f4f6; padding: 30px; border-radius: 12px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 14px; color: #374151; margin: 0 0 10px 0;">Tu número de BIB</p>
-            <p style="font-size: 64px; font-weight: bold; color: #1f2937; margin: 0;">#{{athlete_bib}}</p></div>
-        <p style="font-size: 14px; color: #6b7280; text-align: center;">¡Nos vemos en la línea de salida!</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 14px;">{{race_name}} • {{race_date}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Ya tienes número"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Este es tu número de corredor para <strong>{{race_name}}</strong>."),
+            e.cifra("Tu BIB", "#{{athlete_bib}}"),
+            e.p("Nos vemos en la línea de salida."),
+            e.nota(_PIE_CARRERA),
+        ),
     },
     {
         "id": "runner_summary",
@@ -571,25 +420,15 @@ DEFAULT_TEMPLATES = [
         "subject": "Tu resumen del {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">¡Felicidades!</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">¡Gracias por participar en <strong>{{race_name}}</strong>! Aquí está tu resumen:</p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center;">
-                <p style="font-size: 32px; font-weight: bold; color: #1f2937; margin: 0;">{{athlete_laps_completed}}</p>
-                <p style="font-size: 12px; color: #374151; margin: 5px 0 0 0;">VUELTAS</p></div>
-            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center;">
-                <p style="font-size: 32px; font-weight: bold; color: #111827; margin: 0;">{{athlete_total_km}}</p>
-                <p style="font-size: 12px; color: #374151; margin: 5px 0 0 0;">KILÓMETROS</p></div></div>
-        <p style="font-size: 14px; color: #6b7280; text-align: center;">¡Nos vemos en la próxima edición!</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 14px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Lo que hiciste"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Gracias por correr <strong>{{race_name}}</strong>. Así quedó tu carrera:"),
+            e.cifra("Vueltas", "{{athlete_laps_completed}}"),
+            e.cifra("Kilómetros", "{{athlete_total_km}}"),
+            e.p("Nos vemos en la próxima edición."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "athlete_cancellation",
@@ -598,21 +437,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Confirmación de Cancelación - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Registro Cancelado</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Confirmamos que tu registro para <strong>{{race_name}}</strong> ha sido cancelado y eliminado de nuestro sistema.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 8px 0; color: #4b5563;"><strong>Razón de cancelación:</strong></p>
-            <p style="margin: 0; color: #4b5563;">{{cancellation_reason}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Si cambiaste de opinión, puedes volver a registrarte en cualquier momento desde nuestra página web.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Registro cancelado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu registro para <strong>{{race_name}}</strong> queda cancelado y borrado de "
+                "nuestro sistema."),
+            e.linea("Razón", "{{cancellation_reason}}"),
+            e.separador(),
+            e.p("Si cambias de opinión, puedes volver a registrarte cuando quieras."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_cancellation",
@@ -621,21 +455,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Confirmación de Cancelación - Voluntario {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Postulación Cancelada</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Confirmamos que tu postulación como voluntario para <strong>{{race_name}}</strong> ha sido cancelada y eliminada de nuestro sistema.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0 0 8px 0; color: #4b5563;"><strong>Razón de cancelación:</strong></p>
-            <p style="margin: 0; color: #4b5563;">{{cancellation_reason}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Si cambiaste de opinión, puedes postularte nuevamente en cualquier momento.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Postulación cancelada"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Tu postulación como voluntario para <strong>{{race_name}}</strong> queda cancelada "
+                "y borrada de nuestro sistema."),
+            e.linea("Razón", "{{cancellation_reason}}"),
+            e.separador(),
+            e.p("Si cambias de opinión, puedes postularte de nuevo cuando quieras."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_shift_rejected",
@@ -644,36 +473,20 @@ DEFAULT_TEMPLATES = [
         "subject": "Sobre uno de tus turnos - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Sobre uno de tus turnos</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Gracias por ofrecerte como voluntario en <strong>{{race_name}}</strong>. No podremos contar contigo en este turno:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #9ca3af;">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Puesto:</strong></td>
-                    <td style="text-align: right; color: #1f2937; font-weight: bold;">{{volunteer_puesto}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Turno:</strong></td>
-                    <td style="text-align: right;">{{volunteer_turno}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Día:</strong></td>
-                    <td style="text-align: right;">{{volunteer_dia}}</td></tr>
-                <tr>
-                    <td style="padding: 8px 0;"><strong>Horario:</strong></td>
-                    <td style="text-align: right;">{{volunteer_hora_inicio}} - {{volunteer_hora_fin}}</td></tr>
-            </table></div>
-        <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fcd34d;">
-            <p style="margin: 0 0 8px 0; color: #92400e;"><strong>Motivo:</strong></p>
-            <p style="margin: 0; color: #92400e;">{{rechazo_motivo}}</p></div>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu postulación sigue activa: los demás turnos que pediste no se ven afectados.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Sobre uno de tus turnos"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Gracias por ofrecerte en <strong>{{race_name}}</strong>. En este turno no vamos a "
+                "poder contar contigo:"),
+            e.h2("{{volunteer_puesto}}"),
+            e.linea("Turno", "{{volunteer_turno}}"),
+            e.linea("Día", "{{volunteer_dia}}"),
+            e.linea("Horario", "{{volunteer_hora_inicio}} a {{volunteer_hora_fin}}"),
+            e.linea("Motivo", "{{rechazo_motivo}}"),
+            e.separador(),
+            e.p("Tu postulación sigue activa: los demás turnos que pediste no se ven afectados."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_application_rejected",
@@ -682,21 +495,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Sobre tu postulación como voluntario - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Sobre tu postulación</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Gracias por ofrecerte como voluntario en <strong>{{race_name}}</strong>. En esta ocasión no podremos contar contigo.</p>
-        <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fcd34d;">
-            <p style="margin: 0 0 8px 0; color: #92400e;"><strong>Motivo:</strong></p>
-            <p style="margin: 0; color: #92400e;">{{rechazo_motivo}}</p></div>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Agradecemos de verdad tu disposición y esperamos verte en una próxima edición.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Sobre tu postulación"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Gracias por ofrecerte como voluntario en <strong>{{race_name}}</strong>. En esta "
+                "ocasión no vamos a poder contar contigo."),
+            e.linea("Motivo", "{{rechazo_motivo}}"),
+            e.separador(),
+            e.p("Agradecemos de verdad tu disposición y esperamos verte en una próxima edición."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_verification_code",
@@ -705,19 +513,13 @@ DEFAULT_TEMPLATES = [
         "subject": "Código de Verificación - Voluntarios {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "general"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Código de Verificación</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu código de verificación para el registro de voluntario es:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="font-size: 36px; font-weight: bold; color: #4b5563; margin: 0; letter-spacing: 8px;">{{verification_code}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Este código expira en 30 minutos.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 14px;">¡Gracias por querer ser parte del equipo!</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tu código de verificación"),
+            e.p("Para completar tu registro como voluntario:"),
+            e.codigo("{{verification_code}}"),
+            e.p("Caduca en 30 minutos."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "volunteer_edit_link",
@@ -726,20 +528,14 @@ DEFAULT_TEMPLATES = [
         "subject": "Link para Editar tu Postulación - {{race_name}}",
         "category": "voluntarios",
         "merge_sources": ["race", "volunteer"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Editar Postulación</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{volunteer_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Usa el siguiente enlace para editar tu postulación como voluntario:</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{volunteer_edit_link}}" style="display: inline-block; background: #1f2937; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">Editar mi Postulación</a></div>
-        <p style="font-size: 14px; color: #6b7280;">Si no solicitaste este enlace, puedes ignorar este correo.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Editar tu postulación"),
+            e.p("Hola <strong>{{volunteer_nombre_completo}}</strong>,"),
+            e.p("Desde aquí puedes cambiar tus datos y tus turnos:"),
+            e.boton("Editar mi postulación", "{{volunteer_edit_link}}"),
+            e.nota("Si no pediste este enlace, ignora este correo."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "payment_rejected",
@@ -748,26 +544,21 @@ DEFAULT_TEMPLATES = [
         "subject": "Comprobante de Pago Rechazado - {{race_name}}",
         "category": "pagos",
         "merge_sources": ["race", "athlete", "payment"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Comprobante Rechazado</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Lamentamos informarte que el comprobante de pago que enviaste no pudo ser verificado.</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
-            <p style="margin: 0; color: #374151;">
-                <strong>Posibles razones:</strong></p>
-            <ul style="color: #374151; margin: 10px 0 0 0; padding-left: 20px;">
-                <li>Imagen borrosa o ilegible</li>
-                <li>Monto incorrecto</li>
-                <li>Cuenta de destino incorrecta</li>
-                <li>Comprobante duplicado o ya utilizado</li></ul></div>
-        <p style="font-size: 14px; color: #6b7280;">Por favor, envía un nuevo comprobante válido para completar tu inscripción.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("No pudimos verificar tu comprobante"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("El comprobante que enviaste no se pudo verificar. Suele ser por una de estas "
+                "razones:"),
+            e.lista([
+                "La imagen está borrosa o no se lee.",
+                "El monto no coincide.",
+                "La cuenta de destino no es la del evento.",
+                "El comprobante ya se había usado.",
+            ]),
+            e.p("Envía uno nuevo para completar tu inscripción."),
+            e.boton("Subir otro comprobante", "{{frontend_url}}/mi-perfil"),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "athlete_edit_code",
@@ -776,20 +567,14 @@ DEFAULT_TEMPLATES = [
         "subject": "Código de Acceso - {{race_name}}",
         "category": "atletas",
         "merge_sources": ["race", "athlete", "general"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Código de Acceso</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre_completo}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Tu código de acceso para editar tu registro es:</p>
-        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 36px; font-weight: bold; color: #1f2937; margin: 0; letter-spacing: 8px;">{{verification_code}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Este código es válido por 30 minutos. Úsalo para acceder a tu registro y realizar cambios.</p></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
+        "content": _correo(
+            e.h1("Tu código de acceso"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Con este código entras a tu registro para cambiar lo que necesites:"),
+            e.codigo("{{verification_code}}"),
+            e.p("Caduca en 30 minutos."),
+            e.nota("{{race_name}}"),
+        ),
     },
     {
         "id": "password_reset",
@@ -798,23 +583,16 @@ DEFAULT_TEMPLATES = [
         "subject": "Código para restablecer tu contraseña - {{race_name}}",
         "category": "sistema",
         "merge_sources": ["race", "athlete", "general"],
-        "content": """
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">Restablecer Contraseña</h1></div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-        <p style="font-size: 16px; color: #1f2937;">Hola <strong>{{athlete_nombre}}</strong>,</p>
-        <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">Recibimos una solicitud para restablecer la contraseña de tu perfil. Usa este código para crear una nueva contraseña:</p>
-        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <p style="font-size: 36px; font-weight: bold; color: #1f2937; margin: 0; letter-spacing: 8px;">{{verification_code}}</p></div>
-        <p style="font-size: 14px; color: #6b7280;">Este código expira en 30 minutos.</p>
-        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; border-left: 4px solid #9ca3af; margin-top: 20px;">
-            <p style="margin: 0; color: #374151; font-size: 14px;">Si no solicitaste este cambio, puedes ignorar este correo: tu contraseña actual seguirá funcionando.</p></div></div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">{{race_name}}</p></div>
-</div>
-"""
-    }
+        "content": _correo(
+            e.h1("Restablecer tu contraseña"),
+            e.p("Hola <strong>{{athlete_nombre}}</strong>,"),
+            e.p("Pediste restablecer la contraseña de tu perfil. Usa este código:"),
+            e.codigo("{{verification_code}}"),
+            e.p("Caduca en 30 minutos."),
+            e.nota("Si no fuiste tú, ignora este correo: tu contraseña actual sigue funcionando."),
+            e.nota("{{race_name}}"),
+        ),
+    },
 ]
 class EmailTemplateUpdate(BaseModel):
     name: Optional[str] = None

@@ -2,7 +2,6 @@ import smtplib
 import os
 
 from services.env_utils import get_env
-from services import marca
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import List, Dict
@@ -22,114 +21,37 @@ GMAIL_APP_PASSWORD = get_env("GMAIL_APP_PASSWORD")
 EMAILS_ACTIVOS = (get_env("EMAILS_ACTIVOS", "true") or "true").lower() not in ("false", "0", "no")
 
 def get_email_template(subject: str, content: str, athletes_data: List[Dict], unsubscribe_link: str) -> str:
-    """Generate HTML email template with race branding - Mobile optimized with cards"""
-    
-    # Base URL for community page - use environment variable for production
+    """Aviso de seguimiento: como va cada corredor al que sigue esta persona."""
+    from services import correo_estilo as estilo
+
     base_url = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
-    
-    # Generate athlete cards (mobile-friendly vertical layout)
-    athletes_cards = ""
+
+    ESTADOS = {"active": "En carrera", "retired": "DNF", "dns": "DNS"}
+
+    bloques = [estilo.h1(subject)]
+    if content:
+        bloques.append(estilo.p(content))
+
     for athlete in athletes_data:
-        status = athlete.get("status", "active")
-        bib = athlete.get('bib', '-')
-        
-        # Show appropriate status badge based on actual status
-        if status == "active":
-            status_badge = '<span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">Activo</span>'
-        elif status == "retired":
-            status_badge = '<span style="background-color: #ef4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNF</span>'
-        elif status == "dns":
-            status_badge = '<span style="background-color: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">DNS</span>'
-        else:
-            status_badge = '<span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500;">Activo</span>'
-        
-        athletes_cards += f"""
-        <div style="background-color: #fafaf9; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
-            <!-- Header: BIB + Status -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div>
-                    <span style="background-color: #ea580c; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 14px;">#{bib}</span>
-                </div>
-                {status_badge}
-            </div>
-            
-            <!-- Name -->
-            <div style="margin-bottom: 12px;">
-                <p style="margin: 0; font-size: 16px; font-weight: bold; color: #1f2937;">{athlete.get('nombre', '')} {athlete.get('apellidos', '')}</p>
-            </div>
-            
-            <!-- Stats Row -->
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 8px 0 0 8px; border: 1px solid #e5e7eb; border-right: none;">
-                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Vueltas</p>
-                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #ea580c;">{athlete.get('laps_completed', 0)}</p>
-                    </td>
-                    <td style="text-align: center; padding: 8px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e5e7eb;">
-                        <p style="margin: 0; font-size: 10px; color: #6b7280; text-transform: uppercase;">Kilómetros</p>
-                        <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; color: #1f2937;">{athlete.get('total_km', 0)}</p>
-                    </td>
-                </tr>
-            </table>
-            
-            <!-- Cheer Button -->
-            <div style="margin-top: 12px; text-align: center;">
-                <a href="{base_url}/enviar-animo/{bib}" style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500;">
-                    💬 Enviar mensaje de ánimo
-                </a>
-            </div>
-        </div>
-        """
-    
-    # Define base_url for use in html template
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
-        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff;">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 24px 16px; text-align: center;">
-                <img src="{base_url}/icon-bu.png" alt="Backyard Ultra" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 12px;">
-                <h1 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">BACKYARD ULTRA</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 4px 0 0 0; font-size: 12px; letter-spacing: 2px;">SANTO DOMINGO 2026</p>
-            </div>
-            {marca.bloque_html()}
-            
-            <!-- Content -->
-            <div style="padding: 20px 16px;">
-                <h2 style="color: #1f2937; margin: 0 0 8px 0; font-size: 18px;">{subject}</h2>
-                <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 14px; line-height: 1.5;">{content}</p>
-                
-                <!-- Athletes Cards -->
-                {athletes_cards}
-                
-                <!-- Footer Info -->
-                <div style="margin-top: 20px; padding: 16px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">
-                        <strong>Seguimiento:</strong><br>
-                        <a href="{base_url}/en-vivo" style="color: #ea580c;">Ver clasificación en vivo</a>
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background-color: #1f2937; padding: 16px; text-align: center;">
-                <p style="color: #9ca3af; margin: 0 0 8px 0; font-size: 11px;">
-                    Backyard Ultra Santo Domingo 2026
-                </p>
-                <p style="color: #6b7280; margin: 0; font-size: 10px;">
-                    <a href="{unsubscribe_link}" style="color: #9ca3af;">Cancelar suscripción</a>
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return html
+        bib = athlete.get("bib", "-")
+        nombre = f"{athlete.get('nombre', '')} {athlete.get('apellidos', '')}".strip()
+        estado = ESTADOS.get(athlete.get("status", "active"), "En carrera")
+        bloques += [
+            estilo.separador(),
+            estilo.h2(f"#{bib} · {nombre}"),
+            estilo.linea("Estado", estado),
+            estilo.linea("Vueltas", str(athlete.get("laps_completed", 0))),
+            estilo.linea("Kilómetros", str(athlete.get("total_km", 0))),
+            estilo.boton("Enviar mensaje de ánimo", f"{base_url}/enviar-animo/{bib}"),
+        ]
+
+    bloques += [
+        estilo.separador(),
+        estilo.p(estilo.enlace("Ver la clasificación en vivo", f"{base_url}/en-vivo")),
+    ]
+
+    pie = estilo.nota(estilo.enlace("Cancelar estos avisos", unsubscribe_link))
+    return estilo.documento("".join(bloques), preheader=subject, pie_extra=pie)
 
 
 async def send_notification_email(
@@ -150,7 +72,7 @@ async def send_notification_email(
         unsubscribe_link = f"{base_url}/api/race/unsubscribe/{subscription_id}"
         
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"🏃 {subject} - Backyard Ultra SD 2026"
+        msg['Subject'] = f"{subject} · Backyard Ultra Santo Domingo"
         msg['From'] = f"Backyard Ultra SD <{GMAIL_USER}>"
         msg['To'] = to_email
         
@@ -289,7 +211,7 @@ async def send_finish_notifications(db, race_code: str, athlete_bib: str, is_win
 
     for sub in subscriptions:
         if is_winner:
-            subject = f"🏆 ¡{athlete.get('nombre')} es el GANADOR!"
+            subject = f"{athlete.get('nombre')} ganó el Backyard Ultra"
             content = f"¡Felicitaciones! {athlete.get('nombre')} {athlete.get('apellidos')} ha ganado el Backyard Ultra Santo Domingo 2026."
         else:
             subject = f"{athlete.get('nombre')} ha terminado (DNF)"
@@ -344,122 +266,48 @@ def get_manual_notification_template(
     view_url: str,
     download_url: str
 ) -> str:
-    """Generate HTML email template for manual availability notification"""
-    
-    base_url = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
-    logo_url = f"{base_url}/icon-bu.png"
-    
+    """Aviso de que ya esta publicada la guia del corredor o el manual de staff."""
+    from services import correo_estilo as estilo
+
     if manual_type == "runners":
-        title = "Guía del Corredor Disponible"
-        icon = "📖"
-        description = "La guía oficial del corredor ya está disponible. En ella encontrarás toda la información que necesitas para prepararte para el evento."
-        button_text = "Ver Guía del Corredor"
-        content_items = [
-            "Información sobre el circuito y la ruta",
+        titulo = "Ya está la guía del corredor"
+        descripcion = ("La guía oficial del corredor ya está publicada. Ahí tienes todo lo que "
+                       "necesitas para prepararte.")
+        boton = "Ver la guía"
+        puntos = [
+            "El circuito y la ruta",
             "Equipo obligatorio y recomendado",
             "Horarios y puntos de hidratación",
             "Reglas de la competencia",
-            "Protocolos de seguridad"
+            "Protocolos de seguridad",
         ]
     else:
-        title = "Manual de Voluntarios Disponible"
-        icon = "📋"
-        description = "El manual oficial para voluntarios ya está disponible. Contiene toda la información que necesitas para tu participación como parte del staff."
-        button_text = "Ver Manual de Voluntarios"
-        content_items = [
-            "Descripción de roles y responsabilidades",
-            "Horarios y turnos de trabajo",
-            "Protocolos de comunicación",
-            "Información de emergencias",
-            "Código de vestimenta y lineamientos"
+        titulo = "Ya está el manual de voluntarios"
+        descripcion = ("El manual oficial para voluntarios ya está publicado. Ahí tienes todo lo "
+                       "que necesitas para tu turno.")
+        boton = "Ver el manual"
+        puntos = [
+            "Roles y responsabilidades",
+            "Horarios y turnos",
+            "Cómo nos comunicamos",
+            "Qué hacer en una emergencia",
+            "Vestimenta y lineamientos",
         ]
-    
-    # Build content list HTML
-    content_list = ""
-    for item in content_items:
-        content_list += f'<li style="padding: 4px 0; color: #4b5563;">{item}</li>'
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f4;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); padding: 32px 24px; text-align: center;">
-                <img src="{logo_url}" alt="Backyard Ultra" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 16px; border: 3px solid rgba(255,255,255,0.3);">
-                <h1 style="color: white; margin: 0; font-size: 24px; font-weight: bold;">BACKYARD ULTRA</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; letter-spacing: 3px;">SANTO DOMINGO</p>
-            </div>
-            {marca.bloque_html()}
-            
-            <!-- Announcement Banner -->
-            <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 24px; margin: 0;">
-                <p style="margin: 0; color: #065f46; font-size: 16px; font-weight: 600;">
-                    {icon} ¡{title}!
-                </p>
-            </div>
-            
-            <!-- Content -->
-            <div style="padding: 32px 24px;">
-                <p style="color: #1f2937; margin: 0 0 16px 0; font-size: 18px; line-height: 1.6;">
-                    Hola <strong>{recipient_name}</strong>,
-                </p>
-                
-                <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 16px; line-height: 1.6;">
-                    {description}
-                </p>
-                
-                <!-- Content Summary Box -->
-                <div style="background-color: #fafaf9; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 12px 0; color: #1f2937; font-size: 15px; font-weight: 600;">
-                        En este documento encontrarás:
-                    </p>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8;">
-                        {content_list}
-                    </ul>
-                </div>
-                
-                <!-- CTA Buttons -->
-                <div style="text-align: center; margin: 32px 0;">
-                    <a href="{view_url}" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; margin-bottom: 12px;">
-                        {button_text}
-                    </a>
-                    <p style="margin: 16px 0 0 0;">
-                        <a href="{download_url}" style="color: #ea580c; font-size: 14px; text-decoration: underline;">
-                            Descargar PDF directamente
-                        </a>
-                    </p>
-                </div>
-                
-                <!-- Important Notice -->
-                <div style="background-color: #fef3c7; border-radius: 12px; padding: 16px 20px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-                        <strong>💡 Recomendación:</strong> Te sugerimos leer este documento con anticipación para estar preparado el día del evento.
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style="background-color: #1f2937; padding: 24px; text-align: center;">
-                <p style="color: #f97316; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
-                    {race_name}
-                </p>
-                <p style="color: #9ca3af; margin: 0 0 12px 0; font-size: 13px;">
-                    ¡Nos vemos en la línea de salida!
-                </p>
-                <p style="color: #6b7280; margin: 0; font-size: 12px;">
-                    Este correo fue enviado porque estás registrado para el evento.
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    return html
+
+    cuerpo = "".join([
+        estilo.h1(titulo),
+        estilo.p(f"Hola <strong>{recipient_name}</strong>,"),
+        estilo.p(descripcion),
+        estilo.h2("Qué encontrarás dentro"),
+        estilo.lista(puntos),
+        estilo.boton(boton, view_url),
+        estilo.p(estilo.enlace("O descargar el PDF", download_url)),
+        estilo.separador(),
+        estilo.p("Léelo con tiempo, no el día del evento."),
+        estilo.nota(race_name),
+    ])
+    pie = estilo.nota("Recibes este correo porque estás registrado para el evento.")
+    return estilo.documento(cuerpo, preheader=descripcion, pie_extra=pie)
 
 
 async def send_manual_notification_email(
@@ -478,9 +326,9 @@ async def send_manual_notification_email(
     
     try:
         if manual_type == "runners":
-            subject = f"📖 La Guía del Corredor ya está disponible - {race_name}"
+            subject = f"Ya está la guía del corredor · {race_name}"
         else:
-            subject = f"📋 El Manual de Voluntarios ya está disponible - {race_name}"
+            subject = f"Ya está el manual de voluntarios · {race_name}"
         
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
