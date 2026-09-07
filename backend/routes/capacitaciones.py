@@ -357,6 +357,14 @@ async def inscripcion_publica(cap_id: str, data: InscripcionPublica, request: Re
             "created_at": datetime.now(timezone.utc),
         })
 
+    # La confirmacion no puede retrasar la respuesta: el SMTP de Gmail tarda
+    # segundos y la persona esta mirando la pantalla.
+    import asyncio
+
+    from services.actividad_email_service import enviar_confirmacion
+
+    asyncio.create_task(enviar_confirmacion(email, nombre_completo, _serialize(cap), telefono))
+
     return {
         "success": True,
         "ya_estaba": bool(existente),

@@ -119,18 +119,19 @@ export default function ActividadRegistroPage() {
   const horaFin = getEndTime(actividad.datetime, actividad.duration);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 space-y-6" data-testid="actividad-registro">
+    // pt-20: la barra de navegacion es fija y taparia el titulo
+    <div className="max-w-2xl mx-auto px-4 pt-20 sm:pt-24 pb-12 space-y-6" data-testid="actividad-registro">
       {/* Cabecera de la actividad */}
       <div className="space-y-3">
         {actividad.tipo_label && (
-          <span className="inline-block text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+            <GraduationCap className="w-3.5 h-3.5" />
             {actividad.tipo_label}
           </span>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold leading-tight flex items-start gap-3">
-          <GraduationCap className="w-7 h-7 text-primary shrink-0 mt-1" />
-          <span>{actividad.name}</span>
-        </h1>
+        {/* Sin icono al lado: en el telefono el nombre parte en dos lineas y
+            el icono le robaba el ancho */}
+        <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{actividad.name}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
           <span className="flex items-start gap-2 sm:col-span-2">
             <Calendar className="w-4 h-4 shrink-0 mt-0.5" />
