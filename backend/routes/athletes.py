@@ -2991,19 +2991,53 @@ def _personalize_email(text: str, recipient: dict, escape: bool = True) -> str:
 
 
 def _wrap_email_html(subject: str, content: str) -> str:
-    return f"""
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-    <div style="background: #1f2937; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 22px;">{subject}</h1>
-    </div>
-    <div style="padding: 30px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none; color: #374151; line-height: 1.6;">
-        {content}
-    </div>
-    <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
-        <p style="color: #9ca3af; margin: 0; font-size: 12px;">Backyard Ultra Santo Domingo</p>
-    </div>
-</div>
-"""
+    """Envuelve lo que escribio quien redacta en el correo completo.
+
+    El contenido viene del editor del panel y trae sus propias etiquetas
+    (parrafos, listas, negritas, enlaces). Los estilos en linea no se heredan
+    dentro de ese HTML ajeno, asi que la tipografia se le impone con una hoja
+    de estilo con `!important`: Gmail, Apple Mail y Outlook.com la respetan, y
+    en el que no, se ve la fuente por defecto del cliente, que tampoco chirria.
+    """
+    from services import correo_estilo as estilo
+
+    cuerpo = f"""
+                        {estilo.h1(subject)}
+                        <div class="bysd-cuerpo">{content}</div>"""
+    documento = estilo.documento(cuerpo, preheader=subject)
+
+    hoja = f"""
+    <style>
+        .bysd-cuerpo, .bysd-cuerpo p, .bysd-cuerpo li, .bysd-cuerpo div, .bysd-cuerpo span {{
+            font-family: {estilo.FUENTE} !important;
+            font-size: 17px !important;
+            line-height: 1.6 !important;
+            color: {estilo.TINTA} !important;
+        }}
+        .bysd-cuerpo p {{ margin: 0 0 16px 0 !important; }}
+        .bysd-cuerpo h1, .bysd-cuerpo h2, .bysd-cuerpo h3 {{
+            font-family: {estilo.FUENTE} !important;
+            font-weight: 700 !important;
+            color: {estilo.TINTA} !important;
+            margin: 32px 0 12px 0 !important;
+            line-height: 1.3 !important;
+        }}
+        .bysd-cuerpo h1 {{ font-size: 22px !important; }}
+        .bysd-cuerpo h2 {{ font-size: 19px !important; }}
+        .bysd-cuerpo h3 {{ font-size: 17px !important; }}
+        .bysd-cuerpo ul, .bysd-cuerpo ol {{ margin: 0 0 16px 0 !important; padding-left: 22px !important; }}
+        .bysd-cuerpo li {{ margin: 0 0 8px 0 !important; }}
+        .bysd-cuerpo a {{ color: {estilo.TINTA} !important; text-decoration: underline !important; }}
+        .bysd-cuerpo img {{ max-width: 100% !important; height: auto !important; }}
+        .bysd-cuerpo blockquote {{
+            margin: 0 0 16px 0 !important;
+            padding-left: 16px !important;
+            border-left: 3px solid {estilo.LINEA} !important;
+            color: {estilo.APAGADO} !important;
+        }}
+    </style>
+</head>"""
+    return documento.replace("</head>", hoja, 1)
 
 
 def _html_to_plain(html: str) -> str:

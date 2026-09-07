@@ -716,9 +716,17 @@ export default function EmailComposer() {
               </Button>
             </div>
             <div className="overflow-y-auto p-6">
-              <div className="border rounded-lg overflow-hidden">
-                <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-              </div>
+              {/* En iframe y no con dangerouslySetInnerHTML: el correo es un
+                  documento completo con su propia hoja de estilo, que metida
+                  en el panel se aplicaría también al panel. Aislado, además,
+                  se ve tal como lo pintará el cliente de correo. */}
+              <iframe
+                title="Vista previa del correo"
+                srcDoc={previewHtml}
+                sandbox=""
+                className="w-full h-[60vh] border rounded-lg bg-white"
+                data-testid="preview-frame"
+              />
             </div>
             <div className="px-6 py-4 border-t flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowPreview(false)}>Cerrar</Button>
