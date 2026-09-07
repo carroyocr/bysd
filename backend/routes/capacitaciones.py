@@ -8,14 +8,17 @@ cambia es que ahora una actividad tiene tipo: junto a las capacitaciones caben
 los entrenamientos, la entrega de kits y cualquier otro acto no competitivo de
 la carrera. El funcionamiento es el mismo para todos.
 """
-from fastapi import APIRouter, HTTPException, Header
+import re
+
+from fastapi import APIRouter, HTTPException, Header, Request
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime, timezone
 import io
 
 from services.auth import has_permission, verify_admin_token
+from services.rate_limit import limitar_inscripcion_actividad
 
 router = APIRouter(prefix="/capacitaciones", tags=["capacitaciones"])
 
@@ -164,6 +167,9 @@ async def admin_participants(cap_id: str, authorization: Optional[str] = Header(
     ).sort("nombre_completo", 1).to_list(1000)
     return {"participants": [
         {"nombre_completo": r.get("nombre_completo", ""), "email": r.get("email", ""),
+         "telefono": r.get("telefono", ""),
+         # Quien se apunto por la pagina publica, sin cuenta en el sitio
+         "invitado": r.get("origen") == "publico",
          "registered_at": r.get("created_at").isoformat() if r.get("created_at") else None}
         for r in regs
     ]}
@@ -253,6 +259,113 @@ async def tipos_de_actividad():
     return {"tipos": [{"value": v, "label": l} for v, l in TIPOS_ACTIVIDAD.items()]}
 
 
+# ---------------- Invitados (sin cuenta) ----------------
+#
+# La charla abierta al publico se llena de gente que no corre la carrera y que
+# no tiene por que crearse un perfil para sentarse a escucharla. Estas dos
+# rutas son las unicas de actividades que funcionan sin sesion: una muestra el
+# programa y la otra apunta al invitado con su nombre, correo y telefono.
+
+
+class InscripcionPublica(BaseModel):
+    nombre_completo: str
+    email: EmailStr
+    telefono: str
+
+
+def _telefono_valido(telefono: str) -> str:
+    """Deja el telefono tal como lo escribio la persona, pero comprueba que
+    tenga digitos suficientes para poder llamarla."""
+    digitos = re.sub(r"\D", "", telefono or "")
+    if not (8 <= len(digitos) <= 15):
+        raise HTTPException(status_code=400, detail="Escribe un teléfono válido")
+    return telefono.strip()
+
+
+@router.get("/{cap_id}/publica")
+async def actividad_publica(cap_id: str):
+    """Ficha de una actividad para la pagina de inscripcion de invitados."""
+    from server import db as database
+    from bson import ObjectId
+
+    try:
+        oid = ObjectId(cap_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    cap = await database.capacitaciones.find_one({"_id": oid})
+    if not cap:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+
+    count = await database.capacitacion_registrations.count_documents({"capacitacion_id": cap_id})
+    return _serialize(cap, count)
+
+
+@router.post("/{cap_id}/inscripcion-publica")
+async def inscripcion_publica(cap_id: str, data: InscripcionPublica, request: Request):
+    """Apunta a un invitado a la actividad. Sin cuenta y sin contrasena.
+
+    Si el correo ya tiene perfil de corredor, la inscripcion se cuelga de ese
+    perfil: asi es la misma que vera en "Mis actividades" y no queda repetida.
+    """
+    from server import db as database
+    from bson import ObjectId
+
+    limitar_inscripcion_actividad(request)
+
+    try:
+        oid = ObjectId(cap_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    cap = await database.capacitaciones.find_one({"_id": oid})
+    if not cap:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+
+    nombre_completo = " ".join((data.nombre_completo or "").split())
+    if len(nombre_completo) < 3:
+        raise HTTPException(status_code=400, detail="Escribe tu nombre y apellido")
+    email = data.email.strip().lower()
+    telefono = _telefono_valido(data.telefono)
+
+    athlete = await database.athletes.find_one({"email": email}, {"_id": 1})
+    athlete_id = str(athlete["_id"]) if athlete else None
+
+    criterios = [{"email": email}]
+    if athlete_id:
+        criterios.append({"athlete_id": athlete_id})
+    existente = await database.capacitacion_registrations.find_one(
+        {"capacitacion_id": cap_id, "$or": criterios}
+    )
+
+    datos = {
+        "nombre_completo": nombre_completo,
+        "email": email,
+        "telefono": telefono,
+    }
+    if athlete_id:
+        datos["athlete_id"] = athlete_id
+
+    if existente:
+        await database.capacitacion_registrations.update_one(
+            {"_id": existente["_id"]},
+            {"$set": {**datos, "updated_at": datetime.now(timezone.utc)}},
+        )
+    else:
+        await database.capacitacion_registrations.insert_one({
+            "capacitacion_id": cap_id,
+            **datos,
+            "origen": "publico",
+            "created_at": datetime.now(timezone.utc),
+        })
+
+    return {
+        "success": True,
+        "ya_estaba": bool(existente),
+        "nombre_completo": nombre_completo,
+        "email": email,
+        "telefono": telefono,
+    }
+
+
 # ---------------- Athlete ----------------
 
 @router.get("/list")
@@ -306,6 +419,7 @@ async def register(cap_id: str, authorization: Optional[str] = Header(None)):
         {"$set": {
             "nombre_completo": nombre_completo,
             "email": athlete.get("email", ""),
+            "telefono": athlete.get("telefono", "") or "",
         }, "$setOnInsert": {"created_at": datetime.now(timezone.utc)}},
         upsert=True
     )

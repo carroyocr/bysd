@@ -129,3 +129,16 @@ def limitar_verificacion(request: Optional[Request]) -> None:
         "verificacion", ip_cliente(request), limite=20, ventana_segundos=900,
         mensaje="Demasiados intentos. Espera unos minutos.",
     )
+
+
+def limitar_inscripcion_actividad(request: Optional[Request]) -> None:
+    """15 inscripciones publicas a actividades por IP cada 10 minutos.
+
+    Da margen a que una familia o un grupo se apunte desde el mismo telefono
+    en la sala de espera, y corta al que quiera llenar la lista con nombres
+    inventados.
+    """
+    comprobar(
+        "inscripcion-actividad", ip_cliente(request), limite=15, ventana_segundos=600,
+        mensaje="Ya registraste varias inscripciones. Espera unos minutos.",
+    )

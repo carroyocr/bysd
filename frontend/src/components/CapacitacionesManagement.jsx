@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { GraduationCap, Plus, Trash2, Loader2, Users, Download, Calendar, Clock, DollarSign, X, FileText } from 'lucide-react';
+import { GraduationCap, Plus, Trash2, Loader2, Users, Download, Calendar, Clock, DollarSign, X, FileText, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { token as sesionToken } from '../lib/sesion';
 
@@ -35,6 +35,17 @@ export default function CapacitacionesManagement() {
 
   const token = sesionToken();
   const authHeader = { Authorization: `Bearer ${token}` };
+
+  // Enlace de inscripcion sin cuenta, para repartir por correo o WhatsApp
+  const copiarEnlacePublico = async (cap) => {
+    const enlace = `${window.location.origin}/actividad/${cap.id}`;
+    try {
+      await navigator.clipboard.writeText(enlace);
+      toast.success('Enlace copiado');
+    } catch {
+      window.prompt('Copia el enlace de inscripción:', enlace);
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -229,6 +240,9 @@ export default function CapacitacionesManagement() {
                     <Button size="sm" variant="outline" onClick={() => openParticipants(c)} data-testid={`view-participants-${c.id}`}>
                       <Users className="w-4 h-4 mr-1.5" />Inscritos
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => copiarEnlacePublico(c)} title="Copiar enlace de inscripción sin cuenta" data-testid={`public-link-${c.id}`}>
+                      <Link2 className="w-4 h-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => downloadAttendance(c)} title="Descargar hoja de asistencia" data-testid={`attendance-${c.id}`}>
                       <Download className="w-4 h-4" />
                     </Button>
@@ -267,10 +281,18 @@ export default function CapacitacionesManagement() {
               ) : (
                 <ol className="space-y-1">
                   {participants.map((p, i) => (
-                    <li key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 text-sm" data-testid={`participant-${i}`}>
-                      <span className="text-gray-400 w-6 text-right">{i + 1}.</span>
-                      <span className="font-medium">{p.nombre_completo}</span>
-                      <span className="text-muted-foreground text-xs ml-auto truncate">{p.email}</span>
+                    <li key={i} className="flex items-start gap-3 py-2 border-b border-gray-50 text-sm" data-testid={`participant-${i}`}>
+                      <span className="text-gray-400 w-6 text-right shrink-0">{i + 1}.</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium">{p.nombre_completo}</span>
+                        {p.invitado && (
+                          <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                            Invitado
+                          </span>
+                        )}
+                        <span className="block text-muted-foreground text-xs truncate">{p.email}</span>
+                      </span>
+                      {p.telefono && <span className="text-muted-foreground text-xs shrink-0">{p.telefono}</span>}
                     </li>
                   ))}
                 </ol>
