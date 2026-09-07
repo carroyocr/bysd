@@ -31,7 +31,7 @@ ANCHO = 600
 
 def h1(texto: str) -> str:
     """El asunto del correo, dentro del correo. Uno por correo."""
-    return (f'<h1 style="margin: 0 0 20px 0; font-size: 28px; line-height: 1.25; '
+    return (f'<h1 style="margin: 0 0 20px 0; font-size: 25px; line-height: 1.3; '
             f'font-weight: 700; letter-spacing: -0.02em; color: {TINTA};">{texto}</h1>')
 
 
@@ -88,21 +88,22 @@ def cifra(etiqueta: str, valor: str) -> str:
     """El dato que es el correo entero: el numero de corredor, el monto, las
     vueltas. Grande y sin caja; el tamano ya lo destaca.
 
-    El tamano sale del largo del valor. Un numero corto aguanta 44px, pero una
-    frase ("8:00 a. m. a 12:00 p. m.") a ese cuerpo se come la pantalla y parte
-    en tres lineas. Se decide aqui y no en cada plantilla para que no dependa de
-    que quien la escriba se acuerde.
+    Destacar no es gritar: el salto sobre el texto (17px) es corto a proposito,
+    y lo que separa el dato es la negrita y el aire, no el tamano. El largo del
+    valor lo baja todavia mas, porque una frase a cuerpo grande parte en varias
+    lineas. Se decide aqui y no en cada plantilla para que no dependa de que
+    quien la escriba se acuerde.
     """
     # En las plantillas guardadas el valor todavia es "{{payment_amount}}", que
     # es largo y no se parece a lo que vera el lector. Cada marcador cuenta como
     # un valor corto, que es lo que suele acabar puesto ahi.
     largo = len(re.sub(r"\{\{[a-z_]+\}\}", "000000", valor))
     if largo <= 8:
-        tamano, espaciado = "44px", "-0.02em"
+        tamano, espaciado = "26px", "-0.015em"
     elif largo <= 16:
-        tamano, espaciado = "30px", "-0.015em"
-    else:
         tamano, espaciado = "22px", "normal"
+    else:
+        tamano, espaciado = "19px", "normal"
     return (f'<p style="margin: 0 0 24px 0; line-height: 1.2;">'
             f'<span style="display: block; margin-bottom: 6px; font-size: 13px; color: {APAGADO};">{etiqueta}</span>'
             f'<span style="display: block; font-size: {tamano}; font-weight: 700; letter-spacing: {espaciado}; color: {TINTA};">{valor}</span>'
@@ -111,8 +112,8 @@ def cifra(etiqueta: str, valor: str) -> str:
 
 def codigo(valor: str) -> str:
     """Un codigo de un solo uso. Se copia a mano, asi que va grande y separado."""
-    return (f'<p style="margin: 0 0 20px 0; font-size: 34px; font-weight: 700; '
-            f'letter-spacing: 0.28em; color: {TINTA}; line-height: 1.2;">{valor}</p>')
+    return (f'<p style="margin: 0 0 20px 0; font-size: 27px; font-weight: 700; '
+            f'letter-spacing: 0.32em; color: {TINTA}; line-height: 1.3;">{valor}</p>')
 
 
 def enlace(texto: str, url: str) -> str:
