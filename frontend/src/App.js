@@ -25,6 +25,7 @@ import AdminPage from './pages/AdminPage';
 import SurveyPage from './pages/SurveyPage';
 import InscripcionPage from './pages/InscripcionPage';
 import VoluntarioRegistroPage from './pages/VoluntarioRegistroPage';
+import ActividadRegistroPage from './pages/ActividadRegistroPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
@@ -103,6 +104,9 @@ export default function App() {
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
+                    {/* Inscripción a una charla o actividad sin cuenta: el
+                        enlace se copia desde el panel y se reparte */}
+                    <Route path="/actividad/:id" element={<ActividadRegistroPage />} />
                     {/* Athlete Profile + Legacy routes */}
                     <Route path="/mi-perfil" element={<MyProfilePage />} />
                     {/* Perfil del espectador. Aparte de /mi-perfil, que es el
