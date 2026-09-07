@@ -62,8 +62,11 @@ export default function EmailComposer() {
   const [sponsorStatus, setSponsorStatus] = useState('');
   const [sponsorCategory, setSponsorCategory] = useState('');
   const [activityId, setActivityId] = useState('');
+  const [volunteerRaceCode, setVolunteerRaceCode] = useState('');
+  const [volunteerEvento, setVolunteerEvento] = useState('');
   const [recipientOptions, setRecipientOptions] = useState({
     media_types: [], sponsor_statuses: [], sponsor_categories: [], activities: [],
+    volunteer_races: [], volunteer_eventos: [], volunteer_legacy_total: 0, volunteer_legacy_code: '',
   });
   const [manualEmails, setManualEmails] = useState('');
   const [recipients, setRecipients] = useState([]);
@@ -157,6 +160,10 @@ export default function EmailComposer() {
         sponsor_statuses: data?.sponsor_statuses || [],
         sponsor_categories: data?.sponsor_categories || [],
         activities: data?.activities || [],
+        volunteer_races: data?.volunteer_races || [],
+        volunteer_eventos: data?.volunteer_eventos || [],
+        volunteer_legacy_total: data?.volunteer_legacy_total || 0,
+        volunteer_legacy_code: data?.volunteer_legacy_code || '',
       }))
       .catch(() => {});
   }, [token]);
@@ -188,8 +195,11 @@ export default function EmailComposer() {
     sponsor_status: filterType === 'sponsors' ? sponsorStatus || null : null,
     sponsor_category: filterType === 'sponsors' ? sponsorCategory || null : null,
     activity_id: filterType === 'activity' ? activityId || null : null,
+    volunteer_race_code: filterType === 'volunteers' ? volunteerRaceCode || null : null,
+    volunteer_evento: filterType === 'volunteers' ? volunteerEvento || null : null,
     manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
-  }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, activityId, manualEmails]);
+  }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, activityId,
+      volunteerRaceCode, volunteerEvento, manualEmails]);
 
   const loadRecipients = useCallback(async () => {
     setLoadingRecipients(true);
@@ -342,6 +352,48 @@ export default function EmailComposer() {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {filterType === 'volunteers' && (
+                <div className="space-y-2 mt-2">
+                  <select
+                    value={volunteerRaceCode}
+                    onChange={(e) => {
+                      setVolunteerRaceCode(e.target.value);
+                      // La lista antigua no distingue eventos: el filtro sobraría
+                      if (e.target.value === recipientOptions.volunteer_legacy_code) setVolunteerEvento('');
+                    }}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    data-testid="volunteer-race-select"
+                  >
+                    <option value="">Todas las carreras</option>
+                    {recipientOptions.volunteer_races.map(r => (
+                      <option key={r.code} value={r.code}>{r.name} ({r.total})</option>
+                    ))}
+                    {recipientOptions.volunteer_legacy_total > 0 && (
+                      <option value={recipientOptions.volunteer_legacy_code}>
+                        Voluntarios de 2026 · lista antigua ({recipientOptions.volunteer_legacy_total})
+                      </option>
+                    )}
+                  </select>
+                  <select
+                    value={volunteerEvento}
+                    onChange={(e) => setVolunteerEvento(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                    disabled={volunteerRaceCode === recipientOptions.volunteer_legacy_code && !!recipientOptions.volunteer_legacy_code}
+                    data-testid="volunteer-evento-select"
+                  >
+                    <option value="">Carrera y campeonato</option>
+                    {recipientOptions.volunteer_eventos.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  {recipientOptions.volunteer_races.length === 0 && (
+                    <p className="text-xs text-gray-400">
+                      Aún no hay postulaciones de voluntarios en el formulario público.
+                    </p>
+                  )}
                 </div>
               )}
 

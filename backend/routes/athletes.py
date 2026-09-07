@@ -2580,6 +2580,8 @@ class EmailRecipientFilter(BaseModel):
     media_type: Optional[str] = None  # tipo de medio (solo filtro 'press')
     sponsor_status: Optional[str] = None  # etapa del pipeline (solo filtro 'sponsors')
     sponsor_category: Optional[str] = None  # categoría de la propuesta (solo filtro 'sponsors')
+    volunteer_race_code: Optional[str] = None  # carrera del voluntariado (solo filtro 'volunteers'; vacío = todas)
+    volunteer_evento: Optional[str] = None  # 'carrera' o 'campeonato' (solo filtro 'volunteers'; vacío = ambos)
 
 
 REG_STATUSES = {"pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"}
@@ -2692,9 +2694,108 @@ def _dedupe_recipients(recipients):
     return {"recipients": unicos, "total": len(unicos)}
 
 
+VOLUNTARIOS_HEREDADOS = "__heredados__"
+VOLUNTEER_EVENTO_LABELS = {"carrera": "Carrera", "campeonato": "Campeonato Mundial"}
+
+
+def _volunteer_evento_query(evento):
+    """Filtro por evento del voluntariado (carrera o campeonato).
+
+    Las postulaciones antiguas no traen el campo `evento`: cuentan como
+    'carrera', igual que en el resto del módulo de voluntarios."""
+    if not evento:
+        return {}
+    from routes.volunteer_registration import VALID_EVENTOS
+
+    if evento not in VALID_EVENTOS:
+        raise HTTPException(status_code=400, detail="Evento de voluntarios inválido")
+    if evento == "carrera":
+        return {"$or": [
+            {"evento": "carrera"},
+            {"evento": {"$in": [None, ""]}},
+            {"evento": {"$exists": False}},
+        ]}
+    return {"evento": evento}
+
+
+async def _volunteer_recipients(database, race_code, evento):
+    """Voluntarios postulados, sacados de `volunteer_registrations`.
+
+    Es la colección donde vive el voluntariado desde que existe el formulario
+    público: una ficha por persona y evento, con su `race_code`. La colección
+    `volunteers` es el listado suelto de la edición de 2026, anterior a todo
+    esto, y solo se consulta si se pide a propósito (VOLUNTARIOS_HEREDADOS).
+    Un mismo correo puede haberse postulado a los dos eventos: se deduplica.
+    """
+    if race_code == VOLUNTARIOS_HEREDADOS:
+        docs = await database.volunteers.find(
+            {}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+        ).to_list(1000)
+    else:
+        query = {}
+        if race_code:
+            query["race_code"] = race_code
+        query.update(_volunteer_evento_query(evento))
+        docs = await database.volunteer_registrations.find(
+            query, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+        ).sort("created_at", -1).to_list(2000)
+
+    recipients = []
+    for d in docs:
+        email = (d.get("email") or "").strip().lower()
+        if not email:
+            continue
+        nombre = d.get("nombre", "") or ""
+        apellidos = d.get("apellidos", "") or ""
+        recipients.append({
+            "email": email,
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "nombre_completo": f"{nombre} {apellidos}".strip(),
+            "source": "voluntario",
+        })
+    return _dedupe_recipients(recipients)
+
+
+async def _volunteer_filter_options(database):
+    """Carreras y eventos con voluntarios, para el selector del redactor.
+
+    Solo se ofrecen las carreras que de verdad tienen postulaciones: una lista
+    con todas las carreras configuradas dejaría elegir opciones vacías.
+    """
+    from routes.volunteer_registration import VALID_EVENTOS
+
+    conteos = await database.volunteer_registrations.aggregate([
+        {"$group": {"_id": "$race_code", "total": {"$sum": 1}}}
+    ]).to_list(100)
+    codigos = [c["_id"] for c in conteos if c.get("_id")]
+    nombres = {
+        r["code"]: r.get("name") or r["code"]
+        for r in await database.race_configurations.find(
+            {"code": {"$in": codigos}}, {"_id": 0, "code": 1, "name": 1}
+        ).to_list(100)
+    }
+    carreras = sorted(
+        (
+            {"code": c["_id"], "name": nombres.get(c["_id"], c["_id"]), "total": c["total"]}
+            for c in conteos if c.get("_id")
+        ),
+        key=lambda c: c["name"].lower(),
+    )
+    return {
+        "volunteer_races": carreras,
+        "volunteer_eventos": [
+            {"value": e, "label": VOLUNTEER_EVENTO_LABELS.get(e, e)} for e in VALID_EVENTOS
+        ],
+        # El listado suelto de la edición de 2026, previo al formulario público
+        "volunteer_legacy_total": await database.volunteers.count_documents({}),
+        "volunteer_legacy_code": VOLUNTARIOS_HEREDADOS,
+    }
+
+
 @router.get("/admin/email-recipient-options")
 async def admin_email_recipient_options(authorization: str = Header(None)):
-    """Admin: categorías disponibles para filtrar prensa y patrocinadores."""
+    """Admin: categorías disponibles para filtrar prensa, patrocinadores y voluntarios."""
     from server import db as database
     from routes.prensa import TIPOS_MEDIO
     from routes.sponsors import SPONSOR_STATUSES, STATUS_LABELS
@@ -2707,6 +2808,7 @@ async def admin_email_recipient_options(authorization: str = Header(None)):
         {}, {"name": 1, "datetime": 1, "tipo": 1}
     ).sort("datetime", -1).to_list(500)
     return {
+        **await _volunteer_filter_options(database),
         "media_types": list(TIPOS_MEDIO),
         "sponsor_statuses": [{"value": s, "label": STATUS_LABELS.get(s, s)} for s in SPONSOR_STATUSES],
         "sponsor_categories": sorted(
@@ -2745,21 +2847,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         return {"recipients": recipients, "total": len(recipients)}
 
     if data.filter_type == "volunteers":
-        vols = await database.volunteers.find(
-            {}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
-        ).to_list(500)
-        for v in vols:
-            if v.get("email"):
-                nombre = v.get("nombre", "") or ""
-                apellidos = v.get("apellidos", "") or ""
-                recipients.append({
-                    "email": v["email"],
-                    "nombre": nombre,
-                    "apellidos": apellidos,
-                    "nombre_completo": f"{nombre} {apellidos}".strip(),
-                    "source": "voluntario"
-                })
-        return {"recipients": recipients, "total": len(recipients)}
+        return await _volunteer_recipients(database, data.volunteer_race_code, data.volunteer_evento)
 
     if data.filter_type == "press":
         from routes.prensa import TIPOS_MEDIO
