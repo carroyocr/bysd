@@ -26,6 +26,8 @@ import SurveyPage from './pages/SurveyPage';
 import InscripcionPage from './pages/InscripcionPage';
 import VoluntarioRegistroPage from './pages/VoluntarioRegistroPage';
 import ActividadRegistroPage from './pages/ActividadRegistroPage';
+import PrensaPage from './pages/PrensaPage';
+import NotaPrensaPage from './pages/NotaPrensaPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
@@ -86,6 +88,9 @@ export default function App() {
                     <Route path="/patrocinadores" element={<PatrocinadoresPage />} />
                     <Route path="/patrocinadores/:raceCode" element={<PatrocinadoresPage />} />
                     <Route path="/faq" element={<FAQPage />} />
+                    {/* Sala de prensa: la lista y la ficha de cada comunicado */}
+                    <Route path="/prensa" element={<PrensaPage />} />
+                    <Route path="/prensa/:slug" element={<NotaPrensaPage />} />
                     {/* Resultados routes - with and without race code */}
                     <Route path="/en-vivo" element={<LiveDashboardPage />} />
                     <Route path="/resultados/:raceCode" element={<LiveDashboardPage />} />

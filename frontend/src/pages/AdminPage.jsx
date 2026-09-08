@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
-  Bell, Radio, Eye, ShieldAlert
+  Bell, Radio, Eye, ShieldAlert, FileText
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -29,6 +29,7 @@ import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import PrensaManagement from '../components/PrensaManagement';
+import NotasPrensaManagement from '../components/NotasPrensaManagement';
 import PushComposer from '../components/PushComposer';
 import CheerModerationPanel from '../components/CheerModerationPanel';
 import EspectadoresManagement from '../components/EspectadoresManagement';
@@ -77,6 +78,7 @@ const TAB_PERMISSIONS = {
   'capacitaciones': ['capacitaciones', 'config'],
   'seleccionados': ['seleccionados', 'athletes'],
   'prensa': ['prensa', 'emails'],
+  'notas-prensa': ['prensa', 'emails'],
 };
 
 const canOpenTab = (permissions, tabId) =>
@@ -138,6 +140,7 @@ const ADMIN_SECTIONS = [
       { id: 'app-avisos', label: 'Mensajes App', icon: Bell },
       { id: 'espectadores', label: 'Espectadores', icon: Eye },
       { id: 'prensa', label: 'Prensa', icon: Newspaper },
+      { id: 'notas-prensa', label: 'Notas de Prensa', icon: FileText },
     ],
   },
   {
@@ -191,6 +194,7 @@ const TAB_VIEWS = {
   'whatsapp': () => <WhatsAppComposer />,
   'emails': () => <EmailTemplatesManagement />,
   'prensa': () => <PrensaManagement />,
+  'notas-prensa': () => <NotasPrensaManagement />,
   'config': () => <RaceConfigPanel />,
   'users': () => <UserManagement />,
   'surveys': () => <SurveyResultsSection />,

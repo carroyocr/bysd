@@ -41,7 +41,7 @@ export default function Navigation() {
   const [pastRaces, setPastRaces] = useState([]);
   const [expandedMobile, setExpandedMobile] = useState({ anteriores: false });
   const [expandedPastRace, setExpandedPastRace] = useState({});
-  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true, showSponsors: true });
+  const [pageVisibility, setPageVisibility] = useState({ showTracking: true, showCommunity: true, showPreregistration: true, showSponsors: true, showPress: false });
   const [menuLogo, setMenuLogo] = useState('/icon-bu.png');
   const location = useLocation();
   const { getYear, config } = useRaceConfig();
@@ -65,7 +65,10 @@ export default function Navigation() {
             showTracking: data.show_tracking_page,
             showCommunity: data.show_community_page,
             showPreregistration: data.show_preregistration !== false,
-            showSponsors: data.show_sponsors_page !== false
+            showSponsors: data.show_sponsors_page !== false,
+            // La sala de prensa no tiene interruptor: el backend la enciende
+            // cuando hay al menos una nota publicada
+            showPress: data.show_press_page === true
           });
         }
       } catch (error) {
@@ -145,6 +148,7 @@ export default function Navigation() {
   const activeRaceCode = activeRace?.code?.toLowerCase() || config?.code?.toLowerCase() || 'bysd-2027';
 
   const isPatrocinadoresActive = location.pathname.includes('/patrocinadores');
+  const isPrensaActive = location.pathname.startsWith('/prensa');
   const isResultadosActive = location.pathname.includes('/resultados') || location.pathname === '/en-vivo';
   const isComunidadActive = location.pathname.includes('/comunidad');
   const isAnterioresActive = pastRaces.some(race => 
@@ -208,6 +212,20 @@ export default function Navigation() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Sala de prensa: solo cuando hay notas publicadas */}
+            {pageVisibility.showPress && (
+              <Link
+                to="/prensa"
+                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                  isPrensaActive
+                    ? 'text-primary bg-secondary'
+                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                }`}
+              >
+                Prensa
+              </Link>
+            )}
 
             {/* Direct link to active race Patrocinadores - Only show if the sponsors page is enabled */}
             {pageVisibility.showSponsors && (
@@ -360,6 +378,20 @@ export default function Navigation() {
                       {link.label}
                     </Link>
                   ))}
+
+                  {pageVisibility.showPress && (
+                    <Link
+                      to="/prensa"
+                      onClick={handleLinkClick}
+                      className={`px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                        isPrensaActive
+                          ? 'text-primary bg-secondary'
+                          : 'text-foreground hover:text-primary hover:bg-secondary'
+                      }`}
+                    >
+                      Prensa
+                    </Link>
+                  )}
 
                   {/* Direct links to active race pages */}
                   {pageVisibility.showSponsors && (
