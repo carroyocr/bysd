@@ -228,7 +228,7 @@ export default function NotasPrensaManagement() {
                       <span className="font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Borrador</span>
                     )}
                   </div>
-                  <h3 className="font-semibold leading-snug">{n.titulo}</h3>
+                  <h3 className="titular-nota font-semibold leading-snug break-words">{n.titulo}</h3>
                   {n.resumen && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{n.resumen}</p>}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">

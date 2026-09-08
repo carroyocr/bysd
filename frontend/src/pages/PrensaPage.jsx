@@ -80,7 +80,7 @@ function Nota({ nota }) {
           {fmtFecha(nota.fecha)}
           {esAparicion && nota.medio ? <> · <span className="font-medium text-foreground">{nota.medio}</span></> : null}
         </p>
-        <h2 className="text-lg sm:text-xl font-semibold leading-snug group-hover:text-primary transition-colors">
+        <h2 className="titular-nota text-lg sm:text-xl font-semibold leading-snug break-words group-hover:text-primary transition-colors">
           {nota.titulo}
         </h2>
         {nota.resumen && (

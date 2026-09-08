@@ -334,6 +334,11 @@ code {
     color: hsl(var(--foreground));
 }
 .nota-prensa-cuerpo > * + * { margin-top: 1.25rem; }
+.nota-prensa-cuerpo h2,
+.nota-prensa-cuerpo h3 {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: -0.01em;
+}
 .nota-prensa-cuerpo h2 { font-size: 1.375rem; font-weight: 700; line-height: 1.3; margin-top: 2.5rem; }
 .nota-prensa-cuerpo h3 { font-size: 1.125rem; font-weight: 700; line-height: 1.4; margin-top: 2rem; }
 .nota-prensa-cuerpo ul,
@@ -347,4 +352,12 @@ code {
     padding-left: 1rem;
     border-left: 3px solid hsl(var(--border));
     color: hsl(var(--muted-foreground));
+}
+
+/* Titular de una nota de prensa. El titular es una frase para leer, no el
+   rótulo de una sección: Anton es condensada y muy pesada, y a dos líneas
+   deja de leerse. El resto del sitio sigue igual; esto es solo para las notas. */
+.titular-nota {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: -0.01em;
 }

@@ -58,7 +58,7 @@ export default function NotaPrensaPage() {
         </Link>
 
         <p className="text-sm text-muted-foreground">{fmtFecha(nota.fecha)}</p>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mt-2">
+        <h1 className="titular-nota text-3xl sm:text-4xl font-bold leading-tight mt-2 break-words">
           {nota.titulo}
         </h1>
         {nota.resumen && (
