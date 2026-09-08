@@ -192,6 +192,11 @@ async def get_page_visibility(db=Depends(lambda: None)):
         {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_sponsors_page": 1, "show_volunteer_carrera": 1, "name": 1, "code": 1}
     )
 
+    # La sala de prensa no tiene interruptor: se ensena cuando hay al menos una
+    # nota publicada y desaparece sola cuando no hay ninguna. Una seccion vacia
+    # en el menu es peor que no tenerla, y esto ahorra acordarse de encenderla.
+    hay_notas = await database.notas_prensa.count_documents({"publicada": True}) > 0
+
     if not config:
         return {
             "show_tracking_page": True,
@@ -199,11 +204,13 @@ async def get_page_visibility(db=Depends(lambda: None)):
             "show_preregistration": True,
             "show_sponsors_page": True,
             "show_volunteer_carrera": False,
+            "show_press_page": hay_notas,
             "race_name": "Backyard Ultra Santo Domingo",
             "race_code": ""
         }
 
     return {
+        "show_press_page": hay_notas,
         "show_tracking_page": config.get("show_tracking_page", True),
         "show_community_page": config.get("show_community_page", True),
         "show_preregistration": config.get("show_preregistration", True),

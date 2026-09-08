@@ -51,3 +51,8 @@ async def serve_ad_logo(filename: str):
 @router.get("/api/uploads/sponsors/{filename}")
 async def get_sponsor_logo(filename: str):
     return await file_storage.serve(filename, disk_dir=STATIC_DIR / "uploads" / "sponsors")
+
+
+@router.get("/api/uploads/prensa/{filename}")
+async def get_imagen_nota_prensa(filename: str):
+    return await file_storage.serve(filename, disk_dir=STATIC_DIR / "uploads" / "prensa")

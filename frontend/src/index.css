@@ -324,3 +324,27 @@ code {
 @media (prefers-reduced-motion: reduce) {
     .bysd-entra, .bysd-halo { animation: none; opacity: 1; transform: none; }
 }
+
+/* Cuerpo de un comunicado de prensa. El texto lo escribe la organización en el
+   editor del panel y llega como HTML suelto (<p>, <ul>, <h2>, <a>), así que la
+   tipografía se le pone desde aquí: dentro del editor no hay clases. */
+.nota-prensa-cuerpo {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: hsl(var(--foreground));
+}
+.nota-prensa-cuerpo > * + * { margin-top: 1.25rem; }
+.nota-prensa-cuerpo h2 { font-size: 1.375rem; font-weight: 700; line-height: 1.3; margin-top: 2.5rem; }
+.nota-prensa-cuerpo h3 { font-size: 1.125rem; font-weight: 700; line-height: 1.4; margin-top: 2rem; }
+.nota-prensa-cuerpo ul,
+.nota-prensa-cuerpo ol { padding-left: 1.5rem; }
+.nota-prensa-cuerpo ul { list-style: disc; }
+.nota-prensa-cuerpo ol { list-style: decimal; }
+.nota-prensa-cuerpo li + li { margin-top: .5rem; }
+.nota-prensa-cuerpo a { color: hsl(var(--primary)); text-decoration: underline; }
+.nota-prensa-cuerpo img { max-width: 100%; height: auto; border-radius: .75rem; }
+.nota-prensa-cuerpo blockquote {
+    padding-left: 1rem;
+    border-left: 3px solid hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+}
