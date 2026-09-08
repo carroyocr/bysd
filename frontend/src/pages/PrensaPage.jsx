@@ -32,31 +32,35 @@ export default function PrensaPage() {
   }, []);
 
   return (
-    <div className="pt-20 sm:pt-24 pb-20">
-      <div className="max-w-3xl mx-auto px-4">
-        <header className="mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Prensa</h1>
-          <p className="text-muted-foreground mt-3 text-base leading-relaxed">
-            Comunicados de la organización y lo que se ha publicado sobre la carrera.
-          </p>
-        </header>
+    // Mismo encabezado que Reglas, Patrocinadores y las demas: seccion con el
+    // degradado, titulo centrado en la fuente de display y la bajada debajo.
+    <section className="pt-16 pb-20 bg-gradient-to-b from-muted/20 to-background">
+      <div className="container mx-auto px-4 py-10">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center space-y-4 mb-12">
+            <h1 className="font-display text-4xl sm:text-5xl text-foreground">Prensa</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Comunicados de la organización y lo que se ha publicado sobre la carrera
+            </p>
+          </div>
 
-        {cargando ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : notas.length === 0 ? (
-          <div className="py-20 text-center">
-            <Newspaper className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />
-            <p className="text-muted-foreground">Todavía no hay notas publicadas.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border" data-testid="lista-notas">
-            {notas.map((n) => <Nota key={n.id} nota={n} />)}
-          </div>
-        )}
+          {cargando ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : notas.length === 0 ? (
+            <div className="py-20 text-center">
+              <Newspaper className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-40" />
+              <p className="text-muted-foreground">Todavía no hay notas publicadas.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border" data-testid="lista-notas">
+              {notas.map((n) => <Nota key={n.id} nota={n} />)}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
