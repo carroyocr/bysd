@@ -7,19 +7,21 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.5.0, lista para subir
+## Estado — la 1.5.0, publicada
 
-La **1.5.0 está empaquetada y sin subir**: `build/backyard.iq`, **181 builds de
-111 relojes**, sin un solo error ni aviso. Entra la generación **fēnix 9** al
-completo —siete modelos— a petición de un usuario de la tienda que pidió el
-fēnix 9 Pro para noviembre.
+La **1.5.0 salió a la Connect IQ Store el 9 de septiembre de 2026**: **181
+builds de 111 relojes**, sin un solo error ni aviso. Entra la generación
+**fēnix 9** al completo —siete modelos— a petición de un usuario de la tienda
+que pidió el fēnix 9 Pro para noviembre.
 
 Trae la **primera familia de pantalla nueva del proyecto**, `round-466x466`
 (el fēnix 9 Pro 51 mm). No hizo falta dibujar nada: el emblema de 380 px le
 entra centrado igual que en la de 454.
 
-**Lo que falta, y solo lo puede hacer Cristhian:** subir el `.iq` al portal,
-pegar el texto de novedades y enviar a revisión.
+**Una actualización no se sube por «Upload an App».** Esa pantalla es para una
+app nueva y rechaza el `.iq` con «The manifest app ID is already in use by
+another app», que es correcto: la ficha ya existe. Las versiones nuevas van
+desde el panel, abriendo la app en la lista.
 
 ## Estado — la 1.4.1, publicada
 
