@@ -97,7 +97,16 @@ para enseñárselo a un corredor.
 
 ## Pasos en el portal (para cada producto)
 
-1. Entra a https://apps.garmin.com/developer con tu cuenta.
+1. Entra al portal con tu cuenta. **Las URL llevan segmento de idioma**, igual
+   que la ficha pública, y además `/developer` a secas no existe:
+   - Gestionar y **actualizar** una app ya publicada:
+     `https://apps.garmin.com/en-US/developer/dashboard`
+   - Subir una app **nueva**: `https://apps.garmin.com/en-US/developer/upload`
+
+   `https://apps.garmin.com/developer` da un 404 que no explica nada. Las dos
+   buenas salen del botón «Submit an App» de
+   `https://developer.garmin.com/connect-iq/submit-an-app/`, y comprobadas el
+   9 de septiembre de 2026: redirigen al SSO de Garmin con su `returnTo`.
 2. **Upload an App** → sube el `.iq` correspondiente.
 3. Rellena la ficha con los textos de abajo (nombre, resumen, descripción).
 4. Elige **categoría** (Activity Tracking / Running) y las **capturas**.
