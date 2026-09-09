@@ -6,6 +6,12 @@ La 1.3.0 sí llegó a la tienda antes (versión inicial, 24 de agosto). La
 versión se declara en `AcercaView.mc` y las novedades ES/EN para la ficha están
 en `garmin/PUBLICAR.md`.
 
+**La 1.5.0 está publicada** (9 de septiembre de 2026; 181 builds de **111
+relojes**, sin error ni aviso). Entra la generación **fēnix 9** entera, a
+petición de un usuario de la tienda que pidió el fēnix 9 Pro para noviembre, y
+con ella la **primera familia de pantalla nueva del proyecto**,
+`round-466x466` (el 9 Pro 51 mm). No hizo falta dibujar nada.
+
 **La 1.4.1 está publicada** (27 de agosto de 2026; `garmin/build/backyard.iq`,
 174 builds, sin error ni aviso). Es la primera desde la 1.1.0 que cambia el
 comportamiento y no la lista de relojes: Margen pasa a ser la primera

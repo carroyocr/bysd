@@ -1,11 +1,27 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 27 de agosto de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 9 de septiembre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.5.0, publicada
+
+La **1.5.0 salió a la Connect IQ Store el 9 de septiembre de 2026**: **181
+builds de 111 relojes**, sin un solo error ni aviso. Entra la generación
+**fēnix 9** al completo —siete modelos— a petición de un usuario de la tienda
+que pidió el fēnix 9 Pro para noviembre.
+
+Trae la **primera familia de pantalla nueva del proyecto**, `round-466x466`
+(el fēnix 9 Pro 51 mm). No hizo falta dibujar nada: el emblema de 380 px le
+entra centrado igual que en la de 454.
+
+**Una actualización no se sube por «Upload an App».** Esa pantalla es para una
+app nueva y rechaza el `.iq` con «The manifest app ID is already in use by
+another app», que es correcto: la ficha ya existe. Las versiones nuevas van
+desde el panel, abriendo la app en la lista.
 
 ## Estado — la 1.4.1, publicada
 
@@ -83,7 +99,16 @@ para enseñárselo a un corredor.
 
 ## Pasos en el portal (para cada producto)
 
-1. Entra a https://apps.garmin.com/developer con tu cuenta.
+1. Entra al portal con tu cuenta. **Las URL llevan segmento de idioma**, igual
+   que la ficha pública, y además `/developer` a secas no existe:
+   - Gestionar y **actualizar** una app ya publicada:
+     `https://apps.garmin.com/en-US/developer/dashboard`
+   - Subir una app **nueva**: `https://apps.garmin.com/en-US/developer/upload`
+
+   `https://apps.garmin.com/developer` da un 404 que no explica nada. Las dos
+   buenas salen del botón «Submit an App» de
+   `https://developer.garmin.com/connect-iq/submit-an-app/`, y comprobadas el
+   9 de septiembre de 2026: redirigen al SSO de Garmin con su `returnTo`.
 2. **Upload an App** → sube el `.iq` correspondiente.
 3. Rellena la ficha con los textos de abajo (nombre, resumen, descripción).
 4. Elige **categoría** (Activity Tracking / Running) y las **capturas**.
@@ -94,6 +119,43 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.5.0 (para el campo "What's New")
+
+La generación **fēnix 9** entera, siete modelos, y con ellos la lista pasa de
+104 a **111 relojes** y de 174 a **181 builds**. Salió de una petición desde la
+tienda: un usuario pidió el fēnix 9 Pro y avisó de que lo necesitaba para
+noviembre.
+
+Seis de los siete entraron sin tocar una línea: caen en familias de pantalla
+que ya se compilaban (416, 454, y 260 y 280 los Solar) y en tallas de icono que
+ya existían. El séptimo, el **9 Pro 51 mm**, estrena la **primera familia de
+pantalla nueva del proyecto**, `round-466x466`. Tampoco pidió dibujo: el
+emblema de 380 px le entra centrado igual que en la de 454.
+
+Y de paso se cerró un agujero del verificador de dispositivos, que miraba las
+líneas de reloj pero no las de familia: una familia nueva sin su regla compila
+sin un aviso y se queda con el emblema de 240 px en una pantalla de 466. Ahora
+lo caza, y el aviso se probó quitando la regla a mano.
+
+**Sobre si el texto cabe en 466 px**, que era la duda razonable al estrenar
+pantalla: el 9 Pro 51 mm usa las **mismas fuentes en píxeles** que los relojes
+de 454 (31.5 px la pequeña, 119.8 la numérica media) sobre una pantalla más
+ancha, así que proporcionalmente es la más holgada del catálogo —25.70 % contra
+el 26.54 % del 416, que era el peor caso—. Medido en los datos del SDK, no
+supuesto.
+
+**ES**
+
+> - La generación fēnix 9 al completo: fēnix 9 (43 y 47 mm), fēnix 9 Pro (43,
+>   47 y 51 mm) y fēnix 9 Pro Solar (47 y 51 mm).
+
+**EN**
+
+> - The full fēnix 9 generation: fēnix 9 (43 and 47 mm), fēnix 9 Pro (43, 47
+>   and 51 mm) and fēnix 9 Pro Solar (47 and 51 mm).
 
 ---
 
