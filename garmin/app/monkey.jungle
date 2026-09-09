@@ -33,13 +33,19 @@ semioctagon-176x176.resourcePath = $(base.resourcePath);resources-small
 round-390x390.resourcePath = $(base.resourcePath);resources-large
 round-416x416.resourcePath = $(base.resourcePath);resources-large
 round-454x454.resourcePath = $(base.resourcePath);resources-large
+# El fenix 9 Pro 51 mm estrena familia (466 px, septiembre de 2026):
+# primera pantalla nueva del proyecto. El emblema de 380 le entra
+# centrado igual que en la de 454, asi que no hubo que dibujar otro.
+round-466x466.resourcePath = $(base.resourcePath);resources-large
 
 # --- Iconos del lanzador por talla ---
 # El tamano del icono (35-70 px) va por dispositivo, no por familia de
 # pantalla: no correlacionan (dos relojes de 454 px piden 65 y 70). Cada regla
 # incluye ademas el emblema de su familia, porque la regla de dispositivo
-# reemplaza a la de pantalla. Los de 65 px (fenix847mm, fr965) usan el icono
-# por defecto de shared/resources y su emblema por la familia round-454.
+# reemplaza a la de pantalla. Los de 65 px (fenix847mm, fr965, y del fenix 9
+# el 47 mm, el 9 Pro 47 y el 9 Pro 51) usan el icono por defecto de
+# shared/resources y su emblema por la familia: round-454, o round-466 en
+# el caso del 9 Pro 51 mm.
 
 # 35 px (pantalla base)
 vivoactive4.resourcePath = $(base.resourcePath);../shared/resources-icon35
@@ -79,6 +85,8 @@ fenix7xpronowifi.resourcePath = $(base.resourcePath);../shared/resources-icon40
 # su icono es de 65 px, el de shared/resources, y su emblema lo pone la familia.
 fenix8solar47mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fenix8solar51mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix9prosolar47mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
+fenix9prosolar51mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro3.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fr255.resourcePath = $(base.resourcePath);../shared/resources-icon40
@@ -91,6 +99,8 @@ vivoactive5.resourcePath = $(base.resourcePath);resources-large;../shared/resour
 
 # 60 px (emblema large)
 fenix843mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+fenix943mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+fenix9pro43mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 epix2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 fr265.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 fenixe.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60

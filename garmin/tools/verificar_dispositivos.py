@@ -37,6 +37,7 @@ EMBLEMA = {
     "round-390x390": "resources-large",
     "round-416x416": "resources-large",
     "round-454x454": "resources-large",
+    "round-466x466": "resources-large",
 }
 
 # El tamano del icono del lanzador va por dispositivo y no correlaciona con la
@@ -55,7 +56,7 @@ def reglas(proyecto):
     salida = {}
     with open(ruta, encoding="utf-8") as f:
         for linea in f:
-            m = re.match(r"^([a-z0-9_]+)\.resourcePath\s*=\s*(.+)$", linea.strip())
+            m = re.match(r"^([a-z0-9_-]+)\.resourcePath\s*=\s*(.+)$", linea.strip())
             if m:
                 salida[m.group(1)] = m.group(2)
     return salida
@@ -91,6 +92,20 @@ def revisar(proyecto):
         elif not os.path.isdir(os.path.join(RAIZ, "shared", carpeta)):
             fallos.append("%s: apunta a shared/%s, que no existe"
                           % (id_reloj, carpeta))
+
+        # La cuarta averia silenciosa, y la que se descubrio al entrar el
+        # fenix 9 Pro 51 mm: una familia de pantalla NUEVA que necesita
+        # emblema y no tiene su regla en el jungle. El reloj compila igual, sin
+        # un aviso, y se queda con el emblema de 240 px en una esfera de 466.
+        if proyecto == "app":
+            debe_familia = EMBLEMA.get(j["deviceFamily"])
+            if debe_familia and not regla:
+                de_familia = regla_de.get(j["deviceFamily"], "")
+                if debe_familia not in de_familia:
+                    fallos.append(
+                        "%s: su familia (%s) necesita %s y el jungle no la "
+                        "declara, asi que se queda con el emblema base"
+                        % (id_reloj, j["deviceFamily"], debe_familia))
 
         # El emblema solo esta en la app: el campo de datos no lo lleva.
         if proyecto == "app" and regla:
