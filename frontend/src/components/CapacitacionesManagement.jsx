@@ -291,6 +291,11 @@ export default function CapacitacionesManagement() {
                           </span>
                         )}
                         <span className="block text-muted-foreground text-xs truncate">{p.email}</span>
+                        {p.invitado_por && (
+                          <span className="block text-muted-foreground text-xs truncate">
+                            Invitado por {p.invitado_por}
+                          </span>
+                        )}
                       </span>
                       {p.telefono && <span className="text-muted-foreground text-xs shrink-0">{p.telefono}</span>}
                     </li>
