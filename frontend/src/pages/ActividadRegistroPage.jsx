@@ -156,19 +156,9 @@ export default function ActividadRegistroPage() {
         </div>
       </div>
 
-      {/* Programa */}
-      {actividad.program && (
-        <Card>
-          <CardContent className="p-5 sm:p-6">
-            <h2 className="font-semibold mb-3">Programa</h2>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-              {actividad.program}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Inscripción */}
+      {/* Inscripción: va antes del programa a proposito. Cuando el programa
+          es largo el formulario quedaba fuera de pantalla y pasaba
+          desapercibido; lo primero que se ve tiene que ser como apuntarse. */}
       {hecho ? (
         <Card className="border-green-300 bg-green-50/40" data-testid="actividad-registro-listo">
           <CardContent className="p-6 text-center space-y-3">
@@ -252,6 +242,18 @@ export default function ActividadRegistroPage() {
                   : 'Confirmar inscripción'}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Programa */}
+      {actividad.program && (
+        <Card>
+          <CardContent className="p-5 sm:p-6">
+            <h2 className="font-semibold mb-3">Programa</h2>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {actividad.program}
+            </p>
           </CardContent>
         </Card>
       )}
