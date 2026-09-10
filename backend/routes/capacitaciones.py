@@ -168,6 +168,7 @@ async def admin_participants(cap_id: str, authorization: Optional[str] = Header(
     return {"participants": [
         {"nombre_completo": r.get("nombre_completo", ""), "email": r.get("email", ""),
          "telefono": r.get("telefono", ""),
+         "invitado_por": r.get("invitado_por", ""),
          # Quien se apunto por la pagina publica, sin cuenta en el sitio
          "invitado": r.get("origen") == "publico",
          "registered_at": r.get("created_at").isoformat() if r.get("created_at") else None}
@@ -271,6 +272,10 @@ class InscripcionPublica(BaseModel):
     nombre_completo: str
     email: EmailStr
     telefono: str
+    # Quien le paso la invitacion. Opcional: a la charla tambien llega gente
+    # por su cuenta, y un campo obligatorio ahi solo se rellena con cualquier
+    # cosa. Sirve para saber por donde se esta corriendo la voz.
+    invitado_por: Optional[str] = None
 
 
 def _telefono_valido(telefono: str) -> str:
@@ -325,6 +330,7 @@ async def inscripcion_publica(cap_id: str, data: InscripcionPublica, request: Re
         raise HTTPException(status_code=400, detail="Escribe tu nombre y apellido")
     email = data.email.strip().lower()
     telefono = _telefono_valido(data.telefono)
+    invitado_por = " ".join((data.invitado_por or "").split())[:120]
 
     athlete = await database.athletes.find_one({"email": email}, {"_id": 1})
     athlete_id = str(athlete["_id"]) if athlete else None
@@ -343,6 +349,10 @@ async def inscripcion_publica(cap_id: str, data: InscripcionPublica, request: Re
     }
     if athlete_id:
         datos["athlete_id"] = athlete_id
+    # Solo si viene con algo: quien vuelve al enlace a corregir el telefono y
+    # deja este campo vacio no tiene por que borrar lo que ya habia contestado.
+    if invitado_por:
+        datos["invitado_por"] = invitado_por
 
     if existente:
         await database.capacitacion_registrations.update_one(
@@ -371,6 +381,7 @@ async def inscripcion_publica(cap_id: str, data: InscripcionPublica, request: Re
         "nombre_completo": nombre_completo,
         "email": email,
         "telefono": telefono,
+        "invitado_por": invitado_por or (existente or {}).get("invitado_por", ""),
     }
 
 

@@ -6,12 +6,23 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
   GraduationCap, Calendar, Clock, DollarSign, Users, Check, Loader2,
-  CalendarX, User, Mail, Phone,
+  CalendarX, User, Mail, Phone, UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getEndTime } from '../lib/duracion';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Por donde se reparte la invitacion: los grupos que la estan moviendo, mas
+// una salida libre para todo lo demas. Se escribe aqui, en una sola lista, y
+// se cambia aqui cuando se sumen o se caigan grupos.
+const INVITACION_OPCIONES = [
+  'Pico Duarte Express',
+  'Pico Diego de Ocampo',
+  'Senderitmo',
+  'Trillo Azul',
+];
+const OTROS = 'Otros';
 
 const fmtFecha = (iso) => {
   if (!iso) return '';
@@ -32,8 +43,8 @@ const fmtFecha = (iso) => {
  * crearse un perfil para sentarse a escuchar.
  *
  * El enlace se copia desde el panel (Actividades) y se reparte por correo o
- * WhatsApp. Admite ?nombre=, ?email= y ?telefono= para llegar con los datos ya
- * puestos y que la persona solo tenga que confirmarlos.
+ * WhatsApp. Admite ?nombre=, ?email=, ?telefono= e ?invitado_por= para llegar
+ * con los datos ya puestos y que la persona solo tenga que confirmarlos.
  */
 export default function ActividadRegistroPage() {
   const { id } = useParams();
@@ -47,6 +58,18 @@ export default function ActividadRegistroPage() {
     email: params.get('email') || '',
     telefono: params.get('telefono') || '',
   });
+  const [invitacion, setInvitacion] = useState(() => {
+    const previo = (params.get('invitado_por') || '').trim();
+    if (!previo) return { opcion: '', otro: '' };
+    return INVITACION_OPCIONES.includes(previo)
+      ? { opcion: previo, otro: '' }
+      : { opcion: OTROS, otro: previo };
+  });
+
+  // Lo que se guarda: el grupo elegido, o lo que escriba quien marca "Otros"
+  const invitadoPor = invitacion.opcion === OTROS
+    ? (invitacion.otro.trim() || OTROS)
+    : invitacion.opcion;
 
   const cargar = useCallback(async () => {
     try {
@@ -78,7 +101,7 @@ export default function ActividadRegistroPage() {
       const res = await fetch(`${API_URL}/api/capacitaciones/${id}/inscripcion-publica`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos),
+        body: JSON.stringify({ ...datos, invitado_por: invitadoPor }),
       });
       const respuesta = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -177,6 +200,9 @@ export default function ActividadRegistroPage() {
               <p className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground" />{hecho.nombre_completo}</p>
               <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />{hecho.email}</p>
               <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" />{hecho.telefono}</p>
+              {hecho.invitado_por && (
+                <p className="flex items-center gap-2"><UserPlus className="w-4 h-4 text-muted-foreground" />Te invitó {hecho.invitado_por}</p>
+              )}
             </div>
             <div className="pt-2">
               <Button variant="outline" onClick={() => setHecho(null)} data-testid="actividad-registro-otro">
@@ -190,7 +216,7 @@ export default function ActividadRegistroPage() {
           <CardContent className="p-5 sm:p-6">
             <h2 className="font-semibold">Confirma tus datos</h2>
             <p className="text-sm text-muted-foreground mt-1 mb-4">
-              No hace falta crear una cuenta: con estos tres datos queda hecha tu inscripción.
+              No hace falta crear una cuenta: con estos datos queda hecha tu inscripción.
             </p>
             <form onSubmit={enviar} className="space-y-4">
               <div className="space-y-1.5">
@@ -230,6 +256,33 @@ export default function ActividadRegistroPage() {
                   required
                   data-testid="actividad-telefono"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="invitado_por">
+                  ¿Por medio de quién recibiste la invitación?{' '}
+                  <span className="font-normal text-muted-foreground">(opcional)</span>
+                </Label>
+                <select
+                  id="invitado_por"
+                  value={invitacion.opcion}
+                  onChange={(e) => setInvitacion((i) => ({ ...i, opcion: e.target.value }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  data-testid="actividad-invitado-por"
+                >
+                  <option value="">Selecciona una opción</option>
+                  {INVITACION_OPCIONES.map((o) => <option key={o} value={o}>{o}</option>)}
+                  <option value={OTROS}>{OTROS}</option>
+                </select>
+                {invitacion.opcion === OTROS && (
+                  <Input
+                    value={invitacion.otro}
+                    onChange={(e) => setInvitacion((i) => ({ ...i, otro: e.target.value }))}
+                    placeholder="¿Quién te invitó?"
+                    maxLength={120}
+                    className="mt-2"
+                    data-testid="actividad-invitado-por-otro"
+                  />
+                )}
               </div>
               <Button
                 type="submit"
