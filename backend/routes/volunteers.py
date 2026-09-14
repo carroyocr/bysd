@@ -969,9 +969,44 @@ async def get_alimentacion(evento: Optional[str] = None):
         for indice, valores in sorted(cuenta["por_dia"].items())
     ]
 
+    # La lista de reparto: quien recibe que, y a que hora se le entrega. Es lo
+    # que se lleva a la mesa de comida para ir marcando.
+    entregas = []
+    for email, datos in cuenta["personas"].items():
+        for entrega in datos["entregas"]:
+            minuto = entrega["minuto"]
+            entregas.append({
+                "dia": alimentacion.etiqueta_dia(minuto, base),
+                "hora": f"{minuto % 1440 // 60:02d}:{minuto % 60:02d}",
+                "orden": minuto,
+                "tipo": entrega["tipo"],
+                "email": email,
+                "nombre": nombres.get(email, email),
+                "puesto": entrega["puesto"],
+                "turno": entrega["turno"],
+                "horario_turno": entrega["horario"],
+            })
+    entregas.sort(key=lambda e: (e["orden"], e["tipo"], e["nombre"].lower()))
+
+    # Lo mismo, contado: cuantas raciones de cada cosa hay que tener listas a
+    # cada hora.
+    resumen = {}
+    for entrega in entregas:
+        clave = (entrega["orden"], entrega["tipo"])
+        fila = resumen.setdefault(clave, {
+            "dia": entrega["dia"],
+            "hora": entrega["hora"],
+            "tipo": entrega["tipo"],
+            "cantidad": 0,
+        })
+        fila["cantidad"] += 1
+    entregas_resumen = [resumen[c] for c in sorted(resumen)]
+
     return {
         "totales": cuenta["totales"],
         "por_dia": por_dia,
+        "entregas": entregas,
+        "entregas_resumen": entregas_resumen,
         "voluntarios": voluntarios,
         "reglas": {
             "refrigerio_desde_horas": alimentacion.REFRIGERIO_DESDE_MIN / 60,

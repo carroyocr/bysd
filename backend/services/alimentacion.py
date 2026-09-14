@@ -166,11 +166,27 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
 
     cuenta = {"refrigerio": 0, "desayuno": 0, "almuerzo": 0, "cena": 0}
     por_dia = {}
+    entregas = []
 
-    def anotar(tipo, minuto):
+    def anotar(tipo, turno):
+        """Apunta una racion y cuando y donde se entrega.
+
+        Se entrega al empezar el turno que la genera: el refrigerio, al que lo
+        gana; la comida, al turno al que se entra, que es justo el cambio de
+        turno (el almuerzo de quien encadena 08-12 con 12-16 se reparte a las
+        12:00, cuando llega a su segundo puesto).
+        """
+        minuto = turno["inicio"]
         cuenta[tipo] += 1
         dia = por_dia.setdefault(minuto // 1440, {"refrigerio": 0, "desayuno": 0, "almuerzo": 0, "cena": 0})
         dia[tipo] += 1
+        entregas.append({
+            "tipo": tipo,
+            "minuto": minuto,
+            "puesto": turno["puesto"],
+            "turno": turno["turno"],
+            "horario": turno["horario"],
+        })
 
     # Nadie come dos veces a la misma hora. Un voluntario puede aparecer en dos
     # puestos que se pisan (el panel de asignaciones lo marca como conflicto) y
@@ -181,7 +197,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
             continue
         if fin_del_ultimo_refrigerio is not None and turno["inicio"] < fin_del_ultimo_refrigerio:
             continue
-        anotar("refrigerio", turno["inicio"])
+        anotar("refrigerio", turno)
         fin_del_ultimo_refrigerio = turno["fin"]
 
     jornadas = _jornadas(ordenados)
@@ -191,7 +207,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
             if comida:
                 # La comida se sirve en el turno al que se entra, que es el que
                 # dice de que dia es ese almuerzo o esa cena.
-                anotar(comida, siguiente["inicio"])
+                anotar(comida, siguiente)
 
     return {
         **cuenta,
@@ -208,6 +224,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
         ],
         "detalle_turnos": ordenados,
         "por_dia": por_dia,
+        "entregas": sorted(entregas, key=lambda e: (e["minuto"], e["tipo"])),
     }
 
 
