@@ -980,6 +980,7 @@ async def get_alimentacion(evento: Optional[str] = None):
                 "hora": f"{minuto % 1440 // 60:02d}:{minuto % 60:02d}",
                 "orden": minuto,
                 "tipo": entrega["tipo"],
+                "cantidad": entrega["cantidad"],
                 "email": email,
                 "nombre": nombres.get(email, email),
                 "puesto": entrega["puesto"],
@@ -999,7 +1000,7 @@ async def get_alimentacion(evento: Optional[str] = None):
             "tipo": entrega["tipo"],
             "cantidad": 0,
         })
-        fila["cantidad"] += 1
+        fila["cantidad"] += entrega["cantidad"]
     entregas_resumen = [resumen[c] for c in sorted(resumen)]
 
     return {
@@ -1010,6 +1011,9 @@ async def get_alimentacion(evento: Optional[str] = None):
         "voluntarios": voluntarios,
         "reglas": {
             "refrigerio_desde_horas": alimentacion.REFRIGERIO_DESDE_MIN / 60,
+            "horas_refrigerio": [
+                f"{h // 60:02d}:{h % 60:02d}" for h in alimentacion.HORAS_REFRIGERIO
+            ],
             "hueco_continuo_minutos": alimentacion.HUECO_CONTINUO_MIN,
             "franjas": {etiqueta: f"{desde // 60:02d}:00" for desde, etiqueta in alimentacion.FRANJAS},
             "comidas": {f"{a} a {b}": comida for (a, b), comida in alimentacion.COMIDA_DEL_SALTO.items()},
