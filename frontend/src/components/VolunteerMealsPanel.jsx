@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
   UtensilsCrossed, Coffee, Soup, Moon, Cookie, Users, RefreshCw, Loader2, Download,
+  Clock, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -28,10 +29,19 @@ const celdaCSV = (valor) => {
   return `"${texto.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
 };
 
+// Etiqueta en singular para el detalle de una entrega
+const NOMBRE_TIPO = {
+  refrigerio: 'Refrigerio',
+  desayuno: 'Desayuno',
+  almuerzo: 'Almuerzo',
+  cena: 'Cena',
+};
+
 export default function VolunteerMealsPanel() {
   const [evento, setEvento] = useState('carrera');
   const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [abiertos, setAbiertos] = useState([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -52,6 +62,28 @@ export default function VolunteerMealsPanel() {
   const voluntarios = datos?.voluntarios || [];
   const totales = datos?.totales || {};
   const porDia = datos?.por_dia || [];
+  const entregas = useMemo(() => datos?.entregas || [], [datos]);
+
+  // Las entregas agrupadas por el momento en que se reparten: es como se
+  // trabaja en la mesa de comida, una hora cada vez.
+  const momentos = useMemo(() => {
+    const mapa = new Map();
+    entregas.forEach((e) => {
+      const clave = `${e.dia} ${e.hora}`;
+      if (!mapa.has(clave)) {
+        mapa.set(clave, { clave, dia: e.dia, hora: e.hora, total: 0, porTipo: {} });
+      }
+      const momento = mapa.get(clave);
+      momento.total += 1;
+      (momento.porTipo[e.tipo] = momento.porTipo[e.tipo] || []).push(e);
+    });
+    return [...mapa.values()];
+  }, [entregas]);
+
+  const alternar = (clave) =>
+    setAbiertos((previos) =>
+      previos.includes(clave) ? previos.filter((c) => c !== clave) : [...previos, clave]
+    );
 
   // La cocina trabaja con la hoja; la pantalla es para mirar el total.
   const exportarCSV = () => {
@@ -92,6 +124,39 @@ export default function VolunteerMealsPanel() {
     toast.success(`${voluntarios.length} voluntario(s) exportado(s)`);
   };
 
+  // La hoja de reparto: una línea por ración, con su casilla para marcar.
+  const exportarEntregasCSV = () => {
+    if (entregas.length === 0) {
+      toast.error('No hay entregas que listar');
+      return;
+    }
+
+    const cabeceras = [
+      'Fecha', 'Hora', 'Comida', 'Voluntario', 'Email', 'Puesto', 'Turno', 'Entregado',
+    ];
+    const filas = entregas.map((e) => [
+      e.dia,
+      e.hora,
+      NOMBRE_TIPO[e.tipo] || e.tipo,
+      e.nombre,
+      e.email,
+      e.puesto,
+      `${e.turno} (${e.horario_turno})`,
+      '',
+    ]);
+
+    const contenido = '\ufeff' + [cabeceras, ...filas]
+      .map((fila) => fila.map(celdaCSV).join(','))
+      .join('\n');
+
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8;' }));
+    enlace.download = `entregas-alimentacion-${evento}-${new Date().toISOString().split('T')[0]}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+    toast.success(`${entregas.length} entrega(s) exportada(s)`);
+  };
+
   return (
     <div className="space-y-6" data-testid="volunteer-meals-panel">
       {/* Header */}
@@ -111,7 +176,17 @@ export default function VolunteerMealsPanel() {
             data-testid="export-alimentacion-csv"
           >
             <Download className="w-4 h-4 mr-2" />
-            Descargar CSV
+            Resumen (CSV)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportarEntregasCSV}
+            disabled={loading || entregas.length === 0}
+            data-testid="export-entregas-csv"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Entregas (CSV)
           </Button>
           <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -203,6 +278,79 @@ export default function VolunteerMealsPanel() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quien come y a que hora: la hoja de reparto */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-[#E8772E]" />
+                Entregas por fecha y hora
+                <Badge variant="secondary">{entregas.length}</Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Cada ración en el momento en que se reparte, al empezar el turno que la gana.
+                Abre una hora para ver quién la recibe.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y" data-testid="meals-deliveries">
+                {momentos.map((momento) => {
+                  const abierto = abiertos.includes(momento.clave);
+                  return (
+                    <div key={momento.clave}>
+                      <button
+                        type="button"
+                        onClick={() => alternar(momento.clave)}
+                        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-gray-50"
+                        data-testid={`delivery-${momento.clave}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {abierto ? (
+                            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="font-medium">{momento.dia}</span>
+                          <span className="font-mono text-sm text-muted-foreground">{momento.hora}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          {TIPOS.filter((t) => momento.porTipo[t.key]).map((t) => (
+                            <Badge key={t.key} variant="outline" className={t.clase}>
+                              {momento.porTipo[t.key].length} {t.label.toLowerCase()}
+                            </Badge>
+                          ))}
+                        </div>
+                      </button>
+                      {abierto && (
+                        <div className="px-4 pb-4 space-y-3 bg-gray-50/60">
+                          {TIPOS.filter((t) => momento.porTipo[t.key]).map((t) => (
+                            <div key={t.key}>
+                              <div className="text-xs font-medium uppercase text-muted-foreground py-2">
+                                {t.label} ({momento.porTipo[t.key].length})
+                              </div>
+                              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
+                                {momento.porTipo[t.key].map((e, i) => (
+                                  <div key={`${e.email}-${e.tipo}-${i}`} className="text-sm">
+                                    <span className="font-medium">{e.nombre}</span>
+                                    <span className="text-muted-foreground"> · {e.puesto}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {momentos.length === 0 && (
+                  <p className="px-4 py-8 text-center text-gray-400">
+                    No hay entregas: nadie tiene turnos asignados en este evento
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

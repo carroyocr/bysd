@@ -171,6 +171,50 @@ class TestDias:
         assert alimentacion.etiqueta_dia(0, base) == "2026-01-24"
 
 
+class TestEntregas:
+    """Quien recibe que, y a que hora se le entrega."""
+
+    def test_el_refrigerio_se_entrega_al_empezar_el_turno(self):
+        cuenta = alimentacion.calcular_voluntario([turno("16:00", "20:00", puesto="Hidratación")])
+        assert cuenta["entregas"] == [{
+            "tipo": "refrigerio",
+            "minuto": 16 * 60,
+            "puesto": "Hidratación",
+            "turno": "A",
+            "horario": "16:00-20:00",
+        }]
+
+    def test_la_comida_se_entrega_en_el_cambio_de_turno(self):
+        cuenta = alimentacion.calcular_voluntario([
+            turno("08:00", "12:00", puesto="Control de Vueltas"),
+            turno("12:00", "16:00", puesto="Hidratación"),
+        ])
+        almuerzo = [e for e in cuenta["entregas"] if e["tipo"] == "almuerzo"]
+        assert len(almuerzo) == 1
+        # A las 12:00, en el puesto al que llega
+        assert almuerzo[0]["minuto"] == 12 * 60
+        assert almuerzo[0]["puesto"] == "Hidratación"
+
+    def test_las_entregas_salen_en_orden_de_hora(self):
+        cuenta = alimentacion.calcular_voluntario([
+            turno("16:00", "20:00"),
+            turno("08:00", "12:00"),
+            turno("12:00", "16:00"),
+        ])
+        minutos = [e["minuto"] for e in cuenta["entregas"]]
+        assert minutos == sorted(minutos)
+        # 3 refrigerios + 1 almuerzo (mañana a tarde); 16:00 es tarde otra vez
+        assert len(cuenta["entregas"]) == 4
+
+    def test_la_entrega_de_madrugada_cae_en_el_dia_siguiente(self):
+        cuenta = alimentacion.calcular_voluntario([
+            turno("20:00", "00:00", dia_tipo="carrera_dia1"),
+            turno("00:00", "04:00", dia_tipo="carrera_dia2"),
+        ])
+        horas = [(e["minuto"] // 1440, e["minuto"] % 1440 // 60) for e in cuenta["entregas"]]
+        assert horas == [(0, 20), (1, 0)]
+
+
 class TestTotales:
     def test_los_totales_suman_a_todas_las_personas(self):
         resultado = alimentacion.calcular({
