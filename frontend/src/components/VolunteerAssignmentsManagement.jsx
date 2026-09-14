@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -549,6 +549,35 @@ export default function VolunteerAssignmentsManagement() {
     toast.success(`${filteredVolunteers.length} voluntario(s) exportado(s)`);
   };
 
+  // El taller de camisetas solo necesita tres columnas, y del voluntario no
+  // hay nombre estampado que dar: en su registro solo se pide la talla.
+  const exportarCamisetasCSV = () => {
+    if (filteredVolunteers.length === 0) {
+      toast.error('No hay voluntarios para exportar');
+      return;
+    }
+
+    const cabeceras = ['Sexo', 'Talla', 'Nombre completo'];
+    const filas = filteredVolunteers
+      .map((v) => [
+        v.sexo || '',
+        v.talla_camiseta || '',
+        `${v.nombre || ''} ${v.apellidos || ''}`.trim(),
+      ])
+      .sort((a, b) => a[2].localeCompare(b[2], 'es'));
+
+    const contenido = '\ufeff' + [cabeceras, ...filas]
+      .map(fila => fila.map(celdaCSV).join(','))
+      .join('\n');
+
+    const enlace = document.createElement('a');
+    enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8;' }));
+    enlace.download = `camisetas-voluntarios-${new Date().toISOString().split('T')[0]}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(enlace.href);
+    toast.success(`${filteredVolunteers.length} voluntario(s) exportado(s)`);
+  };
+
   // Statistics (scoped to the selected event)
   const totalVolunteers = eventVolunteers.length;
   const totalFormalAssignments = eventSlots.filter(s => s.email_asignado).length;
@@ -642,6 +671,16 @@ export default function VolunteerAssignmentsManagement() {
               >
                 <Download className="w-4 h-4 mr-2" />
                 Descargar CSV ({filteredVolunteers.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportarCamisetasCSV}
+                disabled={loading || filteredVolunteers.length === 0}
+                data-testid="export-camisetas-csv"
+              >
+                <Shirt className="w-4 h-4 mr-2" />
+                Camisetas (CSV)
               </Button>
               <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
