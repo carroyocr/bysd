@@ -889,6 +889,99 @@ async def get_volunteers_with_assignments():
     return result
 
 
+@router.get("/alimentacion")
+async def get_alimentacion(evento: Optional[str] = None):
+    """Cuanta comida hay que pedir para los voluntarios, segun sus turnos.
+
+    Las reglas viven en services/alimentacion.py; aqui solo se leen los turnos
+    asignados del evento y se les pone nombre a los correos.
+    """
+    from server import db as database
+    from services import alimentacion
+
+    # Hay cupos viejos con el correo en blanco: no son nadie, no comen.
+    query = {"email_asignado": {"$nin": [None, ""]}}
+    if evento in VALID_EVENTOS:
+        query.update(evento_query(evento))
+
+    slots = await database.volunteer_assignments.find(
+        query,
+        {"_id": 0, "email_asignado": 1, "puesto": 1, "turno": 1, "dia": 1,
+         "dia_tipo": 1, "hora_inicio": 1, "hora_fin": 1},
+    ).to_list(3000)
+
+    turnos_por_persona = {}
+    for slot in slots:
+        turnos_por_persona.setdefault(slot["email_asignado"], []).append(slot)
+
+    base = alimentacion.base_del_evento(slots)
+    cuenta = alimentacion.calcular(turnos_por_persona, base)
+
+    # Nombre de cada voluntario: puede estar en cualquiera de las dos colecciones
+    correos = list(turnos_por_persona.keys())
+    nombres = {}
+    for coleccion in ("volunteers", "volunteer_registrations"):
+        registros = await database[coleccion].find(
+            {"email": {"$in": correos}},
+            {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1},
+        ).to_list(2000)
+        for r in registros:
+            nombre = f"{r.get('nombre', '')} {r.get('apellidos', '')}".strip()
+            if nombre:
+                nombres.setdefault(r["email"], nombre)
+
+    voluntarios = []
+    for email, datos in cuenta["personas"].items():
+        voluntarios.append({
+            "email": email,
+            "nombre": nombres.get(email, email),
+            "turnos": datos["turnos"],
+            "horas": round(datos["minutos"] / 60, 1),
+            "refrigerio": datos["refrigerio"],
+            "desayuno": datos["desayuno"],
+            "almuerzo": datos["almuerzo"],
+            "cena": datos["cena"],
+            "total_comidas": datos["total_comidas"],
+            "jornadas": [
+                {
+                    "dia": alimentacion.etiqueta_dia(j["inicio"], base),
+                    "desde": f"{j['inicio'] % 1440 // 60:02d}:{j['inicio'] % 60:02d}",
+                    "hasta": f"{j['fin'] % 1440 // 60:02d}:{j['fin'] % 60:02d}",
+                    "turnos": j["turnos"],
+                }
+                for j in datos["jornadas"]
+            ],
+            "detalle_turnos": [
+                {
+                    "dia": alimentacion.etiqueta_dia(t["inicio"], base),
+                    "puesto": t["puesto"],
+                    "turno": t["turno"],
+                    "horario": t["horario"],
+                    "franja": t["franja"],
+                }
+                for t in datos["detalle_turnos"]
+            ],
+        })
+    voluntarios.sort(key=lambda v: v["nombre"].lower())
+
+    por_dia = [
+        {"dia": alimentacion.etiqueta_dia(indice * 1440, base), **valores}
+        for indice, valores in sorted(cuenta["por_dia"].items())
+    ]
+
+    return {
+        "totales": cuenta["totales"],
+        "por_dia": por_dia,
+        "voluntarios": voluntarios,
+        "reglas": {
+            "refrigerio_desde_horas": alimentacion.REFRIGERIO_DESDE_MIN / 60,
+            "hueco_continuo_minutos": alimentacion.HUECO_CONTINUO_MIN,
+            "franjas": {etiqueta: f"{desde // 60:02d}:00" for desde, etiqueta in alimentacion.FRANJAS},
+            "comidas": {f"{a} a {b}": comida for (a, b), comida in alimentacion.COMIDA_DEL_SALTO.items()},
+        },
+    }
+
+
 # ============================================================================
 # SCHEDULER ENDPOINTS
 # ============================================================================

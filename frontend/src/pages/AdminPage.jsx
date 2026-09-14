@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
-  Bell, Radio, Eye, ShieldAlert, FileText
+  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -16,6 +16,7 @@ import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
 import SponsorsManagement from '../components/SponsorsManagement';
 import VolunteerConfigManagement from '../components/VolunteerConfigManagement';
+import VolunteerMealsPanel from '../components/VolunteerMealsPanel';
 import VolunteerAssignmentsManagement from '../components/VolunteerAssignmentsManagement';
 import VolunteerProfilesManagement from '../components/VolunteerProfilesManagement';
 import FinancesManagement from '../components/FinancesManagement';
@@ -63,6 +64,7 @@ const TAB_PERMISSIONS = {
   'volunteers': ['shifts', 'volunteers'],
   'assignments': ['assignments', 'volunteers'],
   'volunteer-profiles': ['volunteer-profiles', 'volunteers'],
+  'alimentacion': ['alimentacion', 'volunteers'],
   'sponsors': ['sponsors'],
   'surveys': ['surveys'],
   'config': ['race-config', 'config'],
@@ -119,6 +121,7 @@ const ADMIN_SECTIONS = [
       { id: 'assignments', label: 'Voluntarios', icon: ClipboardCheck },
       { id: 'volunteer-profiles', label: 'Perfiles', icon: Users },
       { id: 'volunteers', label: 'Turnos', icon: CalendarClock },
+      { id: 'alimentacion', label: 'Alimentación', icon: UtensilsCrossed },
     ],
   },
   {
@@ -187,6 +190,7 @@ const TAB_VIEWS = {
   'assignments': () => <VolunteerAssignmentsManagement />,
   'volunteer-profiles': () => <VolunteerProfilesManagement />,
   'volunteers': () => <VolunteerConfigManagement />,
+  'alimentacion': () => <VolunteerMealsPanel />,
   'capacitaciones': () => <CapacitacionesManagement />,
   'sponsors': () => <SponsorsManagement />,
   'finances': () => <FinancesManagement />,
