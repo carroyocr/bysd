@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
   Search, Medal, Shield, RefreshCw, Loader2, Trash2, ArrowLeftRight, UserPlus,
-  Pencil, X, Save
+  Pencil, X, Save, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -37,6 +37,7 @@ export default function SeleccionadosManagement() {
 
   // Alta manual de un seleccionado externo (no corrió el evento previo)
   const [showManualForm, setShowManualForm] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const [manualData, setManualData] = useState({ ...MANUAL_VACIO });
   const [savingManual, setSavingManual] = useState(false);
 
@@ -138,6 +139,31 @@ export default function SeleccionadosManagement() {
       toast.error('Error de conexión');
     } finally {
       setSavingManual(false);
+    }
+  };
+
+  // El taller de camisetas trabaja con una hoja, no con la pantalla: sexo,
+  // talla, el nombre completo y el que va estampado.
+  const handleExportCamisetas = async () => {
+    setExportando(true);
+    try {
+      const res = await adminFetch(`${API_URL}/api/seleccionados/admin/camisetas/export`);
+      if (!res.ok) throw new Error('No se pudo generar el archivo');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `camisetas-seleccionados-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      window.URL.revokeObjectURL(url);
+      enlace.remove();
+      toast.success('Desglose de camisetas descargado');
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -272,12 +298,28 @@ export default function SeleccionadosManagement() {
   return (
     <div className="space-y-6" data-testid="seleccionados-management">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold">Seleccionados — Campeonato Mundial por Equipos</h2>
-        <p className="text-muted-foreground">
-          Quién va al campeonato: titulares y reservas, a partir de los atletas
-          del evento previo (BYSD-2026)
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold">Seleccionados — Campeonato Mundial por Equipos</h2>
+          <p className="text-muted-foreground">
+            Quién va al campeonato: titulares y reservas, a partir de los atletas
+            del evento previo (BYSD-2026)
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCamisetas}
+          disabled={exportando || seleccionados.length === 0}
+          data-testid="export-camisetas-csv"
+        >
+          {exportando ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          Camisetas (CSV)
+        </Button>
       </div>
 
       {/* Stats */}

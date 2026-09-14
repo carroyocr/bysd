@@ -7,9 +7,12 @@ archived_participants / participants; al seleccionar uno se copia su ficha a
 la colección campeonato_seleccionados.
 """
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
+import csv
+import io
 import re
 import uuid
 
@@ -176,6 +179,97 @@ async def list_seleccionados(db=Depends(get_db)):
             "total": len(docs),
         },
     }
+
+
+@router.get("/admin/camisetas/export", dependencies=[solo_atletas])
+async def export_camisetas(db=Depends(get_db)):
+    """Desglose de camisetas de la seleccion, en CSV, para el taller.
+
+    La talla y el nombre que va estampado no se digitan aqui: los pone el
+    propio atleta, en su inscripcion al campeonato o en su perfil. Se miran
+    los dos sitios, en ese orden, porque la nomina se arma antes de que el
+    atleta llene nada y lo que llene despues puede quedar en cualquiera de
+    los dos. Lo que siga vacio sale vacio: es justo lo que hay que reclamar.
+    """
+    from bson import ObjectId
+
+    seleccionados = await db.campeonato_seleccionados.find({}, {"_id": 0}).to_list(500)
+
+    inscripciones = await db.registrations.find(
+        {"race_code": MUNDIAL},
+        {
+            "_id": 0, "seleccionado_id": 1, "athlete_id": 1, "email": 1,
+            "sexo": 1, "talla_camiseta": 1, "personalizacion_camiseta": 1,
+        },
+    ).to_list(500)
+    inscripcion_de = {
+        i["seleccionado_id"]: i for i in inscripciones if i.get("seleccionado_id")
+    }
+
+    # Los perfiles que hagan falta, de una sola pasada
+    ids, correos = [], []
+    for inscripcion in inscripcion_de.values():
+        if inscripcion.get("athlete_id"):
+            try:
+                ids.append(ObjectId(inscripcion["athlete_id"]))
+            except Exception:
+                pass
+        correo = (inscripcion.get("email") or "").lower()
+        if correo and not correo.endswith(".invalid"):
+            correos.append(correo)
+
+    atletas = []
+    if ids or correos:
+        atletas = await db.athletes.find(
+            {"$or": [{"_id": {"$in": ids}}, {"email": {"$in": correos}}]},
+            {"sexo": 1, "talla_camiseta": 1, "personalizacion_camiseta": 1, "email": 1},
+        ).to_list(500)
+    atleta_por_id = {str(a["_id"]): a for a in atletas}
+    atleta_por_correo = {(a.get("email") or "").lower(): a for a in atletas}
+
+    def perfil(inscripcion):
+        if not inscripcion:
+            return {}
+        por_id = atleta_por_id.get(inscripcion.get("athlete_id") or "")
+        if por_id:
+            return por_id
+        return atleta_por_correo.get((inscripcion.get("email") or "").lower(), {})
+
+    filas = []
+    for sel in seleccionados:
+        inscripcion = inscripcion_de.get(sel.get("id")) or {}
+        atleta = perfil(inscripcion)
+
+        def dato(campo):
+            for fuente in (inscripcion, atleta, sel):
+                valor = (fuente.get(campo) or "").strip()
+                if valor:
+                    return valor
+            return ""
+
+        filas.append([
+            dato("sexo"),
+            dato("talla_camiseta"),
+            f"{sel.get('nombre', '')} {sel.get('apellidos', '')}".strip(),
+            dato("personalizacion_camiseta"),
+        ])
+
+    filas.sort(key=lambda f: f[2].lower())
+
+    salida = io.StringIO()
+    salida.write("\ufeff")  # para que Excel abra los acentos bien
+    escritor = csv.writer(salida)
+    escritor.writerow(["Sexo", "Talla", "Nombre completo", "Nombre en camiseta"])
+    escritor.writerows(filas)
+    salida.seek(0)
+
+    return StreamingResponse(
+        iter([salida.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=camisetas_seleccionados.csv"
+        },
+    )
 
 
 @router.post("/admin", dependencies=[solo_atletas])
