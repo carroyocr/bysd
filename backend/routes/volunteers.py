@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -889,12 +889,11 @@ async def get_volunteers_with_assignments():
     return result
 
 
-@router.get("/alimentacion")
-async def get_alimentacion(evento: Optional[str] = None):
-    """Cuanta comida hay que pedir para los voluntarios, segun sus turnos.
+async def _raciones_del_evento(evento: Optional[str]):
+    """Lo que come cada voluntario del evento: cuenta, nombres y entregas.
 
-    Las reglas viven en services/alimentacion.py; aqui solo se leen los turnos
-    asignados del evento y se les pone nombre a los correos.
+    Lo comparten la pantalla de alimentacion y los tickets, que son la misma
+    cuenta mirada de dos maneras.
     """
     from server import db as database
     from services import alimentacion
@@ -929,6 +928,46 @@ async def get_alimentacion(evento: Optional[str] = None):
             nombre = f"{r.get('nombre', '')} {r.get('apellidos', '')}".strip()
             if nombre:
                 nombres.setdefault(r["email"], nombre)
+
+    # La lista de reparto: quien recibe que, y a que hora se le entrega.
+    entregas = []
+    for email, datos in cuenta["personas"].items():
+        for entrega in datos["entregas"]:
+            minuto = entrega["minuto"]
+            entregas.append({
+                "dia": alimentacion.etiqueta_dia(minuto, base),
+                "hora": f"{minuto % 1440 // 60:02d}:{minuto % 60:02d}",
+                "orden": minuto,
+                "tipo": entrega["tipo"],
+                "cantidad": entrega["cantidad"],
+                "email": email,
+                "nombre": nombres.get(email, email),
+                "puesto": entrega["puesto"],
+                "turno": entrega["turno"],
+                "horario_turno": entrega["horario"],
+            })
+    entregas.sort(key=lambda e: (e["orden"], e["tipo"], e["nombre"].lower()))
+
+    return cuenta, nombres, base, entregas
+
+
+def _etiqueta_evento(evento: Optional[str]) -> str:
+    return {
+        "carrera": "Carrera Activa",
+        "campeonato": "Campeonato Mundial por Equipos",
+    }.get(evento, "Todos los eventos")
+
+
+@router.get("/alimentacion")
+async def get_alimentacion(evento: Optional[str] = None):
+    """Cuanta comida hay que pedir para los voluntarios, segun sus turnos.
+
+    Las reglas viven en services/alimentacion.py; aqui solo se leen los turnos
+    asignados del evento y se les pone nombre a los correos.
+    """
+    from services import alimentacion
+
+    cuenta, nombres, base, entregas = await _raciones_del_evento(evento)
 
     voluntarios = []
     for email, datos in cuenta["personas"].items():
@@ -969,28 +1008,8 @@ async def get_alimentacion(evento: Optional[str] = None):
         for indice, valores in sorted(cuenta["por_dia"].items())
     ]
 
-    # La lista de reparto: quien recibe que, y a que hora se le entrega. Es lo
-    # que se lleva a la mesa de comida para ir marcando.
-    entregas = []
-    for email, datos in cuenta["personas"].items():
-        for entrega in datos["entregas"]:
-            minuto = entrega["minuto"]
-            entregas.append({
-                "dia": alimentacion.etiqueta_dia(minuto, base),
-                "hora": f"{minuto % 1440 // 60:02d}:{minuto % 60:02d}",
-                "orden": minuto,
-                "tipo": entrega["tipo"],
-                "cantidad": entrega["cantidad"],
-                "email": email,
-                "nombre": nombres.get(email, email),
-                "puesto": entrega["puesto"],
-                "turno": entrega["turno"],
-                "horario_turno": entrega["horario"],
-            })
-    entregas.sort(key=lambda e: (e["orden"], e["tipo"], e["nombre"].lower()))
-
-    # Lo mismo, contado: cuantas raciones de cada cosa hay que tener listas a
-    # cada hora.
+    # La misma lista de reparto, contada: cuantas raciones de cada cosa hay
+    # que tener listas a cada hora.
     resumen = {}
     for entrega in entregas:
         clave = (entrega["orden"], entrega["tipo"])
@@ -1019,6 +1038,126 @@ async def get_alimentacion(evento: Optional[str] = None):
             "comidas": {f"{a} a {b}": comida for (a, b), comida in alimentacion.COMIDA_DEL_SALTO.items()},
         },
     }
+
+
+@router.get("/tickets-alimentacion")
+async def tickets_alimentacion(evento: Optional[str] = None):
+    """Los tickets de comida en hojas para imprimir y recortar.
+
+    Se le entregan al voluntario con su camiseta: van agrupados por persona
+    para poder recortar el juego completo de una.
+    """
+    from services import tickets_alimentacion as tickets
+
+    _cuenta, _nombres, _base, entregas = await _raciones_del_evento(evento)
+
+    hojas = tickets.construir_pdf(
+        tickets.preparar(entregas), _etiqueta_evento(evento)
+    )
+    nombre = f"tickets-alimentacion-{evento or 'todos'}.pdf"
+
+    return StreamingResponse(
+        hojas,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={nombre}"},
+    )
+
+
+@router.get("/reporte-posiciones")
+async def reporte_posiciones(evento: Optional[str] = None):
+    """El cuadro de cada puesto en un Excel, para mandarselo a su coordinador.
+
+    Una hoja por puesto con sus turnos, quien los cubre, como localizarlo y que
+    comida le toca; y una hoja de resumen con los cupos que faltan.
+    """
+    from server import db as database
+    from services import alimentacion, reporte_posiciones
+
+    query = evento_query(evento) if evento in VALID_EVENTOS else {}
+    slots = await database.volunteer_assignments.find(query, {"_id": 0}).to_list(3000)
+
+    # Ficha de cada voluntario. La coleccion nueva manda; la vieja solo tiene
+    # nombre y telefono, y sirve de respaldo para los que no se han re-inscrito.
+    correos = sorted({s["email_asignado"] for s in slots if s.get("email_asignado")})
+    fichas = {}
+    for coleccion in ("volunteers", "volunteer_registrations"):
+        registros = await database[coleccion].find(
+            {"email": {"$in": correos}}, {"_id": 0}
+        ).to_list(2000)
+        for r in registros:
+            ficha = fichas.setdefault(r["email"], {})
+            for campo, valor in r.items():
+                if valor not in (None, ""):
+                    ficha[campo] = valor
+
+    # La comida que le toca a cada quien, turno por turno
+    turnos_por_persona = {}
+    for slot in slots:
+        if slot.get("email_asignado"):
+            turnos_por_persona.setdefault(slot["email_asignado"], []).append(slot)
+    base = alimentacion.base_del_evento(slots)
+    cuenta = alimentacion.calcular(turnos_por_persona, base)
+
+    def comida_del_turno(email: str, inicio: int) -> str:
+        entregas = cuenta["personas"].get(email, {}).get("entregas", [])
+        texto = []
+        for entrega in entregas:
+            if inicio in entrega["turnos_origen"]:
+                minuto = entrega["minuto"]
+                hora = f"{minuto % 1440 // 60:02d}:{minuto % 60:02d}"
+                texto.append(f"{entrega['tipo'].capitalize()} {hora}")
+        return " · ".join(texto)
+
+    def fila_voluntario(email: str, inicio: int) -> dict:
+        ficha = fichas.get(email, {})
+        emergencia = " ".join(filter(None, [
+            ficha.get("contacto_emergencia_nombre", ""),
+            f"({ficha['contacto_emergencia_relacion']})" if ficha.get("contacto_emergencia_relacion") else "",
+            ficha.get("contacto_emergencia_telefono", ""),
+        ])).strip()
+        return {
+            "voluntario": f"{ficha.get('nombre', '')} {ficha.get('apellidos', '')}".strip() or email,
+            "telefono": ficha.get("telefono", ""),
+            "email": email,
+            "talla": ficha.get("talla_camiseta", ""),
+            "tipo_sangre": ficha.get("tipo_sangre", ""),
+            "emergencia": emergencia,
+            "alimentacion": comida_del_turno(email, inicio),
+        }
+
+    # Los cupos agrupados por puesto y por franja horaria
+    puestos = {}
+    for slot in slots:
+        inicio, fin = alimentacion.intervalo(slot, base)
+        puesto = slot.get("puesto") or "Sin puesto"
+        clave = (inicio, fin, slot.get("turno") or "")
+        turno = puestos.setdefault(puesto, {}).setdefault(clave, {
+            "dia": alimentacion.etiqueta_dia(inicio, base),
+            "turno": slot.get("turno") or "",
+            "horario": f"{inicio % 1440 // 60:02d}:{inicio % 60:02d}-{fin % 1440 // 60:02d}:{fin % 60:02d}",
+            "inicio": inicio,
+            "cupos": 0,
+            "equipo": [],
+        })
+        turno["cupos"] += 1
+        if slot.get("email_asignado"):
+            turno["equipo"].append(fila_voluntario(slot["email_asignado"], inicio))
+
+    posiciones = []
+    for puesto in sorted(puestos, key=str.lower):
+        turnos = [puestos[puesto][clave] for clave in sorted(puestos[puesto])]
+        for turno in turnos:
+            turno["equipo"].sort(key=lambda v: v["voluntario"].lower())
+        posiciones.append({"puesto": puesto, "turnos": turnos})
+
+    libro = reporte_posiciones.construir_libro(posiciones, _etiqueta_evento(evento))
+    nombre = f"voluntarios-por-posicion-{evento or 'todos'}.xlsx"
+
+    return StreamingResponse(
+        libro,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={nombre}"},
+    )
 
 
 # ============================================================================

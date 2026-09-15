@@ -184,8 +184,9 @@ def _fundir_entregas(entregas: list) -> list:
         clave = (entrega["minuto"], entrega["tipo"])
         if clave in fundidas:
             fundidas[clave]["cantidad"] += entrega["cantidad"]
+            fundidas[clave]["turnos_origen"] += entrega["turnos_origen"]
         else:
-            fundidas[clave] = dict(entrega)
+            fundidas[clave] = {**entrega, "turnos_origen": list(entrega["turnos_origen"])}
     return [fundidas[c] for c in sorted(fundidas)]
 
 
@@ -237,6 +238,9 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
             "puesto": turno["puesto"],
             "turno": turno["turno"],
             "horario": turno["horario"],
+            # De que turno sale la racion, para poder listarla en el reporte
+            # que se le manda al coordinador de ese puesto.
+            "turnos_origen": [turno["inicio"]],
         })
 
     # Nadie come dos veces a la misma hora. Un voluntario puede aparecer en dos

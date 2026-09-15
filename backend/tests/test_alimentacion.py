@@ -184,6 +184,7 @@ class TestEntregas:
             "puesto": "Hidratación",
             "turno": "A",
             "horario": "08:00-12:00",
+            "turnos_origen": [8 * 60],
         }]
 
     def test_cada_turno_recoge_en_la_mesa_que_le_cae_dentro(self):
