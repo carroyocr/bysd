@@ -174,15 +174,53 @@ class TestDias:
 class TestEntregas:
     """Quien recibe que, y a que hora se le entrega."""
 
-    def test_el_refrigerio_se_entrega_al_empezar_el_turno(self):
-        cuenta = alimentacion.calcular_voluntario([turno("16:00", "20:00", puesto="Hidratación")])
+    def test_el_refrigerio_se_recoge_en_el_reparto_de_su_turno(self):
+        # 08-12 pasa por la mesa de las 9:30
+        cuenta = alimentacion.calcular_voluntario([turno("08:00", "12:00", puesto="Hidratación")])
         assert cuenta["entregas"] == [{
             "tipo": "refrigerio",
-            "minuto": 16 * 60,
+            "minuto": 9 * 60 + 30,
+            "cantidad": 1,
             "puesto": "Hidratación",
             "turno": "A",
-            "horario": "16:00-20:00",
+            "horario": "08:00-12:00",
+            "turnos_origen": [8 * 60],
         }]
+
+    def test_cada_turno_recoge_en_la_mesa_que_le_cae_dentro(self):
+        casos = {
+            ("00:00", "04:00"): 1 * 60,
+            ("07:30", "12:00"): 9 * 60 + 30,
+            ("08:00", "12:00"): 9 * 60 + 30,
+            ("12:00", "16:00"): 14 * 60 + 30,
+            ("20:00", "00:00"): 20 * 60 + 30,
+        }
+        for (desde, hasta), minuto in casos.items():
+            cuenta = alimentacion.calcular_voluntario([turno(desde, hasta)])
+            assert cuenta["entregas"][0]["minuto"] == minuto, (desde, hasta)
+
+    def test_el_turno_sin_mesa_dentro_recoge_en_la_mas_cercana(self):
+        # 16-20 no alcanza ninguna de las cuatro: la de las 20:30 es la de al
+        # lado (media hora despues de salir), y nunca una anterior a entrar
+        cuenta = alimentacion.calcular_voluntario([turno("16:00", "20:00")])
+        assert cuenta["entregas"][0]["minuto"] == 20 * 60 + 30
+
+        # 04-08 recoge en la de las 9:30, hora y media despues de salir
+        cuenta = alimentacion.calcular_voluntario([turno("04:00", "08:00")])
+        assert cuenta["entregas"][0]["minuto"] == 9 * 60 + 30
+
+    def test_dos_refrigerios_en_la_misma_mesa_salen_en_una_linea(self):
+        # 04-08 y 08-12 recogen los dos a las 9:30
+        cuenta = alimentacion.calcular_voluntario([
+            turno("04:00", "08:00"),
+            turno("08:00", "12:00"),
+        ])
+        refrigerios = [e for e in cuenta["entregas"] if e["tipo"] == "refrigerio"]
+        assert len(refrigerios) == 1
+        assert refrigerios[0]["cantidad"] == 2
+        assert refrigerios[0]["minuto"] == 9 * 60 + 30
+        # La cuenta no cambia: siguen siendo dos raciones
+        assert cuenta["refrigerio"] == 2
 
     def test_la_comida_se_entrega_en_el_cambio_de_turno(self):
         cuenta = alimentacion.calcular_voluntario([
@@ -203,16 +241,18 @@ class TestEntregas:
         ])
         minutos = [e["minuto"] for e in cuenta["entregas"]]
         assert minutos == sorted(minutos)
-        # 3 refrigerios + 1 almuerzo (mañana a tarde); 16:00 es tarde otra vez
+        # 3 refrigerios (9:30, 14:30, 20:30) + 1 almuerzo (mañana a tarde)
         assert len(cuenta["entregas"]) == 4
+        assert sum(e["cantidad"] for e in cuenta["entregas"]) == 4
 
     def test_la_entrega_de_madrugada_cae_en_el_dia_siguiente(self):
         cuenta = alimentacion.calcular_voluntario([
             turno("20:00", "00:00", dia_tipo="carrera_dia1"),
             turno("00:00", "04:00", dia_tipo="carrera_dia2"),
         ])
-        horas = [(e["minuto"] // 1440, e["minuto"] % 1440 // 60) for e in cuenta["entregas"]]
-        assert horas == [(0, 20), (1, 0)]
+        # 20:30 del dia 1 y 01:00 del dia 2
+        horas = [(e["minuto"] // 1440, e["minuto"] % 1440) for e in cuenta["entregas"]]
+        assert horas == [(0, 20 * 60 + 30), (1, 60)]
 
 
 class TestTotales:

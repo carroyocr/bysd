@@ -41,6 +41,15 @@ COMIDAS = ("desayuno", "almuerzo", "cena")
 # Un turno da refrigerio a partir de esta duracion
 REFRIGERIO_DESDE_MIN = 4 * 60
 
+# Los refrigerios no se reparten turno por turno, sino en cuatro momentos fijos
+# del dia: uno solo abre la mesa y pasan todos los que les toca.
+HORAS_REFRIGERIO = (
+    1 * 60,            # 01:00, la madrugada
+    9 * 60 + 30,       # 09:30, la mañana
+    14 * 60 + 30,      # 14:30, la tarde
+    20 * 60 + 30,      # 20:30, la noche
+)
+
 # Hasta aqui dos turnos se consideran la misma jornada. Los horarios reales no
 # siempre encajan al minuto (hay turnos que abren 07:30 y otros 08:00), y media
 # hora de hueco no es irse a casa.
@@ -138,6 +147,49 @@ def etiqueta_dia(minuto: int, base: int) -> str:
     return ETIQUETA_DIA_TIPO.get(indice, f"Día {indice + 1}")
 
 
+def hora_de_reparto(inicio: int, fin: int) -> int:
+    """En cual de los cuatro repartos recoge su refrigerio quien cubre ese turno.
+
+    El de su turno, si dentro del turno cae uno. Si no cae ninguno (pasa con el
+    turno de 16:00 a 20:00 y con el de 04:00 a 08:00), el mas cercano, y en un
+    empate el posterior: nadie recoge su refrigerio antes de entrar a trabajar.
+    """
+    dia = inicio // 1440
+    candidatos = [
+        (dia + desplazamiento) * 1440 + hora
+        for desplazamiento in (-1, 0, 1)
+        for hora in HORAS_REFRIGERIO
+    ]
+
+    dentro = [c for c in candidatos if inicio <= c < fin]
+    if dentro:
+        return min(dentro)
+
+    def distancia(candidato):
+        if candidato < inicio:
+            return (inicio - candidato, 1)   # antes de entrar: se cede el empate
+        return (candidato - fin, 0)
+
+    return min(candidatos, key=distancia)
+
+
+def _fundir_entregas(entregas: list) -> list:
+    """Dos raciones iguales en el mismo reparto son una linea de dos.
+
+    Pasa con quien encadena 04-08 y 08-12: los dos refrigerios le tocan en la
+    mesa de las 9:30, y en la hoja de reparto su nombre debe salir una vez.
+    """
+    fundidas = {}
+    for entrega in entregas:
+        clave = (entrega["minuto"], entrega["tipo"])
+        if clave in fundidas:
+            fundidas[clave]["cantidad"] += entrega["cantidad"]
+            fundidas[clave]["turnos_origen"] += entrega["turnos_origen"]
+        else:
+            fundidas[clave] = {**entrega, "turnos_origen": list(entrega["turnos_origen"])}
+    return [fundidas[c] for c in sorted(fundidas)]
+
+
 def _jornadas(turnos_ordenados) -> list:
     """Parte los turnos en bloques de trabajo continuo."""
     bloques = []
@@ -168,24 +220,27 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
     por_dia = {}
     entregas = []
 
-    def anotar(tipo, turno):
-        """Apunta una racion y cuando y donde se entrega.
+    def anotar(tipo, turno, minuto):
+        """Apunta una racion, y cuando y donde se entrega.
 
-        Se entrega al empezar el turno que la genera: el refrigerio, al que lo
-        gana; la comida, al turno al que se entra, que es justo el cambio de
-        turno (el almuerzo de quien encadena 08-12 con 12-16 se reparte a las
-        12:00, cuando llega a su segundo puesto).
+        El refrigerio se recoge en uno de los cuatro repartos del dia. La
+        comida se entrega al empezar el turno al que se entra, que es justo el
+        cambio de turno: el almuerzo de quien encadena 08-12 con 12-16 se
+        reparte a las 12:00, cuando llega a su segundo puesto.
         """
-        minuto = turno["inicio"]
         cuenta[tipo] += 1
         dia = por_dia.setdefault(minuto // 1440, {"refrigerio": 0, "desayuno": 0, "almuerzo": 0, "cena": 0})
         dia[tipo] += 1
         entregas.append({
             "tipo": tipo,
             "minuto": minuto,
+            "cantidad": 1,
             "puesto": turno["puesto"],
             "turno": turno["turno"],
             "horario": turno["horario"],
+            # De que turno sale la racion, para poder listarla en el reporte
+            # que se le manda al coordinador de ese puesto.
+            "turnos_origen": [turno["inicio"]],
         })
 
     # Nadie come dos veces a la misma hora. Un voluntario puede aparecer en dos
@@ -197,7 +252,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
             continue
         if fin_del_ultimo_refrigerio is not None and turno["inicio"] < fin_del_ultimo_refrigerio:
             continue
-        anotar("refrigerio", turno)
+        anotar("refrigerio", turno, hora_de_reparto(turno["inicio"], turno["fin"]))
         fin_del_ultimo_refrigerio = turno["fin"]
 
     jornadas = _jornadas(ordenados)
@@ -207,7 +262,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
             if comida:
                 # La comida se sirve en el turno al que se entra, que es el que
                 # dice de que dia es ese almuerzo o esa cena.
-                anotar(comida, siguiente)
+                anotar(comida, siguiente, siguiente["inicio"])
 
     return {
         **cuenta,
@@ -224,7 +279,7 @@ def calcular_voluntario(turnos: list, base: int = 0) -> dict:
         ],
         "detalle_turnos": ordenados,
         "por_dia": por_dia,
-        "entregas": sorted(entregas, key=lambda e: (e["minuto"], e["tipo"])),
+        "entregas": _fundir_entregas(entregas),
     }
 
 

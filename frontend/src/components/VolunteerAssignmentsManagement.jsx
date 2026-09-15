@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -45,6 +45,7 @@ export default function VolunteerAssignmentsManagement() {
   const [selectedSlotToRemove, setSelectedSlotToRemove] = useState(null);
   const [selectedSlotToAdd, setSelectedSlotToAdd] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [descargandoReporte, setDescargandoReporte] = useState(false);
   const [showRechazoModal, setShowRechazoModal] = useState(false);
   const [rechazoSlotId, setRechazoSlotId] = useState(null); // null = la solicitud completa
   const [rechazoMotivo, setRechazoMotivo] = useState('');
@@ -578,6 +579,31 @@ export default function VolunteerAssignmentsManagement() {
     toast.success(`${filteredVolunteers.length} voluntario(s) exportado(s)`);
   };
 
+  // El cuadro de trabajo de cada puesto, para mandarselo a su coordinador. Lo
+  // arma el backend porque es un .xlsx de verdad, con una hoja por posición.
+  const descargarReportePosiciones = async () => {
+    setDescargandoReporte(true);
+    try {
+      const evento = eventoFilter === 'all' ? '' : `?evento=${eventoFilter}`;
+      const res = await adminFetch(`${API_URL}/api/volunteers/reporte-posiciones${evento}`);
+      if (!res.ok) throw new Error('No se pudo generar el reporte');
+
+      const blob = await res.blob();
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = `voluntarios-por-posicion-${eventoFilter}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      URL.revokeObjectURL(enlace.href);
+      enlace.remove();
+      toast.success('Reporte por posición descargado');
+    } catch (error) {
+      toast.error(error.message || 'Error de conexión');
+    } finally {
+      setDescargandoReporte(false);
+    }
+  };
+
   // Statistics (scoped to the selected event)
   const totalVolunteers = eventVolunteers.length;
   const totalFormalAssignments = eventSlots.filter(s => s.email_asignado).length;
@@ -681,6 +707,22 @@ export default function VolunteerAssignmentsManagement() {
               >
                 <Shirt className="w-4 h-4 mr-2" />
                 Camisetas (CSV)
+              </Button>
+              {/* No depende de la búsqueda ni del estado: es el cuadro entero
+                  del evento, puesto por puesto */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={descargarReportePosiciones}
+                disabled={loading || descargandoReporte}
+                data-testid="export-posiciones-xlsx"
+              >
+                {descargandoReporte ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                )}
+                Por posición (Excel)
               </Button>
               <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />

@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
   UtensilsCrossed, Coffee, Soup, Moon, Cookie, Users, RefreshCw, Loader2, Download,
-  Clock, ChevronDown, ChevronRight,
+  Clock, ChevronDown, ChevronRight, Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -42,6 +42,7 @@ export default function VolunteerMealsPanel() {
   const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [abiertos, setAbiertos] = useState([]);
+  const [imprimiendo, setImprimiendo] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -74,11 +75,16 @@ export default function VolunteerMealsPanel() {
         mapa.set(clave, { clave, dia: e.dia, hora: e.hora, total: 0, porTipo: {} });
       }
       const momento = mapa.get(clave);
-      momento.total += 1;
+      momento.total += e.cantidad;
       (momento.porTipo[e.tipo] = momento.porTipo[e.tipo] || []).push(e);
     });
     return [...mapa.values()];
   }, [entregas]);
+
+  // Una línea puede llevar dos raciones: quien encadena 04-08 con 08-12 recoge
+  // sus dos refrigerios en la mesa de las 9:30.
+  const raciones = (lista) => lista.reduce((suma, e) => suma + e.cantidad, 0);
+  const totalRaciones = useMemo(() => raciones(entregas), [entregas]);
 
   const alternar = (clave) =>
     setAbiertos((previos) =>
@@ -132,12 +138,13 @@ export default function VolunteerMealsPanel() {
     }
 
     const cabeceras = [
-      'Fecha', 'Hora', 'Comida', 'Voluntario', 'Email', 'Puesto', 'Turno', 'Entregado',
+      'Fecha', 'Hora', 'Comida', 'Cantidad', 'Voluntario', 'Email', 'Puesto', 'Turno', 'Entregado',
     ];
     const filas = entregas.map((e) => [
       e.dia,
       e.hora,
       NOMBRE_TIPO[e.tipo] || e.tipo,
+      e.cantidad,
       e.nombre,
       e.email,
       e.puesto,
@@ -154,7 +161,31 @@ export default function VolunteerMealsPanel() {
     enlace.download = `entregas-alimentacion-${evento}-${new Date().toISOString().split('T')[0]}.csv`;
     enlace.click();
     URL.revokeObjectURL(enlace.href);
-    toast.success(`${entregas.length} entrega(s) exportada(s)`);
+    toast.success(`${totalRaciones} ración(es) exportada(s)`);
+  };
+
+  // Los tickets se recortan y se entregan con la camiseta del staff: cada uno
+  // dice qué comida es, a qué hora se recoge y de quién es.
+  const descargarTickets = async () => {
+    setImprimiendo(true);
+    try {
+      const res = await adminFetch(`${API_URL}/api/volunteers/tickets-alimentacion?evento=${evento}`);
+      if (!res.ok) throw new Error('No se pudieron generar los tickets');
+
+      const blob = await res.blob();
+      const enlace = document.createElement('a');
+      enlace.href = URL.createObjectURL(blob);
+      enlace.download = `tickets-alimentacion-${evento}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      URL.revokeObjectURL(enlace.href);
+      enlace.remove();
+      toast.success(`${totalRaciones} ticket(s) listos para imprimir`);
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setImprimiendo(false);
+    }
   };
 
   return (
@@ -168,6 +199,20 @@ export default function VolunteerMealsPanel() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={descargarTickets}
+            disabled={loading || imprimiendo || entregas.length === 0}
+            data-testid="export-tickets-pdf"
+          >
+            {imprimiendo ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Ticket className="w-4 h-4 mr-2" />
+            )}
+            Tickets (PDF)
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -288,11 +333,11 @@ export default function VolunteerMealsPanel() {
               <CardTitle className="text-lg flex items-center gap-2">
                 <Clock className="w-5 h-5 text-[#E8772E]" />
                 Entregas por fecha y hora
-                <Badge variant="secondary">{entregas.length}</Badge>
+                <Badge variant="secondary">{totalRaciones}</Badge>
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Cada ración en el momento en que se reparte, al empezar el turno que la gana.
-                Abre una hora para ver quién la recibe.
+                Los refrigerios se reparten en cuatro mesas fijas: 01:00, 09:30, 14:30 y 20:30.
+                Las comidas, en el cambio de turno. Abre una hora para ver quién recibe.
               </p>
             </CardHeader>
             <CardContent className="p-0">
@@ -319,7 +364,7 @@ export default function VolunteerMealsPanel() {
                         <div className="flex items-center gap-2 flex-wrap justify-end">
                           {TIPOS.filter((t) => momento.porTipo[t.key]).map((t) => (
                             <Badge key={t.key} variant="outline" className={t.clase}>
-                              {momento.porTipo[t.key].length} {t.label.toLowerCase()}
+                              {raciones(momento.porTipo[t.key])} {t.label.toLowerCase()}
                             </Badge>
                           ))}
                         </div>
@@ -329,12 +374,15 @@ export default function VolunteerMealsPanel() {
                           {TIPOS.filter((t) => momento.porTipo[t.key]).map((t) => (
                             <div key={t.key}>
                               <div className="text-xs font-medium uppercase text-muted-foreground py-2">
-                                {t.label} ({momento.porTipo[t.key].length})
+                                {t.label} ({raciones(momento.porTipo[t.key])})
                               </div>
                               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
                                 {momento.porTipo[t.key].map((e, i) => (
                                   <div key={`${e.email}-${e.tipo}-${i}`} className="text-sm">
                                     <span className="font-medium">{e.nombre}</span>
+                                    {e.cantidad > 1 && (
+                                      <span className="font-semibold"> ×{e.cantidad}</span>
+                                    )}
                                     <span className="text-muted-foreground"> · {e.puesto}</span>
                                   </div>
                                 ))}
@@ -419,7 +467,7 @@ export default function VolunteerMealsPanel() {
           <Card className="bg-muted/40">
             <CardContent className="p-4 text-sm text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">Cómo se cuenta</p>
-              <p>Un refrigerio por cada turno de 4 horas o más.</p>
+              <p>Un refrigerio por cada turno de 4 horas o más, que se recoge en una de las cuatro mesas del día: 01:00, 09:30, 14:30 y 20:30. A cada turno le toca la mesa que le cae dentro; el que no alcanza ninguna (16-20, 04-08) va a la más cercana, nunca antes de entrar.</p>
               <p>Turnos seguidos de madrugada a mañana: desayuno. De mañana a tarde: almuerzo. De tarde a noche: cena.</p>
               <p>La franja la da la hora de inicio del turno: madrugada desde las 00:00, mañana desde las 06:00, tarde desde las 12:00, noche desde las 18:00.</p>
               <p>Dos turnos son seguidos si no hay más de 30 minutos entre uno y otro. Quien tiene un solo turno, o turnos sueltos, se queda con su refrigerio.</p>
