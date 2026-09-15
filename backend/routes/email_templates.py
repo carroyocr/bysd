@@ -248,6 +248,41 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "payment_deadline_reminder",
+        "name": "Recordatorio de Pago con Fecha Límite",
+        "description": (
+            "Último aviso a quien no ha pagado, con la fecha en que se libera el cupo. "
+            "La fecha va escrita en el asunto y en el cuerpo: cámbiala cada temporada."
+        ),
+        "subject": "Tu inscripción vence el 30 de septiembre - {{race_name}}",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete", "payment"],
+        "content": _correo(
+            e.h1("Tu cupo vence el 30 de septiembre"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu cupo en <strong>{{race_name}}</strong> está apartado, pero todavía no "
+                "nos ha llegado el pago de tu inscripción."),
+            e.p("Tienes hasta el <strong>30 de septiembre</strong> para completarlo. Pasada "
+                "esa fecha el espacio se libera y pasa a la siguiente persona en la lista."),
+            e.cifra("Monto a pagar", "{{payment_amount}}"),
+            e.h2("Datos para el pago"),
+            e.linea("Banco", "{{payment_bank_name}}"),
+            e.linea("Titular", "{{payment_account_name}}"),
+            e.linea("Tipo de cuenta", "{{payment_account_type}}"),
+            e.linea("Número de cuenta", "{{payment_account_number}}"),
+            e.linea("Identificación", "{{payment_account_id}}"),
+            e.separador(),
+            e.p("Cuando pagues, sube el comprobante y confirmamos tu inscripción."),
+            e.boton("Subir comprobante", "{{payment_upload_url}}"),
+            e.nota("Si ya pagaste en estos días no hace falta que hagas nada: tu comprobante "
+                   "puede estar en revisión y te llegará el correo de confirmación."),
+            e.nota("Si al final no vas a participar, avísanos "
+                   + e.enlace("cancelando tu registro", "{{payment_cancel_url}}")
+                   + " para que otro corredor pueda tomar el lugar."),
+            e.nota(_PIE_CARRERA),
+        ),
+    },
+    {
         "id": "payment_received",
         "name": "Pago Recibido",
         "description": "Se envía cuando se recibe un comprobante de pago",
