@@ -324,6 +324,10 @@ async def get_participants(
                 "bib": {"$exists": True, "$ne": None},  # Must have BIB assigned
                 # Atletas que pidieron no aparecer publicamente
                 "perfil_publico": {"$ne": False},
+                # Las reservas del campeonato no corren: ni la app ni la web
+                # las listan como corredores. Si una sube a titular en
+                # Seleccionados, cambia su categoria y aparece.
+                "categoria": {"$ne": "reserva"},
             }
 
             if include_waitlist:
