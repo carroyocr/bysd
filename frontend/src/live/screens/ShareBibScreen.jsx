@@ -6,6 +6,7 @@ import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
 import { enApp, shareImage, descargarBlob } from '../../lib/nativeExport';
 import { cargarPresenting, dibujarPresenting } from '../../lib/presentingCanvas';
+import { dibujarDescargaApp } from '../shareCard';
 
 // Lienzo 9:16 (1080x1920): tamaño nativo de las historias de Instagram
 const W = 1080;
@@ -14,7 +15,7 @@ const H = 1920;
 /** Dorsal siempre a tres cifras, como va impreso en la carrera (001). */
 const bibDe3 = (bib) => String(bib ?? '').trim().padStart(3, '0');
 
-function drawBibCard(ctx, { profile, raceName, siteUrl, presenting }) {
+function drawBibCard(ctx, { profile, raceName, presenting }) {
   // Fondo Linterna Nocturna
   ctx.fillStyle = '#0C0C0C';
   ctx.fillRect(0, 0, W, H);
@@ -83,15 +84,13 @@ function drawBibCard(ctx, { profile, raceName, siteUrl, presenting }) {
   // Llamado a seguir
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 56px -apple-system, Helvetica, Arial';
-  ctx.fillText('¡Sígueme en vivo!', W / 2, 1420);
+  ctx.fillText('¡Sígueme en vivo!', W / 2, 1400);
   ctx.fillStyle = '#9a9a9a';
   ctx.font = '600 40px -apple-system, Helvetica, Arial';
-  ctx.fillText(`Busca mi dorsal #${bibDe3(profile.bib)} en`, W / 2, 1500);
-  ctx.fillStyle = '#E77622';
-  ctx.font = '800 44px -apple-system, Helvetica, Arial';
-  ctx.fillText(siteUrl, W / 2, 1575);
+  ctx.fillText(`Busca mi dorsal #${bibDe3(profile.bib)}`, W / 2, 1470);
+  dibujarDescargaApp(ctx, { x: W / 2, y: 1545 });
 
-  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1640 });
+  dibujarPresenting(ctx, presenting, { x: W / 2, y: 1670 });
 
   ctx.fillStyle = '#666666';
   ctx.font = '600 30px -apple-system, Helvetica, Arial';
@@ -135,7 +134,6 @@ export default function ShareBibScreen() {
     drawBibCard(ctx, {
       profile,
       raceName: race?.name || 'Backyard Ultra Santo Domingo',
-      siteUrl: 'backyardultrasantodomingo.com/live',
       presenting,
     });
   }, [profile, race, presenting]);
