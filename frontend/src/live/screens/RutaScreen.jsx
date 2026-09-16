@@ -3,8 +3,8 @@ import { Loader2, Play, Pause, Download, MapPin, Flag } from 'lucide-react';
 import { API } from '../liveApi';
 import { useLiveTheme } from '../liveTheme';
 import { Screen, useRace } from '../LiveApp';
-import { leerGpx, proyectar } from '../gpx';
-import { enApp, openExternal, descargarBlob } from '../../lib/nativeExport';
+import { leerGpx, encuadrar, mosaicos } from '../gpx';
+import { enApp, openExternal, descargarBlob, exportTextFile } from '../../lib/nativeExport';
 
 const W = 320;
 const H = 300;
@@ -14,9 +14,21 @@ const H = 300;
 // para no aburrir a quien solo quiere ver por dónde se corre.
 const RECORRIDO_MS = 12000;
 
-/** Dibujo del circuito: el trazado, la salida, las marcas de kilómetro y el corredor. */
-function Trazado({ ruta, avance, T }) {
-  const puntos = useMemo(() => proyectar(ruta, W, H), [ruta]);
+// Foto de satélite de fondo. Si no hay señal los mosaicos no llegan y el
+// trazado se queda sobre la tarjeta, como antes.
+const MOSAICO_URL = (m) =>
+  `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${m.z}/${m.y}/${m.x}`;
+
+/** Dibujo del circuito: el mapa, el trazado, la salida, las marcas de kilómetro y el corredor. */
+function Trazado({ ruta, avance }) {
+  const encuadre = useMemo(() => encuadrar(ruta, W, H), [ruta]);
+  const { puntos } = encuadre;
+  const fondo = useMemo(() => mosaicos(encuadre, W, H), [encuadre]);
+  // Los colores del trazado cambian cuando hay foto debajo: sobre la tarjeta
+  // clara del tema de día, el blanco no se vería. Al cambiar de ruta la
+  // pantalla pasa por "cargando", así que esto vuelve a empezar en falso.
+  const [conMapa, setConMapa] = useState(false);
+
   const linea = useMemo(
     () => puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '),
     [puntos],
@@ -41,9 +53,42 @@ function Trazado({ ruta, avance, T }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
+      <defs>
+        <clipPath id="ruta-marco">
+          <rect width={W} height={H} rx="10" />
+        </clipPath>
+      </defs>
+
+      <g clipPath="url(#ruta-marco)">
+        {fondo.map((m) => (
+          <image
+            key={`${m.z}/${m.x}/${m.y}`}
+            href={MOSAICO_URL(m)}
+            x={m.px}
+            y={m.py}
+            // Medio punto de más para que no asomen rayas entre mosaicos.
+            width={m.tamano + 0.5}
+            height={m.tamano + 0.5}
+            preserveAspectRatio="none"
+            // React sí escucha `load` en <image> de SVG; la regla solo conoce los de HTML.
+            // eslint-disable-next-line react/no-unknown-property
+            onLoad={() => setConMapa(true)}
+          />
+        ))}
+        {/* Un velo oscuro para que el naranja y los números se lean sobre
+            cualquier foto. */}
+        {conMapa && <rect width={W} height={H} fill="#000000" fillOpacity="0.28" />}
+      </g>
+
       {/* El recorrido ya hecho se pinta encima del trazado completo, para que
           se vea de un vistazo por dónde va. */}
-      <path d={linea} fill="none" stroke="currentColor" strokeOpacity="0.22" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={linea}
+        fill="none"
+        stroke={conMapa ? '#FFFFFF' : 'currentColor'}
+        strokeOpacity={conMapa ? 0.6 : 0.22}
+        strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+      />
       <path
         d={puntos.slice(0, indice + 1).map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}
         fill="none" stroke="#E77622" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
@@ -51,8 +96,15 @@ function Trazado({ ruta, avance, T }) {
 
       {kilometros.map(({ km, punto }) => (
         <g key={km}>
-          <circle cx={punto.x} cy={punto.y} r="7" fill="currentColor" fillOpacity="0.12" />
-          <text x={punto.x} y={punto.y + 3} textAnchor="middle" fontSize="7.5" fill="currentColor" opacity="0.75">
+          <circle
+            cx={punto.x} cy={punto.y} r="7"
+            fill={conMapa ? '#0C0C0C' : 'currentColor'}
+            fillOpacity={conMapa ? 0.75 : 0.12}
+          />
+          <text
+            x={punto.x} y={punto.y + 3} textAnchor="middle" fontSize="7.5"
+            fill={conMapa ? '#FFFFFF' : 'currentColor'} opacity={conMapa ? 0.95 : 0.75}
+          >
             {km}
           </text>
         </g>
@@ -60,6 +112,12 @@ function Trazado({ ruta, avance, T }) {
 
       <circle cx={salida.x} cy={salida.y} r="6" fill="#22c55e" stroke="#0C0C0C" strokeWidth="1.5" />
       <circle cx={corredor.x} cy={corredor.y} r="6.5" fill="#FFFFFF" stroke="#E77622" strokeWidth="3" />
+
+      {conMapa && (
+        <text x={W - 6} y={H - 6} textAnchor="end" fontSize="6" fill="#FFFFFF" opacity="0.7">
+          Esri, Maxar, Earthstar Geographics
+        </text>
+      )}
     </svg>
   );
 }
@@ -93,11 +151,10 @@ function Perfil({ ruta, avance, T }) {
 /**
  * Ruta de la carrera: el circuito que se repite vuelta tras vuelta.
  *
- * Se dibuja el GPX que subió la organización, sin mapa de fondo. No es una
- * limitación disfrazada: en Sierra Prieta no hay cobertura para descargar
- * mosaicos, y lo que hace falta saber -la forma del anillo, dónde está la
- * salida, dónde suben las cuestas- se ve mejor sin una foto de satélite
- * debajo.
+ * Se dibuja el GPX que subió la organización sobre una foto de satélite, para
+ * que se reconozca el terreno. En Sierra Prieta puede no haber cobertura para
+ * bajar la foto: entonces el trazado se ve solo, que basta para saber la forma
+ * del anillo, dónde está la salida y dónde suben las cuestas.
  *
  * Algunas sedes cambian el recorrido al caer la noche, así que puede haber dos.
  */
@@ -170,23 +227,33 @@ export default function RutaScreen() {
     setCorriendo((v) => !v);
   };
 
+  const [enviando, setEnviando] = useState(false);
+
+  // En la app el GPX se entrega por la hoja de compartir del teléfono, que es
+  // por donde lo recibe Garmin Connect ("Copiar a Connect" en iPhone, "Abrir
+  // con Connect" en Android) y lo guarda como recorrido para mandarlo al
+  // reloj. Ninguno de los dos sistemas deja abrir una app concreta con un
+  // archivo, así que Garmin Connect sale como una opción más de la hoja.
+  // Antes se abría la URL en el navegador interno, que solo enseñaba el XML.
   const descargar = useCallback(async () => {
-    if (!elegido) return;
+    if (!elegido || enviando) return;
     const url = elegido.url.startsWith('/api') ? `${API}${elegido.url}` : elegido.url;
     const nombre = `ruta-${elegido.clave}-${race?.code || 'bysd'}.gpx`;
-    if (enApp()) {
-      // En la app se abre fuera: el sistema ofrece guardarlo o mandarlo al
-      // reloj, que es lo que se quiere hacer con un GPX.
-      openExternal(url);
-      return;
-    }
+    setEnviando(true);
     try {
-      const blob = await (await fetch(url)).blob();
-      descargarBlob(nombre, blob);
+      const texto = await (await fetch(url)).text();
+      if (enApp()) {
+        await exportTextFile(nombre, texto, 'application/gpx+xml');
+      } else {
+        descargarBlob(nombre, new Blob([texto], { type: 'application/gpx+xml' }));
+      }
     } catch {
-      openExternal(url);
+      // Cerrar la hoja sin elegir nada también llega aquí: no es un fallo.
+      if (!enApp()) openExternal(url);
+    } finally {
+      setEnviando(false);
     }
-  }, [elegido, race]);
+  }, [elegido, race, enviando]);
 
   const kmRecorridos = ruta ? (avance * ruta.distanciaKm) : 0;
   const alturaActual = ruta
@@ -235,7 +302,7 @@ export default function RutaScreen() {
             )}
 
             <div className={`rounded-2xl p-3 ${T.card}`}>
-              <Trazado ruta={ruta} avance={avance} T={T} />
+              <Trazado ruta={ruta} avance={avance} />
 
               {/* Recorrer la vuelta: el punto va por el trazado y la barra deja
                   pararlo donde uno quiera mirar. */}
@@ -290,10 +357,17 @@ export default function RutaScreen() {
 
             <button
               onClick={descargar}
+              disabled={enviando}
               className={`mt-3 w-full rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 ${T.chip}`}
             >
-              <Download className="w-4 h-4" /> Descargar GPX para el reloj
+              {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {enApp() ? 'Enviar a Garmin Connect' : 'Descargar GPX para el reloj'}
             </button>
+            {enApp() && (
+              <p className={`text-[11px] text-center mt-1.5 ${T.subtle}`}>
+                Elige Garmin Connect en el menú para guardarla como recorrido.
+              </p>
+            )}
           </>
         )}
       </div>

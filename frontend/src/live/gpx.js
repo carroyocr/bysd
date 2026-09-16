@@ -88,27 +88,68 @@ export function leerGpx(texto) {
   };
 }
 
+/** Posición en el mapa del mundo de Web Mercator, de 0 a 1 en cada eje. */
+function mercator(lat, lon) {
+  const seno = Math.sin(rad(lat));
+  return {
+    x: (lon + 180) / 360,
+    y: 0.5 - Math.log((1 + seno) / (1 - seno)) / (4 * Math.PI),
+  };
+}
+
 /**
  * Coloca los puntos en una caja de `ancho` x `alto` respetando la forma.
  *
- * Un grado de longitud mide menos que uno de latitud según se sube de
- * paralelo; sin corregirlo, un circuito redondo se dibuja aplastado.
+ * Se proyecta en Web Mercator, la misma proyección de los mosaicos del mapa:
+ * así el trazado cae justo encima de los caminos de la foto. Además de los
+ * puntos devuelve el encuadre (`escala`, `x0`, `y0`), que es lo que necesita
+ * `mosaicos` para colocar el mapa debajo.
  */
-export function proyectar(ruta, ancho, alto, margen = 14) {
-  const { limites } = ruta;
-  const latMedia = (limites.latMin + limites.latMax) / 2;
-  const escalaLon = Math.cos(rad(latMedia));
+export function encuadrar(ruta, ancho, alto, margen = 14) {
+  const mundo = ruta.puntos.map((p) => mercator(p.lat, p.lon));
+  const xs = mundo.map((m) => m.x);
+  const ys = mundo.map((m) => m.y);
+  const xMin = Math.min(...xs);
+  const yMin = Math.min(...ys);
+  const anchoM = Math.max(Math.max(...xs) - xMin, 1e-12);
+  const altoM = Math.max(Math.max(...ys) - yMin, 1e-12);
 
-  const anchoGeo = Math.max((limites.lonMax - limites.lonMin) * escalaLon, 1e-9);
-  const altoGeo = Math.max(limites.latMax - limites.latMin, 1e-9);
-  const escala = Math.min((ancho - margen * 2) / anchoGeo, (alto - margen * 2) / altoGeo);
+  const escala = Math.min((ancho - margen * 2) / anchoM, (alto - margen * 2) / altoM);
+  // El punto del mundo que queda en la esquina superior izquierda de la caja,
+  // con el trazado centrado.
+  const x0 = xMin - (ancho / escala - anchoM) / 2;
+  const y0 = yMin - (alto / escala - altoM) / 2;
 
-  const desplazaX = (ancho - anchoGeo * escala) / 2;
-  const desplazaY = (alto - altoGeo * escala) / 2;
+  return {
+    puntos: mundo.map((m) => ({ x: (m.x - x0) * escala, y: (m.y - y0) * escala })),
+    escala,
+    x0,
+    y0,
+  };
+}
 
-  return ruta.puntos.map((p) => ({
-    x: desplazaX + (p.lon - limites.lonMin) * escalaLon * escala,
-    // La latitud crece hacia el norte y la pantalla hacia abajo: se invierte.
-    y: desplazaY + (limites.latMax - p.lat) * escala,
-  }));
+/**
+ * Los mosaicos de mapa que cubren la caja entera, ya colocados en ella.
+ *
+ * El zoom se elige para que cada mosaico ocupe como mucho `lado` unidades de
+ * la caja: con menos se ve borroso en pantallas de alta densidad, con más se
+ * piden mosaicos de sobra.
+ */
+export function mosaicos({ escala, x0, y0 }, ancho, alto, { lado = 80, zoomMax = 18 } = {}) {
+  const z = Math.max(0, Math.min(zoomMax, Math.ceil(Math.log2(escala / lado))));
+  const n = 2 ** z;
+  const tamano = escala / n;
+  const lista = [];
+  for (let y = Math.floor(y0 * n); y <= Math.floor((y0 + alto / escala) * n); y += 1) {
+    if (y < 0 || y >= n) continue;
+    for (let x = Math.floor(x0 * n); x <= Math.floor((x0 + ancho / escala) * n); x += 1) {
+      lista.push({
+        z, x: ((x % n) + n) % n, y,
+        px: (x / n - x0) * escala,
+        py: (y / n - y0) * escala,
+        tamano,
+      });
+    }
+  }
+  return lista;
 }
