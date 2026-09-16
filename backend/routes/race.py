@@ -456,6 +456,8 @@ async def iniciar_carrera(
             "status": "registered",
             "payment_status": "paid",
             "bib": {"$exists": True, "$ne": None},
+            # Las reservas se quedan fuera de la salida: no corren.
+            "categoria": {"$ne": "reserva"},
         },
         {"$set": {"status": "active", "updated_at": ahora}},
     )
@@ -534,6 +536,10 @@ async def panel_en_vivo(
             "race_code": codigo,
             "status": {"$in": ["registered", "active", "retired", "dns", "winner", "honor"]},
             "bib": {"$exists": True, "$ne": None},
+            # Las reservas del campeonato no corren: el control de carrera
+            # lleva solo al equipo titular. Si una reserva sube a titular en
+            # Seleccionados, su inscripcion cambia de categoria y aparece aqui.
+            "categoria": {"$ne": "reserva"},
         },
         {"_id": 0, "edit_token": 0},
     ).to_list(1000)
