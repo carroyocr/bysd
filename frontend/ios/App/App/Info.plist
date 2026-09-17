@@ -32,6 +32,30 @@
 	<string>Face ID se usa para entrar a tu perfil de corredor sin escribir la contraseña.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Se accede a tus fotos para elegir la imagen de tu perfil y el comprobante de pago.</string>
+	<!-- Ciclo de vida por escenas (UIScene). Esta clave NO es opcional: una app
+	     compilada con el SDK de iOS 27 (Xcode 27) que no la traiga la cierra el
+	     sistema nada más abrirla, antes incluso de que corra el AppDelegate.
+	     Es lo que tumbó a la 1.3.7, el primer build hecho con Xcode 27.
+	     El delegado que nombra aquí es ios/App/App/SceneDelegate.swift. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
