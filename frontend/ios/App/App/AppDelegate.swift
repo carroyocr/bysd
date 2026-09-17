@@ -25,12 +25,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
     }
 
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // El backend manda badge: 1 con cada aviso; si nadie lo pone a cero,
-        // el globo se queda en el icono para siempre. Abrir la app es leer los
-        // avisos: aqui se limpia.
-        application.applicationIconBadgeNumber = 0
-    }
+    // applicationDidBecomeActive, applicationWillEnterForeground y compania ya
+    // no se llaman: con el ciclo de vida por escenas UIKit avisa al
+    // SceneDelegate. Lo que habia aqui (limpiar el globo del icono) vive ahora
+    // en SceneDelegate.sceneDidBecomeActive.
 
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
@@ -68,4 +66,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    // MARK: - Escenas
+    //
+    // Enlaza la escena que arranca con el SceneDelegate. El nombre tiene que
+    // coincidir con el UISceneConfigurationName del Info.plist.
+
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
+    }
 }

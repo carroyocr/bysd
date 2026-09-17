@@ -26,13 +26,8 @@ target 'App' do
 end
 
 post_install do |installer|
+  # Xcode 27 ya no compila nada por debajo de iOS 15. En Capacitor 8 el propio
+  # assertDeploymentTarget sube a 15.0 cualquier pod que venga por debajo (en
+  # Capacitor 7 el suelo era 14.0, y por eso aqui hubo que forzarlo a mano).
   assertDeploymentTarget(installer)
-  # Xcode 27 ya no compila nada por debajo de iOS 15, y varios pods (Capacitor
-  # y sus plugins, los de Firebase) traen 14.0 en su podspec. Se alinean con
-  # la app, que ya pide 15.0.
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-    end
-  end
 end
