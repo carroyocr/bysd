@@ -75,8 +75,8 @@ class SplashView extends Ui.View {
 
     // Compartido con el delegado: los dos caminos, el del reloj y el del
     // boton, tienen que acabar en la misma vista. Si quedo una carrera viva de
-    // una sesion anterior -la app se cerro a mitad-, se ofrece reanudarla
-    // antes de la linea de salida.
+    // una sesion anterior -la app se cerro a mitad-, se ofrece reanudarla;
+    // si no, se pregunta la hora de salida, y de ahi a la linea de salida.
     //
     // La pregunta es un Menu2 propio y no un Ui.Confirmation, por lo mismo
     // que el menu de terminar: al dialogo nativo lo cierra el sistema con un
@@ -91,15 +91,14 @@ class SplashView extends Ui.View {
             menu.addItem(new Ui.MenuItem(Rez.Strings.resumeNew, null, :no, null));
             Ui.pushView(menu, new ReanudarDelegate(estado), Ui.SLIDE_IMMEDIATE);
         } else {
-            Ui.switchToView(new StartView(estado), new StartDelegate(estado),
-                            Ui.SLIDE_IMMEDIATE);
+            SalidaInicialDelegate.abrir(estado);
         }
     }
 }
 
 // La pregunta de reanudar, al abrir con una carrera guardada. Reanudar:
 // restaura el estado y sigue la carrera donde estaba. Carrera nueva: descarta
-// la guardada y va a la linea de salida. No hay tercera salida: BACK no hace
+// la guardada y pregunta la hora de salida, camino de la linea. No hay tercera salida: BACK no hace
 // nada, porque debajo solo queda el emblema y la decision hay que tomarla.
 class ReanudarDelegate extends Ui.Menu2InputDelegate {
 
@@ -120,8 +119,7 @@ class ReanudarDelegate extends Ui.Menu2InputDelegate {
                             Ui.SLIDE_IMMEDIATE);
         } else {
             _estado.limpiar();
-            Ui.switchToView(new StartView(_estado), new StartDelegate(_estado),
-                            Ui.SLIDE_IMMEDIATE);
+            SalidaInicialDelegate.abrir(_estado);
         }
     }
 

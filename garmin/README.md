@@ -46,13 +46,19 @@ pausa: la campana no espera a nadie.
 
 ## Las pantallas
 
-El emblema a pantalla completa poco más de un segundo, y de ahí a la **línea
-de salida**: qué vuelta se va a correr (distancia y minutos) y si el GPS ya
-fijó. START da la salida sin pedir confirmación, porque con la cuenta atrás
-del director de carrera sonando un diálogo estorba; si se pulsó antes de la
-hora, la app muestra la cuenta atrás «Para la vuelta 1» y la campana suena
-sola. Después, cuatro páginas que se recorren con arriba y abajo (o
-deslizando, en los táctiles) — y añadir una página nueva es añadir un caso al
+El emblema a pantalla completa poco más de un segundo, y de ahí a la **hora de
+salida**, que se pregunta cada vez que se abre la app: la rueda de hora y
+minutos viene puesta en lo configurado (la hora fija guardada o, con Auto, la
+campana que tocaría ahora), START confirma, MENU deja Auto y BACK sale. Luego,
+la **línea de salida**: la hora de salida con la cuenta atrás, qué vuelta se
+va a correr (distancia y minutos), la configuración (verde lo encendido) y si
+el GPS ya fijó. START da la salida sin pedir confirmación, porque con la
+cuenta atrás del director de carrera sonando un diálogo estorba; si se pulsó
+antes de la hora, la app muestra la cuenta atrás «Para la vuelta 1» y la
+campana suena sola. Si nadie pulsa, la carrera arranca sola al llegar la hora
+(solo si la hora se vio por delante: quien abre la app con la hora fija ya
+pasada sale cuando pulse START). Después, cuatro páginas que se recorren con
+arriba y abajo (o deslizando, en los táctiles) — y añadir una página nueva es añadir un caso al
 enumerado de `MainView`:
 
 | Página | Cifra grande | Debajo |
@@ -157,7 +163,7 @@ app/                    la app de reloj
   source/
     BackyardApp.mc      la sesión que graba, la campana y el latido de 1 s
     SplashView.mc       el emblema
-    StartView.mc        la línea de salida: la vuelta, el GPS y START
+    StartView.mc        la línea de salida: hora, vuelta, ajustes, GPS y START
     MainView.mc         las tres páginas
     MainDelegate.mc     botones, gestos y el menú de terminar
   resources/            emblema de 240 px

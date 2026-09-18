@@ -30,6 +30,13 @@
     <string id="pressStart">START para largar</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Procurando GPS</string>
+    <string id="startsIn">faltam</string>
+    <string id="underway">Em curso</string>
+    <string id="confirmStart">START confirma</string>
+    <string id="cfgAutoFinish">Auto meta</string>
+    <string id="cfgAutoKm">Auto km</string>
+    <string id="cfgVibe">Vibra</string>
+    <string id="menuAuto">MENU: Auto</string>
     <string id="endTitle">Terminar?</string>
     <string id="resume">Retomar</string>
     <string id="save">Guardar</string>

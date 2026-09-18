@@ -3,6 +3,8 @@ using Toybox.Graphics as Gfx;
 using Toybox.Application as App;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
+using Toybox.Time as Time;
+using Toybox.Time.Gregorian as Greg;
 
 // Los ajustes de la vuelta, desde el reloj.
 //
@@ -75,6 +77,13 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         var h12 = h % 12;
         if (h12 == 0) { h12 = 12; }
         return h12.format("%d") + ":" + m.format("%02d") + " " + marca;
+    }
+
+    // Un instante en epoch, como HHMM de la hora local: lo que guarda el
+    // ajuste de salida y lo que entiende textoDeSalida.
+    static function hhmmDe(epoch) {
+        var i = Greg.info(new Time.Moment(epoch), Time.FORMAT_SHORT);
+        return (i.hour * 100) + i.min;
     }
 
     function onSelect(item) {
@@ -206,6 +215,7 @@ class RuedaView extends Ui.View {
     var _indices as Lang.Array<Lang.Number>;     // donde esta cada una
     var _separador;                              // ":" entre hora y minuto
     var _foco as Lang.Number;                    // la que mueven UP y DOWN
+    var _pie = null;                             // ayuda abajo, en lineas
 
     function initialize(titulo, columnas, indices, separador) {
         View.initialize();
@@ -214,6 +224,13 @@ class RuedaView extends Ui.View {
         _indices = indices;
         _separador = separador;
         _foco = 0;
+    }
+
+    // Unas lineas de ayuda al pie -que botones hacen que-. Solo la lleva la
+    // rueda de la hora al abrir la app, que no nace de ningun menu y por eso
+    // no se sabe de entrada que MENU elige Auto.
+    function ponerPie(lineas) {
+        _pie = lineas;
     }
 
     // UP y DOWN mueven la columna con foco, dando la vuelta por los extremos.
@@ -298,6 +315,17 @@ class RuedaView extends Ui.View {
         var salto = (h * 0.19).toNumber();
         _flecha(dc, centros[_foco], medio - salto, true);
         _flecha(dc, centros[_foco], medio + salto, false);
+
+        if (_pie != null) {
+            var lineas = _pie as Lang.Array<Lang.String>;
+            var y = (h * 0.82).toNumber();
+            dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+            for (var i = 0; i < lineas.size(); i++) {
+                dc.drawText(w / 2, y, Gfx.FONT_XTINY, lineas[i],
+                            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+                y += altoMarca;
+            }
+        }
     }
 
     // La fuente mas grande en la que el valor todavia cabe. Medido, no
@@ -360,9 +388,28 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // Lo que devuelva el destino: false deja al sistema hacer su BACK, que
+    // en la rueda de la hora al abrir es salir de la app.
     function onBack() {
-        _destino.onCancel();
-        return true;
+        return _destino.onCancel();
+    }
+
+    // MENU solo significa algo si el destino lo atiende: en la rueda de la
+    // hora al abrir, elegir Auto. Por los mismos tres caminos que en la
+    // linea de salida (ver StartDelegate): el fenix 8 no siempre entrega el
+    // UP largo como onMenu.
+    function onMenu() {
+        if (_destino has :onMenu) { return _destino.onMenu(); }
+        return false;
+    }
+
+    function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
+        return false;
+    }
+
+    function onHold(evento) {
+        return onMenu();
     }
 }
 
@@ -471,6 +518,65 @@ class SalidaPickerDelegate {
         Ui.popView(Ui.SLIDE_DOWN);
         Ui.popView(Ui.SLIDE_DOWN);
         return true;
+    }
+}
+
+// La hora de salida, lo primero al abrir la app.
+//
+// Cada vez que se abre, antes de la linea de salida, se pregunta la hora con
+// la rueda, ya puesta en lo que haya configurado: la hora fija guardada o, con
+// Auto, la campana que tocaria ahora. Asi confirmar lo de siempre son dos
+// pulsaciones de START (hora y minutos), y nadie sale con la hora de la
+// carrera anterior sin haberla visto. MENU deja Auto; BACK sale de la app,
+// como en la linea de salida: todavia no se graba nada.
+class SalidaInicialDelegate {
+
+    static function abrir(estado) {
+        var actual = estado.horaSalida >= 0
+                   ? estado.horaSalida
+                   : AjustesMenuDelegate.hhmmDe(estado.campanaPrevista());
+        var horas = new HoraSalidaFactory();
+        var minutos = new MinutoSalidaFactory();
+        var rueda = new RuedaView(Ui.loadResource(Rez.Strings.settingStartTime),
+                                  [ horas, minutos ],
+                                  [ horas.indiceDe(actual),
+                                    minutos.indiceDe(actual) ], ":");
+        rueda.ponerPie([ Ui.loadResource(Rez.Strings.confirmStart),
+                         Ui.loadResource(Rez.Strings.menuAuto) ]);
+        Ui.switchToView(rueda,
+                        new RuedaDelegate(rueda,
+                                          new SalidaInicialDelegate(estado)),
+                        Ui.SLIDE_IMMEDIATE);
+    }
+
+    var _estado;
+
+    function initialize(estado) {
+        _estado = estado;
+    }
+
+    function onAccept(valores as Lang.Array) {
+        var hora = valores[0] as Lang.Number;
+        var minuto = valores[1] as Lang.Number;
+        App.Properties.setValue("startTime", (hora * 100) + minuto);
+        _aLaLinea();
+        return true;
+    }
+
+    function onMenu() {
+        App.Properties.setValue("startTime", -1);
+        _aLaLinea();
+        return true;
+    }
+
+    function onCancel() {
+        return false;
+    }
+
+    function _aLaLinea() {
+        _estado.leerAjustes();
+        Ui.switchToView(new StartView(_estado), new StartDelegate(_estado),
+                        Ui.SLIDE_LEFT);
     }
 }
 

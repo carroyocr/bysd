@@ -24,6 +24,10 @@ class BackyardApp extends App.AppBase {
     var _session = null;
     var _timer;
 
+    // La linea de salida, mientras esta en pantalla: el latido le pregunta
+    // cada segundo si ya llego la hora de arrancar sola.
+    var linea = null;
+
     // La ultima vuelta vista, para detectar la campana. Cero significa que la
     // carrera no ha empezado.
     var _vueltaVista = 0;
@@ -175,6 +179,9 @@ class BackyardApp extends App.AppBase {
     // 'as Void' no es adorno: Timer.start exige un metodo que no devuelva
     // nada, y sin la anotacion el comprobador de tipos lo da por 'Any'.
     function tic() as Void {
+        if (_session == null && linea != null) {
+            linea.revisarHora();
+        }
         estado.refrescarFoto();
         estado.muestrearPulso();
         _quizaCampana();
