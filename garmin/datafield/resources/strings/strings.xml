@@ -31,6 +31,13 @@
     <string id="pressStart">START to begin</string>
     <string id="gpsReady">GPS ready</string>
     <string id="gpsWait">Searching GPS</string>
+    <string id="startsIn">in</string>
+    <string id="underway">Under way</string>
+    <string id="confirmStart">START to confirm</string>
+    <string id="menuAuto">MENU: Auto</string>
+    <string id="cfgAutoFinish">Auto line</string>
+    <string id="cfgAutoKm">Auto km</string>
+    <string id="cfgVibe">Vibe</string>
     <string id="endTitle">Finish?</string>
     <string id="resume">Resume</string>
     <string id="save">Save</string>

@@ -33,10 +33,10 @@
     <string id="startsIn">tra</string>
     <string id="underway">In corso</string>
     <string id="confirmStart">START conferma</string>
+    <string id="menuAuto">MENU: Auto</string>
     <string id="cfgAutoFinish">Auto arrivo</string>
     <string id="cfgAutoKm">Auto km</string>
     <string id="cfgVibe">Vibr.</string>
-    <string id="menuAuto">MENU: Auto</string>
     <string id="endTitle">Terminare?</string>
     <string id="resume">Riprendi</string>
     <string id="save">Salva</string>

@@ -1,11 +1,20 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 9 de septiembre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 18 de septiembre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.6.0, empaquetada y sin subir
+
+La **1.6.0** está compilada en `build/backyard.iq`: los mismos **181 builds de
+111 relojes** que la 1.5.0. Cambia el comportamiento, no la lista de relojes:
+la hora de salida se pregunta al abrir la app, la línea de salida la enseña con
+su cuenta atrás y la configuración, y la carrera arranca sola al llegar la
+hora. Falta subirla desde el panel del portal (abriendo la app en la lista, no
+por «Upload an App»).
 
 ## Estado — la 1.5.0, publicada
 
@@ -119,6 +128,36 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.6.0 (para el campo "What's New")
+
+Lo primero al abrir la app es la **hora de salida**: la rueda de hora y minutos
+viene puesta en la siguiente hora en punto del reloj (a las 11:30, las 12:00),
+START confirma y MENU deja Auto. Después, la línea de salida enseña esa hora
+con la cuenta atrás, la vuelta y la configuración (en verde lo encendido), y si
+nadie pulsa START la carrera **arranca sola** al llegar la hora. De paso, en el
+calentamiento de las esferas pequeñas (fēnix 5) la línea de hora y batería ya
+no se sale por los lados.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
 
 ---
 
