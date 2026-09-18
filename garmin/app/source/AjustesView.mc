@@ -524,17 +524,14 @@ class SalidaPickerDelegate {
 // La hora de salida, lo primero al abrir la app.
 //
 // Cada vez que se abre, antes de la linea de salida, se pregunta la hora con
-// la rueda, ya puesta en lo que haya configurado: la hora fija guardada o, con
-// Auto, la campana que tocaria ahora. Asi confirmar lo de siempre son dos
-// pulsaciones de START (hora y minutos), y nadie sale con la hora de la
+// la rueda, ya puesta en la siguiente hora en punto del reloj: a las 11:30,
+// las 12:00. Es la salida mas probable, y nadie sale con la hora de la
 // carrera anterior sin haberla visto. MENU deja Auto; BACK sale de la app,
 // como en la linea de salida: todavia no se graba nada.
 class SalidaInicialDelegate {
 
     static function abrir(estado) {
-        var actual = estado.horaSalida >= 0
-                   ? estado.horaSalida
-                   : AjustesMenuDelegate.hhmmDe(estado.campanaPrevista());
+        var actual = ((Sys.getClockTime().hour + 1) % 24) * 100;
         var horas = new HoraSalidaFactory();
         var minutos = new MinutoSalidaFactory();
         var rueda = new RuedaView(Ui.loadResource(Rez.Strings.settingStartTime),

@@ -48,8 +48,8 @@ pausa: la campana no espera a nadie.
 
 El emblema a pantalla completa poco más de un segundo, y de ahí a la **hora de
 salida**, que se pregunta cada vez que se abre la app: la rueda de hora y
-minutos viene puesta en lo configurado (la hora fija guardada o, con Auto, la
-campana que tocaría ahora), START confirma, MENU deja Auto y BACK sale. Luego,
+minutos viene puesta en la siguiente hora en punto del reloj (a las 11:30, las
+12:00), START confirma, MENU deja Auto y BACK sale. Luego,
 la **línea de salida**: la hora de salida con la cuenta atrás, qué vuelta se
 va a correr (distancia y minutos), la configuración (verde lo encendido) y si
 el GPS ya fijó. START da la salida sin pedir confirmación, porque con la
