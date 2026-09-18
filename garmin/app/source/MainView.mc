@@ -2,6 +2,7 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
+using Toybox.Math as Math;
 using Toybox.Activity as Activity;
 using Toybox.Time as Time;
 using Toybox.Position as Position;
@@ -254,14 +255,29 @@ class MainView extends Ui.View {
                  _s[:start] + " " + _horaTexto(g.hour, g.min));
         }
 
+        // La hora con la bateria, del texto largo al corto segun quepa en la
+        // cuerda de la esfera a esa altura: en el fenix 5 (240 px) "12:07 PM
+        // · Battery 50%" se salia por los dos lados. Primero cae la palabra
+        // y, si ni asi, la bateria entera.
         var reloj = Sys.getClockTime();
-        var linea = _horaTexto(reloj.hour, reloj.min);
+        var hora = _horaTexto(reloj.hour, reloj.min);
         var bateria = Sys.getSystemStats().battery;
+        var yPie = _yPie(cy, h);
+        var opciones = [ hora ];
         if (bateria != null) {
-            linea = linea + " · " + _s[:battery] + " "
-                  + bateria.format("%d") + "%";
+            var pct = bateria.format("%d") + "%";
+            opciones = [ hora + " · " + _s[:battery] + " " + pct,
+                         hora + " · " + pct, hora ];
         }
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+        var cabe = _cuerda(dc, cx, cy, yPie, Gfx.FONT_XTINY);
+        var linea = opciones[opciones.size() - 1];
+        for (var i = 0; i < opciones.size(); i++) {
+            if (dc.getTextWidthInPixels(opciones[i], Gfx.FONT_XTINY) <= cabe) {
+                linea = opciones[i];
+                break;
+            }
+        }
+        _txt(dc, cx, yPie, Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
 
         // El check del GPS: verde cuando el reloj ya fijo posicion, gris
         // mientras busca. Es lo que se mira de reojo antes de la salida.
@@ -269,6 +285,20 @@ class MainView extends Ui.View {
         var yGps = _yPie2(cy, h);
         _check(dc, cx - (h * 5 / 100), yGps, h, colorGps);
         _txt(dc, cx + (h * 3 / 100), yGps, Gfx.FONT_XTINY, colorGps, "GPS");
+    }
+
+    // El ancho util de una linea de texto centrada en y: la cuerda del
+    // circulo de la esfera en el borde del texto mas alejado del centro, con
+    // un poco de aire. En pantallas no redondas, el ancho entero.
+    function _cuerda(dc, cx, cy, y, fuente) {
+        var w = dc.getWidth();
+        if (Sys.getDeviceSettings().screenShape != Sys.SCREEN_SHAPE_ROUND) {
+            return w;
+        }
+        var r = w / 2;
+        var dy = (y - cy).abs() + (dc.getFontHeight(fuente) / 2);
+        if (dy >= r) { return 0; }
+        return (2 * Math.sqrt((r * r) - (dy * dy))).toNumber() - (w * 6 / 100);
     }
 
     function _gpsListo() {
