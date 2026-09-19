@@ -240,9 +240,12 @@ class StartDelegate extends Ui.BehaviorDelegate {
 
     // START es la campana. No hay confirmacion: en la linea de salida, con la
     // cuenta atras del director de carrera sonando, un dialogo estorba.
+    //
+    // Y solo el boton: en el fenix 8 un toque en la pantalla llega primero
+    // como onSelect, y atenderlo aqui daba la salida con un roce. Devolviendo
+    // false, el toque sigue a onTap y el boton llega a onKey como KEY_ENTER.
     function onSelect() {
-        StartDelegate.salir(_estado);
-        return true;
+        return false;
     }
 
     // Dar la salida y pasar a la carrera. Lo comparten START y el arranque
@@ -281,6 +284,10 @@ class StartDelegate extends Ui.BehaviorDelegate {
     // comportamiento de menu, la tecla KEY_MENU cruda por si el firmware la
     // entrega asi, y el toque sostenido en la pantalla tactil.
     function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_ENTER) {
+            StartDelegate.salir(_estado);
+            return true;
+        }
         if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
         return false;
     }

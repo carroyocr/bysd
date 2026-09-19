@@ -74,6 +74,12 @@ un servidor que contara la carrera, y esta app no tiene red a propósito. La
 página del reloj es nueva: en treinta horas, saber si la batería aguanta la
 noche es información de carrera.
 
+**En los relojes táctiles** la pantalla nunca da la salida, ni para, ni marca
+vuelta: en la rueda de la hora mueve los valores, en la línea de salida
+enciende y apaga los ajustes (y tocar la hora reabre la rueda), y en carrera
+solo cambia de pantalla deslizando arriba y abajo. START y LAP son solo los
+botones.
+
 **BACK durante la carrera** no sale de la app sin preguntar —debajo hay una
 actividad grabando—: abre el menú de terminar, con Reanudar, Guardar y
 Descartar. Descartar pide confirmación aparte, porque tirar treinta horas por

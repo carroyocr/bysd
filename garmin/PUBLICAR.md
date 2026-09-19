@@ -1,20 +1,28 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 18 de septiembre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 19 de septiembre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.6.0, empaquetada y sin subir
+## Estado — la 1.7.0, empaquetada y sin subir
 
-La **1.6.0** está compilada en `build/backyard.iq`: los mismos **181 builds de
-111 relojes** que la 1.5.0. Cambia el comportamiento, no la lista de relojes:
-la hora de salida se pregunta al abrir la app, la línea de salida la enseña con
-su cuenta atrás y la configuración, y la carrera arranca sola al llegar la
-hora. Falta subirla desde el panel del portal (abriendo la app en la lista, no
-por «Upload an App»).
+La **1.7.0** está compilada en `build/backyard.iq`: los mismos **181 builds de
+111 relojes**, sin un solo aviso. Sustituye a la 1.6.0, que se empaquetó el 18
+de septiembre y trae todo lo de aquella (la hora de salida al abrir y el
+arranque solo) más el manejo de los relojes táctiles: la pantalla solo mueve
+la rueda, enciende ajustes o cambia de pantalla, y START y LAP son solo los
+botones. Falta subirla desde el panel del portal (abriendo la app en la lista,
+no por «Upload an App»).
+
+**Lo que se aprendió del táctil, medido en el simulador del fēnix 8:** un
+toque llega PRIMERO como `onSelect` (el START) y deslizar a la derecha como
+`onBack` (el LAP); solo si esos devuelven `false` llega el evento crudo,
+`onTap` o `onSwipe`. Los botones siguen el mismo camino y acaban en `onKey`
+(`KEY_ENTER` el START, `KEY_ESC` el LAP). Por eso los delegados atienden los
+botones en `onKey` y devuelven `false` en `onSelect` y `onBack`.
 
 ## Estado — la 1.5.0, publicada
 
@@ -128,6 +136,41 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.7.0 (para el campo "What's New")
+
+Si la 1.6.0 llegó a publicarse, quita las tres primeras líneas: ya salieron
+con ella.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Relojes táctiles: la hora de salida se cambia con el dedo y los ajustes de
+>   la pantalla de salida se encienden y apagan tocándolos.
+> - En carrera, la pantalla táctil solo cambia de pantalla: la actividad se
+>   para con el botón START y la vuelta se marca con el botón LAP, nunca con
+>   un roce.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Touchscreen watches: set the start time with your finger, and tap the
+>   settings on the start screen to turn them on or off.
+> - During the race the touchscreen only changes screens: the activity stops
+>   only with the START button and yards are marked only with the LAP button,
+>   never by an accidental touch.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
 
 ---
 

@@ -404,7 +404,16 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // En el fenix 8 el toque llega primero como onSelect, igual que START:
+    // atenderlo aqui hacia que cada toque pasara de columna y el segundo
+    // aceptara la hora. Devolviendo false, el sistema entrega el toque a
+    // onTap y el boton a onKey como KEY_ENTER, y cada uno va por su lado.
     function onSelect() {
+        return false;
+    }
+
+    // START: pasa a la columna siguiente y, en la ultima, acepta.
+    function _start() {
         if (_vista.avanzarFoco()) {
             Ui.requestUpdate();
             return true;
@@ -429,6 +438,7 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
     }
 
     function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_ENTER) { return _start(); }
         if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
         return false;
     }
