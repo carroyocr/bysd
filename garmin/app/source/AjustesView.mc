@@ -216,6 +216,10 @@ class RuedaView extends Ui.View {
     var _separador;                              // ":" entre hora y minuto
     var _foco as Lang.Number;                    // la que mueven UP y DOWN
     var _pie = null;                             // ayuda abajo, en lineas
+    // Donde quedo cada cosa en el ultimo dibujo, para saber que se toco.
+    var _centros as Lang.Array<Lang.Number> = [] as Lang.Array<Lang.Number>;
+    var _medio = 0;
+    var _salto = 0;
 
     function initialize(titulo, columnas, indices, separador) {
         View.initialize();
@@ -247,6 +251,24 @@ class RuedaView extends Ui.View {
         return true;
     }
 
+    // Un toque en la pantalla tactil. Tocar una columna le da el foco; tocar
+    // su flecha de arriba o de abajo la mueve, igual que UP y DOWN. Aceptar
+    // sigue siendo cosa de START: un roce no puede confirmar una hora.
+    function tocar(x as Lang.Number, y as Lang.Number) {
+        var n = _centros.size();
+        if (n == 0) { return; }
+        var col = 0;
+        if (n == 2 && (x - _centros[1]).abs() < (x - _centros[0]).abs()) {
+            col = 1;
+        }
+        _foco = col;
+        if (y < _medio - (_salto / 2)) {
+            mover(-1);
+        } else if (y > _medio + (_salto / 2)) {
+            mover(1);
+        }
+    }
+
     function valores() as Lang.Array {
         var v = new [_columnas.size()] as Lang.Array;
         for (var i = 0; i < _columnas.size(); i++) {
@@ -273,6 +295,8 @@ class RuedaView extends Ui.View {
                     ? [ w / 2 ]
                     : [ (w * 0.33).toNumber(), (w * 0.67).toNumber() ];
         var hueco = n == 1 ? (w * 0.80).toNumber() : (w * 0.40).toNumber();
+        _centros = centros as Lang.Array<Lang.Number>;
+        _medio = medio;
 
         // Si alguna columna lleva marca -AM/PM, min, km-, TODAS las cifras
         // suben lo mismo: si sube solo la que la lleva, la hora queda mas
@@ -313,6 +337,7 @@ class RuedaView extends Ui.View {
         // Las flechas dicen que esa columna es la que se mueve. Sin palabras:
         // asi no hay que traducir nada.
         var salto = (h * 0.19).toNumber();
+        _salto = salto;
         _flecha(dc, centros[_foco], medio - salto, true);
         _flecha(dc, centros[_foco], medio + salto, false);
 
@@ -408,8 +433,23 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
         return false;
     }
 
-    function onHold(evento) {
-        return onMenu();
+    // En los tactiles la rueda se mueve con el dedo: tocar las flechas o la
+    // columna, o deslizar sobre ella. El toque se consume aqui para que el
+    // sistema no lo convierta en START y acepte la hora a medio elegir. Y
+    // no hay onHold: un dedo que se queda apoyado mientras elige no puede
+    // cambiar la hora a Auto.
+    function onTap(evento) {
+        var xy = evento.getCoordinates();
+        _vista.tocar(xy[0], xy[1]);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onSwipe(evento) {
+        var direccion = evento.getDirection();
+        if (direccion == Ui.SWIPE_UP) { return onNextPage(); }
+        if (direccion == Ui.SWIPE_DOWN) { return onPreviousPage(); }
+        return true;
     }
 }
 
@@ -572,7 +612,8 @@ class SalidaInicialDelegate {
 
     function _aLaLinea() {
         _estado.leerAjustes();
-        Ui.switchToView(new StartView(_estado), new StartDelegate(_estado),
+        var vista = new StartView(_estado);
+        Ui.switchToView(vista, new StartDelegate(vista, _estado),
                         Ui.SLIDE_LEFT);
     }
 }
