@@ -308,6 +308,7 @@ class RuedaView extends Ui.View {
         }
         var yCifra = hayMarca ? medio - (altoMarca / 2) : medio;
 
+        var yMarca = null;
         for (var i = 0; i < n; i++) {
             var texto = _columnas[i].textoDe(_indices[i]);
             var marca = _columnas[i].marcaDe(_indices[i]);
@@ -317,13 +318,12 @@ class RuedaView extends Ui.View {
             dc.drawText(centros[i], yCifra, fuente, texto,
                         Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
             if (marca != null) {
-                // La marca va debajo, y el centro de una y otra se separan
-                // media cifra MAS media marca: contar solo la cifra dejaba el
-                // AM montado encima del numero.
-                dc.drawText(centros[i],
-                            yCifra + (dc.getFontHeight(fuente) / 2)
-                                   + (altoMarca / 2),
-                            Gfx.FONT_XTINY, marca,
+                // La marca va pegada debajo de la cifra. Se mide desde la
+                // linea base y no desde el borde de la caja de la fuente: las
+                // fuentes numericas traen mucho aire por debajo, y en el
+                // fenix 8 ese aire bajaba el PM hasta taparlo la flecha.
+                yMarca = yCifra + _bajoLaCifra(dc, fuente) + (altoMarca * 80 / 100);
+                dc.drawText(centros[i], yMarca, Gfx.FONT_XTINY, marca,
                             Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
             }
         }
@@ -339,7 +339,15 @@ class RuedaView extends Ui.View {
         var salto = (h * 0.19).toNumber();
         _salto = salto;
         _flecha(dc, centros[_foco], medio - salto, true);
-        _flecha(dc, centros[_foco], medio + salto, false);
+        // La de abajo nunca encima de la marca: si la marca llega a su
+        // altura, la flecha baja lo justo para quedar debajo.
+        var yAbajo = medio + salto;
+        if (yMarca != null) {
+            var a = (w * 0.032).toNumber();
+            var libre = yMarca + (altoMarca / 2) + a;
+            if (libre > yAbajo) { yAbajo = libre; }
+        }
+        _flecha(dc, centros[_foco], yAbajo, false);
 
         if (_pie != null) {
             var lineas = _pie as Lang.Array<Lang.String>;
@@ -351,6 +359,17 @@ class RuedaView extends Ui.View {
                 y += altoMarca;
             }
         }
+    }
+
+    // Del centro de la cifra a su linea base: donde acaba el numero que se ve.
+    // Sin la API de metricas (relojes viejos) se aproxima con el 36 % del
+    // alto de la fuente, que es lo que miden las numericas de Garmin.
+    function _bajoLaCifra(dc, fuente) {
+        var alto = dc.getFontHeight(fuente);
+        if (Gfx has :getFontAscent) {
+            return Gfx.getFontAscent(fuente) - (alto / 2);
+        }
+        return alto * 36 / 100;
     }
 
     // La fuente mas grande en la que el valor todavia cabe. Medido, no
