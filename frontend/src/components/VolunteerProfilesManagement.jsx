@@ -6,10 +6,12 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import {
   Search, Users, UserCheck, UserX, KeyRound, Mail, Download,
-  Loader2, Pencil, X, ShieldCheck, CalendarClock,
+  Loader2, Pencil, X, ShieldCheck, CalendarClock, IdCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
+import { descargarBlob } from '../lib/nativeExport';
+import { useAdminRace } from '../contexts/AdminRaceContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -39,11 +41,13 @@ export default function VolunteerProfilesManagement() {
   const [editando, setEditando] = useState(null); // perfil
   const [formulario, setFormulario] = useState({ nombre: '', apellidos: '', telefono: '' });
   const [guardando, setGuardando] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState(null); // 'todos' o el correo
+  const { raceCode, conCarrera } = useAdminRace();
 
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const respuesta = await adminFetch(`${API_URL}/api/volunteer-registration/admin/profiles`);
+      const respuesta = await adminFetch(conCarrera(`${API_URL}/api/volunteer-registration/admin/profiles`));
       if (respuesta.ok) {
         const datos = await respuesta.json();
         setPerfiles(datos.profiles || []);
@@ -56,7 +60,7 @@ export default function VolunteerProfilesManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [conCarrera]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -154,6 +158,25 @@ export default function VolunteerProfilesManagement() {
     toast.success(`${filtrados.length} perfil(es) exportado(s)`);
   };
 
+  // Los carnets salen cuatro por hoja, con anverso y reverso juntos y marcas
+  // de corte. Sin correo, los de toda la carrera; con correo, solo el suyo.
+  const descargarCarnets = async (perfil) => {
+    setImprimiendo(perfil ? perfil.email : 'todos');
+    try {
+      const filtro = perfil ? `?email=${encodeURIComponent(perfil.email)}` : '';
+      const res = await adminFetch(conCarrera(`${API_URL}/api/staff/carnets${filtro}`));
+      if (!res.ok) throw new Error('No se pudieron generar los carnets');
+      const nombre = perfil
+        ? `carnet-staff-${perfil.nombre || ''}-${perfil.apellidos || ''}`.trim().replace(/\s+/g, '-').toLowerCase()
+        : `carnets-staff-${raceCode}`;
+      descargarBlob(`${nombre}.pdf`, await res.blob());
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setImprimiendo(null);
+    }
+  };
+
   const estadoCuenta = (perfil) => {
     if (!perfil.tiene_cuenta) {
       return <Badge variant="outline" className="border-amber-400 text-amber-700"><UserX className="w-3 h-3 mr-1" />Sin cuenta</Badge>;
@@ -181,10 +204,16 @@ export default function VolunteerProfilesManagement() {
             Quién puede entrar a ver sus turnos, y quién se quedó a medio camino
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={exportarCSV} disabled={filtrados.length === 0} data-testid="export-volunteer-profiles">
-          <Download className="w-4 h-4 mr-2" />
-          Descargar CSV ({filtrados.length})
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => descargarCarnets(null)} disabled={perfiles.length === 0 || !raceCode || imprimiendo === 'todos'} data-testid="download-staff-cards">
+            {imprimiendo === 'todos' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <IdCard className="w-4 h-4 mr-2" />}
+            Carnets PDF ({perfiles.length})
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportarCSV} disabled={filtrados.length === 0} data-testid="export-volunteer-profiles">
+            <Download className="w-4 h-4 mr-2" />
+            Descargar CSV ({filtrados.length})
+          </Button>
+        </div>
       </div>
 
       {/* Resumen */}
@@ -286,6 +315,18 @@ export default function VolunteerProfilesManagement() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   {estadoCuenta(perfil)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => descargarCarnets(perfil)}
+                    disabled={!raceCode || imprimiendo === perfil.email}
+                    title="Descargar su carnet de staff"
+                    data-testid={`download-staff-card-${perfil.email}`}
+                  >
+                    {imprimiendo === perfil.email
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <IdCard className="w-4 h-4" />}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

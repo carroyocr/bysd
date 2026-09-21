@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
-  ListChecks, Check, Users as UsersIcon, ChevronDown, X,
+  ListChecks, Check, Users as UsersIcon, ChevronDown, X, IdCard,
 } from 'lucide-react';
-import { authJson } from '../liveApi';
+import { API, authJson } from '../liveApi';
+import { guardarArchivo } from '../../lib/nativeExport';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { registrarStaff } from '../push';
@@ -77,6 +78,25 @@ export default function StaffPerfilScreen() {
   const [elegidos, setElegidos] = useState([]);
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState(null);
+  const [bajandoCarnet, setBajandoCarnet] = useState(false);
+  const [errorCarnet, setErrorCarnet] = useState(null);
+
+  // El carnet para imprimir: anverso y reverso con sus marcas de corte.
+  const descargarCarnet = async () => {
+    setBajandoCarnet(true);
+    setErrorCarnet(null);
+    try {
+      const res = await fetch(`${API}/api/staff/mi-perfil/carnet`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (!res.ok) throw new Error();
+      await guardarArchivo('carnet-staff.pdf', await res.blob(), 'Carnet de staff');
+    } catch {
+      setErrorCarnet('No se pudo descargar el carnet. Inténtalo de nuevo.');
+    } finally {
+      setBajandoCarnet(false);
+    }
+  };
 
   // Acordeón de puestos: la lista completa son decenas de turnos y llegaba
   // toda desplegada. Arrancan cerrados y solo se abre uno a la vez.
@@ -215,6 +235,27 @@ export default function StaffPerfilScreen() {
 
         {p && tab === 'datos' && (
           <>
+            <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
+              <h3 className="text-sm font-bold flex items-center gap-2 mb-1">
+                <IdCard className="w-4 h-4 text-[#E77622]" /> Carnet de staff
+              </h3>
+              <p className={`text-xs leading-relaxed ${T.muted}`}>
+                Imprímelo, recórtalo por las marcas, dóblalo por la mitad y
+                llévalo visible durante el evento.
+              </p>
+              <button
+                onClick={descargarCarnet}
+                disabled={bajandoCarnet}
+                className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mt-3 w-fit ${T.actionChip}`}
+              >
+                {bajandoCarnet
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E77622]" />
+                  : <IdCard className="w-3.5 h-3.5 text-[#E77622]" />}
+                Descargar carnet (PDF)
+              </button>
+              {errorCarnet && <p className="text-xs text-red-500 mt-2">{errorCarnet}</p>}
+            </div>
+
             <div className={`rounded-2xl px-4 py-4 ${T.card}`}>
               <h3 className="text-sm font-bold flex items-center gap-2 mb-2">
                 <User className="w-4 h-4 text-[#E77622]" /> Datos personales

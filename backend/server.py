@@ -450,6 +450,10 @@ app.include_router(push_router)
 from routes.staff_account import router as staff_account_router
 app.include_router(staff_account_router)
 
+# Carnets del staff: el suyo, la tanda del panel y la verificacion del QR
+from routes.carnets_staff import router as carnets_staff_router
+app.include_router(carnets_staff_router)
+
 # Version publicada de la app movil (la app pregunta al abrir)
 from routes.app_version import router as app_version_router
 app.include_router(app_version_router)
