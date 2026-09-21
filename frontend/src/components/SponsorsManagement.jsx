@@ -1407,22 +1407,22 @@ export default function SponsorsManagement() {
                             <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
                               Vista previa del pie
                             </p>
-                            <div className="rounded-2xl bg-[#17110C] border-t-2 border-[#E77622] h-[88px] flex items-center gap-3 px-4 max-w-md">
+                            <div className="bg-[#17110C] border-t-2 border-[#E77622] h-[108px] flex items-center gap-4 px-5 max-w-md">
                               <div className="min-w-0 flex-1">
                                 {sponsor.mostrar_marca !== false && (
-                                  <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+                                  <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1.5">
                                     Patrocinador
                                   </p>
                                 )}
-                                <p className="font-display text-[24px] leading-none uppercase tracking-wide text-white truncate">
+                                <p className="font-display text-[28px] leading-none uppercase tracking-wide text-white truncate">
                                   {sponsor.name}
                                 </p>
                                 {sponsor.text && (
-                                  <p className="text-[11px] mt-1.5 text-[#9a9a9a] truncate">{sponsor.text}</p>
+                                  <p className="text-[12px] mt-1.5 text-[#9a9a9a] truncate">{sponsor.text}</p>
                                 )}
                               </div>
                               {(sponsor.detail_url || sponsor.banner_url || sponsor.link_url) && (
-                                <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2.5">
+                                <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[13px] font-bold px-5 py-3">
                                   Conocer más
                                 </span>
                               )}

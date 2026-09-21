@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { getJson, postJson } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
 import { openExternal } from '../../lib/nativeExport';
 
 const AD_ROTATE_MS = 8000;
@@ -40,7 +39,6 @@ const DESLIZ_MINIMO = 45;   // px horizontales para contarlo como pasar de banne
  * y el clima en vez de pegado al borde de abajo.
  */
 export default function AdFooter({ raceCode, sobreFoto = false, inline = false }) {
-  const { T, theme } = useLiveTheme();
   const navigate = useNavigate();
   const [banners, setBanners] = useState([]);
   const [index, setIndex] = useState(0);
@@ -208,75 +206,63 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
     openExternal(url);
   };
 
-  const oscuro = theme === 'dark';
   // En línea no es el pie de la pantalla, es un bloque más del contenido.
-  const Caja = inline ? 'div' : 'footer';
-  // Con destino toda la tarjeta es el botón, no solo la pastilla: en un pie
-  // tan bajo, acertarle a la pastilla con el pulgar cuesta.
-  const Tarjeta = destino ? 'button' : 'div';
+  const Caja = destino ? 'button' : 'div';
 
   return (
-    // Fondo propio y no transparente: el pie va pegado abajo mientras se
-    // desplaza la pantalla, y sin fondo el texto de detrás se colaba por los
-    // márgenes de la tarjeta y parecía que la publicidad tapaba la lectura.
-    // Sobre la portada del inicio no: ahí la banda taparía la foto, y no hay
-    // texto que se cuele porque no se desplaza nada por detrás.
+    // Una franja de borde a borde y no una tarjeta: el patrocinador es la
+    // última sección de la pantalla, con su filo naranja arriba, en los
+    // colores de la app. El banner con el arte de cada marca metía un bloque
+    // de otra tipografía y otros colores que no casaba con nada; ese arte no
+    // se pierde, se abre con «Conocer más».
+    // Oscura en los dos temas y con fondo propio: sobre la foto de la
+    // portada o sobre la crema del modo claro, una franja blanca se leía como
+    // un recorte pegado encima. Y como pie fijo, sin fondo se colaría por
+    // detrás el texto de la pantalla al desplazarla.
+    // Con destino toda la franja es el botón, no solo la pastilla: en un pie
+    // tan bajo, acertarle a la pastilla con el pulgar cuesta.
     <Caja
-      className={
-        inline
-          ? 'px-4 py-1'
-          : `sticky bottom-0 z-40 px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${sobreFoto ? '' : `${T.page} ${T.footerShadow}`}`
-      }
+      {...(destino ? { type: 'button', onClick: handleClick } : {})}
+      onTouchStart={alEmpezarGesto}
+      onTouchMove={alMoverGesto}
+      onTouchEnd={alSoltarGesto}
+      onTouchCancel={() => { gesto.current = null; }}
+      // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
+      // que debajo del pie sigue habiendo contenido que desplazar.
+      style={{ touchAction: 'pan-y' }}
+      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] ${
+        inline || sobreFoto ? '' : 'sticky bottom-0 z-40'
+      }`}
     >
-      {/* Solo nombre, una línea de texto y «Conocer más», en los colores de
-          la app. El banner con el arte de cada marca metía en la pantalla un
-          bloque blanco con otra tipografía y otros colores que no casaba con
-          nada; ese arte no se pierde, se abre al tocar.
-          Alto fijo: al rotar, un patrocinador con texto y otro sin él no
+      {/* Alto fijo: al rotar, un patrocinador con texto y otro sin él no
           pueden hacer saltar lo que hay encima. */}
-      <Tarjeta
-        {...(destino ? { type: 'button', onClick: handleClick } : {})}
-        onTouchStart={alEmpezarGesto}
-        onTouchMove={alMoverGesto}
-        onTouchEnd={alSoltarGesto}
-        onTouchCancel={() => { gesto.current = null; }}
-        // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
-        // que debajo del pie sigue habiendo contenido que desplazar.
-        style={{ touchAction: 'pan-y' }}
-        className={`w-full h-[88px] flex items-center gap-3 px-4 text-left rounded-2xl overflow-hidden border-t-2 border-[#E77622] ${
-          oscuro
-            ? 'bg-[#17110C] text-white'
-            : 'bg-white text-[#232323] shadow-sm'
-        } ${sobreFoto ? 'shadow-lg' : ''}`}
-      >
+      <div className="h-[76px] flex items-center gap-4">
         <div className="min-w-0 flex-1">
           {/* La nota de publicidad distingue el anuncio del contenido de la
               app. Cada patrocinador decide si la lleva. */}
           {ad.mostrar_marca !== false && (
-            <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1.5">
               Patrocinador
             </p>
           )}
-          <p className="font-display text-[24px] leading-none uppercase tracking-wide truncate">
+          <p className="font-display text-[28px] leading-none uppercase tracking-wide truncate">
             {ad.name}
           </p>
           {ad.text && (
-            <p className={`text-[11px] mt-1.5 truncate ${oscuro ? 'text-[#9a9a9a]' : T.muted}`}>
-              {ad.text}
-            </p>
+            <p className="text-[12px] mt-1.5 truncate text-[#9a9a9a]">{ad.text}</p>
           )}
         </div>
 
         {destino && (
-          <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2.5">
+          <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[13px] font-bold px-5 py-3">
             Conocer más
           </span>
         )}
+      </div>
 
-        {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
-            fila de puntos de lado a lado que no dice nada, porque no se puede
-            saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
-      </Tarjeta>
+      {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
+          fila de puntos de lado a lado que no dice nada, porque no se puede
+          saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
     </Caja>
   );
 }
