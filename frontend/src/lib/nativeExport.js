@@ -76,6 +76,25 @@ export async function shareImage(filename, blob, title) {
   descargarBlob(filename, blob);
 }
 
+/**
+ * Descarga (web) o comparte (app) un archivo binario, p. ej. un PDF.
+ *
+ * En la app se entrega por la hoja de compartir, desde donde se guarda en
+ * Archivos, se imprime o se manda por WhatsApp.
+ */
+export async function guardarArchivo(filename, blob, title) {
+  if (enApp()) {
+    const written = await Filesystem.writeFile({
+      path: filename,
+      data: await blobABase64(blob),
+      directory: Directory.Cache,
+    });
+    await Share.share({ title: title || filename, files: [written.uri] });
+    return;
+  }
+  descargarBlob(filename, blob);
+}
+
 /** Descarga por el navegador. Solo tiene sentido fuera de la app. */
 export function descargarBlob(filename, blob) {
   const url = URL.createObjectURL(blob);

@@ -36,6 +36,7 @@ import MyProfilePage from './pages/MyProfilePage';
 import MiCuentaPage from './pages/MiCuentaPage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
+import VerificarCarnetPage from './pages/VerificarCarnetPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
 import useAndroidBack from './lib/androidBack';
@@ -117,6 +118,8 @@ export default function App() {
                     {/* Perfil del espectador. Aparte de /mi-perfil, que es el
                         del corredor, hasta que la fase 3 los una. */}
                     <Route path="/mi-cuenta" element={<MiCuentaPage />} />
+                    {/* A donde lleva el QR del carnet de staff */}
+                    <Route path="/staff/verificar/:codigo" element={<VerificarCarnetPage />} />
                     <Route path="/pre-registro" element={<MyProfilePage />} />
                     <Route path="/pre-registro/editar" element={<MyProfilePage />} />
                     <Route path="/inscripcion" element={<MyProfilePage />} />
