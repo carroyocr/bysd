@@ -230,18 +230,20 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
       // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
       // que debajo del pie sigue habiendo contenido que desplazar.
       style={{ touchAction: 'pan-y' }}
-      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] ${
+      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
         inline || sobreFoto ? '' : 'sticky bottom-0 z-40'
       }`}
     >
-      {/* Alto fijo: al rotar, un patrocinador con texto y otro sin él no
+      {/* Abajo, solo el hueco del indicador de inicio y no además un margen
+          propio: sumados dejaban la franja con más aire debajo que encima.
+          Alto fijo: al rotar, un patrocinador con texto y otro sin él no
           pueden hacer saltar lo que hay encima. */}
-      <div className="h-[76px] flex items-center gap-4">
+      <div className="h-[70px] flex items-center gap-4">
         <div className="min-w-0 flex-1">
           {/* La nota de publicidad distingue el anuncio del contenido de la
               app. Cada patrocinador decide si la lleva. */}
           {ad.mostrar_marca !== false && (
-            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1.5">
+            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
               Patrocinador
             </p>
           )}
@@ -249,7 +251,7 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
             {ad.name}
           </p>
           {ad.text && (
-            <p className="text-[12px] mt-1.5 truncate text-[#9a9a9a]">{ad.text}</p>
+            <p className="text-[12px] mt-1 truncate text-[#9a9a9a]">{ad.text}</p>
           )}
         </div>
 
