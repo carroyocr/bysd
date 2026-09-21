@@ -10,6 +10,7 @@ import {
   NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight,
   History, Megaphone, MousePointerClick, Instagram, ArrowUp, ArrowDown,
 } from 'lucide-react';
+import useTextoQueCabe from '../hooks/useTextoQueCabe';
 import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import { adminFetch } from '../lib/adminApi';
@@ -52,11 +53,48 @@ const procesoPermitePublicar = (sponsor) => {
 // Las tres piezas gráficas, con lo que hay que saber al subir cada una.
 const PIEZAS = [
   { tipo: 'logo', campo: 'logo_url', label: 'Logo', ayuda: 'El cuadrado de la marca. Sirve a la vitrina del sitio y al pie de la app: es un solo archivo.' },
-  { tipo: 'banner', campo: 'banner_url', label: 'Banner 1200×240', ayuda: 'Ocupa la barra completa del pie. Cuando existe, sustituye al logo y al texto.' },
-  { tipo: 'detail', campo: 'detail_url', label: 'Imagen ampliada', ayuda: 'Se abre dentro de la app al tocar el banner. 1080 px de ancho, alto libre.' },
+  { tipo: 'banner', campo: 'banner_url', label: 'Banner 1200×240', ayuda: 'Se abre dentro de la app con «Conocer más» cuando no hay imagen ampliada. El pie ya no lo pinta: lleva el nombre y el texto.' },
+  { tipo: 'detail', campo: 'detail_url', label: 'Imagen ampliada', ayuda: 'Se abre dentro de la app con «Conocer más». 1080 px de ancho, alto libre.' },
 ];
 
-const tienePieza = (s) => PIEZAS.some((p) => s[p.campo]);
+// Si tiene con qué salir en el pie de la app. El pie lleva el nombre, el
+// texto y «Conocer más», que abre una imagen o, si no hay, el enlace; así que
+// sirve cualquiera de las tres cosas. Misma regla que `tiene_pieza` del backend.
+const tienePieza = (s) => PIEZAS.some((p) => s[p.campo])
+  || !!(s.text || '').trim()
+  || !!(s.link_url || '').trim();
+
+// La franja del pie de la app tal como sale en el teléfono. Componente propio
+// y fuera del render: necesita un hook para medir el nombre, y la lista de
+// patrocinadores lo pinta dentro de un map.
+function VistaPreviaPie({ sponsor }) {
+  const refNombre = useRef(null);
+  const tamano = useTextoQueCabe(refNombre, sponsor.name, { max: 22, min: 14 });
+  return (
+    <div className="bg-[#17110C] border-t-2 border-[#E77622] h-[80px] flex items-center gap-4 px-5 max-w-[390px]">
+      <div className="min-w-0 flex-1">
+        <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+          Patrocinador
+        </p>
+        <p
+          ref={refNombre}
+          style={{ fontSize: tamano }}
+          className="font-display leading-none uppercase tracking-wide text-white truncate"
+        >
+          {sponsor.name}
+        </p>
+        {sponsor.text && (
+          <p className="text-[11px] mt-1 text-[#9a9a9a] truncate">{sponsor.text}</p>
+        )}
+      </div>
+      {(sponsor.detail_url || sponsor.banner_url || sponsor.link_url) && (
+        <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2">
+          Conocer más
+        </span>
+      )}
+    </div>
+  );
+}
 
 // Separador de miles para el campo de monto (se guarda sin comas)
 const formatMontoInput = (value) => {
@@ -934,17 +972,17 @@ export default function SponsorsManagement() {
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="text">Texto del banner</Label>
+                    <Label htmlFor="text">Descripción corta (pie de la app)</Label>
                     <Input
                       id="text"
                       value={formData.text}
                       maxLength={80}
                       onChange={(e) => setFormData((p) => ({ ...p, text: e.target.value }))}
-                      placeholder="Hidratación oficial del BYSD"
+                      placeholder="Tecnología y seguridad de vanguardia"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="link_url">Enlace (al tocar el banner)</Label>
+                    <Label htmlFor="link_url">Enlace («Conocer más» si no hay imagen)</Label>
                     <Input
                       id="link_url"
                       value={formData.link_url}
@@ -1020,21 +1058,6 @@ export default function SponsorsManagement() {
                       onChange={(e) => setFormData((p) => ({ ...p, publicar_app: e.target.checked }))}
                     />
                     App — vitrina de patrocinadores y rotación del pie
-                  </label>
-                  <label className="flex items-start gap-2 text-sm pt-1">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={formData.mostrar_marca}
-                      onChange={(e) => setFormData((p) => ({ ...p, mostrar_marca: e.target.checked }))}
-                    />
-                    <span>
-                      Marcar como «Patrocinador» sobre el banner
-                      <span className="block text-xs text-muted-foreground">
-                        Distingue la publicidad del contenido de la app. Quítalo solo si la
-                        propia pieza ya deja claro de quién es.
-                      </span>
-                    </span>
                   </label>
                 </div>
               </div>
@@ -1313,7 +1336,7 @@ export default function SponsorsManagement() {
                       )}
                       {publicado && sponsor.publicar_app !== false && !tienePieza(sponsor) && (
                         <span className="text-xs text-amber-600">
-                          Sin imágenes: no se pinta en el pie de la app
+                          Sin imágenes, texto ni enlace: no se pinta en el pie de la app
                         </span>
                       )}
                     </div>
@@ -1378,7 +1401,6 @@ export default function SponsorsManagement() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span>Vigencia: {vigenciaLabel(sponsor)}</span>
                           <span>Peso: {sponsor.weight || 1}×</span>
-                          <span>Marca «Patrocinador»: {sponsor.mostrar_marca === false ? 'no' : 'sí'}</span>
                           <span className="inline-flex items-center gap-1">
                             <Eye className="w-3 h-3" /> {sponsor.impressions || 0} impresiones
                           </span>
@@ -1402,38 +1424,14 @@ export default function SponsorsManagement() {
                             <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
                               Vista previa del pie
                             </p>
-                            {sponsor.banner_url ? (
-                              <img
-                                src={`${API_URL}${sponsor.banner_url}`}
-                                alt={`Banner de ${sponsor.name}`}
-                                className="rounded-xl border border-[#262626] max-w-md w-full aspect-[5/1] object-cover bg-[#161616]"
-                              />
-                            ) : (
-                              <div className="rounded-xl bg-[#161616] border border-[#262626] h-[72px] flex items-center gap-3 px-4 relative max-w-md">
-                                {sponsor.mostrar_marca !== false && (
-                                  <span className="absolute top-1 right-3 text-[8px] tracking-widest uppercase text-[#777777]">
-                                    Patrocinador
-                                  </span>
-                                )}
-                                {sponsor.logo_url ? (
-                                  <img
-                                    src={`${API_URL}${sponsor.logo_url}`}
-                                    alt={sponsor.name}
-                                    className="w-12 h-12 rounded-xl object-contain bg-white"
-                                  />
-                                ) : (
-                                  <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold">
-                                    {sponsor.name.slice(0, 6)}
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <p className="text-[13px] font-bold text-white truncate">{sponsor.name}</p>
-                                  {sponsor.text && (
-                                    <p className="text-[11px] text-[#999999] truncate">{sponsor.text}</p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            <VistaPreviaPie sponsor={sponsor} />
+                            <p className="text-[11px] text-muted-foreground mt-1.5">
+                              {sponsor.detail_url || sponsor.banner_url
+                                ? `«Conocer más» abre ${sponsor.detail_url ? 'la imagen ampliada' : 'el banner'} dentro de la app.`
+                                : sponsor.link_url
+                                  ? '«Conocer más» abre el enlace.'
+                                  : 'Sin imagen ni enlace: el pie sale sin botón.'}
+                            </p>
                           </div>
                         )}
                       </div>

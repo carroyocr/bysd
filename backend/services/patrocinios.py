@@ -114,12 +114,15 @@ def vigente(doc: dict, ahora: datetime) -> bool:
 def tiene_pieza(doc: dict) -> bool:
     """Si hay con que pintar el anuncio en el pie.
 
-    Sin logo, sin banner y sin imagen ampliada no hay nada que ensenar, y un
-    hueco con un nombre dentro es peor que no ensenar nada. Por eso el pie los
-    salta aunque esten encendidos: encender es una intencion, tener pieza es
-    poder cumplirla.
+    Desde septiembre de 2026 el pie ya no pinta el arte de la marca: lleva el
+    nombre, una linea de texto y un boton que abre la pieza grafica o, si no
+    hay, el enlace. Asi que basta con cualquiera de esas cosas: una imagen,
+    el texto o el enlace. Lo que se sigue saltando es el patrocinador que
+    solo tiene nombre, un hueco que no dice nada ni lleva a ningun sitio.
     """
-    return any(doc.get(campo) for campo in IMAGENES.values())
+    if any(doc.get(campo) for campo in IMAGENES.values()):
+        return True
+    return bool((doc.get("text") or "").strip() or (doc.get("link_url") or "").strip())
 
 
 def proceso_permite_publicar(doc: dict) -> bool:

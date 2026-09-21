@@ -237,7 +237,9 @@ export default function DashboardScreen() {
       )}
 
       {/* El patrocinador cierra la pantalla, debajo del clima */}
-      <div className="pt-2 pb-[calc(0.25rem+env(safe-area-inset-bottom))]">
+      {/* La franja llega hasta el borde de abajo: el hueco del indicador de
+          inicio lo pone ella, con su propio fondo. */}
+      <div className="pt-2">
         <AdFooter raceCode={raceCode} inline />
       </div>
     </Screen>

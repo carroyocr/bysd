@@ -2,9 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { API, getJson, postJson } from '../liveApi';
-import { useLiveTheme } from '../liveTheme';
+import { getJson, postJson } from '../liveApi';
 import { openExternal } from '../../lib/nativeExport';
+import useTextoQueCabe from '../../hooks/useTextoQueCabe';
 
 const AD_ROTATE_MS = 8000;
 const CACHE_PIE = 'bysd_ads_pie';
@@ -35,16 +35,15 @@ const DESLIZ_MINIMO = 45;   // px horizontales para contarlo como pasar de banne
 /**
  * Pie publicitario fijo: rota banners ponderados por peso y acumula métricas.
  *
+ * Con `relleno` deja el hueco del indicador de inicio aunque no haya nada que
+ * anunciar, para la pantalla que confía en la franja para ese margen.
+ *
  * Con `inline` deja de ser pie y se queda donde se le ponga, dentro del
  * contenido: lo usa el tablero, donde el patrocinador va entre los corredores
  * y el clima en vez de pegado al borde de abajo.
  */
-export default function AdFooter({ raceCode, sobreFoto = false, inline = false }) {
-  const { T, theme } = useLiveTheme();
+export default function AdFooter({ raceCode, sobreFoto = false, inline = false, relleno = false }) {
   const navigate = useNavigate();
-  // Color propio: la portada de la carrera fuerza texto blanco sobre la foto
-  // y en modo claro la tarjeta es blanca, así que el nombre se perdía.
-  const cardText = theme === 'dark' ? 'text-white' : 'text-[#232323]';
   const [banners, setBanners] = useState([]);
   const [index, setIndex] = useState(0);
   // Cada pase a mano lo incrementa y con eso reinicia el reloj de la rotacion:
@@ -54,6 +53,7 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   const gesto = useRef(null);
   const arrastro = useRef(false);
   const impressionsSent = useRef(new Set());
+  const refNombre = useRef(null);
 
   useEffect(() => {
     let cancel = false;
@@ -180,6 +180,8 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   };
 
   const ad = playlist.length ? playlist[index % playlist.length] : null;
+  // Antes del «return null» de más abajo: un hook no puede ir detrás.
+  const tamanoNombre = useTextoQueCabe(refNombre, ad?.name, { max: 22, min: 14 });
 
   useEffect(() => {
     if (!ad || ad.is_sponsor_fallback || impressionsSent.current.has(ad.id)) return;
@@ -187,102 +189,97 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
     postJson('/api/ads/track', { banner_id: ad.id, event: 'impression' }).catch(() => {});
   }, [ad]);
 
-  if (!ad) return null;
+  // Con `relleno`, sin patrocinador queda al menos el hueco del indicador de
+  // inicio: la franja es la que lo pone, y sin ella lo último de la pantalla
+  // quedaría debajo de la barrita del iPhone.
+  if (!ad) return relleno ? <div className="h-[env(safe-area-inset-bottom)]" /> : null;
+
+  // Adónde lleva «Conocer más». Si el patrocinador subió una pieza gráfica
+  // se enseña dentro de la app, que sacar al usuario al navegador es la forma
+  // más rápida de que no vuelva; si no subió nada, se va a su enlace. Sin
+  // ninguna de las dos cosas no hay botón: sería un botón que no hace nada.
+  const tienePieza = !!(ad.detail_url || ad.banner_url);
+  const destino = tienePieza && raceCode ? 'pieza' : ad.link_url ? 'enlace' : null;
 
   const handleClick = () => {
     // El clic que el navegador manda despues de un deslizamiento no abre nada.
     if (arrastro.current) { arrastro.current = false; return; }
+    if (!destino) return;
     if (!ad.is_sponsor_fallback) {
       postJson('/api/ads/track', { banner_id: ad.id, event: 'click' }).catch(() => {});
     }
-    // Con imagen ampliada el patrocinador se lee dentro de la app; solo se sale
-    // al navegador cuando no hay nada más que enseñar aquí.
-    if (ad.detail_url && raceCode) {
+    if (destino === 'pieza') {
       navigate(`/live/${raceCode}/patrocinador/${ad.id}`);
       return;
     }
-    if (ad.link_url) {
-      const url = ad.link_url.startsWith('http') ? ad.link_url : `https://${ad.link_url}`;
-      openExternal(url);
-    }
+    const url = ad.link_url.startsWith('http') ? ad.link_url : `https://${ad.link_url}`;
+    openExternal(url);
   };
 
-  const bannerCompleto = !!ad.banner_url;
   // En línea no es el pie de la pantalla, es un bloque más del contenido.
-  const Caja = inline ? 'div' : 'footer';
+  const Caja = destino ? 'button' : 'div';
 
   return (
-    // Fondo propio y no transparente: el pie va pegado abajo mientras se
-    // desplaza la pantalla, y sin fondo el texto de detrás se colaba por los
-    // márgenes de la tarjeta y parecía que la publicidad tapaba la lectura.
-    // Sobre la portada del inicio no: ahí la banda taparía la foto, y no hay
-    // texto que se cuele porque no se desplaza nada por detrás.
+    // Una franja de borde a borde y no una tarjeta: el patrocinador es la
+    // última sección de la pantalla, con su filo naranja arriba, en los
+    // colores de la app. El banner con el arte de cada marca metía un bloque
+    // de otra tipografía y otros colores que no casaba con nada; ese arte no
+    // se pierde, se abre con «Conocer más».
+    // Oscura en los dos temas y con fondo propio: sobre la foto de la
+    // portada o sobre la crema del modo claro, una franja blanca se leía como
+    // un recorte pegado encima. Y como pie fijo, sin fondo se colaría por
+    // detrás el texto de la pantalla al desplazarla.
+    // Con destino toda la franja es el botón, no solo la pastilla: en un pie
+    // tan bajo, acertarle a la pastilla con el pulgar cuesta.
     <Caja
-      className={
-        inline
-          ? 'px-4 py-1'
-          : `sticky bottom-0 z-40 px-4 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${sobreFoto ? '' : `${T.page} ${T.footerShadow}`}`
-      }
+      {...(destino ? { type: 'button', onClick: handleClick } : {})}
+      onTouchStart={alEmpezarGesto}
+      onTouchMove={alMoverGesto}
+      onTouchEnd={alSoltarGesto}
+      onTouchCancel={() => { gesto.current = null; }}
+      // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
+      // que debajo del pie sigue habiendo contenido que desplazar.
+      style={{ touchAction: 'pan-y' }}
+      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${
+        inline || sobreFoto ? '' : 'sticky bottom-0 z-40'
+      }`}
     >
-      {/* Proporción fija en vez de alto fijo: el ancho de la barra cambia con
-          cada teléfono, así que con un alto fijo la pieza del patrocinador se
-          deformaría o se recortaría en casi todos. Con 5:1 la imagen llena la
-          barra exacta en cualquier pantalla.
-          Sin tarjeta detrás: el pie ya es una banda con su propio fondo, y una
-          tarjeta encima de otra solo añade un borde que no separa nada. Sobre
-          la portada del inicio sí hace falta, que ahí no hay banda y el logo
-          quedaría suelto sobre la foto. */}
-      <button
-        onClick={handleClick}
-        onTouchStart={alEmpezarGesto}
-        onTouchMove={alMoverGesto}
-        onTouchEnd={alSoltarGesto}
-        onTouchCancel={() => { gesto.current = null; }}
-        // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
-        // que debajo del pie sigue habiendo contenido que desplazar.
-        style={{ touchAction: 'pan-y' }}
-        className={`w-full aspect-[5/1] flex items-center gap-3 relative text-left rounded-2xl overflow-hidden ${bannerCompleto ? '' : 'px-3.5'} ${sobreFoto ? `shadow-lg ${T.card}` : ''} ${cardText}`}
-      >
-        {bannerCompleto ? (
-          <img
-            src={`${API}${ad.banner_url}`}
-            alt={ad.name}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <>
-            {ad.logo_url ? (
-              <img
-                src={`${API}${ad.logo_url}`}
-                alt={ad.name}
-                className="w-12 h-12 rounded-xl object-contain bg-white shrink-0"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-xl bg-[#F2E8C7] text-[#333333] flex items-center justify-center text-[10px] font-extrabold shrink-0">
-                {ad.name?.slice(0, 6)}
-              </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-[13px] font-bold truncate">{ad.name}</p>
-              {ad.text && <p className={`text-[11px] truncate ${T.muted}`}>{ad.text}</p>}
-            </div>
-          </>
-        )}
-
-        {/* La nota de publicidad va en voz baja: tiene que estar para que se
-            distinga de lo que es contenido de la app, pero sin disputarle el
-            sitio al nombre del patrocinador. Cada banner decide si la lleva:
-            hay piezas que ya dicen de quién son. */}
-        {ad.mostrar_marca !== false && (
-          <span className={`absolute top-1 right-3 text-[7px] tracking-[0.18em] uppercase ${bannerCompleto ? 'text-white/45 drop-shadow' : `${T.subtle} opacity-70`}`}>
+      {/* Abajo, solo el hueco del indicador de inicio y no además un margen
+          propio: sumados dejaban la franja con más aire debajo que encima.
+          Alto fijo: al rotar, un patrocinador con texto y otro sin él no
+          pueden hacer saltar lo que hay encima. */}
+      <div className="h-[58px] flex items-center gap-4">
+        <div className="min-w-0 flex-1">
+          {/* La nota de publicidad va siempre: distingue el anuncio del
+              contenido de la app. El interruptor «mostrar_marca» del panel
+              era para los banners con el arte de la marca, que ya decían de
+              quién eran; aquí solo hay un nombre y hace falta. */}
+          <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
             Patrocinador
+          </p>
+          {/* Los nombres largos bajan de tamaño hasta caber en una línea. */}
+          <p
+            ref={refNombre}
+            style={{ fontSize: tamanoNombre }}
+            className="font-display leading-none uppercase tracking-wide truncate"
+          >
+            {ad.name}
+          </p>
+          {ad.text && (
+            <p className="text-[11px] mt-1 truncate text-[#9a9a9a]">{ad.text}</p>
+          )}
+        </div>
+
+        {destino && (
+          <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2">
+            Conocer más
           </span>
         )}
+      </div>
 
-        {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
-            fila de puntos de lado a lado que no dice nada, porque no se puede
-            saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
-      </button>
+      {/* Sin puntos de rotación: con dos docenas de patrocinadores era una
+          fila de puntos de lado a lado que no dice nada, porque no se puede
+          saltar de uno a otro. El banner cambia solo cada pocos segundos. */}
     </Caja>
   );
 }
