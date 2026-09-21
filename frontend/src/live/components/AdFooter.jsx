@@ -35,11 +35,14 @@ const DESLIZ_MINIMO = 45;   // px horizontales para contarlo como pasar de banne
 /**
  * Pie publicitario fijo: rota banners ponderados por peso y acumula métricas.
  *
+ * Con `relleno` deja el hueco del indicador de inicio aunque no haya nada que
+ * anunciar, para la pantalla que confía en la franja para ese margen.
+ *
  * Con `inline` deja de ser pie y se queda donde se le ponga, dentro del
  * contenido: lo usa el tablero, donde el patrocinador va entre los corredores
  * y el clima en vez de pegado al borde de abajo.
  */
-export default function AdFooter({ raceCode, sobreFoto = false, inline = false }) {
+export default function AdFooter({ raceCode, sobreFoto = false, inline = false, relleno = false }) {
   const navigate = useNavigate();
   const [banners, setBanners] = useState([]);
   const [index, setIndex] = useState(0);
@@ -178,7 +181,7 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
 
   const ad = playlist.length ? playlist[index % playlist.length] : null;
   // Antes del «return null» de más abajo: un hook no puede ir detrás.
-  const tamanoNombre = useTextoQueCabe(refNombre, ad?.name, { max: 28, min: 16 });
+  const tamanoNombre = useTextoQueCabe(refNombre, ad?.name, { max: 22, min: 14 });
 
   useEffect(() => {
     if (!ad || ad.is_sponsor_fallback || impressionsSent.current.has(ad.id)) return;
@@ -186,7 +189,10 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
     postJson('/api/ads/track', { banner_id: ad.id, event: 'impression' }).catch(() => {});
   }, [ad]);
 
-  if (!ad) return null;
+  // Con `relleno`, sin patrocinador queda al menos el hueco del indicador de
+  // inicio: la franja es la que lo pone, y sin ella lo último de la pantalla
+  // quedaría debajo de la barrita del iPhone.
+  if (!ad) return relleno ? <div className="h-[env(safe-area-inset-bottom)]" /> : null;
 
   // Adónde lleva «Conocer más». Si el patrocinador subió una pieza gráfica
   // se enseña dentro de la app, que sacar al usuario al navegador es la forma
@@ -234,7 +240,7 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
       // Horizontal lo gobierna el gesto; vertical se lo queda la pantalla,
       // que debajo del pie sigue habiendo contenido que desplazar.
       style={{ touchAction: 'pan-y' }}
-      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
+      className={`w-full block text-left bg-[#17110C] text-white border-t-2 border-[#E77622] px-5 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] ${
         inline || sobreFoto ? '' : 'sticky bottom-0 z-40'
       }`}
     >
@@ -242,13 +248,13 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           propio: sumados dejaban la franja con más aire debajo que encima.
           Alto fijo: al rotar, un patrocinador con texto y otro sin él no
           pueden hacer saltar lo que hay encima. */}
-      <div className="h-[70px] flex items-center gap-4">
+      <div className="h-[58px] flex items-center gap-4">
         <div className="min-w-0 flex-1">
           {/* La nota de publicidad va siempre: distingue el anuncio del
               contenido de la app. El interruptor «mostrar_marca» del panel
               era para los banners con el arte de la marca, que ya decían de
               quién eran; aquí solo hay un nombre y hace falta. */}
-          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+          <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
             Patrocinador
           </p>
           {/* Los nombres largos bajan de tamaño hasta caber en una línea. */}
@@ -260,12 +266,12 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
             {ad.name}
           </p>
           {ad.text && (
-            <p className="text-[12px] mt-1 truncate text-[#9a9a9a]">{ad.text}</p>
+            <p className="text-[11px] mt-1 truncate text-[#9a9a9a]">{ad.text}</p>
           )}
         </div>
 
         {destino && (
-          <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[13px] font-bold px-5 py-3">
+          <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2">
             Conocer más
           </span>
         )}

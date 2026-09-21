@@ -116,39 +116,10 @@ export default function HomeScreen() {
           )}
         </div>
 
-        {/* Cuenta regresiva: protagónica pero abajo, donde no tapa caras en
-            las fotos curadas del fondo */}
-        {!started && startMs != null && (
-          <div className="relative z-10 mt-auto mb-4 mx-auto bg-black/55 backdrop-blur rounded-2xl px-5 py-3 text-center">
-            <p className="text-[9px] font-extrabold tracking-[0.3em] text-[#F5A623] mb-1.5 flex items-center justify-center gap-1.5">
-              <Clock className="w-3 h-3" /> INICIA EN
-            </p>
-            <div className="flex items-baseline justify-center gap-3 font-mono">
-              {(() => {
-                const ms = Math.max(0, startMs - now);
-                const seg = [
-                  [Math.floor(ms / 86400000), 'DÍAS'],
-                  [Math.floor((ms % 86400000) / 3600000), 'HRS'],
-                  [Math.floor((ms % 3600000) / 60000), 'MIN'],
-                  [Math.floor((ms % 60000) / 1000), 'SEG'],
-                ];
-                return seg.map(([v, label]) => (
-                  <div key={label}>
-                    <div className="text-2xl font-extrabold text-white leading-none">
-                      {String(v).padStart(2, '0')}
-                    </div>
-                    <div className="text-[8px] tracking-widest text-white/60 mt-1">{label}</div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-        )}
-
         {/* Accesos rápidos */}
         {/* Cuatro accesos: con los círculos de antes no cabían en un teléfono
             estrecho, así que van algo más pequeños y más juntos. */}
-        <div className="relative z-10 mt-auto px-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+        <div className="relative z-10 mt-auto px-3 pb-4">
           <div className="flex justify-center gap-4">
             {quickActions.map(({ label, Icon, to }) => (
               <button key={label} onClick={() => navigate(to)} className="flex flex-col items-center gap-2">
@@ -161,8 +132,36 @@ export default function HomeScreen() {
           </div>
         </div>
 
+        {/* Cuenta regresiva, discreta y en una línea, entre los accesos y el
+            patrocinador. En medio de la foto tapaba justo al corredor, que
+            es lo que la portada quiere enseñar. */}
+        {!started && startMs != null && (
+          <div className="relative z-10 mx-auto mb-3 inline-flex items-center gap-2.5 bg-black/55 backdrop-blur rounded-full px-4 py-1.5">
+            <span className="text-[9px] font-extrabold tracking-[0.25em] text-[#F5A623] flex items-center gap-1.5">
+              <Clock className="w-3 h-3" /> INICIA EN
+            </span>
+            <span className="font-mono text-[13px] font-bold tabular-nums flex items-baseline gap-1.5">
+              {(() => {
+                const ms = Math.max(0, startMs - now);
+                const seg = [
+                  [Math.floor(ms / 86400000), 'd'],
+                  [Math.floor((ms % 86400000) / 3600000), 'h'],
+                  [Math.floor((ms % 3600000) / 60000), 'm'],
+                  [Math.floor((ms % 60000) / 1000), 's'],
+                ];
+                return seg.map(([v, u]) => (
+                  <span key={u}>
+                    {String(v).padStart(2, '0')}
+                    <span className="text-[10px] font-semibold text-white/55 ml-px">{u}</span>
+                  </span>
+                ));
+              })()}
+            </span>
+          </div>
+        )}
+
         <div className="relative z-10">
-          <AdFooter raceCode={raceCode} sobreFoto />
+          <AdFooter raceCode={raceCode} sobreFoto relleno />
         </div>
       </div>
     </div>

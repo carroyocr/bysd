@@ -69,11 +69,11 @@ const tienePieza = (s) => PIEZAS.some((p) => s[p.campo])
 // patrocinadores lo pinta dentro de un map.
 function VistaPreviaPie({ sponsor }) {
   const refNombre = useRef(null);
-  const tamano = useTextoQueCabe(refNombre, sponsor.name, { max: 28, min: 16 });
+  const tamano = useTextoQueCabe(refNombre, sponsor.name, { max: 22, min: 14 });
   return (
-    <div className="bg-[#17110C] border-t-2 border-[#E77622] h-[94px] flex items-center gap-4 px-5 max-w-[390px]">
+    <div className="bg-[#17110C] border-t-2 border-[#E77622] h-[80px] flex items-center gap-4 px-5 max-w-[390px]">
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+        <p className="text-[9px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
           Patrocinador
         </p>
         <p
@@ -84,11 +84,11 @@ function VistaPreviaPie({ sponsor }) {
           {sponsor.name}
         </p>
         {sponsor.text && (
-          <p className="text-[12px] mt-1 text-[#9a9a9a] truncate">{sponsor.text}</p>
+          <p className="text-[11px] mt-1 text-[#9a9a9a] truncate">{sponsor.text}</p>
         )}
       </div>
       {(sponsor.detail_url || sponsor.banner_url || sponsor.link_url) && (
-        <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[13px] font-bold px-5 py-3">
+        <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2">
           Conocer más
         </span>
       )}
