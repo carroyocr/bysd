@@ -4,6 +4,7 @@ import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { getJson, postJson } from '../liveApi';
 import { openExternal } from '../../lib/nativeExport';
+import useTextoQueCabe from '../../hooks/useTextoQueCabe';
 
 const AD_ROTATE_MS = 8000;
 const CACHE_PIE = 'bysd_ads_pie';
@@ -49,6 +50,7 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   const gesto = useRef(null);
   const arrastro = useRef(false);
   const impressionsSent = useRef(new Set());
+  const refNombre = useRef(null);
 
   useEffect(() => {
     let cancel = false;
@@ -175,6 +177,8 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
   };
 
   const ad = playlist.length ? playlist[index % playlist.length] : null;
+  // Antes del «return null» de más abajo: un hook no puede ir detrás.
+  const tamanoNombre = useTextoQueCabe(refNombre, ad?.name, { max: 28, min: 16 });
 
   useEffect(() => {
     if (!ad || ad.is_sponsor_fallback || impressionsSent.current.has(ad.id)) return;
@@ -240,14 +244,19 @@ export default function AdFooter({ raceCode, sobreFoto = false, inline = false }
           pueden hacer saltar lo que hay encima. */}
       <div className="h-[70px] flex items-center gap-4">
         <div className="min-w-0 flex-1">
-          {/* La nota de publicidad distingue el anuncio del contenido de la
-              app. Cada patrocinador decide si la lleva. */}
-          {ad.mostrar_marca !== false && (
-            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
-              Patrocinador
-            </p>
-          )}
-          <p className="font-display text-[28px] leading-none uppercase tracking-wide truncate">
+          {/* La nota de publicidad va siempre: distingue el anuncio del
+              contenido de la app. El interruptor «mostrar_marca» del panel
+              era para los banners con el arte de la marca, que ya decían de
+              quién eran; aquí solo hay un nombre y hace falta. */}
+          <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#E77622] mb-1">
+            Patrocinador
+          </p>
+          {/* Los nombres largos bajan de tamaño hasta caber en una línea. */}
+          <p
+            ref={refNombre}
+            style={{ fontSize: tamanoNombre }}
+            className="font-display leading-none uppercase tracking-wide truncate"
+          >
             {ad.name}
           </p>
           {ad.text && (
