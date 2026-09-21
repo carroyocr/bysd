@@ -9,8 +9,8 @@ import { openExternal } from '../../lib/nativeExport';
 /**
  * Pieza ampliada de un patrocinador, dentro de la app.
  *
- * El banner del pie solo da para un vistazo; aquí el patrocinador puede poner
- * una imagen larga con toda la información. Se abre dentro de la app, con el
+ * El pie solo lleva el nombre y una línea de texto; aquí el patrocinador puede
+ * poner una imagen larga con toda la información. Se abre dentro de la app, con el
  * botón de volver de la barra: sacar al usuario al navegador para leer una
  * promoción es la forma más rápida de que no vuelva.
  *
@@ -60,11 +60,14 @@ export default function PatrocinadorScreen() {
 
         {ad && (
           <>
-            {ad.detail_url ? (
+            {/* La imagen ampliada, y si no la hay, el banner: el pie ya no
+                pinta el arte de la marca, así que este es el sitio donde se
+                ve cualquiera de las dos piezas que haya subido. */}
+            {ad.detail_url || ad.banner_url ? (
               // Ancho completo y alto automático: la imagen manda su propia
               // proporción y así no se deforma en ningún teléfono.
               <img
-                src={`${API}${ad.detail_url}`}
+                src={`${API}${ad.detail_url || ad.banner_url}`}
                 alt={ad.name}
                 className="w-full h-auto rounded-2xl"
               />

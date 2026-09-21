@@ -34,7 +34,8 @@ async def _anuncios(db, race_code: str) -> list[dict]:
     """Los patrocinadores de esa carrera que pueden salir como anuncio.
 
     Tienen que cumplir las cuatro: estar activos, tener encendido el
-    interruptor de la app, estar en vigencia y traer alguna pieza grafica.
+    interruptor de la app, estar en vigencia y traer algo que ensenar
+    (una imagen, el texto o el enlace: ver `patrocinios.tiene_pieza`).
     A diferencia de antes, se les exige tambien haber llegado al momento
     comercial de publicar: el pie es la vitrina mas visible que tenemos y no
     deberia estrenar una marca que todavia no ha firmado.
