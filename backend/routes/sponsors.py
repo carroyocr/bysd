@@ -1,8 +1,13 @@
-"""Patrocinadores: una ficha por marca y edicion, con todo dentro.
+"""Patrocinadores: una ficha por marca, con la lista de carreras que patrocina.
 
-Comercial, marca y publicacion viven en el mismo documento de `sponsors`. Las
-reglas compartidas con el pie publicitario estan en `services/patrocinios.py`;
-aqui queda el CRUD del panel y la vitrina publica.
+La ficha (quien es la empresa: contactos, logo, descripcion) se guarda una vez.
+Lo que se negocia por evento -status, categoria, monto, donde se ve, el arte de
+esa campana y las metricas- vive en `participaciones`, una por carrera. El
+reparto exacto y el porque estan en `services/patrocinios.py`.
+
+Las rutas del panel identifican la marca por su `id`, no por el nombre: asi
+renombrar una empresa no desengancha nada. Las de una carrera concreta llevan
+ademas el `race_code`.
 
 El listado publico de la vitrina es el unico endpoint abierto; el resto exige
 el permiso "sponsors".
@@ -29,8 +34,8 @@ ORDERED_PIPELINE = patrocinios.PIPELINE
 DEFAULT_PUBLICAR_DESDE = patrocinios.PUBLICAR_DESDE_POR_DEFECTO
 
 
-class DatosComerciales(BaseModel):
-    """El bloque que nunca sale del panel."""
+class FichaBase(BaseModel):
+    """La marca: lo que no cambia de una edicion a otra."""
     razon_social: Optional[str] = None
     rnc: Optional[str] = None
     nombre_contacto: Optional[str] = None
@@ -38,47 +43,41 @@ class DatosComerciales(BaseModel):
     telefono: Optional[str] = None
     correo: Optional[str] = None
     pagina_web: Optional[str] = None
-    propuesta_categoria: Optional[str] = None
-    propuesta_monto: Optional[float] = None
-    status: Optional[str] = None
-    publicar_desde: Optional[str] = None
-
-
-class DatosPublicos(BaseModel):
-    """Marca y publicacion: lo que ve quien entra al sitio o abre la app."""
     description: Optional[str] = None
     instagram: Optional[str] = None
-    text: Optional[str] = None
-    link_url: Optional[str] = None
+
+
+class FichaCreate(FichaBase):
+    name: str
+    # Las carreras que patrocina desde el primer momento. Se pueden marcar
+    # despues desde la pestana "Carreras" de su ficha.
+    races: List[str] = []
+
+
+class FichaUpdate(FichaBase):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ParticipacionUpdate(BaseModel):
+    """Lo que la marca negocia y publica en una carrera concreta."""
+    order: Optional[int] = None
+    status: Optional[str] = None
+    publicar_desde: Optional[str] = None
+    propuesta_categoria: Optional[str] = None
+    propuesta_monto: Optional[float] = None
     publicar_web: Optional[bool] = None
     publicar_app: Optional[bool] = None
     mostrar_marca: Optional[bool] = None
     weight: Optional[int] = Field(default=None, ge=1, le=10)
     start_at: Optional[str] = None
     end_at: Optional[str] = None
-
-
-class SponsorCreate(DatosComerciales, DatosPublicos):
-    name: str
-    race_code: str
-    order: Optional[int] = 0
-
-
-class SponsorUpdate(DatosComerciales, DatosPublicos):
-    name: Optional[str] = None
-    order: Optional[int] = None
-    is_active: Optional[bool] = None
+    text: Optional[str] = None
+    link_url: Optional[str] = None
 
 
 class BitacoraEntry(BaseModel):
     nota: str
-
-
-class SponsorCopy(BaseModel):
-    """Traer patrocinadores de una edicion a otra."""
-    from_race_code: str
-    to_race_code: str
-    names: List[str]
 
 
 def get_db():
@@ -86,18 +85,25 @@ def get_db():
     return db
 
 
-def nombre_archivo(race_code: str, sponsor_name: str, tipo: str, ext: str = "png") -> str:
-    """Nombre del archivo de una imagen: sin acentos ni simbolos, y por carrera.
-
-    Se nombra por el patrocinador y no por su `id` para que el archivo se
-    pueda reconocer de un vistazo en GridFS.
-    """
-    limpio = unicodedata.normalize("NFKD", sponsor_name.lower())
+def _slug(texto: str) -> str:
+    limpio = unicodedata.normalize("NFKD", texto.lower())
     limpio = limpio.encode("ascii", "ignore").decode("ascii")
     limpio = re.sub(r"[^a-z0-9\-]", "-", limpio)
-    limpio = re.sub(r"-+", "-", limpio).strip("-")
+    return re.sub(r"-+", "-", limpio).strip("-")
+
+
+def nombre_archivo(race_code: Optional[str], sponsor_name: str, tipo: str, ext: str = "png") -> str:
+    """Nombre del archivo de una imagen: sin acentos ni simbolos.
+
+    Se nombra por el patrocinador y no por su `id` para que el archivo se
+    pueda reconocer de un vistazo en GridFS. El logo es de la marca y no
+    lleva carrera delante; el banner y la imagen ampliada son de una edicion
+    concreta y si la llevan.
+    """
     sufijo = "" if tipo == "logo" else f"_{tipo}"
-    return f"{race_code.upper()}_{limpio}{sufijo}.{ext}"
+    if tipo == "logo":
+        return f"MARCA_{_slug(sponsor_name)}.{ext}"
+    return f"{(race_code or '').upper()}_{_slug(sponsor_name)}{sufijo}.{ext}"
 
 
 def archivo_de_url(url: str) -> str:
@@ -111,20 +117,25 @@ def archivo_de_url(url: str) -> str:
     return url.rsplit("/", 1)[-1].split("?", 1)[0]
 
 
-# Nombre anterior, cuando solo habia logos. Lo siguen usando las migraciones.
-def logo_filename(race_code: str, sponsor_name: str, ext: str = "png") -> str:
-    return nombre_archivo(race_code, sponsor_name, "logo", ext)
-
-
-async def _buscar(db, name: str, race_code: str) -> dict:
-    doc = await db.sponsors.find_one({"name": name, "race_code": race_code.upper()})
+async def _ficha(db, sponsor_id: str) -> dict:
+    doc = await db.sponsors.find_one({"id": sponsor_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
     return doc
 
 
+def _participacion(doc: dict, race_code: str) -> dict:
+    part = patrocinios.participacion(doc, race_code)
+    if not part:
+        raise HTTPException(
+            status_code=404,
+            detail="Este patrocinador no está marcado en esa carrera",
+        )
+    return part
+
+
 def _validar(datos: dict) -> None:
-    """Las tres validaciones que comparten el alta y la edicion."""
+    """Las validaciones de una participacion: pipeline, categoria y fechas."""
     if "status" in datos and datos["status"] not in patrocinios.STATUSES:
         raise HTTPException(status_code=400, detail="Status inválido")
     if "publicar_desde" in datos and datos["publicar_desde"] not in patrocinios.PIPELINE:
@@ -137,99 +148,162 @@ def _validar(datos: dict) -> None:
     patrocinios.parse_iso(datos.get("end_at"))
 
 
+async def _siguiente_orden(db, race_code: str) -> int:
+    """El orden que le toca al proximo que entre en esa carrera."""
+    code = race_code.upper()
+    ordenes = [
+        part.get("order", 0)
+        async for doc in db.sponsors.find(
+            {"participaciones.race_code": code}, {"participaciones": 1}
+        )
+        for part in doc.get("participaciones", [])
+        if (part.get("race_code") or "").upper() == code
+    ]
+    return (max(ordenes) + 1) if ordenes else 1
+
+
+async def _guardar_participaciones(db, sponsor_id: str, participaciones: list) -> None:
+    await db.sponsors.update_one(
+        {"id": sponsor_id},
+        {"$set": {
+            "participaciones": participaciones,
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+
+
 @router.get("/race/{race_code}")
 async def get_sponsors_by_race(race_code: str, destino: str = "web", db=Depends(get_db)):
     """Patrocinadores publicados de una carrera (publico).
 
     `destino` dice quien pregunta: "web" es la pagina de patrocinadores del
     sitio y "app" la vitrina de BYSD Live. Sale quien tenga encendido el
-    interruptor de ese destino **y** cuyo proceso comercial haya llegado al
-    momento de publicar. Las dos condiciones viven ahora en el mismo
-    documento; antes la primera estaba en otra coleccion.
+    interruptor de ese destino **y** cuyo proceso comercial de esa carrera haya
+    llegado al momento de publicar.
+
+    La respuesta es la de siempre, campo por campo: la ficha y su participacion
+    se aplanan en `vista_vitrina`.
     """
     code = race_code.upper()
-    # Los campos que deciden quien sale no son de la vitrina, pero hacen falta
-    # para filtrar: se piden aparte y se quitan antes de responder.
-    campos_filtro = {"status": 1, "publicar_desde": 1, "publicar_web": 1, "publicar_app": 1}
-    docs = await db.sponsors.find(
-        {"race_code": code, "is_active": True},
-        {**patrocinios.CAMPOS_VITRINA, **campos_filtro},
-    ).sort("order", 1).to_list(200)
+    docs = await db.sponsors.find({"participaciones.race_code": code}).to_list(400)
 
     sponsors = []
     for doc in docs:
-        if not patrocinios.sale_en(doc, destino):
+        part = patrocinios.participacion(doc, code)
+        if not part or not patrocinios.sale_en(doc, part, destino):
             continue
-        for campo in campos_filtro:
-            doc.pop(campo, None)
-        sponsors.append(doc)
+        sponsors.append(patrocinios.vista_vitrina(doc, part))
 
+    sponsors.sort(key=lambda s: s.get("order") or 0)
     return {"sponsors": sponsors, "race_code": code}
 
 
-@router.get("/admin/race/{race_code}", dependencies=[solo_sponsors])
-async def get_sponsors_admin(race_code: str, db=Depends(get_db)):
-    """Todos los patrocinadores de una carrera, con los tres bloques."""
-    sponsors = await db.sponsors.find(
-        {"race_code": race_code.upper()}, {"_id": 0}
-    ).sort("order", 1).to_list(200)
+@router.get("/admin", dependencies=[solo_sponsors])
+async def get_sponsors_admin(db=Depends(get_db)):
+    """Todas las fichas, con sus participaciones dentro.
 
-    return {"sponsors": sponsors, "race_code": race_code.upper()}
+    El panel las filtra por carrera y por status sin volver a preguntar: son
+    unas decenas de marcas y caben de sobra en una sola respuesta.
+    """
+    sponsors = await db.sponsors.find({}, {"_id": 0}).sort("name", 1).to_list(400)
+    for doc in sponsors:
+        doc.setdefault("participaciones", [])
+        doc["participaciones"].sort(key=lambda p: p.get("race_code") or "")
+    return {"sponsors": sponsors}
+
+
+@router.get("/admin/race/{race_code}", dependencies=[solo_sponsors])
+async def get_sponsors_admin_race(race_code: str, db=Depends(get_db)):
+    """Las marcas de una carrera, con su participacion aplanada en la ficha.
+
+    Es la vista de una sola edicion, para lo que solo mira a una carrera.
+    """
+    code = race_code.upper()
+    docs = await db.sponsors.find(
+        {"participaciones.race_code": code}, {"_id": 0}
+    ).to_list(400)
+
+    sponsors = []
+    for doc in docs:
+        part = patrocinios.participacion(doc, code)
+        if not part:
+            continue
+        plano = {k: v for k, v in doc.items() if k != "participaciones"}
+        plano.update({k: v for k, v in part.items() if k != "id"})
+        sponsors.append(plano)
+
+    sponsors.sort(key=lambda s: s.get("order") or 0)
+    return {"sponsors": sponsors, "race_code": code}
 
 
 @router.post("/create", dependencies=[solo_sponsors])
-async def create_sponsor(sponsor: SponsorCreate, db=Depends(get_db)):
-    """Alta de un patrocinador, con su ficha completa desde el primer momento.
+async def create_sponsor(ficha: FichaCreate, db=Depends(get_db)):
+    """Alta de una marca. Las carreras que patrocine se marcan aqui o despues."""
+    name = ficha.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="El nombre es obligatorio")
 
-    Hasta septiembre de 2026 esto creaba ademas un documento en `ad_banners`,
-    y desde el 26 de agosto lo hacia con un argumento que ya no existia: el
-    alta reventaba con un 500 despues de haber insertado el patrocinador. Ya
-    no hay segunda coleccion que estrenar.
-    """
-    code = sponsor.race_code.upper()
-    if await db.sponsors.find_one({"name": sponsor.name, "race_code": code}):
-        raise HTTPException(
-            status_code=400,
-            detail="Ya existe un patrocinador con ese nombre para esta carrera",
+    # Sin dos marcas con el mismo nombre: la gracia de la ficha unica es que
+    # "Cedimat" sea una sola en todo el panel.
+    if await db.sponsors.find_one({"name": re.compile(f"^{re.escape(name)}$", re.I)}):
+        raise HTTPException(status_code=400, detail="Ya existe un patrocinador con ese nombre")
+
+    datos = ficha.model_dump(exclude_none=True)
+    doc = patrocinios.nueva_ficha(
+        name, **{k: v for k, v in datos.items() if k not in ("name", "races")}
+    )
+
+    for code in dict.fromkeys(c.upper() for c in ficha.races if c):
+        doc["participaciones"].append(
+            patrocinios.nueva_participacion(code, order=await _siguiente_orden(db, code))
         )
 
-    datos = sponsor.model_dump(exclude_none=True)
-    _validar(datos)
-
-    ultimo = await db.sponsors.find_one({"race_code": code}, sort=[("order", -1)])
-    siguiente = (ultimo.get("order", 0) + 1) if ultimo else 1
-
-    doc = patrocinios.nuevo(
-        code,
-        sponsor.name,
-        order=sponsor.order or siguiente,
-        **{k: v for k, v in datos.items() if k not in ("name", "race_code", "order")},
-    )
     await db.sponsors.insert_one(doc)
     doc.pop("_id", None)
-
     return {"message": "Patrocinador creado exitosamente", "sponsor": doc}
 
 
-@router.put("/update/{sponsor_name}", dependencies=[solo_sponsors])
-async def update_sponsor(
-    sponsor_name: str,
-    race_code: str,
-    updates: SponsorUpdate,
-    db=Depends(get_db),
-):
-    """Editar cualquiera de los tres bloques.
+@router.put("/{sponsor_id}", dependencies=[solo_sponsors])
+async def update_sponsor(sponsor_id: str, updates: FichaUpdate, db=Depends(get_db)):
+    """Editar la ficha de la marca: contactos, descripcion, Instagram.
 
-    Las cadenas vacias se guardan como tales -asi se le quita la descripcion o
-    el enlace a un patrocinador-; solo se descarta lo que llega como null, que
-    es lo que el panel no mando.
+    Las cadenas vacias se guardan como tales -asi se le quita la descripcion a
+    una marca-; solo se descarta lo que llega como null, que es lo que el panel
+    no mando.
     """
-    sponsor = await _buscar(db, sponsor_name, race_code)
+    doc = await _ficha(db, sponsor_id)
 
     cambios = updates.model_dump(exclude_none=True)
     if not cambios:
         raise HTTPException(status_code=400, detail="No se proporcionaron datos para actualizar")
 
+    nombre = (cambios.get("name") or "").strip()
+    if nombre and nombre.lower() != (doc.get("name") or "").lower():
+        if await db.sponsors.find_one({
+            "name": re.compile(f"^{re.escape(nombre)}$", re.I),
+            "id": {"$ne": sponsor_id},
+        }):
+            raise HTTPException(status_code=400, detail="Ya existe un patrocinador con ese nombre")
+        cambios["name"] = nombre
+
+    cambios["updated_at"] = datetime.now(timezone.utc)
+    await db.sponsors.update_one({"id": sponsor_id}, {"$set": cambios})
+    return {"message": "Patrocinador actualizado exitosamente"}
+
+
+@router.put("/{sponsor_id}/carrera/{race_code}", dependencies=[solo_sponsors])
+async def guardar_participacion(
+    sponsor_id: str, race_code: str, updates: ParticipacionUpdate, db=Depends(get_db)
+):
+    """Marcar la carrera, o editar lo que la marca negocia en ella.
+
+    Si todavia no estaba marcada, se crea la participacion: es lo que hace la
+    casilla de la carrera en la ficha. Si ya estaba, se editan sus campos.
+    """
+    doc = await _ficha(db, sponsor_id)
+    code = race_code.upper()
+
+    cambios = updates.model_dump(exclude_none=True)
     _validar(cambios)
 
     # Vaciar la vigencia se pide con cadena vacia, pero se guarda como null:
@@ -238,48 +312,85 @@ async def update_sponsor(
         if cambios.get(campo) == "":
             cambios[campo] = None
 
-    cambios["updated_at"] = datetime.now(timezone.utc)
-    ops = {"$set": cambios}
+    participaciones = list(doc.get("participaciones") or [])
+    part = patrocinios.participacion(doc, code)
 
-    # Cada cambio de status queda registrado en la bitacora automaticamente.
-    anterior = sponsor.get("status") or "prospecto"
+    if not part:
+        nueva = patrocinios.nueva_participacion(
+            code, order=cambios.pop("order", None) or await _siguiente_orden(db, code), **cambios
+        )
+        participaciones.append(nueva)
+        await _guardar_participaciones(db, sponsor_id, participaciones)
+        return {"message": f"Patrocinador añadido a {code}", "participacion": nueva}
+
+    # Cada cambio de status queda registrado en la bitacora de esa carrera.
+    anterior = part.get("status") or "prospecto"
     nuevo_status = cambios.get("status")
     if nuevo_status and nuevo_status != anterior:
-        ops["$push"] = {
-            "bitacora": patrocinios.entrada_bitacora(
-                f"Status: {patrocinios.STATUS_LABELS.get(anterior, anterior)}"
-                f" → {patrocinios.STATUS_LABELS.get(nuevo_status, nuevo_status)}",
-                tipo="status",
-            )
-        }
+        part.setdefault("bitacora", []).append(patrocinios.entrada_bitacora(
+            f"Status: {patrocinios.STATUS_LABELS.get(anterior, anterior)}"
+            f" → {patrocinios.STATUS_LABELS.get(nuevo_status, nuevo_status)}",
+            tipo="status",
+        ))
 
-    await db.sponsors.update_one(
-        {"name": sponsor_name, "race_code": race_code.upper()}, ops
-    )
-
-    return {"message": "Patrocinador actualizado exitosamente"}
+    part.update(cambios)
+    await _guardar_participaciones(db, sponsor_id, participaciones)
+    return {"message": "Participación actualizada", "participacion": part}
 
 
-@router.post("/imagen/{tipo}/{sponsor_name}", dependencies=[solo_sponsors])
+@router.delete("/{sponsor_id}/carrera/{race_code}", dependencies=[solo_sponsors])
+async def quitar_participacion(sponsor_id: str, race_code: str, db=Depends(get_db)):
+    """Desmarcar una carrera: la marca deja de patrocinarla.
+
+    Se borra tambien el arte de esa campana, que no sirve para ninguna otra.
+    El logo no se toca: es de la marca y lo comparten todas las ediciones.
+    """
+    doc = await _ficha(db, sponsor_id)
+    code = race_code.upper()
+    part = _participacion(doc, code)
+
+    from services import file_storage
+
+    for campo in patrocinios.IMAGENES_CARRERA.values():
+        url = part.get(campo) or ""
+        if url.startswith("/api/uploads/"):
+            await file_storage.delete(archivo_de_url(url))
+
+    participaciones = [
+        p for p in doc.get("participaciones") or []
+        if (p.get("race_code") or "").upper() != code
+    ]
+    await _guardar_participaciones(db, sponsor_id, participaciones)
+    return {"message": f"Patrocinador quitado de {code}"}
+
+
+@router.post("/{sponsor_id}/imagen/{tipo}", dependencies=[solo_sponsors])
 async def subir_imagen(
     tipo: str,
-    sponsor_name: str,
-    race_code: str,
+    sponsor_id: str,
+    race_code: Optional[str] = None,
     file: UploadFile = File(...),
     db=Depends(get_db),
 ):
-    """Sube una de las tres piezas graficas del patrocinador.
+    """Sube una de las tres piezas graficas.
 
-    - logo:   el cuadrado de la marca. Sirve a la vitrina del sitio y al pie
-              de la app: es un solo archivo, no uno por sitio como antes.
+    - logo:   el cuadrado de la marca. Es de la ficha: sirve a la vitrina del
+              sitio y al pie de la app en todas las ediciones.
     - banner: la pieza que ocupa la barra entera del pie (1200x240).
     - detail: la imagen que se abre en la app al tocar el banner.
-    """
-    campo = patrocinios.IMAGENES.get(tipo)
-    if not campo:
-        raise HTTPException(status_code=400, detail="Tipo de imagen no válido")
 
-    await _buscar(db, sponsor_name, race_code)
+    Las dos ultimas son el arte de una campana, asi que piden `race_code`.
+    """
+    if tipo not in patrocinios.IMAGENES:
+        raise HTTPException(status_code=400, detail="Tipo de imagen no válido")
+    campo = patrocinios.IMAGENES[tipo]
+    es_de_la_marca = tipo in patrocinios.IMAGEN_MARCA
+
+    if not es_de_la_marca and not race_code:
+        raise HTTPException(status_code=400, detail="Falta la carrera de esta pieza")
+
+    doc = await _ficha(db, sponsor_id)
+    part = None if es_de_la_marca else _participacion(doc, race_code)
 
     # Sin SVG: puede llevar JavaScript dentro y se sirve desde nuestro origen,
     # asi que abrirlo ejecutaria ese script.
@@ -297,222 +408,130 @@ async def subir_imagen(
 
     # Las tres van por `compress_banner`, que reescala pero conserva el canal
     # alfa. El logo no puede pasar por `compress_image`: esa lo convierte a
-    # JPEG aplanando la transparencia contra negro, y ahora el mismo archivo
-    # tiene que verse igual de bien sobre la tarjeta blanca de la vitrina que
-    # sobre el pie negro de la app. Un logo de marca casi siempre es un PNG
+    # JPEG aplanando la transparencia contra negro, y el mismo archivo tiene
+    # que verse igual de bien sobre la tarjeta blanca de la vitrina que sobre
+    # el pie negro de la app. Un logo de marca casi siempre es un PNG
     # recortado, y aplanarlo lo convertiria en un cuadrado negro.
     contenido, ext, content_type = file_storage.compress_banner(
         contenido, ext_original, file.content_type
     )
 
-    filename = nombre_archivo(race_code, sponsor_name, tipo, ext)
+    filename = nombre_archivo(race_code, doc["name"], tipo, ext)
     await file_storage.save(filename, contenido, content_type, file_storage.FOLDER_SPONSORS)
 
     # El nombre del archivo no cambia al reemplazar una pieza -se construye con
-    # la carrera y el nombre del patrocinador-, asi que sin esta marca el
-    # telefono seguiria ensenando la imagen vieja hasta que caducase su cache.
+    # el nombre de la marca-, asi que sin esta marca de version el telefono
+    # seguiria ensenando la imagen vieja hasta que caducase su cache.
     version = int(datetime.now(timezone.utc).timestamp())
     url = f"/api/uploads/sponsors/{filename}?v={version}"
-    await db.sponsors.update_one(
-        {"name": sponsor_name, "race_code": race_code.upper()},
-        {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
-    )
+
+    if es_de_la_marca:
+        await db.sponsors.update_one(
+            {"id": sponsor_id},
+            {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
+        )
+    else:
+        part[campo] = url
+        await _guardar_participaciones(db, sponsor_id, doc["participaciones"])
+
     return {"message": "Imagen subida exitosamente", "tipo": tipo, "url": url, campo: url}
 
 
-@router.delete("/imagen/{tipo}/{sponsor_name}", dependencies=[solo_sponsors])
-async def quitar_imagen(tipo: str, sponsor_name: str, race_code: str, db=Depends(get_db)):
+@router.delete("/{sponsor_id}/imagen/{tipo}", dependencies=[solo_sponsors])
+async def quitar_imagen(
+    tipo: str, sponsor_id: str, race_code: Optional[str] = None, db=Depends(get_db)
+):
     """Quita una pieza: sirve para volver del banner completo al logo y texto."""
-    campo = patrocinios.IMAGENES.get(tipo)
-    if not campo:
+    if tipo not in patrocinios.IMAGENES:
         raise HTTPException(status_code=400, detail="Tipo de imagen no válido")
+    campo = patrocinios.IMAGENES[tipo]
+    es_de_la_marca = tipo in patrocinios.IMAGEN_MARCA
 
-    sponsor = await _buscar(db, sponsor_name, race_code)
+    if not es_de_la_marca and not race_code:
+        raise HTTPException(status_code=400, detail="Falta la carrera de esta pieza")
 
-    url = sponsor.get(campo) or ""
+    doc = await _ficha(db, sponsor_id)
+    part = None if es_de_la_marca else _participacion(doc, race_code)
+
+    url = (doc if es_de_la_marca else part).get(campo) or ""
     if url.startswith("/api/uploads/"):
         from services import file_storage
         await file_storage.delete(archivo_de_url(url))
 
-    await db.sponsors.update_one(
-        {"name": sponsor_name, "race_code": race_code.upper()},
-        {"$set": {campo: None, "updated_at": datetime.now(timezone.utc)}},
-    )
+    if es_de_la_marca:
+        await db.sponsors.update_one(
+            {"id": sponsor_id},
+            {"$set": {campo: None, "updated_at": datetime.now(timezone.utc)}},
+        )
+    else:
+        part[campo] = None
+        await _guardar_participaciones(db, sponsor_id, doc["participaciones"])
+
     return {"message": "Imagen eliminada", "tipo": tipo}
 
 
-@router.post("/upload-logo/{sponsor_name}", dependencies=[solo_sponsors])
-async def upload_sponsor_logo(
-    sponsor_name: str, race_code: str, file: UploadFile = File(...), db=Depends(get_db)
-):
-    """Ruta antigua del logo. Se mantiene para no romper un panel ya abierto."""
-    return await subir_imagen("logo", sponsor_name, race_code, file, db)
-
-
-@router.delete("/delete/{sponsor_name}", dependencies=[solo_sponsors])
-async def delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_db)):
-    """Retirar un patrocinador sin borrarlo: deja de salir, se conserva todo."""
+@router.delete("/{sponsor_id}", dependencies=[solo_sponsors])
+async def retirar_sponsor(sponsor_id: str, db=Depends(get_db)):
+    """Retirar una marca sin borrarla: deja de salir en todas sus carreras."""
     result = await db.sponsors.update_one(
-        {"name": sponsor_name, "race_code": race_code.upper()},
+        {"id": sponsor_id},
         {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
     )
-
-    if result.modified_count == 0:
+    if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
+    return {"message": "Patrocinador retirado"}
 
-    return {"message": "Patrocinador eliminado exitosamente"}
 
-
-@router.delete("/hard-delete/{sponsor_name}", dependencies=[solo_sponsors])
-async def hard_delete_sponsor(sponsor_name: str, race_code: str, db=Depends(get_db)):
+@router.delete("/{sponsor_id}/permanente", dependencies=[solo_sponsors])
+async def borrar_sponsor(sponsor_id: str, db=Depends(get_db)):
     """Borrar de verdad, con sus imagenes, para no dejar huerfanos en GridFS."""
-    sponsor = await db.sponsors.find_one({"name": sponsor_name, "race_code": race_code.upper()})
-    if not sponsor:
-        raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
+    doc = await _ficha(db, sponsor_id)
 
     from services import file_storage
 
-    for campo in patrocinios.IMAGENES.values():
-        url = sponsor.get(campo) or ""
+    urls = [doc.get("logo_url") or ""]
+    for part in doc.get("participaciones") or []:
+        urls += [part.get(c) or "" for c in patrocinios.IMAGENES_CARRERA.values()]
+    for url in urls:
         if url.startswith("/api/uploads/"):
             await file_storage.delete(archivo_de_url(url))
 
-    await db.sponsors.delete_one({"name": sponsor_name, "race_code": race_code.upper()})
-
+    await db.sponsors.delete_one({"id": sponsor_id})
     return {"message": "Patrocinador eliminado permanentemente"}
 
 
-@router.post("/bitacora/{sponsor_name}", dependencies=[solo_sponsors])
+@router.post("/{sponsor_id}/bitacora", dependencies=[solo_sponsors])
 async def add_bitacora_entry(
-    sponsor_name: str, race_code: str, entry: BitacoraEntry, db=Depends(get_db)
+    sponsor_id: str, race_code: str, entry: BitacoraEntry, db=Depends(get_db)
 ):
-    """Registrar un contacto en la bitacora del patrocinador."""
+    """Registrar un contacto en la bitacora de esa carrera."""
     nota = entry.nota.strip()
     if not nota:
         raise HTTPException(status_code=400, detail="La nota no puede estar vacía")
 
-    result = await db.sponsors.update_one(
-        {"name": sponsor_name, "race_code": race_code.upper()},
-        {
-            "$push": {"bitacora": patrocinios.entrada_bitacora(nota)},
-            "$set": {"updated_at": datetime.now(timezone.utc)},
-        },
-    )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Patrocinador no encontrado")
+    doc = await _ficha(db, sponsor_id)
+    part = _participacion(doc, race_code)
+    part.setdefault("bitacora", []).append(patrocinios.entrada_bitacora(nota))
+    await _guardar_participaciones(db, sponsor_id, doc["participaciones"])
     return {"message": "Contacto registrado en la bitácora"}
-
-
-@router.post("/copy", dependencies=[solo_sponsors])
-async def copy_sponsors(payload: SponsorCopy, db=Depends(get_db)):
-    """Traer patrocinadores de otra edicion a la carrera indicada.
-
-    Llega lo que sirve para volver a tocar la puerta -contactos, logo,
-    descripcion, Instagram- pero no el resultado de la negociacion anterior:
-    el proceso empieza otra vez en "prospecto", y la categoria y el monto de
-    aquella vez quedan como referencia en la bitacora, no como propuesta
-    vigente.
-
-    La copia nace apagada para los dos destinos: una edicion que aun no ha
-    empezado a vender no deberia estrenar vitrina con las marcas del ano
-    pasado.
-    """
-    origen = payload.from_race_code.upper()
-    destino = payload.to_race_code.upper()
-
-    if origen == destino:
-        raise HTTPException(status_code=400, detail="El origen y el destino son la misma carrera")
-    if not payload.names:
-        raise HTTPException(status_code=400, detail="No se indicó ningún patrocinador")
-
-    from services import file_storage
-
-    ultimo = await db.sponsors.find_one({"race_code": destino}, sort=[("order", -1)])
-    siguiente_orden = (ultimo.get("order", 0) + 1) if ultimo else 1
-
-    copiados, omitidos = [], []
-
-    for name in payload.names:
-        fuente = await db.sponsors.find_one({"name": name, "race_code": origen})
-        if not fuente:
-            omitidos.append({"name": name, "motivo": "no existe en la carrera de origen"})
-            continue
-
-        if await db.sponsors.find_one({"name": name, "race_code": destino}):
-            omitidos.append({"name": name, "motivo": "ya está en esta carrera"})
-            continue
-
-        # Las imagenes se duplican con el nombre de la carrera destino: si
-        # luego se cambia el logo de una edicion, la otra conserva el suyo.
-        imagenes = {}
-        for tipo, campo in patrocinios.IMAGENES.items():
-            url_origen = fuente.get(campo)
-            if not url_origen:
-                continue
-            archivo_origen = archivo_de_url(url_origen)
-            ext = archivo_origen.rsplit(".", 1)[-1] if "." in archivo_origen else "png"
-            contenido = await file_storage.load(archivo_origen)
-            if not contenido:
-                continue
-            archivo_destino = nombre_archivo(destino, name, tipo, ext)
-            await file_storage.save(
-                archivo_destino, contenido[0], contenido[1], file_storage.FOLDER_SPONSORS
-            )
-            imagenes[campo] = f"/api/uploads/sponsors/{archivo_destino}"
-
-        categoria_anterior = sponsor_categories.etiqueta(fuente.get("propuesta_categoria"))
-        monto_anterior = fuente.get("propuesta_monto")
-        referencia = f" Entró como {categoria_anterior}." if categoria_anterior else ""
-        referencia += f" Aportó RD${monto_anterior:,.2f}." if monto_anterior else ""
-
-        copia = patrocinios.nuevo(
-            destino,
-            name,
-            order=siguiente_orden,
-            razon_social=fuente.get("razon_social"),
-            rnc=fuente.get("rnc"),
-            nombre_contacto=fuente.get("nombre_contacto"),
-            posicion_contacto=fuente.get("posicion_contacto"),
-            telefono=fuente.get("telefono"),
-            correo=fuente.get("correo"),
-            pagina_web=fuente.get("pagina_web"),
-            publicar_desde=fuente.get("publicar_desde"),
-            description=fuente.get("description"),
-            instagram=fuente.get("instagram"),
-            text=fuente.get("text"),
-            link_url=fuente.get("link_url"),
-            weight=fuente.get("weight"),
-            mostrar_marca=fuente.get("mostrar_marca", True),
-            publicar_web=False,
-            publicar_app=False,
-            bitacora=[patrocinios.entrada_bitacora(
-                f"Traído de {origen}.{referencia}", tipo="status"
-            )],
-            **imagenes,
-        )
-        await db.sponsors.insert_one(copia)
-
-        siguiente_orden += 1
-        copiados.append(name)
-
-    return {
-        "message": f"{len(copiados)} patrocinador(es) traídos de {origen}",
-        "copiados": copiados,
-        "omitidos": omitidos,
-    }
 
 
 @router.post("/reorder", dependencies=[solo_sponsors])
 async def reorder_sponsors(
     race_code: str,
-    sponsor_orders: List[dict],  # [{"name": "Sponsor1", "order": 1}, ...]
+    sponsor_orders: List[dict],  # [{"id": "...", "order": 1}, ...]
     db=Depends(get_db),
 ):
-    """Reordenar la vitrina. El mismo orden manda en la rotacion del pie."""
+    """Reordenar la vitrina de una carrera. El mismo orden manda en el pie."""
+    code = race_code.upper()
     for item in sponsor_orders:
         await db.sponsors.update_one(
-            {"name": item["name"], "race_code": race_code.upper()},
-            {"$set": {"order": item["order"], "updated_at": datetime.now(timezone.utc)}},
+            {"id": item.get("id"), "participaciones.race_code": code},
+            {
+                "$set": {
+                    "participaciones.$.order": item.get("order", 0),
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
         )
-
     return {"message": "Orden actualizado exitosamente"}

@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Mete los patrocinadores de BYSD-2026 en la base, con sus logos.
 
+RETIRADO. Ya se corrio, y escribe con la forma vieja -un documento por marca y
+carrera- que dejo de existir con la ficha unica
+(`migrations/ficha_unica_patrocinador.py`, septiembre de 2026). Se conserva por
+lo que cuenta de donde salieron esos 23 patrocinadores; volver a correrlo
+insertaria documentos que ni el panel ni la vitrina saben leer.
+
 Los 23 patrocinadores de la primera edicion nunca estuvieron en la base: vivian
 escritos a mano en frontend/src/content/legacySponsors.js, con los logos en
 frontend/public/sponsors/. Por eso el panel no los mostraba y no habia forma de

@@ -1,24 +1,30 @@
-"""Reglas de un patrocinador: una sola ficha, tres bloques.
+"""Reglas de un patrocinador: una ficha por marca, una participacion por carrera.
 
-Hasta septiembre de 2026 un patrocinador vivia partido en dos colecciones:
-`sponsors` (el expediente comercial) y `ad_banners` (la ficha de publicidad),
-unidas por nombre y carrera. Eran 44 y 44 -uno a uno-, con la descripcion y el
-Instagram guardados en las dos, el logo cargado dos veces en dos carpetas de
-GridFS distintas, y los interruptores de "donde se ve" viviendo en la ficha
-aunque decidieran tambien la vitrina del sitio. Renombrar en un lado
-desenganchaba el otro en silencio.
+Hasta septiembre de 2026 un patrocinador se guardaba una vez **por cada
+edicion**: Cedimat en BYSD-2026 y Cedimat en BYSD-2027 eran dos documentos sin
+relacion, cada uno con su razon social, su contacto y su telefono copiados a
+mano. Eran 55 documentos para 31 marcas, y 21 de esas marcas estaban repetidas.
+Corregir un telefono obligaba a acordarse de todas las ediciones donde la marca
+saliera; en los datos reales, 5 marcas acabaron con contactos distintos y 4 con
+telefonos distintos sin que nadie lo decidiera.
 
-Ahora es un solo documento en `sponsors` con tres bloques:
+Ahora la marca se guarda una sola vez y lleva dentro la lista de carreras que
+patrocina. El reparto es el siguiente, y es el que contesta a "¿esto cambia de
+una edicion a otra?":
 
-- **Comercial**: razon social, RNC, contactos, categoria, monto, el pipeline
-  (`status`) y la bitacora. Es lo que nunca sale del panel.
-- **Marca**: el logo, el banner de la barra, la imagen ampliada, la
-  descripcion y el Instagram. Es lo que ve el publico.
-- **Publicacion**: donde se ve (`publicar_web`, `publicar_app`), desde cuando
-  (`start_at`/`end_at`), con cuanta frecuencia (`weight`) y las metricas.
+- **La ficha de la marca** (una por empresa): nombre, razon social, RNC,
+  contacto y su posicion, telefono, correo, pagina web, descripcion, Instagram
+  y logo. Es quien es la empresa, y no cambia porque cambie el ano.
+- **La participacion** (una por carrera que patrocina): el proceso comercial
+  (`status`, `publicar_desde`, bitacora), lo negociado (categoria y monto),
+  donde se ve y desde cuando (`publicar_web`, `publicar_app`, vigencia, peso,
+  orden), el arte de esa campana (texto, enlace, banner, imagen ampliada) y
+  las metricas. Todo eso se negocia y se paga por evento.
 
-Este modulo tiene lo que necesitan por igual el router de patrocinadores y el
-de publicidad, para que las dos vistas del mismo dato no vuelvan a divergir.
+La vitrina del sitio y el pie de la app siguen viendo lo de siempre: las
+funciones `vista_vitrina` y `vista_anuncio` aplanan la ficha con la
+participacion de la carrera que se pida, y devuelven exactamente los mismos
+campos que antes. Hay apps instaladas (1.3.x) leyendo esa forma.
 """
 from datetime import datetime, timezone
 from typing import Optional
@@ -28,19 +34,22 @@ from fastapi import HTTPException
 
 # Las tres piezas graficas de un patrocinador, y el campo donde vive cada una.
 #
-# - logo:   el cuadrado de la marca. Sirve a la vitrina del sitio Y al pie de
-#           la app: es el mismo logo, cargado una vez.
+# - logo:   el cuadrado de la marca. Es de la ficha: la misma empresa no
+#           cambia de logo entre una edicion y la siguiente, y sirve por igual
+#           a la vitrina del sitio y al pie de la app.
 # - banner: la pieza que ocupa la barra entera del pie (1200x240, 5:1).
-#           Cuando existe, sustituye al logo y al texto.
 # - detail: la imagen que se abre dentro de la app al tocar el banner.
-IMAGENES = {
-    "logo": "logo_url",
-    "banner": "banner_url",
-    "detail": "detail_url",
-}
+#
+# Las dos ultimas son el arte de la campana de esa edicion, asi que viven en
+# la participacion.
+IMAGEN_MARCA = {"logo": "logo_url"}
+IMAGENES_CARRERA = {"banner": "banner_url", "detail": "detail_url"}
+IMAGENES = {**IMAGEN_MARCA, **IMAGENES_CARRERA}
 
 # Pipeline del proceso de cierre. "prospecto" (aun sin primer contacto) y
-# "declinado" (no se concreto) cubren el inicio y la salida negativa.
+# "declinado" (no se concreto) cubren el inicio y la salida negativa. Se lleva
+# por carrera: una marca puede estar cobrada en el Mundial y en primera
+# reunion para la edicion siguiente.
 STATUSES = (
     "prospecto",
     "envio_informacion",
@@ -66,27 +75,23 @@ STATUS_LABELS = {
 }
 
 # Orden del pipeline (sin "declinado", que nunca se publica). Cada
-# patrocinador define en `publicar_desde` el momento a partir del cual puede
+# participacion define en `publicar_desde` el momento a partir del cual puede
 # salir; por defecto, cuando cierra.
 PIPELINE = [s for s in STATUSES if s != "declinado"]
 PUBLICAR_DESDE_POR_DEFECTO = "cierre"
 
-# Lo que sale en la vitrina de patrocinadores (sitio y app). Es la lista corta:
-# el logo, el nombre y la categoria, que es lo que distingue un nivel de otro.
-CAMPOS_VITRINA = {
-    "_id": 0, "id": 1, "name": 1, "logo_url": 1, "order": 1,
-    "race_code": 1, "is_active": 1, "propuesta_categoria": 1,
-}
+# Los campos de la ficha: lo que es de la marca y no de una edicion.
+CAMPOS_FICHA = (
+    "razon_social", "rnc", "nombre_contacto", "posicion_contacto",
+    "telefono", "correo", "pagina_web", "description", "instagram",
+)
 
-# Lo que necesita un anuncio para pintarse en el pie de BYSD Live. Es la misma
-# forma que devolvia `ad_banners`, y no se toca: hay apps instaladas (1.3.x)
-# leyendola tal cual.
-CAMPOS_ANUNCIO = {
-    "_id": 0, "id": 1, "name": 1, "text": 1, "link_url": 1,
-    "logo_url": 1, "banner_url": 1, "detail_url": 1, "weight": 1, "order": 1,
-    "mostrar_marca": 1, "description": 1, "instagram": 1,
-    "publicar_web": 1, "publicar_app": 1,
-}
+# Los campos de una participacion, sin contar `race_code`, `id` ni la bitacora.
+CAMPOS_PARTICIPACION = (
+    "order", "status", "publicar_desde", "propuesta_categoria", "propuesta_monto",
+    "publicar_web", "publicar_app", "mostrar_marca", "weight",
+    "start_at", "end_at", "text", "link_url",
+)
 
 
 def parse_iso(value: Optional[str]) -> Optional[datetime]:
@@ -100,10 +105,10 @@ def parse_iso(value: Optional[str]) -> Optional[datetime]:
         raise HTTPException(status_code=400, detail="Fecha de vigencia no válida (use ISO 8601)")
 
 
-def vigente(doc: dict, ahora: datetime) -> bool:
+def vigente(part: dict, ahora: datetime) -> bool:
     """Si la fecha de hoy cae dentro de la vigencia declarada (o no hay)."""
-    inicio = parse_iso(doc.get("start_at"))
-    fin = parse_iso(doc.get("end_at"))
+    inicio = parse_iso(part.get("start_at"))
+    fin = parse_iso(part.get("end_at"))
     if inicio and ahora < inicio:
         return False
     if fin and ahora > fin:
@@ -111,88 +116,157 @@ def vigente(doc: dict, ahora: datetime) -> bool:
     return True
 
 
-def tiene_pieza(doc: dict) -> bool:
+def tiene_pieza(doc: dict, part: dict) -> bool:
     """Si hay con que pintar el anuncio en el pie.
 
     Desde septiembre de 2026 el pie ya no pinta el arte de la marca: lleva el
     nombre, una linea de texto y un boton que abre la pieza grafica o, si no
-    hay, el enlace. Asi que basta con cualquiera de esas cosas: una imagen,
-    el texto o el enlace. Lo que se sigue saltando es el patrocinador que
-    solo tiene nombre, un hueco que no dice nada ni lleva a ningun sitio.
+    hay, el enlace. Asi que basta con cualquiera de esas cosas: una imagen, el
+    texto o el enlace. Lo que se sigue saltando es el patrocinador que solo
+    tiene nombre, un hueco que no dice nada ni lleva a ningun sitio.
+
+    El logo es de la ficha y las otras dos piezas de la participacion, por eso
+    hacen falta las dos mitades para contestar.
     """
-    if any(doc.get(campo) for campo in IMAGENES.values()):
+    if doc.get("logo_url") or any(part.get(c) for c in IMAGENES_CARRERA.values()):
         return True
-    return bool((doc.get("text") or "").strip() or (doc.get("link_url") or "").strip())
+    return bool((part.get("text") or "").strip() or (part.get("link_url") or "").strip())
 
 
-def proceso_permite_publicar(doc: dict) -> bool:
-    """Si el proceso comercial ya llego al momento de salir a la luz.
+def proceso_permite_publicar(part: dict) -> bool:
+    """Si el proceso comercial de esa carrera ya llego al momento de salir.
 
     Es la puerta comercial -"no lo ensenes hasta que firme"-, distinta de los
     interruptores de donde se ve. Las dos tienen que dar el visto bueno.
     """
-    status = doc.get("status") or "prospecto"
+    status = part.get("status") or "prospecto"
     if status not in PIPELINE:
         return False  # declinado, o un valor que no reconocemos
-    desde = doc.get("publicar_desde") or PUBLICAR_DESDE_POR_DEFECTO
+    desde = part.get("publicar_desde") or PUBLICAR_DESDE_POR_DEFECTO
     if desde not in PIPELINE:
         desde = PUBLICAR_DESDE_POR_DEFECTO
     return PIPELINE.index(status) >= PIPELINE.index(desde)
 
 
-def sale_en(doc: dict, destino: str) -> bool:
-    """Si este patrocinador se ensena en la vitrina de `destino` ("web"/"app").
+def sale_en(doc: dict, part: dict, destino: str) -> bool:
+    """Si esta participacion se ensena en la vitrina de `destino` ("web"/"app").
 
-    Las dos condiciones juntas: que el proceso comercial lo permita y que el
-    interruptor de ese destino este encendido. Ausente cuenta como encendido,
-    que es como nacieron los que vienen de antes de la unificacion.
+    Tres condiciones: que la marca no este retirada, que el proceso comercial
+    de esa carrera lo permita y que el interruptor de ese destino este
+    encendido. Ausente cuenta como encendido, que es como nacieron los que
+    vienen de antes de la unificacion.
     """
-    if not proceso_permite_publicar(doc):
+    if doc.get("is_active") is False:
+        return False
+    if not proceso_permite_publicar(part):
         return False
     interruptor = "publicar_app" if destino == "app" else "publicar_web"
-    return doc.get(interruptor) is not False
+    return part.get(interruptor) is not False
 
 
-def nuevo(race_code: str, name: str, *, order: int, **campos) -> dict:
-    """El documento de un patrocinador recien dado de alta.
+def participacion(doc: dict, race_code: str) -> Optional[dict]:
+    """La participacion de esa carrera dentro de la ficha, si la hay."""
+    code = (race_code or "").upper()
+    for part in doc.get("participaciones") or []:
+        if (part.get("race_code") or "").upper() == code:
+            return part
+    return None
 
-    Nace con los tres bloques puestos, aunque casi todos vacios: si un campo
+
+def vista_vitrina(doc: dict, part: dict) -> dict:
+    """Lo que sale en la vitrina de patrocinadores (sitio y app).
+
+    Es la lista corta de siempre: el logo, el nombre y la categoria, que es lo
+    que distingue un nivel de otro. Mismas claves que antes de partir la ficha
+    en dos: quien lo lee no se entera del cambio.
+    """
+    return {
+        "id": part.get("id"),
+        "name": doc.get("name"),
+        "logo_url": doc.get("logo_url"),
+        "order": part.get("order", 0),
+        "race_code": part.get("race_code"),
+        "is_active": doc.get("is_active", True),
+        "propuesta_categoria": part.get("propuesta_categoria"),
+    }
+
+
+def vista_anuncio(doc: dict, part: dict) -> dict:
+    """Lo que necesita un anuncio para pintarse en el pie de BYSD Live.
+
+    Es la misma forma que devolvia `ad_banners`, y no se toca: hay apps
+    instaladas (1.3.x) leyendola tal cual. El `id` es el de la participacion,
+    porque las metricas se cuentan por carrera.
+    """
+    return {
+        "id": part.get("id"),
+        "name": doc.get("name"),
+        "text": part.get("text"),
+        "link_url": part.get("link_url"),
+        "logo_url": doc.get("logo_url"),
+        "banner_url": part.get("banner_url"),
+        "detail_url": part.get("detail_url"),
+        "weight": part.get("weight", 1),
+        "order": part.get("order", 0),
+        "mostrar_marca": part.get("mostrar_marca", True),
+        "description": doc.get("description"),
+        "instagram": doc.get("instagram"),
+        "publicar_web": part.get("publicar_web", True),
+        "publicar_app": part.get("publicar_app", True),
+    }
+
+
+def nueva_ficha(name: str, **campos) -> dict:
+    """La ficha de una marca recien dada de alta, sin ninguna carrera todavia.
+
+    Nace con todos los campos puestos, aunque casi todos vacios: si un campo
     falta, el panel lo lee como vacio y nadie se entera de que nunca existio.
 
-    El `id` es estable y no se recalcula nunca: es con lo que la app cuenta
-    impresiones y clics (`POST /api/ads/track`), asi que sobrevive a cambios
-    de nombre.
+    El `id` es estable y no se recalcula nunca: identifica a la marca en todas
+    las rutas del panel, asi que sobrevive a cambios de nombre.
     """
     ahora = datetime.now(timezone.utc)
     texto = lambda k: (campos.get(k) or "").strip()  # noqa: E731
 
-    return {
+    ficha = {
         "id": campos.get("id") or str(uuid.uuid4()),
         "name": name.strip(),
+        "is_active": campos.get("is_active", True),
+        "logo_url": campos.get("logo_url"),
+        "participaciones": campos.get("participaciones") or [],
+        "created_at": campos.get("created_at") or ahora,
+        "updated_at": ahora,
+    }
+    for campo in CAMPOS_FICHA:
+        ficha[campo] = texto(campo)
+    return ficha
+
+
+def nueva_participacion(race_code: str, *, order: int, **campos) -> dict:
+    """Lo que una marca patrocina en una carrera concreta.
+
+    El `id` es con lo que la app cuenta impresiones y clics
+    (`POST /api/ads/track`). Al unificar las fichas se hereda el del documento
+    que habia para esa carrera, para que los contadores ya recogidos sigan
+    sumando donde estaban.
+    """
+    texto = lambda k: (campos.get(k) or "").strip()  # noqa: E731
+
+    return {
+        "id": campos.get("id") or str(uuid.uuid4()),
         "race_code": race_code.upper(),
         "order": order,
-        "is_active": True,
 
         # Comercial
-        "razon_social": texto("razon_social"),
-        "rnc": texto("rnc"),
-        "nombre_contacto": texto("nombre_contacto"),
-        "posicion_contacto": texto("posicion_contacto"),
-        "telefono": texto("telefono"),
-        "correo": texto("correo"),
-        "pagina_web": texto("pagina_web"),
-        "propuesta_categoria": texto("propuesta_categoria"),
-        "propuesta_monto": campos.get("propuesta_monto"),
         "status": campos.get("status") or "prospecto",
         "publicar_desde": campos.get("publicar_desde") or PUBLICAR_DESDE_POR_DEFECTO,
+        "propuesta_categoria": texto("propuesta_categoria"),
+        "propuesta_monto": campos.get("propuesta_monto"),
         "bitacora": campos.get("bitacora") or [],
 
-        # Marca
-        "logo_url": campos.get("logo_url"),
+        # Arte de esta campana
         "banner_url": campos.get("banner_url"),
         "detail_url": campos.get("detail_url"),
-        "description": texto("description"),
-        "instagram": texto("instagram"),
         "text": texto("text"),
         "link_url": texto("link_url"),
 
@@ -208,8 +282,7 @@ def nuevo(race_code: str, name: str, *, order: int, **campos) -> dict:
         "impressions": campos.get("impressions") or 0,
         "clicks": campos.get("clicks") or 0,
 
-        "created_at": ahora,
-        "updated_at": ahora,
+        "created_at": campos.get("created_at") or datetime.now(timezone.utc),
     }
 
 

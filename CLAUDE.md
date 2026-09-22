@@ -43,6 +43,8 @@ Desde agosto de 2026 conviven varias carreras (el Campeonato Mundial de octubre 
 - **Las vueltas se anotan solo por `services/laps.py`**, que escribe en `lap_registrations` con `race_code`, origen (`qr` o `panel`) y autor. `registrations.laps_completed` y `total_km` no se tocan a mano: los recalcula `laps.recalcular()` desde ese libro. Corregir es **anular** (`laps.anular`), nunca borrar.
 - **La vuelta en curso la da el reloj**, en `services/races.py`: `vuelta_actual(carrera)` cuenta desde `started_at`, la hora real que se sella con "Iniciar carrera", y se detiene en `finished_at` al cerrar la carrera. No hay contadores manuales; la colección `race_config` quedó retirada.
 
+- **Un patrocinador es una marca, no una marca por carrera.** `sponsors` guarda una ficha por empresa (contactos, logo, descripción: lo que no cambia de un año a otro) con una lista de `participaciones`, una por carrera que patrocina. Lo que se negocia por evento —status del pipeline, categoría, monto, dónde se ve, el anuncio de esa campaña, las métricas y la bitácora— vive en la participación, nunca en la ficha. Las reglas están en `backend/services/patrocinios.py`, y `vista_vitrina`/`vista_anuncio` aplanan las dos mitades para que `/api/sponsors/race/{code}` y `/api/ads/*` sigan devolviendo la forma que leen las apps instaladas: no se les cambia ni un campo.
+
 Dar la salida (`POST /api/race/start`) también pasa los inscritos de `registered` a `active`: es lo que los convierte en corredores en carrera.
 
 Cerrar una carrera (`POST /api/race-config/close/{code}`) no mueve ni borra datos, solo congela. Cada dato lleva su `race_code` y se queda donde está.

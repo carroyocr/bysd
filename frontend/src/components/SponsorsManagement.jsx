@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import {
-  Plus, Edit, Trash2, Save, X, Upload,
-  Building2, Image, Phone, Mail, Globe, User, Smartphone,
-  NotebookPen, Eye, EyeOff, Landmark, BadgeDollarSign, ChevronDown, ChevronRight,
-  History, Megaphone, MousePointerClick, Instagram, ArrowUp, ArrowDown,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from './ui/table';
+import {
+  Plus, Trash2, Save, X, Upload, Search,
+  Building2, Globe, Smartphone, NotebookPen, Eye, EyeOff, Landmark,
+  Megaphone, MousePointerClick, Instagram, Flag, Archive,
 } from 'lucide-react';
 import useTextoQueCabe from '../hooks/useTextoQueCabe';
 import { toast } from 'sonner';
@@ -19,7 +25,9 @@ import { SPONSOR_CATEGORIES, getCategory } from '../lib/sponsorCategories';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 // Pipeline del proceso de cierre (mismo orden que el backend). "Prospecto" y
-// "Declinado" complementan la lista original: inicio y salida negativa.
+// "Declinado" complementan la lista original: inicio y salida negativa. Se
+// lleva por carrera: una marca puede estar cobrada en el Mundial y en primera
+// reunión para la edición siguiente.
 const STATUS_OPTIONS = [
   { value: 'prospecto', label: 'Prospecto', badgeClass: 'bg-gray-100 text-gray-700' },
   { value: 'envio_informacion', label: 'Envío de Información', badgeClass: 'bg-blue-100 text-blue-700' },
@@ -38,38 +46,39 @@ const DEFAULT_PUBLICAR_DESDE = 'cierre';
 const getStatusInfo = (status) =>
   STATUS_OPTIONS.find((s) => s.value === (status || 'prospecto')) || STATUS_OPTIONS[0];
 
-// Si el proceso comercial ya llegó al momento de publicar. Es la puerta
-// comercial —«no lo enseñes hasta que firme»—, distinta de los interruptores
-// de dónde se ve. Las dos tienen que dar el visto bueno.
-const procesoPermitePublicar = (sponsor) => {
-  if (!sponsor.is_active) return false;
-  const idx = PIPELINE_ORDER.indexOf(sponsor.status || 'prospecto');
+// Si el proceso comercial de esa carrera ya llegó al momento de publicar. Es
+// la puerta comercial —«no lo enseñes hasta que firme»—, distinta de los
+// interruptores de dónde se ve. Las dos tienen que dar el visto bueno.
+const procesoPermitePublicar = (ficha, part) => {
+  if (!ficha.is_active) return false;
+  const idx = PIPELINE_ORDER.indexOf(part.status || 'prospecto');
   if (idx === -1) return false; // declinado
-  let desde = PIPELINE_ORDER.indexOf(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE);
+  let desde = PIPELINE_ORDER.indexOf(part.publicar_desde || DEFAULT_PUBLICAR_DESDE);
   if (desde === -1) desde = PIPELINE_ORDER.indexOf(DEFAULT_PUBLICAR_DESDE);
   return idx >= desde;
 };
 
-// Las tres piezas gráficas, con lo que hay que saber al subir cada una.
-const PIEZAS = [
-  { tipo: 'logo', campo: 'logo_url', label: 'Logo', ayuda: 'El cuadrado de la marca. Sirve a la vitrina del sitio y al pie de la app: es un solo archivo.' },
+// Las piezas gráficas. El logo es de la marca —la misma empresa no cambia de
+// logo entre ediciones—; el banner y la imagen ampliada son el arte de una
+// campaña concreta, así que van en la carrera.
+const PIEZAS_CARRERA = [
   { tipo: 'banner', campo: 'banner_url', label: 'Banner 1200×240', ayuda: 'Se abre dentro de la app con «Conocer más» cuando no hay imagen ampliada. El pie ya no lo pinta: lleva el nombre y el texto.' },
   { tipo: 'detail', campo: 'detail_url', label: 'Imagen ampliada', ayuda: 'Se abre dentro de la app con «Conocer más». 1080 px de ancho, alto libre.' },
 ];
 
-// Si tiene con qué salir en el pie de la app. El pie lleva el nombre, el
-// texto y «Conocer más», que abre una imagen o, si no hay, el enlace; así que
-// sirve cualquiera de las tres cosas. Misma regla que `tiene_pieza` del backend.
-const tienePieza = (s) => PIEZAS.some((p) => s[p.campo])
-  || !!(s.text || '').trim()
-  || !!(s.link_url || '').trim();
+// Si tiene con qué salir en el pie de la app: el pie lleva el nombre, el texto
+// y «Conocer más», que abre una imagen o, si no hay, el enlace. Misma regla
+// que `tiene_pieza` del backend, con sus dos mitades.
+const tienePieza = (ficha, part) => !!ficha.logo_url
+  || PIEZAS_CARRERA.some((p) => part[p.campo])
+  || !!(part.text || '').trim()
+  || !!(part.link_url || '').trim();
 
 // La franja del pie de la app tal como sale en el teléfono. Componente propio
-// y fuera del render: necesita un hook para medir el nombre, y la lista de
-// patrocinadores lo pinta dentro de un map.
-function VistaPreviaPie({ sponsor }) {
+// y fuera del render: necesita un hook para medir el nombre.
+function VistaPreviaPie({ nombre, part }) {
   const refNombre = useRef(null);
-  const tamano = useTextoQueCabe(refNombre, sponsor.name, { max: 22, min: 14 });
+  const tamano = useTextoQueCabe(refNombre, nombre, { max: 22, min: 14 });
   return (
     <div className="bg-[#17110C] border-t-2 border-[#E77622] h-[80px] flex items-center gap-4 px-5 max-w-[390px]">
       <div className="min-w-0 flex-1">
@@ -81,13 +90,13 @@ function VistaPreviaPie({ sponsor }) {
           style={{ fontSize: tamano }}
           className="font-display leading-none uppercase tracking-wide text-white truncate"
         >
-          {sponsor.name}
+          {nombre}
         </p>
-        {sponsor.text && (
-          <p className="text-[11px] mt-1 text-[#9a9a9a] truncate">{sponsor.text}</p>
+        {part.text && (
+          <p className="text-[11px] mt-1 text-[#9a9a9a] truncate">{part.text}</p>
         )}
       </div>
-      {(sponsor.detail_url || sponsor.banner_url || sponsor.link_url) && (
+      {(part.detail_url || part.banner_url || part.link_url) && (
         <span className="shrink-0 rounded-full bg-[#E77622] text-[#1a1a1a] text-[12px] font-bold px-4 py-2">
           Conocer más
         </span>
@@ -109,34 +118,6 @@ const parseMontoInput = (str) => (str || '').replace(/,/g, '').replace(/[^0-9.]/
 // datetime-local usa "YYYY-MM-DDTHH:MM"; el backend guarda ISO tal cual
 const toInputValue = (iso) => (iso ? iso.slice(0, 16) : '');
 
-const EMPTY_FORM = {
-  name: '',
-  // Comercial
-  razon_social: '',
-  rnc: '',
-  nombre_contacto: '',
-  posicion_contacto: '',
-  telefono: '',
-  correo: '',
-  pagina_web: '',
-  propuesta_categoria: '',
-  propuesta_monto: '',
-  status: 'prospecto',
-  publicar_desde: DEFAULT_PUBLICAR_DESDE,
-  // Marca
-  description: '',
-  instagram: '',
-  text: '',
-  link_url: '',
-  // Publicación
-  publicar_web: true,
-  publicar_app: true,
-  mostrar_marca: true,
-  weight: 1,
-  start_at: '',
-  end_at: '',
-};
-
 const formatFechaHora = (iso) => {
   if (!iso) return '';
   try {
@@ -149,83 +130,327 @@ const formatFechaHora = (iso) => {
   }
 };
 
-const formatMonto = (monto) => {
-  if (monto === null || monto === undefined || monto === '') return null;
-  return new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(monto);
+const EMPTY_FICHA = {
+  name: '',
+  razon_social: '',
+  rnc: '',
+  nombre_contacto: '',
+  posicion_contacto: '',
+  telefono: '',
+  correo: '',
+  pagina_web: '',
+  description: '',
+  instagram: '',
 };
 
-const vigenciaLabel = (s) => {
-  if (!s.start_at && !s.end_at) return 'Todo el evento';
-  const fmt = (iso) => (iso ? new Date(iso).toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' }) : '…');
-  return `${fmt(s.start_at)} → ${fmt(s.end_at)}`;
-};
+const fichaDesde = (s) => ({
+  name: s.name || '',
+  razon_social: s.razon_social || '',
+  rnc: s.rnc || '',
+  nombre_contacto: s.nombre_contacto || '',
+  posicion_contacto: s.posicion_contacto || '',
+  telefono: s.telefono || '',
+  correo: s.correo || '',
+  pagina_web: s.pagina_web || '',
+  description: s.description || '',
+  instagram: s.instagram || '',
+});
+
+const partDesde = (p) => ({
+  status: p.status || 'prospecto',
+  publicar_desde: p.publicar_desde || DEFAULT_PUBLICAR_DESDE,
+  propuesta_categoria: p.propuesta_categoria || '',
+  propuesta_monto: p.propuesta_monto ?? '',
+  publicar_web: p.publicar_web !== false,
+  publicar_app: p.publicar_app !== false,
+  mostrar_marca: p.mostrar_marca !== false,
+  weight: p.weight || 1,
+  order: p.order || 0,
+  start_at: toInputValue(p.start_at),
+  end_at: toInputValue(p.end_at),
+  text: p.text || '',
+  link_url: p.link_url || '',
+});
+
+/**
+ * Lo que una marca patrocina en una carrera: el bloque que se abre al marcar
+ * su casilla en la pestaña «Carreras». Lleva su propio estado y su propio
+ * botón de guardar, porque cada edición se negocia aparte.
+ */
+function BloqueCarrera({
+  ficha, race, part, onGuardar, onQuitar, onSubirImagen, onQuitarImagen,
+  subiendo, cuposTomados,
+}) {
+  const [datos, setDatos] = useState(() => partDesde(part));
+  const [guardando, setGuardando] = useState(false);
+
+  // Si la participación cambia por fuera (se recarga la lista tras guardar),
+  // el bloque se pone al día.
+  useEffect(() => { setDatos(partDesde(part)); }, [part]);
+
+  const set = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value }));
+  const toggle = (campo) => setDatos((d) => ({ ...d, [campo]: !d[campo] }));
+
+  const categoria = getCategory(datos.propuesta_categoria);
+  const tomados = categoria ? cuposTomados(race.code, categoria.slug, ficha.id) : 0;
+  const sinCupos = !!categoria && categoria.cupos != null && tomados >= categoria.cupos;
+  const seVe = procesoPermitePublicar(ficha, { ...part, ...datos });
+
+  const guardar = async () => {
+    if (datos.propuesta_monto !== '' && isNaN(parseFloat(datos.propuesta_monto))) {
+      toast.error('El monto debe ser un número');
+      return;
+    }
+    setGuardando(true);
+    await onGuardar(race.code, {
+      ...datos,
+      propuesta_monto: datos.propuesta_monto !== '' ? parseFloat(datos.propuesta_monto) : null,
+      weight: Number(datos.weight) || 1,
+      order: Number(datos.order) || 0,
+    });
+    setGuardando(false);
+  };
+
+  return (
+    <div className="border rounded-md p-4 space-y-4 bg-muted/20">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Flag className="w-4 h-4 text-primary" />
+          <span className="font-semibold text-sm">{race.name}</span>
+          <Badge className={getStatusInfo(datos.status).badgeClass}>
+            {getStatusInfo(datos.status).label}
+          </Badge>
+          {seVe ? (
+            <Badge variant="outline" className="text-[10px] gap-1"><Eye className="w-3 h-3" />Publicable</Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground"><EyeOff className="w-3 h-3" />Sin publicar</Badge>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={() => onQuitar(race.code)}
+          data-testid={`quitar-carrera-${race.code}`}
+        >
+          <X className="w-4 h-4 mr-1" />
+          Quitar de esta carrera
+        </Button>
+      </div>
+
+      {/* Proceso y propuesta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Status del proceso</Label>
+          <select
+            value={datos.status}
+            onChange={set('status')}
+            className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+            data-testid={`status-${race.code}`}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Publicar a partir de</Label>
+          <select
+            value={datos.publicar_desde}
+            onChange={set('publicar_desde')}
+            className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+          >
+            {STATUS_OPTIONS.filter((s) => s.value !== 'declinado').map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Categoría</Label>
+          <select
+            value={datos.propuesta_categoria}
+            onChange={set('propuesta_categoria')}
+            className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+            data-testid={`categoria-${race.code}`}
+          >
+            <option value="">Sin categoría asignada</option>
+            {SPONSOR_CATEGORIES.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.label}{c.subtitle ? ` — ${c.subtitle}` : ''}
+              </option>
+            ))}
+          </select>
+          {categoria && (
+            <p className={`text-xs ${sinCupos ? 'text-amber-600' : 'text-muted-foreground'}`}>
+              Cupos: {categoria.cuposLabel} · {tomados} tomado(s) en esta carrera
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Monto (RD$)</Label>
+          <Input
+            value={formatMontoInput(datos.propuesta_monto)}
+            onChange={(e) => setDatos((d) => ({ ...d, propuesta_monto: parseMontoInput(e.target.value) }))}
+            placeholder="0.00"
+            inputMode="decimal"
+          />
+        </div>
+      </div>
+
+      {/* Dónde se ve */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={datos.publicar_web} onChange={() => toggle('publicar_web')} />
+          <Globe className="w-4 h-4 text-muted-foreground" />
+          En la vitrina del sitio
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={datos.publicar_app} onChange={() => toggle('publicar_app')} />
+          <Smartphone className="w-4 h-4 text-muted-foreground" />
+          En el pie de la app
+        </label>
+        <div className="space-y-1.5">
+          <Label>Desde</Label>
+          <Input type="datetime-local" value={datos.start_at} onChange={set('start_at')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Hasta</Label>
+          <Input type="datetime-local" value={datos.end_at} onChange={set('end_at')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Frecuencia en la rotación (1-10)</Label>
+          <Input type="number" min="1" max="10" value={datos.weight} onChange={set('weight')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Orden en la vitrina</Label>
+          <Input type="number" min="0" value={datos.order} onChange={set('order')} />
+        </div>
+      </div>
+
+      {/* El anuncio de esta campaña */}
+      <div className="space-y-3 pt-3 border-t">
+        <h5 className="text-sm font-semibold flex items-center gap-2">
+          <Megaphone className="w-4 h-4" />
+          El anuncio de esta edición
+        </h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Texto del pie</Label>
+            <Input value={datos.text} onChange={set('text')} placeholder="Una línea corta" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Enlace</Label>
+            <Input value={datos.link_url} onChange={set('link_url')} placeholder="https://" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {PIEZAS_CARRERA.map((pieza) => (
+            <div key={pieza.tipo} className="space-y-1.5">
+              <Label>{pieza.label}</Label>
+              {part[pieza.campo] ? (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={`${API_URL}${part[pieza.campo]}`}
+                    alt={pieza.label}
+                    className="h-12 rounded border bg-white object-contain"
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => onQuitarImagen(race.code, pieza.tipo)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onSubirImagen(race.code, pieza.tipo)}
+                  disabled={subiendo === `${race.code}:${pieza.tipo}`}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {subiendo === `${race.code}:${pieza.tipo}` ? 'Subiendo…' : 'Subir'}
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">{pieza.ayuda}</p>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-1">Así se ve en el teléfono:</p>
+          <VistaPreviaPie nombre={ficha.name} part={{ ...part, ...datos }} />
+        </div>
+
+        <p className="text-xs text-muted-foreground flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />{part.impressions || 0} impresiones
+          </span>
+          <span className="flex items-center gap-1">
+            <MousePointerClick className="w-3 h-3" />{part.clicks || 0} clics
+          </span>
+        </p>
+      </div>
+
+      <Button onClick={guardar} disabled={guardando} data-testid={`guardar-carrera-${race.code}`}>
+        <Save className="w-4 h-4 mr-2" />
+        {guardando ? 'Guardando…' : `Guardar ${race.name}`}
+      </Button>
+    </div>
+  );
+}
 
 export default function SponsorsManagement() {
   const { raceCode } = useRaceConfig();
-  // El panel abre en la carrera activa, pero se puede mirar cualquier edición:
-  // es lo que permite ver a los patrocinadores de años anteriores y traerlos.
   const [races, setRaces] = useState([]);
-  const [selectedRace, setSelectedRace] = useState(raceCode);
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Traer de otra edición
-  const [showImport, setShowImport] = useState(false);
-  const [importFrom, setImportFrom] = useState('');
-  const [importCandidates, setImportCandidates] = useState([]);
-  const [importSelected, setImportSelected] = useState([]);
-  const [loadingCandidates, setLoadingCandidates] = useState(false);
-  const [importing, setImporting] = useState(false);
+  // Filtros de la tabla
+  const [filtroRace, setFiltroRace] = useState('todas');
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [busqueda, setBusqueda] = useState('');
 
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingSponsor, setEditingSponsor] = useState(null);
-  const [saving, setSaving] = useState(false);
+  // La ficha abierta en la ventana emergente
+  const [abiertaId, setAbiertaId] = useState(null);
+  const [tab, setTab] = useState('comercial');
+  const [fichaForm, setFichaForm] = useState(EMPTY_FICHA);
+  const [guardandoFicha, setGuardandoFicha] = useState(false);
 
-  // Un solo acordeón abierto por tarjeta: "bitacora" o "publicidad".
-  const [abierto, setAbierto] = useState({ name: null, panel: null });
-  const [bitacoraNota, setBitacoraNota] = useState('');
-  const [savingNota, setSavingNota] = useState(false);
+  // Alta
+  const [creando, setCreando] = useState(false);
+  const [nuevaForm, setNuevaForm] = useState({ name: '', races: [] });
+  const [creandoGuardando, setCreandoGuardando] = useState(false);
 
-  // Las tres piezas comparten un único input de archivo, que recuerda para
-  // cuál se abrió.
-  const [subiendo, setSubiendo] = useState(null); // `${name}:${tipo}`
+  // Bitácora
+  const [notaCarrera, setNotaCarrera] = useState('');
+  const [nota, setNota] = useState('');
+  const [guardandoNota, setGuardandoNota] = useState(false);
+
+  // Las piezas comparten un único input de archivo, que recuerda para cuál se abrió.
+  const [subiendo, setSubiendo] = useState(null);
   const destinoSubida = useRef(null);
   const fileInputRef = useRef(null);
 
-  const [formData, setFormData] = useState(EMPTY_FORM);
-  // Categoría escrita a mano antes de que existiera el esquema: se muestra
-  // para que quede claro qué decía, pero hay que elegir una del catálogo.
-  const [categoriaFueraDeEsquema, setCategoriaFueraDeEsquema] = useState('');
-
-  const loadSponsors = useCallback(async () => {
-    if (!selectedRace) return;
-
+  const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${selectedRace}`);
+      const response = await adminFetch(`${API_URL}/api/sponsors/admin`);
       if (response.ok) {
         const data = await response.json();
         setSponsors(data.sponsors || []);
+      } else {
+        toast.error('Error al cargar patrocinadores');
       }
-    } catch (error) {
-      console.error('Error loading sponsors:', error);
-      toast.error('Error al cargar patrocinadores');
+    } catch {
+      toast.error('Error de conexión');
     } finally {
       setLoading(false);
     }
-  }, [selectedRace]);
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar]);
 
   useEffect(() => {
-    loadSponsors();
-  }, [loadSponsors]);
-
-  // La carrera activa llega después del primer render (la trae el contexto)
-  useEffect(() => {
-    if (raceCode) setSelectedRace(raceCode);
-  }, [raceCode]);
-
-  useEffect(() => {
-    const loadRaces = async () => {
+    const cargarCarreras = async () => {
       try {
         const response = await fetch(`${API_URL}/api/race-config/all`);
         if (response.ok) {
@@ -236,190 +461,184 @@ export default function SponsorsManagement() {
         console.error('Error loading races:', error);
       }
     };
-    loadRaces();
+    cargarCarreras();
   }, []);
 
-  const resetForm = () => {
-    setFormData(EMPTY_FORM);
-    setCategoriaFueraDeEsquema('');
-    setShowAddForm(false);
-    setEditingSponsor(null);
+  const abierta = sponsors.find((s) => s.id === abiertaId) || null;
+  const partesDe = (s) => s.participaciones || [];
+  const parteEn = (s, code) => partesDe(s).find((p) => p.race_code === code);
+
+  // Cupos ya tomados de una categoría en una carrera. No bloquea nada: es el
+  // aviso de que esa categoría se está quedando sin espacio.
+  const cuposTomados = useCallback((code, slug, exceptoId) => sponsors.filter((s) => {
+    if (s.id === exceptoId || !s.is_active) return false;
+    const p = (s.participaciones || []).find((x) => x.race_code === code);
+    return p && p.propuesta_categoria === slug && p.status !== 'declinado';
+  }).length, [sponsors]);
+
+  /* ---------------- Tabla: filtros ---------------- */
+
+  const filtradas = useMemo(() => sponsors.filter((s) => {
+    const partes = partesDe(s);
+    const enCarrera = filtroRace === 'todas'
+      ? partes
+      : partes.filter((p) => p.race_code === filtroRace);
+    if (filtroRace !== 'todas' && enCarrera.length === 0) return false;
+    if (filtroStatus !== 'todos' && !enCarrera.some((p) => (p.status || 'prospecto') === filtroStatus)) {
+      return false;
+    }
+    const texto = busqueda.trim().toLowerCase();
+    if (texto) {
+      const donde = [s.name, s.nombre_contacto, s.correo, s.telefono, s.razon_social]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!donde.includes(texto)) return false;
+    }
+    return true;
+  }), [sponsors, filtroRace, filtroStatus, busqueda]);
+
+  // Los que de verdad se están viendo, dentro del filtro de carrera.
+  const contarEn = (destino) => sponsors.reduce((total, s) => {
+    const partes = filtroRace === 'todas' ? partesDe(s) : partesDe(s).filter((p) => p.race_code === filtroRace);
+    return total + partes.filter((p) => (
+      procesoPermitePublicar(s, p)
+      && p[destino === 'web' ? 'publicar_web' : 'publicar_app'] !== false
+      && (destino === 'web' || tienePieza(s, p))
+    )).length;
+  }, 0);
+
+  /* ---------------- Ficha ---------------- */
+
+  const abrirFicha = (s) => {
+    setAbiertaId(s.id);
+    setFichaForm(fichaDesde(s));
+    setTab('comercial');
+    setNota('');
+    setNotaCarrera(partesDe(s)[0]?.race_code || '');
   };
 
-  // Cupos ya tomados en la edición que se está mirando. No bloquea nada: es
-  // el aviso de que esa categoría se está quedando sin espacio. El
-  // patrocinador que se edita no se cuenta a sí mismo.
-  const cuposTomados = (slug) => sponsors.filter((s) => (
-    s.propuesta_categoria === slug
-    && s.is_active
-    && s.status !== 'declinado'
-    && s.name !== editingSponsor
-  )).length;
-
-  const buildPayload = () => ({
-    name: formData.name,
-    razon_social: formData.razon_social || '',
-    rnc: formData.rnc || '',
-    nombre_contacto: formData.nombre_contacto || '',
-    posicion_contacto: formData.posicion_contacto || '',
-    telefono: formData.telefono || '',
-    correo: formData.correo || '',
-    pagina_web: formData.pagina_web || '',
-    // Vacío viaja como cadena, no como null: null lo descarta el backend y
-    // no habría forma de quitarle la categoría a un patrocinador.
-    propuesta_categoria: formData.propuesta_categoria || '',
-    propuesta_monto: formData.propuesta_monto !== '' ? parseFloat(formData.propuesta_monto) : null,
-    status: formData.status || 'prospecto',
-    publicar_desde: formData.publicar_desde || DEFAULT_PUBLICAR_DESDE,
-    description: formData.description || '',
-    instagram: formData.instagram || '',
-    text: formData.text || '',
-    link_url: formData.link_url || '',
-    publicar_web: formData.publicar_web,
-    publicar_app: formData.publicar_app,
-    mostrar_marca: formData.mostrar_marca,
-    weight: Number(formData.weight) || 1,
-    start_at: formData.start_at || '',
-    end_at: formData.end_at || '',
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.name.trim()) {
+  const guardarFicha = async () => {
+    if (!fichaForm.name.trim()) {
       toast.error('El nombre es requerido');
       return;
     }
-    if (formData.propuesta_monto !== '' && isNaN(parseFloat(formData.propuesta_monto))) {
-      toast.error('El monto de la propuesta debe ser un número');
-      return;
-    }
-
-    setSaving(true);
+    setGuardandoFicha(true);
     try {
-      const response = editingSponsor
-        ? await adminFetch(
-          `${API_URL}/api/sponsors/update/${encodeURIComponent(editingSponsor)}?race_code=${selectedRace}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildPayload()),
-          }
-        )
-        : await adminFetch(`${API_URL}/api/sponsors/create`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...buildPayload(), race_code: selectedRace }),
-        });
-
+      const response = await adminFetch(`${API_URL}/api/sponsors/${abiertaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fichaForm),
+      });
       if (response.ok) {
-        toast.success(editingSponsor ? 'Patrocinador actualizado' : 'Patrocinador creado');
-        loadSponsors();
-        resetForm();
+        toast.success('Ficha guardada');
+        cargar();
       } else {
         const error = await response.json().catch(() => ({}));
         toast.error(error.detail || 'Error al guardar');
       }
-    } catch (error) {
-      console.error('Error saving sponsor:', error);
-      toast.error('Error al guardar');
+    } catch {
+      toast.error('Error de conexión');
     } finally {
-      setSaving(false);
+      setGuardandoFicha(false);
     }
   };
 
-  const handleEdit = (sponsor) => {
-    const categoriaGuardada = sponsor.propuesta_categoria || '';
-    const esDelEsquema = !categoriaGuardada || !!getCategory(categoriaGuardada);
-    setCategoriaFueraDeEsquema(esDelEsquema ? '' : categoriaGuardada);
-    setEditingSponsor(sponsor.name);
-    setFormData({
-      name: sponsor.name,
-      razon_social: sponsor.razon_social || '',
-      rnc: sponsor.rnc || '',
-      nombre_contacto: sponsor.nombre_contacto || '',
-      posicion_contacto: sponsor.posicion_contacto || '',
-      telefono: sponsor.telefono || '',
-      correo: sponsor.correo || '',
-      pagina_web: sponsor.pagina_web || '',
-      propuesta_categoria: esDelEsquema ? categoriaGuardada : '',
-      propuesta_monto: sponsor.propuesta_monto ?? '',
-      status: sponsor.status || 'prospecto',
-      publicar_desde: sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE,
-      description: sponsor.description || '',
-      instagram: sponsor.instagram || '',
-      text: sponsor.text || '',
-      link_url: sponsor.link_url || '',
-      publicar_web: sponsor.publicar_web !== false,
-      publicar_app: sponsor.publicar_app !== false,
-      mostrar_marca: sponsor.mostrar_marca !== false,
-      weight: sponsor.weight || 1,
-      start_at: toInputValue(sponsor.start_at),
-      end_at: toInputValue(sponsor.end_at),
-    });
-    setShowAddForm(true);
+  const crear = async () => {
+    if (!nuevaForm.name.trim()) {
+      toast.error('El nombre es requerido');
+      return;
+    }
+    setCreandoGuardando(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/sponsors/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nuevaForm.name.trim(), races: nuevaForm.races }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        toast.success('Patrocinador creado');
+        setCreando(false);
+        setNuevaForm({ name: '', races: [] });
+        await cargar();
+        if (data.sponsor) abrirFicha(data.sponsor);
+      } else {
+        toast.error(data.detail || 'Error al crear');
+      }
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setCreandoGuardando(false);
+    }
   };
 
-  /* --------- Cambios sueltos desde la propia tarjeta, sin abrir el form --------- */
+  const retirar = async () => {
+    if (!window.confirm(`¿Retirar a "${abierta.name}"? Deja de salir en todas sus carreras, pero no se borra nada.`)) return;
+    const response = await adminFetch(`${API_URL}/api/sponsors/${abiertaId}`, { method: 'DELETE' });
+    if (response.ok) {
+      toast.success('Patrocinador retirado');
+      setAbiertaId(null);
+      cargar();
+    } else {
+      toast.error('No se pudo retirar');
+    }
+  };
 
-  const parchear = async (sponsor, cambios, mensaje) => {
+  const borrar = async () => {
+    if (!window.confirm(`¿Eliminar permanentemente a "${abierta.name}"? Se borran sus imágenes y todas sus carreras. No se puede deshacer.`)) return;
+    const response = await adminFetch(`${API_URL}/api/sponsors/${abiertaId}/permanente`, { method: 'DELETE' });
+    if (response.ok) {
+      toast.success('Patrocinador eliminado');
+      setAbiertaId(null);
+      cargar();
+    } else {
+      toast.error('No se pudo eliminar');
+    }
+  };
+
+  /* ---------------- Carreras ---------------- */
+
+  const guardarParticipacion = async (code, datos) => {
     try {
-      const response = await adminFetch(
-        `${API_URL}/api/sponsors/update/${encodeURIComponent(sponsor.name)}?race_code=${selectedRace}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cambios),
-        }
-      );
+      const response = await adminFetch(`${API_URL}/api/sponsors/${abiertaId}/carrera/${code}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
+      });
       if (response.ok) {
-        if (mensaje) toast.success(mensaje);
-        loadSponsors();
+        toast.success('Guardado');
+        cargar();
       } else {
         const error = await response.json().catch(() => ({}));
-        toast.error(error.detail || 'No se pudo guardar el cambio');
+        toast.error(error.detail || 'No se pudo guardar');
       }
     } catch {
       toast.error('Error de conexión');
     }
   };
 
-  const handleStatusChange = (sponsor, status) => {
-    if ((sponsor.status || 'prospecto') === status) return;
-    parchear(sponsor, { status }, `Status actualizado a "${getStatusInfo(status).label}"`);
-  };
+  const marcarCarrera = (code) => guardarParticipacion(code, {});
 
-  // Dónde se ve. Un interruptor por destino, en la misma tarjeta donde se
-  // lleva el proceso comercial: antes vivían en la otra pestaña y el estado
-  // de la vitrina del sitio se decidía desde la ficha de publicidad.
-  const cambiarDonde = (sponsor, campo) =>
-    parchear(sponsor, { [campo]: sponsor[campo] === false });
-
-  const handleDelete = async (sponsorName) => {
-    if (!window.confirm(`¿Eliminar permanentemente el patrocinador "${sponsorName}"? Se borran también sus imágenes. Esta acción no se puede deshacer.`)) return;
-
+  const quitarCarrera = async (code) => {
+    if (!window.confirm(`¿Quitar a "${abierta.name}" de ${code}? Se borra el anuncio de esa edición; el logo y los contactos se conservan.`)) return;
     try {
-      const response = await adminFetch(
-        `${API_URL}/api/sponsors/hard-delete/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
-        { method: 'DELETE' }
-      );
-
+      const response = await adminFetch(`${API_URL}/api/sponsors/${abiertaId}/carrera/${code}`, {
+        method: 'DELETE',
+      });
       if (response.ok) {
-        toast.success('Patrocinador eliminado permanentemente');
-        setSponsors((prev) => prev.filter((s) => s.name !== sponsorName));
+        toast.success(`Quitado de ${code}`);
+        cargar();
       } else {
-        toast.error('Error al eliminar');
+        toast.error('No se pudo quitar');
       }
-    } catch (error) {
-      console.error('Error deleting sponsor:', error);
-      toast.error('Error al eliminar');
+    } catch {
+      toast.error('Error de conexión');
     }
   };
 
   /* ---------------- Piezas gráficas ---------------- */
 
-  const pedirImagen = (sponsorName, tipo) => {
-    destinoSubida.current = { sponsorName, tipo };
+  const pedirImagen = (raceCodePieza, tipo) => {
+    destinoSubida.current = { raceCodePieza, tipo };
     fileInputRef.current?.click();
   };
 
@@ -428,20 +647,20 @@ export default function SponsorsManagement() {
     event.target.value = '';
     const destino = destinoSubida.current;
     if (!file || !destino) return;
-    const { sponsorName, tipo } = destino;
-    const etiqueta = PIEZAS.find((p) => p.tipo === tipo)?.label || 'Imagen';
+    const { raceCodePieza, tipo } = destino;
 
-    setSubiendo(`${sponsorName}:${tipo}`);
+    setSubiendo(tipo === 'logo' ? 'logo' : `${raceCodePieza}:${tipo}`);
     const body = new FormData();
     body.append('file', file);
+    const query = tipo === 'logo' ? '' : `?race_code=${raceCodePieza}`;
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/imagen/${tipo}/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
+        `${API_URL}/api/sponsors/${abiertaId}/imagen/${tipo}${query}`,
         { method: 'POST', body }
       );
       if (response.ok) {
-        toast.success(`${etiqueta} subido`);
-        loadSponsors();
+        toast.success('Imagen subida');
+        cargar();
       } else {
         const error = await response.json().catch(() => ({}));
         toast.error(error.detail || 'No se pudo subir la imagen');
@@ -453,181 +672,66 @@ export default function SponsorsManagement() {
     }
   };
 
-  const quitarImagen = async (sponsorName, tipo) => {
-    const etiqueta = PIEZAS.find((p) => p.tipo === tipo)?.label || 'la imagen';
-    if (!window.confirm(`¿Quitar ${etiqueta.toLowerCase()} de "${sponsorName}"?`)) return;
-    try {
-      const response = await adminFetch(
-        `${API_URL}/api/sponsors/imagen/${tipo}/${encodeURIComponent(sponsorName)}?race_code=${selectedRace}`,
-        { method: 'DELETE' }
-      );
-      if (response.ok) {
-        toast.success('Imagen quitada');
-        loadSponsors();
-      } else {
-        toast.error('No se pudo quitar la imagen');
-      }
-    } catch {
-      toast.error('Error de conexión');
-    }
-  };
-
-  /* ---------------- Orden ---------------- */
-
-  const mover = async (index, direccion) => {
-    const destino = index + direccion;
-    if (destino < 0 || destino >= sponsors.length) return;
-    const reordenados = [...sponsors];
-    [reordenados[index], reordenados[destino]] = [reordenados[destino], reordenados[index]];
-    setSponsors(reordenados);
-    try {
-      const response = await adminFetch(
-        `${API_URL}/api/sponsors/reorder?race_code=${selectedRace}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(reordenados.map((s, i) => ({ name: s.name, order: i + 1 }))),
-        }
-      );
-      if (!response.ok) {
-        toast.error('No se pudo guardar el orden');
-        loadSponsors();
-      }
-    } catch {
-      toast.error('Error de conexión');
-      loadSponsors();
+  const quitarImagen = async (raceCodePieza, tipo) => {
+    if (!window.confirm('¿Quitar la imagen?')) return;
+    const query = tipo === 'logo' ? '' : `?race_code=${raceCodePieza}`;
+    const response = await adminFetch(
+      `${API_URL}/api/sponsors/${abiertaId}/imagen/${tipo}${query}`,
+      { method: 'DELETE' }
+    );
+    if (response.ok) {
+      toast.success('Imagen quitada');
+      cargar();
+    } else {
+      toast.error('No se pudo quitar la imagen');
     }
   };
 
   /* ---------------- Bitácora ---------------- */
 
-  const togglePanel = (sponsor, panel) => {
-    setAbierto((prev) => (
-      prev.name === sponsor.name && prev.panel === panel
-        ? { name: null, panel: null }
-        : { name: sponsor.name, panel }
-    ));
-    setBitacoraNota('');
-  };
-
-  const handleAddNota = async (sponsor) => {
-    if (!bitacoraNota.trim()) {
+  const agregarNota = async () => {
+    if (!nota.trim()) {
       toast.error('Escribe la nota del contacto');
       return;
     }
-    setSavingNota(true);
+    if (!notaCarrera) {
+      toast.error('Elige la carrera a la que pertenece el contacto');
+      return;
+    }
+    setGuardandoNota(true);
     try {
       const response = await adminFetch(
-        `${API_URL}/api/sponsors/bitacora/${encodeURIComponent(sponsor.name)}?race_code=${selectedRace}`,
+        `${API_URL}/api/sponsors/${abiertaId}/bitacora?race_code=${notaCarrera}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nota: bitacoraNota }),
+          body: JSON.stringify({ nota }),
         }
       );
       if (response.ok) {
         toast.success('Contacto registrado');
-        setBitacoraNota('');
-        loadSponsors();
+        setNota('');
+        cargar();
       } else {
         const error = await response.json().catch(() => ({}));
-        toast.error(error.detail || 'Error al registrar contacto');
+        toast.error(error.detail || 'Error al registrar el contacto');
       }
     } catch {
       toast.error('Error de conexión');
     } finally {
-      setSavingNota(false);
+      setGuardandoNota(false);
     }
   };
 
-  const ultimoContacto = (sponsor) => {
-    const entradas = sponsor.bitacora || [];
-    return entradas.length ? entradas[entradas.length - 1] : null;
-  };
+  // Todas las notas de la marca, de la más nueva a la más vieja, con la
+  // carrera a la que pertenece cada una.
+  const bitacoraCompleta = abierta
+    ? partesDe(abierta)
+      .flatMap((p) => (p.bitacora || []).map((b) => ({ ...b, race_code: p.race_code })))
+      .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))
+    : [];
 
-  /* ---------------- Traer de otra edición ---------------- */
-
-  const abrirImport = () => {
-    const otras = races.filter((r) => r.code !== selectedRace);
-    setImportFrom(otras[0]?.code || '');
-    setImportCandidates([]);
-    setImportSelected([]);
-    setShowImport(true);
-  };
-
-  const yaEstaEnEstaCarrera = (name) => sponsors.some((s) => s.name === name);
-
-  const loadCandidates = useCallback(async (fromRace) => {
-    if (!fromRace) return;
-    setLoadingCandidates(true);
-    setImportSelected([]);
-    try {
-      const response = await adminFetch(`${API_URL}/api/sponsors/admin/race/${fromRace}`);
-      if (response.ok) {
-        const data = await response.json();
-        setImportCandidates(data.sponsors || []);
-      } else {
-        setImportCandidates([]);
-      }
-    } catch {
-      toast.error('Error al cargar los patrocinadores de esa edición');
-      setImportCandidates([]);
-    } finally {
-      setLoadingCandidates(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showImport && importFrom) loadCandidates(importFrom);
-  }, [showImport, importFrom, loadCandidates]);
-
-  const toggleImportSelected = (name) => {
-    setImportSelected((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
-  };
-
-  const handleImport = async () => {
-    if (importSelected.length === 0) {
-      toast.error('Marca al menos un patrocinador');
-      return;
-    }
-    setImporting(true);
-    try {
-      const response = await adminFetch(`${API_URL}/api/sponsors/copy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from_race_code: importFrom,
-          to_race_code: selectedRace,
-          names: importSelected,
-        }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast.success(data.message);
-        setShowImport(false);
-        loadSponsors();
-      } else {
-        toast.error(data.detail || 'Error al traer los patrocinadores');
-      }
-    } catch {
-      toast.error('Error de conexión');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const categoriaElegida = getCategory(formData.propuesta_categoria);
-  const tomadosEnCategoria = categoriaElegida ? cuposTomados(categoriaElegida.slug) : 0;
-  const sinCupos = !!categoriaElegida
-    && categoriaElegida.cupos != null
-    && tomadosEnCategoria >= categoriaElegida.cupos;
-
-  // Los que de verdad se están viendo en cada sitio, para el resumen de
-  // arriba: proceso cumplido, interruptor encendido y —en la app— con pieza.
-  const enElSitio = sponsors.filter((s) => procesoPermitePublicar(s) && s.publicar_web !== false);
-  const enLaApp = sponsors.filter((s) => procesoPermitePublicar(s) && s.publicar_app !== false && tienePieza(s));
+  const nombreCarrera = (code) => races.find((r) => r.code === code)?.name || code;
 
   if (loading) {
     return (
@@ -647,858 +751,426 @@ export default function SponsorsManagement() {
         onChange={handleImageFile}
       />
 
-      {/* Header */}
+      {/* Encabezado */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Patrocinios y Publicidad</h2>
           <p className="text-muted-foreground">
-            {sponsors.length} registrados • {enElSitio.length} en el sitio • {enLaApp.length} en el pie de la app
+            {sponsors.length} marcas • {contarEn('web')} en el sitio • {contarEn('app')} en el pie de la app
+            {filtroRace !== 'todas' && ` • ${nombreCarrera(filtroRace)}`}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <Button onClick={() => { setNuevaForm({ name: '', races: raceCode ? [raceCode] : [] }); setCreando(true); }} data-testid="add-sponsor-btn">
+          <Plus className="w-4 h-4 mr-2" />
+          Agregar Patrocinador
+        </Button>
+      </div>
+
+      {/* Filtros */}
+      <Card>
+        <CardContent className="p-4 flex flex-col sm:flex-row flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por marca, contacto o correo"
+              className="pl-9"
+              data-testid="sponsor-buscar"
+            />
+          </div>
           <select
-            value={selectedRace || ''}
-            onChange={(e) => { resetForm(); setShowImport(false); setSelectedRace(e.target.value); }}
+            value={filtroRace}
+            onChange={(e) => setFiltroRace(e.target.value)}
             className="px-3 py-2 border rounded-md bg-background text-sm"
-            data-testid="sponsor-race-select"
+            data-testid="sponsor-filtro-carrera"
           >
+            <option value="todas">Todas las carreras</option>
             {races.map((r) => (
               <option key={r.code} value={r.code}>
                 {r.name}{r.code === raceCode ? ' (activa)' : ''}
               </option>
             ))}
           </select>
-          <Button variant="outline" onClick={abrirImport} data-testid="import-sponsors-btn">
-            <History className="w-4 h-4 mr-2" />
-            Traer de otra edición
-          </Button>
-          <Button onClick={() => { resetForm(); setShowAddForm(true); }} data-testid="add-sponsor-btn">
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Patrocinador
-          </Button>
-        </div>
-      </div>
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value)}
+            className="px-3 py-2 border rounded-md bg-background text-sm"
+            data-testid="sponsor-filtro-status"
+          >
+            <option value="todos">Todos los status</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+          {(filtroRace !== 'todas' || filtroStatus !== 'todos' || busqueda) && (
+            <Button
+              variant="ghost"
+              onClick={() => { setFiltroRace('todas'); setFiltroStatus('todos'); setBusqueda(''); }}
+            >
+              <X className="w-4 h-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Traer de otra edición */}
-      {showImport && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <History className="w-4 h-4" />
-              Traer patrocinadores de otra edición
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Llegan los contactos, el logo, la descripción y el Instagram. El proceso
-              empieza de nuevo en «Prospecto» y la copia nace apagada en los dos destinos:
-              una edición que aún no ha empezado a vender no debería estrenar vitrina con
-              las marcas del año pasado.
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Label className="text-sm">Desde</Label>
-              <select
-                value={importFrom}
-                onChange={(e) => setImportFrom(e.target.value)}
-                className="px-3 py-2 border rounded-md bg-background text-sm"
-              >
-                {races.filter((r) => r.code !== selectedRace).map((r) => (
-                  <option key={r.code} value={r.code}>{r.name}</option>
-                ))}
-              </select>
+      {/* Tabla */}
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Patrocinador</TableHead>
+                <TableHead>Contacto</TableHead>
+                <TableHead>Teléfono</TableHead>
+                <TableHead>Correo</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                    No hay patrocinadores que cumplan el filtro.
+                  </TableCell>
+                </TableRow>
+              ) : filtradas.map((s) => {
+                const partes = filtroRace === 'todas'
+                  ? partesDe(s)
+                  : partesDe(s).filter((p) => p.race_code === filtroRace);
+                return (
+                  <TableRow
+                    key={s.id}
+                    className="cursor-pointer"
+                    onClick={() => abrirFicha(s)}
+                    data-testid={`sponsor-row-${s.id}`}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2 font-medium">
+                        {s.logo_url ? (
+                          <img src={`${API_URL}${s.logo_url}`} alt="" className="w-8 h-8 rounded object-contain bg-white border" />
+                        ) : (
+                          <span className="w-8 h-8 rounded border flex items-center justify-center text-muted-foreground">
+                            <Building2 className="w-4 h-4" />
+                          </span>
+                        )}
+                        <span>
+                          {s.name}
+                          {!s.is_active && (
+                            <Badge variant="outline" className="ml-2 text-[10px]">Retirado</Badge>
+                          )}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{s.nombre_contacto || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{s.telefono || '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{s.correo || '—'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {partes.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">Sin carreras</span>
+                        ) : partes.map((p) => (
+                          <Badge key={p.race_code} className={`${getStatusInfo(p.status).badgeClass} text-[11px]`}>
+                            {filtroRace === 'todas' ? `${p.race_code}: ` : ''}
+                            {getStatusInfo(p.status).label}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Alta */}
+      <Dialog open={creando} onOpenChange={setCreando}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo patrocinador</DialogTitle>
+            <DialogDescription>
+              La ficha es una sola para la marca. Marca aquí las carreras que patrocina;
+              el resto de los datos se llenan después en su ficha.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="nueva-name">Nombre de la marca *</Label>
+              <Input
+                id="nueva-name"
+                value={nuevaForm.name}
+                onChange={(e) => setNuevaForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ej: Café Santo Domingo"
+                data-testid="sponsor-name-input"
+              />
             </div>
-
-            {loadingCandidates ? (
-              <p className="text-sm text-muted-foreground">Cargando…</p>
-            ) : importCandidates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Esa edición no tiene patrocinadores.</p>
-            ) : (
-              <div className="grid sm:grid-cols-2 gap-1.5 max-h-72 overflow-y-auto">
-                {importCandidates.map((c) => {
-                  const yaEsta = yaEstaEnEstaCarrera(c.name);
-                  return (
-                    <label
-                      key={c.name}
-                      className={`flex items-center gap-2 text-sm px-2 py-1.5 rounded border ${yaEsta ? 'opacity-50' : 'cursor-pointer hover:bg-muted/50'}`}
-                    >
-                      <input
-                        type="checkbox"
-                        disabled={yaEsta}
-                        checked={importSelected.includes(c.name)}
-                        onChange={() => toggleImportSelected(c.name)}
-                      />
-                      <span className="truncate">{c.name}</span>
-                      {yaEsta && (
-                        <Badge variant="outline" className="text-[10px] ml-auto shrink-0">ya está</Badge>
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <Button onClick={handleImport} disabled={importing || importSelected.length === 0}>
+            <div className="space-y-2">
+              <Label>Carreras que patrocina</Label>
+              {races.map((r) => (
+                <label key={r.code} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={nuevaForm.races.includes(r.code)}
+                    onChange={() => setNuevaForm((f) => ({
+                      ...f,
+                      races: f.races.includes(r.code)
+                        ? f.races.filter((c) => c !== r.code)
+                        : [...f.races, r.code],
+                    }))}
+                  />
+                  {r.name}
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={crear} disabled={creandoGuardando} data-testid="sponsor-crear">
                 <Save className="w-4 h-4 mr-2" />
-                {importing ? 'Trayendo...' : `Traer ${importSelected.length || ''}`.trim()}
+                {creandoGuardando ? 'Creando…' : 'Crear'}
               </Button>
-              <Button variant="outline" onClick={() => setShowImport(false)}>
-                <X className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-              {importCandidates.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setImportSelected(
-                    importCandidates.filter((c) => !yaEstaEnEstaCarrera(c.name)).map((c) => c.name)
-                  )}
-                >
-                  Marcar todos
-                </Button>
-              )}
+              <Button variant="outline" onClick={() => setCreando(false)}>Cancelar</Button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      {/* Alta / edición */}
-      {showAddForm && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              {editingSponsor ? 'Editar Patrocinador' : 'Nuevo Patrocinador'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre del Patrocinador *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Ej: Café Santo Domingo"
-                  disabled={!!editingSponsor}
-                  data-testid="sponsor-name-input"
-                />
-                {!editingSponsor && (
-                  <p className="text-xs text-muted-foreground">
-                    Las imágenes se suben después, desde su tarjeta.
-                  </p>
-                )}
-              </div>
+      {/* Ficha */}
+      <Dialog open={!!abierta} onOpenChange={(v) => !v && setAbiertaId(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {abierta && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {abierta.name}
+                  {!abierta.is_active && <Badge variant="outline">Retirado</Badge>}
+                </DialogTitle>
+                <DialogDescription>
+                  {partesDe(abierta).length === 0
+                    ? 'Todavía no patrocina ninguna carrera.'
+                    : `Patrocina ${partesDe(abierta).map((p) => p.race_code).join(', ')}.`}
+                </DialogDescription>
+              </DialogHeader>
 
-              {/* Datos comerciales */}
-              <div className="pt-3 border-t">
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Landmark className="w-4 h-4" />
-                  Datos Comerciales
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="razon_social">Razón Social</Label>
-                    <Input
-                      id="razon_social"
-                      value={formData.razon_social}
-                      onChange={(e) => setFormData((p) => ({ ...p, razon_social: e.target.value }))}
-                      placeholder="Ej: Industrias Banilejas, S.A.S."
-                      data-testid="sponsor-razon-social-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="rnc">RNC</Label>
-                    <Input
-                      id="rnc"
-                      value={formData.rnc}
-                      onChange={(e) => setFormData((p) => ({ ...p, rnc: e.target.value }))}
-                      placeholder="1-01-00000-0"
-                      data-testid="sponsor-rnc-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nombre_contacto">Nombre de Contacto</Label>
-                    <Input
-                      id="nombre_contacto"
-                      value={formData.nombre_contacto}
-                      onChange={(e) => setFormData((p) => ({ ...p, nombre_contacto: e.target.value }))}
-                      placeholder="Persona con quien se gestiona"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="posicion_contacto">Posición del Contacto</Label>
-                    <Input
-                      id="posicion_contacto"
-                      value={formData.posicion_contacto}
-                      onChange={(e) => setFormData((p) => ({ ...p, posicion_contacto: e.target.value }))}
-                      placeholder="Ej: Gerente de Mercadeo"
-                      data-testid="sponsor-posicion-input"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="telefono">Teléfono</Label>
-                    <Input
-                      id="telefono"
-                      value={formData.telefono}
-                      onChange={(e) => setFormData((p) => ({ ...p, telefono: e.target.value }))}
-                      placeholder="809-000-0000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="correo">Correo</Label>
-                    <Input
-                      id="correo"
-                      type="email"
-                      value={formData.correo}
-                      onChange={(e) => setFormData((p) => ({ ...p, correo: e.target.value }))}
-                      placeholder="contacto@empresa.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pagina_web">Página Web</Label>
-                    <Input
-                      id="pagina_web"
-                      value={formData.pagina_web}
-                      onChange={(e) => setFormData((p) => ({ ...p, pagina_web: e.target.value }))}
-                      placeholder="www.empresa.com"
-                    />
-                  </div>
-                </div>
-              </div>
+              <Tabs value={tab} onValueChange={setTab}>
+                <TabsList className="grid grid-cols-4 w-full">
+                  <TabsTrigger value="comercial" data-testid="tab-comercial">Comercial</TabsTrigger>
+                  <TabsTrigger value="marca" data-testid="tab-marca">Marca</TabsTrigger>
+                  <TabsTrigger value="carreras" data-testid="tab-carreras">Carreras</TabsTrigger>
+                  <TabsTrigger value="bitacora" data-testid="tab-bitacora">Bitácora</TabsTrigger>
+                </TabsList>
 
-              {/* Propuesta */}
-              <div className="pt-3 border-t">
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <BadgeDollarSign className="w-4 h-4" />
-                  Propuesta de Patrocinio
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="propuesta_categoria">Categoría</Label>
-                    <select
-                      id="propuesta_categoria"
-                      value={formData.propuesta_categoria}
-                      onChange={(e) => setFormData((p) => ({ ...p, propuesta_categoria: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-md bg-background"
-                      data-testid="sponsor-categoria-input"
-                    >
-                      <option value="">Sin categoría asignada</option>
-                      {SPONSOR_CATEGORIES.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.label}{c.subtitle ? ` — ${c.subtitle}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    {categoriaFueraDeEsquema && (
-                      <p className="text-xs text-amber-600">
-                        Antes decía «{categoriaFueraDeEsquema}», que no es del esquema.
-                        Elige la categoría que le corresponde.
-                      </p>
-                    )}
-                    {categoriaElegida ? (
-                      <p className={`text-xs ${sinCupos ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                        Cupos: {categoriaElegida.cuposLabel}
-                        {categoriaElegida.cupos != null && ` · ${tomadosEnCategoria} ocupado${tomadosEnCategoria === 1 ? '' : 's'}`}
-                        {' · Aporte de referencia: '}
-                        {categoriaElegida.monto != null ? `RD$${categoriaElegida.montoLabel}` : categoriaElegida.montoLabel}
-                        {sinCupos && ' · Ya no quedan cupos'}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Es la categoría con la que entra y con la que se agrupa en la página de patrocinadores.
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="propuesta_monto">Monto (RD$)</Label>
-                    <Input
-                      id="propuesta_monto"
-                      type="text"
-                      inputMode="decimal"
-                      value={formatMontoInput(formData.propuesta_monto)}
-                      onChange={(e) => {
-                        const raw = parseMontoInput(e.target.value);
-                        if ((raw.match(/\./g) || []).length > 1) return;
-                        setFormData((p) => ({ ...p, propuesta_monto: raw }));
-                      }}
-                      placeholder="100,000.00"
-                      data-testid="sponsor-monto-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Proceso */}
-              <div className="pt-3 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status del Proceso de Cierre</Label>
-                  <select
-                    id="status"
-                    value={formData.status}
-                    onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                    data-testid="sponsor-status-select"
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="publicar_desde">Publicar a partir de</Label>
-                  <select
-                    id="publicar_desde"
-                    value={formData.publicar_desde}
-                    onChange={(e) => setFormData((p) => ({ ...p, publicar_desde: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-md bg-background"
-                    data-testid="sponsor-publicar-desde-select"
-                  >
-                    {STATUS_OPTIONS.filter((s) => s.value !== 'declinado').map((s) => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    Hasta que el proceso no llegue aquí, no se publica en ningún sitio,
-                    aunque los interruptores estén encendidos.
-                  </p>
-                </div>
-              </div>
-
-              {/* Marca y publicidad */}
-              <div className="pt-3 border-t">
-                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                  <Megaphone className="w-4 h-4" />
-                  Marca y Publicidad
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="text">Descripción corta (pie de la app)</Label>
-                    <Input
-                      id="text"
-                      value={formData.text}
-                      maxLength={80}
-                      onChange={(e) => setFormData((p) => ({ ...p, text: e.target.value }))}
-                      placeholder="Tecnología y seguridad de vanguardia"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="link_url">Enlace («Conocer más» si no hay imagen)</Label>
-                    <Input
-                      id="link_url"
-                      value={formData.link_url}
-                      onChange={(e) => setFormData((p) => ({ ...p, link_url: e.target.value }))}
-                      placeholder="https://empresa.do"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="instagram">Instagram</Label>
-                    <Input
-                      id="instagram"
-                      value={formData.instagram}
-                      onChange={(e) => setFormData((p) => ({ ...p, instagram: e.target.value }))}
-                      placeholder="https://www.instagram.com/usuario/"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="weight">Peso de rotación (1–10)</Label>
-                    <Input
-                      id="weight"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={formData.weight}
-                      onChange={(e) => setFormData((p) => ({ ...p, weight: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                      placeholder="Qué es y qué aporta al evento…"
-                      rows={3}
-                      className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="start_at">Vigencia — desde (opcional)</Label>
-                    <Input
-                      id="start_at"
-                      type="datetime-local"
-                      value={formData.start_at}
-                      onChange={(e) => setFormData((p) => ({ ...p, start_at: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_at">Vigencia — hasta (opcional)</Label>
-                    <Input
-                      id="end_at"
-                      type="datetime-local"
-                      value={formData.end_at}
-                      onChange={(e) => setFormData((p) => ({ ...p, end_at: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium">Dónde se ve</p>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.publicar_web}
-                      onChange={(e) => setFormData((p) => ({ ...p, publicar_web: e.target.checked }))}
-                    />
-                    Sitio — página de patrocinadores
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.publicar_app}
-                      onChange={(e) => setFormData((p) => ({ ...p, publicar_app: e.target.checked }))}
-                    />
-                    App — vitrina de patrocinadores y rotación del pie
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  {saving ? 'Guardando...' : (editingSponsor ? 'Actualizar' : 'Crear')}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  <X className="w-4 h-4 mr-2" />
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Lista (oculta mientras el formulario está abierto, para concentrar la
-          vista en el patrocinador que se edita) */}
-      {!showAddForm && !showImport && (
-      <div className="grid gap-4">
-        {sponsors.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">No hay patrocinadores registrados para esta carrera</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Haz clic en "Agregar Patrocinador" para comenzar
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          sponsors.map((sponsor, index) => {
-            const statusInfo = getStatusInfo(sponsor.status);
-            const publicado = procesoPermitePublicar(sponsor);
-            const ultima = ultimoContacto(sponsor);
-            const categoria = getCategory(sponsor.propuesta_categoria);
-            const panelAbierto = abierto.name === sponsor.name ? abierto.panel : null;
-            const enWeb = publicado && sponsor.publicar_web !== false;
-            const enApp = publicado && sponsor.publicar_app !== false && tienePieza(sponsor);
-            return (
-            <Card key={sponsor.name} className={!sponsor.is_active ? 'opacity-50' : ''}>
-              <CardContent className="py-4">
-                <div className="flex items-start gap-4">
-                  {/* Orden */}
-                  <div className="flex flex-col gap-0.5 pt-1">
-                    <button
-                      className="text-muted-foreground disabled:opacity-30"
-                      disabled={index === 0}
-                      onClick={() => mover(index, -1)}
-                      aria-label="Subir"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      className="text-muted-foreground disabled:opacity-30"
-                      disabled={index === sponsors.length - 1}
-                      onClick={() => mover(index, 1)}
-                      aria-label="Bajar"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Logo */}
-                  <div className="flex-shrink-0">
-                    {sponsor.logo_url ? (
-                      <div className="w-20 h-20 rounded-lg border overflow-hidden bg-white flex items-center justify-center">
-                        <img
-                          src={`${API_URL}${sponsor.logo_url}`}
-                          alt={sponsor.name}
-                          className="max-w-full max-h-full object-contain p-1"
-                          onError={(e) => { e.target.style.display = 'none'; }}
+                {/* Comercial */}
+                <TabsContent value="comercial" className="space-y-4 pt-4">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <Landmark className="w-4 h-4" />
+                    Datos de la empresa
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      ['name', 'Nombre del Patrocinador *', 'Ej: Café Santo Domingo'],
+                      ['razon_social', 'Razón Social', 'Ej: Industrias Banilejas, S.A.S.'],
+                      ['rnc', 'RNC', '1-01-00000-0'],
+                      ['nombre_contacto', 'Nombre de Contacto', 'Persona con quien se gestiona'],
+                      ['posicion_contacto', 'Posición del Contacto', 'Ej: Gerente de Mercadeo'],
+                      ['telefono', 'Teléfono', '809-000-0000'],
+                      ['correo', 'Correo', 'contacto@empresa.com'],
+                      ['pagina_web', 'Página Web', 'www.empresa.com'],
+                    ].map(([campo, label, placeholder]) => (
+                      <div key={campo} className="space-y-1.5">
+                        <Label htmlFor={`ficha-${campo}`}>{label}</Label>
+                        <Input
+                          id={`ficha-${campo}`}
+                          value={fichaForm[campo]}
+                          onChange={(e) => setFichaForm((f) => ({ ...f, [campo]: e.target.value }))}
+                          placeholder={placeholder}
+                          data-testid={`ficha-${campo}`}
                         />
                       </div>
-                    ) : (
-                      <div className="w-20 h-20 rounded-lg border border-dashed flex items-center justify-center bg-muted/50">
-                        <Image className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => pedirImagen(sponsor.name, 'logo')}
-                      disabled={subiendo === `${sponsor.name}:logo`}
-                      className="mt-2 w-full text-xs px-2 py-1.5 border rounded-md flex items-center justify-center gap-1 transition-colors hover:bg-muted disabled:opacity-50"
-                    >
-                      <Upload className="w-3 h-3" />
-                      {subiendo === `${sponsor.name}:logo` ? 'Subiendo...' : (sponsor.logo_url ? 'Cambiar' : 'Subir Logo')}
-                    </button>
+                    ))}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Estos datos son de la marca: valen para todas las carreras que patrocine.
+                  </p>
+                </TabsContent>
 
-                  {/* Contenido */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-lg flex items-center gap-2 flex-wrap">
-                          {sponsor.name}
-                          {!sponsor.is_active && (
-                            <Badge variant="outline" className="text-xs">Inactivo</Badge>
+                {/* Marca */}
+                <TabsContent value="marca" className="space-y-4 pt-4">
+                  <div className="space-y-1.5">
+                    <Label>Logo</Label>
+                    <div className="flex items-center gap-3">
+                      {abierta.logo_url ? (
+                        <>
+                          <img
+                            src={`${API_URL}${abierta.logo_url}`}
+                            alt={abierta.name}
+                            className="w-20 h-20 rounded border bg-white object-contain"
+                          />
+                          <Button variant="outline" size="sm" onClick={() => pedirImagen(null, 'logo')}>
+                            <Upload className="w-4 h-4 mr-2" />Reemplazar
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => quitarImagen(null, 'logo')}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => pedirImagen(null, 'logo')}
+                          disabled={subiendo === 'logo'}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {subiendo === 'logo' ? 'Subiendo…' : 'Subir logo'}
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      El cuadrado de la marca. Es uno solo: sirve a la vitrina del sitio y al
+                      pie de la app en todas las ediciones.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ficha-description">Descripción</Label>
+                    <textarea
+                      id="ficha-description"
+                      value={fichaForm.description}
+                      onChange={(e) => setFichaForm((f) => ({ ...f, description: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                      placeholder="Una o dos líneas sobre la marca"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ficha-instagram" className="flex items-center gap-2">
+                      <Instagram className="w-4 h-4" />Instagram
+                    </Label>
+                    <Input
+                      id="ficha-instagram"
+                      value={fichaForm.instagram}
+                      onChange={(e) => setFichaForm((f) => ({ ...f, instagram: e.target.value }))}
+                      placeholder="@lamarca"
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Carreras */}
+                <TabsContent value="carreras" className="space-y-4 pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Marca las carreras que patrocina. Lo que se negocia en cada una —status,
+                    categoría, monto, dónde se ve y el anuncio— vive dentro de su bloque.
+                  </p>
+                  {races.map((r) => {
+                    const part = parteEn(abierta, r.code);
+                    return (
+                      <div key={r.code} className="space-y-2">
+                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!part}
+                            onChange={() => (part ? quitarCarrera(r.code) : marcarCarrera(r.code))}
+                            data-testid={`carrera-check-${r.code}`}
+                          />
+                          {r.name}
+                          {r.code === raceCode && (
+                            <Badge variant="outline" className="text-[10px]">activa</Badge>
                           )}
-                          {categoria && (
-                            <Badge className={`text-xs ${categoria.badgeClass} hover:${categoria.badgeClass}`}>
-                              {categoria.label}
-                            </Badge>
-                          )}
-                          {!categoria && sponsor.propuesta_categoria && (
-                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                              {sponsor.propuesta_categoria}
-                            </Badge>
-                          )}
-                          <Badge className={`text-xs ${statusInfo.badgeClass} hover:${statusInfo.badgeClass}`}>
-                            {statusInfo.label}
-                          </Badge>
-                          {publicado ? (
-                            <Badge className="text-xs bg-green-600 text-white hover:bg-green-600 flex items-center gap-1">
-                              <Eye className="w-3 h-3" />
-                              Proceso cumplido
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs text-muted-foreground flex items-center gap-1">
-                              <EyeOff className="w-3 h-3" />
-                              Aún no
-                            </Badge>
-                          )}
-                        </h3>
-                        {(sponsor.razon_social || sponsor.rnc) && (
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {sponsor.razon_social}
-                            {sponsor.razon_social && sponsor.rnc ? ' · ' : ''}
-                            {sponsor.rnc ? `RNC: ${sponsor.rnc}` : ''}
-                          </div>
+                        </label>
+                        {part && (
+                          <BloqueCarrera
+                            ficha={abierta}
+                            race={r}
+                            part={part}
+                            onGuardar={guardarParticipacion}
+                            onQuitar={quitarCarrera}
+                            onSubirImagen={pedirImagen}
+                            onQuitarImagen={quitarImagen}
+                            subiendo={subiendo}
+                            cuposTomados={cuposTomados}
+                          />
                         )}
                       </div>
+                    );
+                  })}
+                </TabsContent>
 
-                      {/* Acciones */}
-                      <div className="flex gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => togglePanel(sponsor, 'publicidad')}
-                          title="Piezas gráficas, vigencia y métricas"
-                          data-testid={`publicidad-sponsor-${sponsor.name}`}
-                        >
-                          <Megaphone className="w-4 h-4" />
-                          <span className="ml-1 text-xs hidden md:inline">Publicidad</span>
-                          {panelAbierto === 'publicidad' ? (
-                            <ChevronDown className="w-3 h-3 ml-1" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 ml-1" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => togglePanel(sponsor, 'bitacora')}
-                          title="Bitácora de contactos"
-                          data-testid={`bitacora-sponsor-${sponsor.name}`}
-                        >
-                          <NotebookPen className="w-4 h-4" />
-                          <span className="ml-1 text-xs hidden md:inline">
-                            Bitácora{(sponsor.bitacora || []).length > 0 ? ` (${sponsor.bitacora.length})` : ''}
-                          </span>
-                          {panelAbierto === 'bitacora' ? (
-                            <ChevronDown className="w-3 h-3 ml-1" />
-                          ) : (
-                            <ChevronRight className="w-3 h-3 ml-1" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(sponsor)}
-                          data-testid={`edit-sponsor-${sponsor.name}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(sponsor.name)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Contacto y propuesta */}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
-                      {sponsor.nombre_contacto && (
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {sponsor.nombre_contacto}
-                          {sponsor.posicion_contacto ? ` — ${sponsor.posicion_contacto}` : ''}
-                        </span>
-                      )}
-                      {sponsor.telefono && (
-                        <a href={`tel:${sponsor.telefono}`} className="flex items-center gap-1 hover:underline">
-                          <Phone className="w-3 h-3" />{sponsor.telefono}
-                        </a>
-                      )}
-                      {sponsor.correo && (
-                        <a href={`mailto:${sponsor.correo}`} className="flex items-center gap-1 hover:underline">
-                          <Mail className="w-3 h-3" />{sponsor.correo}
-                        </a>
-                      )}
-                      {sponsor.pagina_web && (
-                        <a
-                          href={sponsor.pagina_web.startsWith('http') ? sponsor.pagina_web : `https://${sponsor.pagina_web}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 hover:underline"
-                        >
-                          <Globe className="w-3 h-3" />{sponsor.pagina_web}
-                        </a>
-                      )}
-                      {sponsor.instagram && (
-                        <a
-                          href={sponsor.instagram}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 hover:underline"
-                        >
-                          <Instagram className="w-3 h-3" />Instagram
-                        </a>
-                      )}
-                      {sponsor.propuesta_monto != null && (
-                        <span className="flex items-center gap-1 font-medium text-foreground">
-                          <BadgeDollarSign className="w-3 h-3" />
-                          {formatMonto(sponsor.propuesta_monto)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Proceso e interruptores, juntos: lo que hace falta para
-                        saber de un vistazo si esta marca se está viendo. */}
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                {/* Bitácora */}
+                <TabsContent value="bitacora" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <NotebookPen className="w-4 h-4" />Registrar un contacto
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
                       <select
-                        value={sponsor.status || 'prospecto'}
-                        onChange={(e) => handleStatusChange(sponsor, e.target.value)}
-                        className="px-2 py-1 text-xs border rounded-md bg-background"
-                        data-testid={`status-select-${sponsor.name}`}
+                        value={notaCarrera}
+                        onChange={(e) => setNotaCarrera(e.target.value)}
+                        className="px-3 py-2 border rounded-md bg-background text-sm"
                       >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s.value} value={s.value}>{s.label}</option>
+                        <option value="">Carrera…</option>
+                        {partesDe(abierta).map((p) => (
+                          <option key={p.race_code} value={p.race_code}>{nombreCarrera(p.race_code)}</option>
                         ))}
                       </select>
-
-                      <Button
-                        size="sm"
-                        variant={sponsor.publicar_web === false ? 'outline' : 'secondary'}
-                        onClick={() => cambiarDonde(sponsor, 'publicar_web')}
-                        title="Página de patrocinadores del sitio"
-                        data-testid={`web-toggle-${sponsor.name}`}
-                      >
-                        <Globe className="w-3.5 h-3.5 mr-1" />
-                        Sitio {sponsor.publicar_web === false ? 'no' : 'sí'}
+                      <Input
+                        value={nota}
+                        onChange={(e) => setNota(e.target.value)}
+                        placeholder="Qué se habló, qué quedó pendiente"
+                        className="flex-1 min-w-[200px]"
+                        data-testid="bitacora-nota"
+                      />
+                      <Button onClick={agregarNota} disabled={guardandoNota}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {guardandoNota ? 'Guardando…' : 'Anotar'}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant={sponsor.publicar_app === false ? 'outline' : 'secondary'}
-                        onClick={() => cambiarDonde(sponsor, 'publicar_app')}
-                        title="Vitrina de BYSD Live y rotación del pie"
-                        data-testid={`app-toggle-${sponsor.name}`}
-                      >
-                        <Smartphone className="w-3.5 h-3.5 mr-1" />
-                        App {sponsor.publicar_app === false ? 'no' : 'sí'}
-                      </Button>
-
-                      {!publicado && sponsor.status !== 'declinado' && (
-                        <span className="text-xs text-muted-foreground">
-                          Se publica al llegar a <strong>{getStatusInfo(sponsor.publicar_desde || DEFAULT_PUBLICAR_DESDE).label}</strong>
-                        </span>
-                      )}
-                      {publicado && sponsor.publicar_app !== false && !tienePieza(sponsor) && (
-                        <span className="text-xs text-amber-600">
-                          Sin imágenes, texto ni enlace: no se pinta en el pie de la app
-                        </span>
-                      )}
                     </div>
-
-                    {ultima && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Último contacto: {formatFechaHora(ultima.fecha)} — {ultima.nota}
-                      </p>
-                    )}
-
-                    {/* Publicidad (acordeón) */}
-                    {panelAbierto === 'publicidad' && (
-                      <div className="mt-3 pt-3 border-t space-y-3" data-testid={`publicidad-panel-${sponsor.name}`}>
-                        <h4 className="text-sm font-semibold flex items-center gap-2">
-                          <Megaphone className="w-4 h-4 text-[#E8772E]" />
-                          Piezas gráficas
-                        </h4>
-
-                        <div className="grid sm:grid-cols-3 gap-3">
-                          {PIEZAS.map((pieza) => (
-                            <div key={pieza.tipo} className="border rounded-lg p-3 space-y-2">
-                              <p className="text-xs font-semibold">{pieza.label}</p>
-                              {sponsor[pieza.campo] ? (
-                                <img
-                                  src={`${API_URL}${sponsor[pieza.campo]}`}
-                                  alt={`${pieza.label} de ${sponsor.name}`}
-                                  className={`w-full bg-white border rounded object-contain ${pieza.tipo === 'banner' ? 'aspect-[5/1]' : 'h-20'}`}
-                                />
-                              ) : (
-                                <div className={`w-full border border-dashed rounded flex items-center justify-center bg-muted/40 text-[10px] text-muted-foreground ${pieza.tipo === 'banner' ? 'aspect-[5/1]' : 'h-20'}`}>
-                                  sin imagen
-                                </div>
-                              )}
-                              <p className="text-[10px] text-muted-foreground leading-snug">{pieza.ayuda}</p>
-                              <div className="flex gap-1.5">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="flex-1"
-                                  disabled={subiendo === `${sponsor.name}:${pieza.tipo}`}
-                                  onClick={() => pedirImagen(sponsor.name, pieza.tipo)}
-                                >
-                                  <Upload className="w-3 h-3 mr-1" />
-                                  {subiendo === `${sponsor.name}:${pieza.tipo}` ? '…' : (sponsor[pieza.campo] ? 'Cambiar' : 'Subir')}
-                                </Button>
-                                {sponsor[pieza.campo] && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-red-500 hover:text-red-600"
-                                    onClick={() => quitarImagen(sponsor.name, pieza.tipo)}
-                                    title="Quitar"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                          <span>Vigencia: {vigenciaLabel(sponsor)}</span>
-                          <span>Peso: {sponsor.weight || 1}×</span>
-                          <span className="inline-flex items-center gap-1">
-                            <Eye className="w-3 h-3" /> {sponsor.impressions || 0} impresiones
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MousePointerClick className="w-3 h-3" /> {sponsor.clicks || 0} clics
-                          </span>
-                        </div>
-
-                        {sponsor.text && (
-                          <p className="text-xs text-muted-foreground">Texto: «{sponsor.text}»</p>
-                        )}
-
-                        <p className="text-xs text-muted-foreground">
-                          El texto, el enlace, la descripción, la vigencia y el peso se
-                          cambian desde <strong>Editar</strong>.
-                        </p>
-
-                        {/* Vista previa del pie, en el negro de la app */}
-                        {(enApp || tienePieza(sponsor)) && (
-                          <div>
-                            <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
-                              Vista previa del pie
-                            </p>
-                            <VistaPreviaPie sponsor={sponsor} />
-                            <p className="text-[11px] text-muted-foreground mt-1.5">
-                              {sponsor.detail_url || sponsor.banner_url
-                                ? `«Conocer más» abre ${sponsor.detail_url ? 'la imagen ampliada' : 'el banner'} dentro de la app.`
-                                : sponsor.link_url
-                                  ? '«Conocer más» abre el enlace.'
-                                  : 'Sin imagen ni enlace: el pie sale sin botón.'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Bitácora (acordeón) */}
-                    {panelAbierto === 'bitacora' && (
-                      <div className="mt-3 pt-3 border-t space-y-3" data-testid={`bitacora-panel-${sponsor.name}`}>
-                        <h4 className="text-sm font-semibold flex items-center gap-2">
-                          <NotebookPen className="w-4 h-4 text-[#E8772E]" />
-                          Bitácora de Contactos
-                        </h4>
-
-                        {/* Entradas en orden cronológico, la más nueva al final (estilo chat) */}
-                        {(sponsor.bitacora || []).length === 0 ? (
-                          <p className="text-sm text-muted-foreground italic">
-                            Aún no hay contactos registrados con este patrocinador
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {(sponsor.bitacora || []).map((entrada) => (
-                              <div
-                                key={entrada.id}
-                                className={`p-3 rounded-lg border text-sm ${
-                                  entrada.tipo === 'status' ? 'bg-blue-50 border-blue-200' : 'bg-muted/40'
-                                }`}
-                              >
-                                <div className="text-xs text-muted-foreground">{formatFechaHora(entrada.fecha)}</div>
-                                <div className="mt-0.5">{entrada.nota}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Registrar contacto (abajo, como un chat) */}
-                        <div className="space-y-2">
-                          <textarea
-                            placeholder="Registrar contacto (llamada, correo, reunión...)"
-                            value={bitacoraNota}
-                            onChange={(e) => setBitacoraNota(e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border rounded-md bg-background resize-none text-sm"
-                            data-testid="bitacora-nota-input"
-                          />
-                          <div className="flex justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => handleAddNota(sponsor)}
-                              disabled={savingNota}
-                              data-testid="bitacora-add-btn"
-                            >
-                              {savingNota ? 'Guardando...' : 'Registrar'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            );
-          })
-        )}
-      </div>
-      )}
 
+                  {bitacoraCompleta.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Todavía no hay contactos registrados.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {bitacoraCompleta.map((b) => (
+                        <li key={b.id} className="text-sm border-l-2 pl-3 py-1">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px]">{b.race_code}</Badge>
+                            {formatFechaHora(b.fecha)}
+                            {b.tipo === 'status' && <span className="italic">cambio de status</span>}
+                          </div>
+                          <p>{b.nota}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {/* Pie de la ficha */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t">
+                <div className="flex gap-2">
+                  {(tab === 'comercial' || tab === 'marca') && (
+                    <Button onClick={guardarFicha} disabled={guardandoFicha} data-testid="guardar-ficha">
+                      <Save className="w-4 h-4 mr-2" />
+                      {guardandoFicha ? 'Guardando…' : 'Guardar ficha'}
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => setAbiertaId(null)}>Cerrar</Button>
+                </div>
+                <div className="flex gap-2">
+                  {abierta.is_active && (
+                    <Button variant="outline" size="sm" onClick={retirar}>
+                      <Archive className="w-4 h-4 mr-2" />Retirar
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" className="text-destructive" onClick={borrar}>
+                    <Trash2 className="w-4 h-4 mr-2" />Eliminar
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
