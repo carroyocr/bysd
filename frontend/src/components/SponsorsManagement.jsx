@@ -938,7 +938,10 @@ export default function SponsorsManagement() {
 
       {/* Ficha */}
       <Dialog open={!!abierta} onOpenChange={(v) => !v && setAbiertaId(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        {/* Ancho fijo y hueco de barra reservado: sin esto la ventana se
+            encogía unos píxeles al pasar a una pestaña larga, cuando aparecía
+            la barra de desplazamiento, y volvía a ensancharse al salir. */}
+        <DialogContent className="w-[min(48rem,95vw)] max-w-none max-h-[90vh] overflow-y-auto [scrollbar-gutter:stable]">
           {abierta && (
             <>
               <DialogHeader>
