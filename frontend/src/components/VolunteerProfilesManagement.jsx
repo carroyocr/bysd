@@ -26,6 +26,10 @@ const FILTROS = [
 
 const EVENTO_LABEL = { carrera: 'Carrera', campeonato: 'Campeonato' };
 
+// El valor del filtro que no filtra. No es un `race_code` de verdad: el
+// backend lo entiende como "de todas las ediciones".
+const TODAS = 'todas';
+
 const celdaCSV = (valor) => {
   const texto = valor === null || valor === undefined ? '' : String(valor);
   return `"${texto.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
@@ -42,12 +46,26 @@ export default function VolunteerProfilesManagement() {
   const [formulario, setFormulario] = useState({ nombre: '', apellidos: '', telefono: '' });
   const [guardando, setGuardando] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(null); // 'todos' o el correo
-  const { raceCode, conCarrera } = useAdminRace();
+  const { raceCode, carreras } = useAdminRace();
+  // Esta pantalla elige su propia carrera, sin mover la del resto del panel:
+  // aquí se mira quién ha sido voluntario, y eso se cruza entre ediciones.
+  // Arranca en la del panel y admite TODAS, que es la vista de "alguna vez".
+  const [filtroRace, setFiltroRace] = useState(raceCode || '');
+
+  useEffect(() => {
+    if (raceCode && !filtroRace) setFiltroRace(raceCode);
+  }, [raceCode, filtroRace]);
+
+  const todasLasCarreras = filtroRace === TODAS;
+  const nombreCarrera = (code) => carreras.find((c) => c.code === code)?.name || code;
 
   const cargar = useCallback(async () => {
+    if (!filtroRace) return;
     setLoading(true);
     try {
-      const respuesta = await adminFetch(conCarrera(`${API_URL}/api/volunteer-registration/admin/profiles`));
+      const respuesta = await adminFetch(
+        `${API_URL}/api/volunteer-registration/admin/profiles?race_code=${encodeURIComponent(filtroRace)}`
+      );
       if (respuesta.ok) {
         const datos = await respuesta.json();
         setPerfiles(datos.profiles || []);
@@ -60,7 +78,7 @@ export default function VolunteerProfilesManagement() {
     } finally {
       setLoading(false);
     }
-  }, [conCarrera]);
+  }, [filtroRace]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -137,9 +155,10 @@ export default function VolunteerProfilesManagement() {
       return;
     }
     const cabeceras = ['Nombre', 'Apellidos', 'Email', 'Teléfono', 'Ciudad', 'Talla',
-      'Eventos', 'Turnos Asignados', 'Tiene Cuenta', 'Tiene Contraseña', 'Permisos', 'Fecha de Registro'];
+      'Carreras', 'Eventos', 'Turnos Asignados', 'Tiene Cuenta', 'Tiene Contraseña', 'Permisos', 'Fecha de Registro'];
     const filas = filtrados.map((p) => [
       p.nombre, p.apellidos, p.email, p.telefono, p.ciudad_residencia, p.talla_camiseta,
+      (p.carreras || []).join(' / '),
       (p.eventos || []).map((e) => EVENTO_LABEL[e] || e).join(' / '),
       p.turnos_asignados,
       p.tiene_cuenta ? 'Sí' : 'No',
@@ -152,7 +171,8 @@ export default function VolunteerProfilesManagement() {
       .join('\n');
     const enlace = document.createElement('a');
     enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8;' }));
-    enlace.download = `perfiles-voluntarios-${new Date().toISOString().split('T')[0]}.csv`;
+    const sufijo = todasLasCarreras ? 'todas' : filtroRace;
+    enlace.download = `perfiles-voluntarios-${sufijo}-${new Date().toISOString().split('T')[0]}.csv`;
     enlace.click();
     URL.revokeObjectURL(enlace.href);
     toast.success(`${filtrados.length} perfil(es) exportado(s)`);
@@ -160,15 +180,26 @@ export default function VolunteerProfilesManagement() {
 
   // Los carnets salen cuatro por hoja, con anverso y reverso juntos y marcas
   // de corte. Sin correo, los de toda la carrera; con correo, solo el suyo.
+  //
+  // La carrera la manda el filtro de esta pantalla: un carnet lleva el nombre
+  // del evento impreso, así que imprimir "todas" a la vez no significa nada.
+  // Con TODAS puesto, el de una persona sale con su edición más reciente.
   const descargarCarnets = async (perfil) => {
+    const carrera = todasLasCarreras ? (perfil?.carreras || [])[0] : filtroRace;
+    if (!carrera) {
+      toast.error('Elige una carrera para imprimir carnets');
+      return;
+    }
     setImprimiendo(perfil ? perfil.email : 'todos');
     try {
-      const filtro = perfil ? `?email=${encodeURIComponent(perfil.email)}` : '';
-      const res = await adminFetch(conCarrera(`${API_URL}/api/staff/carnets${filtro}`));
+      const filtro = perfil ? `&email=${encodeURIComponent(perfil.email)}` : '';
+      const res = await adminFetch(
+        `${API_URL}/api/staff/carnets?race_code=${encodeURIComponent(carrera)}${filtro}`
+      );
       if (!res.ok) throw new Error('No se pudieron generar los carnets');
       const nombre = perfil
         ? `carnet-staff-${perfil.nombre || ''}-${perfil.apellidos || ''}`.trim().replace(/\s+/g, '-').toLowerCase()
-        : `carnets-staff-${raceCode}`;
+        : `carnets-staff-${carrera}`;
       descargarBlob(`${nombre}.pdf`, await res.blob());
     } catch (err) {
       toast.error(err.message || 'Error de conexión');
@@ -205,9 +236,18 @@ export default function VolunteerProfilesManagement() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => descargarCarnets(null)} disabled={perfiles.length === 0 || !raceCode || imprimiendo === 'todos'} data-testid="download-staff-cards">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => descargarCarnets(null)}
+            disabled={perfiles.length === 0 || todasLasCarreras || imprimiendo === 'todos'}
+            title={todasLasCarreras
+              ? 'Elige una carrera: el carnet lleva impreso el nombre del evento'
+              : `Carnets de ${nombreCarrera(filtroRace)}`}
+            data-testid="download-staff-cards"
+          >
             {imprimiendo === 'todos' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <IdCard className="w-4 h-4 mr-2" />}
-            Carnets PDF ({perfiles.length})
+            Carnets PDF ({todasLasCarreras ? '—' : perfiles.length})
           </Button>
           <Button variant="outline" size="sm" onClick={exportarCSV} disabled={filtrados.length === 0} data-testid="export-volunteer-profiles">
             <Download className="w-4 h-4 mr-2" />
@@ -246,6 +286,27 @@ export default function VolunteerProfilesManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Label className="text-sm" htmlFor="filtro-carrera">Carrera</Label>
+            <select
+              id="filtro-carrera"
+              value={filtroRace}
+              onChange={(e) => setFiltroRace(e.target.value)}
+              className="px-3 py-2 border rounded-md bg-background text-sm"
+              data-testid="volunteer-profiles-race"
+            >
+              {carreras.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}{c.code === raceCode ? ' (panel)' : ''}
+                </option>
+              ))}
+              <option value={TODAS}>Todas las carreras</option>
+            </select>
+            <span className="text-xs text-muted-foreground">
+              Manda en la lista, en el CSV y en los carnets.
+            </span>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -292,6 +353,11 @@ export default function VolunteerProfilesManagement() {
                     <div className="font-medium truncate">{perfil.nombre} {perfil.apellidos}</div>
                     <div className="text-sm text-muted-foreground truncate">{perfil.email}</div>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
+                      {todasLasCarreras && (perfil.carreras || []).map((c) => (
+                        <Badge key={c} variant="outline" className="text-xs border-primary/40 text-primary">
+                          {c}
+                        </Badge>
+                      ))}
                       {(perfil.eventos || []).map((e) => (
                         <Badge key={e} variant="outline" className="text-xs">
                           {EVENTO_LABEL[e] || e}
@@ -319,8 +385,11 @@ export default function VolunteerProfilesManagement() {
                     variant="ghost"
                     size="sm"
                     onClick={() => descargarCarnets(perfil)}
-                    disabled={!raceCode || imprimiendo === perfil.email}
-                    title="Descargar su carnet de staff"
+                    disabled={imprimiendo === perfil.email
+                      || (todasLasCarreras && (perfil.carreras || []).length === 0)}
+                    title={todasLasCarreras
+                      ? `Su carnet de ${(perfil.carreras || [])[0] || 'su última edición'}`
+                      : 'Descargar su carnet de staff'}
                     data-testid={`download-staff-card-${perfil.email}`}
                   >
                     {imprimiendo === perfil.email

@@ -875,17 +875,24 @@ async def get_volunteer_profiles(race_code: Optional[str] = None):
     (`admin_users` con username = correo), asi que el estado se cruza por
     correo. Un mismo correo puede tener un registro por evento; aqui se agrupa
     por persona, que es como se mira esta pantalla.
+
+    `race_code` acepta ademas "todas": la misma persona suele repetir de un ano
+    para otro, y esa vista es la que contesta a "¿quien ha sido voluntario
+    alguna vez?". Cada perfil dice en que carreras esta (`carreras`), porque
+    fuera de una sola edicion el dato deja de ser obvio.
     """
     from server import db
+
+    todas = (race_code or "").strip().lower() == "todas"
 
     if not race_code:
         active_race = await db.race_configurations.find_one({"is_active": True})
         race_code = active_race["code"] if active_race else "BYSD-2027"
 
     registrations = await db.volunteer_registrations.find(
-        {"race_code": race_code},
+        {} if todas else {"race_code": race_code},
         {"_id": 0, "edit_token": 0}
-    ).sort("created_at", -1).to_list(1000)
+    ).sort("created_at", -1).to_list(2000)
 
     correos = list({r.get("email", "").lower() for r in registrations if r.get("email")})
 
@@ -898,8 +905,11 @@ async def get_volunteer_profiles(race_code: Optional[str] = None):
     # Los turnos asignados viven en volunteer_assignments, no en el registro.
     # Se filtra por carrera: el mismo correo puede haber sido voluntario en
     # ediciones anteriores y esos turnos no cuentan para esta.
+    filtro_asignaciones = {"email_asignado": {"$in": correos}}
+    if not todas:
+        filtro_asignaciones["race_code"] = race_code
     asignaciones = await db.volunteer_assignments.find(
-        {"email_asignado": {"$in": correos}, "race_code": race_code},
+        filtro_asignaciones,
         {"_id": 0, "email_asignado": 1}
     ).to_list(5000)
     turnos_por_correo = {}
@@ -922,6 +932,7 @@ async def get_volunteer_profiles(race_code: Optional[str] = None):
                 "ciudad_residencia": r.get("ciudad_residencia", ""),
                 "talla_camiseta": r.get("talla_camiseta", ""),
                 "eventos": [],
+                "carreras": [],
                 "tiene_cuenta": cuenta is not None,
                 "tiene_password": bool(cuenta and cuenta.get("password")),
                 # Un voluntario con permisos ya no es solo voluntario: conviene
@@ -930,14 +941,19 @@ async def get_volunteer_profiles(race_code: Optional[str] = None):
                 "turnos_asignados": turnos_por_correo.get(correo, 0),
                 "created_at": r.get("created_at"),
             }
-        perfiles[correo]["eventos"].append(r.get("evento") or "carrera")
+        evento = r.get("evento") or "carrera"
+        if evento not in perfiles[correo]["eventos"]:
+            perfiles[correo]["eventos"].append(evento)
+        carrera = r.get("race_code")
+        if carrera and carrera not in perfiles[correo]["carreras"]:
+            perfiles[correo]["carreras"].append(carrera)
 
     resultado = list(perfiles.values())
     con_cuenta = sum(1 for p in resultado if p["tiene_cuenta"])
     con_password = sum(1 for p in resultado if p["tiene_password"])
 
     return {
-        "race_code": race_code,
+        "race_code": "todas" if todas else race_code,
         "profiles": resultado,
         "stats": {
             "total": len(resultado),
