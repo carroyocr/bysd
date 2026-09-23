@@ -52,8 +52,87 @@ const CATEGORIAS = [
   { valor: 'reserva', texto: 'Reserva' },
 ];
 
+// Los tres sitios donde entra una imagen, tal como se ven en el dorsal de
+// 2026: el arte de fondo, el logo de la carrera arriba y el del patrocinador
+// abajo. `fuente` no es una imagen, pero se sube y se quita igual.
+const RANURAS = [
+  {
+    id: 'logo',
+    etiqueta: 'Logo de la carrera',
+    ayuda: 'Va arriba a la izquierda, junto al nombre. Cuadrado, PNG con fondo transparente.',
+  },
+  {
+    id: 'patrocinador',
+    etiqueta: 'Logo del patrocinador',
+    ayuda: 'Va centrado en la banda de abajo. Apaisado, PNG con fondo transparente.',
+  },
+  {
+    id: 'fondo',
+    etiqueta: 'Arte de fondo (opcional)',
+    ayuda: 'Sustituye las bandas de color. A tamaño sangrado: 8,5 × 5,75 pulgadas '
+      + '(2550 × 1725 px a 300 dpi), y el arte debe llegar hasta el borde. Si lo usas, '
+      + 'los logos tienen que venir ya dentro del arte.',
+  },
+];
+
+const rutaDe = (que) =>
+  que === 'fuente' ? '/api/dorsales/fuente' : `/api/dorsales/imagen/${que}`;
+
 const nombreDeArchivo = (code, cuantos) =>
   `dorsales-${code}-${cuantos === 1 ? 'muestra' : `${cuantos}`}.pdf`;
+
+/**
+ * Una ranura de archivo: lo que hay cargado, o el botón para cargarlo.
+ *
+ * Va a nivel de módulo y no dentro del render: definirlo anidado remonta el
+ * `input` en cada tecleo y le quita el foco al resto del formulario.
+ */
+function Ranura({ ranura, diseno, subiendo, onSubir, onQuitar }) {
+  const entrada = useRef(null);
+  const archivo = diseno[`${ranura.id}_archivo`];
+  const dpi = diseno[`${ranura.id}_dpi`];
+  const ocupado = subiendo === ranura.id;
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{ranura.etiqueta}</Label>
+      {archivo ? (
+        <div className="flex items-center gap-2 text-sm rounded-md border border-border p-2">
+          <ImageIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+          <span className="truncate flex-1">
+            {diseno[`${ranura.id}_nombre_original`] || 'Imagen cargada'}
+          </span>
+          {dpi ? (
+            <Badge variant={dpi >= 200 ? 'outline' : 'destructive'}>{dpi} dpi</Badge>
+          ) : null}
+          <Button size="icon" variant="ghost" onClick={() => onQuitar(ranura.id)} disabled={ocupado}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          className="w-full"
+          disabled={ocupado}
+          onClick={() => entrada.current?.click()}
+        >
+          {ocupado
+            ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            : <Upload className="w-4 h-4 mr-2" />}
+          Cargar
+        </Button>
+      )}
+      <input
+        ref={entrada}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => { onSubir(ranura.id, e.target.files?.[0]); e.target.value = ''; }}
+      />
+      <p className="text-xs text-muted-foreground">{ranura.ayuda}</p>
+    </div>
+  );
+}
 
 export default function DorsalesManagement() {
   const { carreras, raceCode, setRaceCode } = useAdminRace();
@@ -75,7 +154,6 @@ export default function DorsalesManagement() {
   const [muestra, setMuestra] = useState(null);      // URL del PDF de la vista previa
   const [previendo, setPreviendo] = useState(false);
   const previewRef = useRef(null);
-  const fondoRef = useRef(null);
   const fuenteRef = useRef(null);
 
   const conCategorias = corredores.some((c) => c.categoria);
@@ -176,22 +254,18 @@ export default function DorsalesManagement() {
       const cuerpo = new FormData();
       cuerpo.append('archivo', archivo);
       const res = await adminFetch(
-        `${API_URL}/api/dorsales/${que}?race_code=${encodeURIComponent(raceCode)}`,
+        `${API_URL}${rutaDe(que)}?race_code=${encodeURIComponent(raceCode)}`,
         { method: 'POST', body: cuerpo }
       );
       const datos = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(datos.detail || 'No se pudo subir el archivo');
       if (datos.aviso) toast.warning(datos.aviso);
-      else toast.success(que === 'fondo' ? 'Diseño base cargado' : 'Tipografía cargada');
+      else toast.success('Archivo cargado');
       await cargarDiseno();
-      // El arte de fondo trae sus propias bandas: las nuestras sobran y le
-      // taparían justo la cabecera. Y el texto del evento, que iba en blanco
-      // sobre banda oscura, pasa al color del número: sobre un arte que no
-      // conocemos, oscuro se ve y blanco puede desaparecer. Las dos cosas se
-      // vuelven a cambiar a mano, y la previa las enseña al momento.
-      if (que === 'fondo') {
-        setDiseno((d) => ({ ...d, mostrar_bandas: false, color_texto_banda: d.color_numero }));
-      }
+      // Un arte de fondo trae sus propias bandas: las nuestras sobran y le
+      // taparían justo la cabecera. Se vuelven a encender a mano, y la previa
+      // lo enseña al momento.
+      if (que === 'fondo') cambiar('mostrar_bandas', false);
     } catch (err) {
       toast.error(err.message || 'Error de conexión');
     } finally {
@@ -203,7 +277,7 @@ export default function DorsalesManagement() {
     setSubiendo(que);
     try {
       const res = await adminFetch(
-        `${API_URL}/api/dorsales/${que}?race_code=${encodeURIComponent(raceCode)}`,
+        `${API_URL}${rutaDe(que)}?race_code=${encodeURIComponent(raceCode)}`,
         { method: 'DELETE' }
       );
       if (!res.ok) throw new Error('No se pudo quitar el archivo');
@@ -383,8 +457,12 @@ export default function DorsalesManagement() {
                 id="evento"
                 value={diseno.evento || ''}
                 onChange={(e) => cambiar('evento', e.target.value)}
-                placeholder="BIG'S BACKYARD ULTRA WORLD TEAM CHAMPIONSHIP 2026"
+                placeholder="Backyard Ultra Santo Domingo"
               />
+              <p className="text-xs text-muted-foreground">
+                Va arriba, a la derecha del logo, partido en dos líneas. Con una barra
+                vertical mandas dónde parte: <code>Backyard Ultra|Santo Domingo</code>.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -395,6 +473,9 @@ export default function DorsalesManagement() {
                 onChange={(e) => cambiar('pie', e.target.value)}
                 placeholder="Déjalo vacío para quitar la banda de abajo"
               />
+              <p className="text-xs text-muted-foreground">
+                Solo se imprime si no hay logo de patrocinador: esa banda es suya.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -464,73 +545,56 @@ export default function DorsalesManagement() {
               )}
             </div>
 
-            {/* Arte de fondo y tipografía */}
-            <div className="space-y-3">
-              <Label>Diseño base</Label>
-              {diseno.fondo_archivo ? (
-                <div className="flex items-center gap-2 text-sm rounded-md border border-border p-2">
-                  <ImageIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="truncate flex-1">{diseno.fondo_nombre_original || 'Imagen cargada'}</span>
-                  <Badge variant={diseno.fondo_dpi >= 200 ? 'outline' : 'destructive'}>
-                    {diseno.fondo_dpi} dpi
-                  </Badge>
-                  <Button size="icon" variant="ghost" onClick={() => quitarArchivo('fondo')}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  disabled={subiendo === 'fondo'}
-                  onClick={() => fondoRef.current?.click()}
-                >
-                  {subiendo === 'fondo'
-                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    : <Upload className="w-4 h-4 mr-2" />}
-                  Cargar imagen de fondo
-                </Button>
-              )}
-              <input
-                ref={fondoRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => { subirArchivo('fondo', e.target.files?.[0]); e.target.value = ''; }}
-              />
-              <p className="text-xs text-muted-foreground">
-                A tamaño sangrado: 8,5 × 5,75 pulgadas (2550 × 1725 px a 300 dpi). El arte
-                debe llegar hasta el borde; lo que quede fuera de la línea de corte se pierde.
-              </p>
+            {/* Logos, arte de fondo y tipografía */}
+            <div className="space-y-4">
+              <Label className="flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4" /> Imágenes
+              </Label>
+              {RANURAS.map((ranura) => (
+                <Ranura
+                  key={ranura.id}
+                  ranura={ranura}
+                  diseno={diseno}
+                  subiendo={subiendo}
+                  onSubir={subirArchivo}
+                  onQuitar={quitarArchivo}
+                />
+              ))}
 
-              {diseno.fuente_archivo ? (
-                <div className="flex items-center gap-2 text-sm rounded-md border border-border p-2">
-                  <Type className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="truncate flex-1">{diseno.fuente_nombre_original}</span>
-                  <Button size="icon" variant="ghost" onClick={() => quitarArchivo('fuente')}>
-                    <Trash2 className="w-4 h-4" />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Tipografía</Label>
+                {diseno.fuente_archivo ? (
+                  <div className="flex items-center gap-2 text-sm rounded-md border border-border p-2">
+                    <Type className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="truncate flex-1">{diseno.fuente_nombre_original}</span>
+                    <Button size="icon" variant="ghost" onClick={() => quitarArchivo('fuente')}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={subiendo === 'fuente'}
+                    onClick={() => fuenteRef.current?.click()}
+                  >
+                    {subiendo === 'fuente'
+                      ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      : <Type className="w-4 h-4 mr-2" />}
+                    Cargar tipografía (.ttf)
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  disabled={subiendo === 'fuente'}
-                  onClick={() => fuenteRef.current?.click()}
-                >
-                  {subiendo === 'fuente'
-                    ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    : <Type className="w-4 h-4 mr-2" />}
-                  Cargar tipografía (.ttf)
-                </Button>
-              )}
-              <input
-                ref={fuenteRef}
-                type="file"
-                accept=".ttf,.otf"
-                className="hidden"
-                onChange={(e) => { subirArchivo('fuente', e.target.files?.[0]); e.target.value = ''; }}
-              />
+                )}
+                <input
+                  ref={fuenteRef}
+                  type="file"
+                  accept=".ttf,.otf"
+                  className="hidden"
+                  onChange={(e) => { subirArchivo('fuente', e.target.files?.[0]); e.target.value = ''; }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se incrusta en el PDF, así no hay que mandarla aparte a la imprenta.
+                </p>
+              </div>
             </div>
 
             {/* Interruptores */}

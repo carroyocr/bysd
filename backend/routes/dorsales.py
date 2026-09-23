@@ -46,12 +46,21 @@ COLECCION = "dorsal_disenos"
 
 SITIO = (get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com") or "").rstrip("/")
 
-# La imagen base se guarda tal cual la mando la organizacion; el limite es el
+# Las imagenes se guardan tal cual las mando la organizacion; el limite es el
 # de un arte de 300 dpi a tamano de dorsal con margen de sobra.
-MAX_FONDO = 20 * 1024 * 1024
+MAX_IMAGEN = 20 * 1024 * 1024
 MAX_FUENTE = 4 * 1024 * 1024
-TIPOS_FONDO = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
+TIPOS_IMAGEN = {"image/png", "image/jpeg", "image/jpg", "image/webp"}
 EXTENSION = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg", "image/webp": "webp"}
+
+# Los tres sitios donde entra una imagen, con el hueco en pulgadas que ocupa
+# cada una. De ahi sale el aviso de resolucion: no es lo mismo un arte que
+# cubre el dorsal entero que un logo de pulgada y media.
+RANURAS = {
+    "fondo": {"ancho": 8.5, "alto": 5.75, "cubrir": True},
+    "logo": {"ancho": 0.87, "alto": 0.87, "cubrir": False},
+    "patrocinador": {"ancho": 6.4, "alto": 0.67, "cubrir": False},
+}
 
 # Por debajo de esto la imagen sale pixelada en un dorsal que se mira de cerca.
 DPI_MINIMO = 200
@@ -216,10 +225,6 @@ class Peticion(BaseModel):
     corredores: list[Corredor] = []
 
 
-def _nombre_fondo(race_code: str, extension: str) -> str:
-    return f"dorsal_fondo_{race_code}.{extension}"
-
-
 def _nombre_fuente(race_code: str) -> str:
     return f"dorsal_fuente_{race_code}.ttf"
 
@@ -279,67 +284,79 @@ async def guardar_diseno(
     return {"race_code": race_code, "diseno": await _diseno_guardado(db, race_code, carrera)}
 
 
-# ==================== LA IMAGEN BASE Y LA TIPOGRAFIA ====================
+# ==================== LAS IMAGENES Y LA TIPOGRAFIA ====================
 
 
-@router.post("/fondo", dependencies=[solo_atletas])
-async def subir_fondo(
+@router.post("/imagen/{ranura}", dependencies=[solo_atletas])
+async def subir_imagen(
+    ranura: str,
     race_code: str = Depends(races.carrera_del_panel),
     archivo: UploadFile = File(...),
     db=Depends(get_db),
 ):
-    """El arte de fondo del dorsal, a tamano de sangrado (8.5 x 5.75 pulgadas).
+    """El arte de fondo, el logo de la carrera o el del patrocinador.
 
-    Se avisa de la resolucion a la que queda, no se rechaza: a veces se prueba
-    con un boceto ligero antes de tener el arte final.
+    Se avisa de la resolucion a la que queda en su hueco del dorsal, no se
+    rechaza: a veces se prueba con un boceto ligero antes de tener el arte
+    final, y quien manda a imprenta es quien decide si le sirve.
     """
-    if archivo.content_type not in TIPOS_FONDO:
-        raise HTTPException(status_code=400, detail="El diseño base debe ser PNG, JPG o WEBP")
+    caja = RANURAS.get(ranura)
+    if not caja:
+        raise HTTPException(status_code=404, detail="Esa ranura no existe")
+    if archivo.content_type not in TIPOS_IMAGEN:
+        raise HTTPException(status_code=400, detail="La imagen debe ser PNG, JPG o WEBP")
 
     contenido = await archivo.read()
-    if len(contenido) > MAX_FONDO:
+    if len(contenido) > MAX_IMAGEN:
         raise HTTPException(status_code=400, detail="La imagen no puede pasar de 20 MB")
 
-    dpi = dorsales.dpi_del_fondo(contenido)
+    dpi = dorsales.dpi_al_imprimir(contenido, caja["ancho"], caja["alto"], cubrir=caja["cubrir"])
     if dpi is None:
         raise HTTPException(status_code=400, detail="Esa imagen no se pudo leer")
 
-    anterior = await db[COLECCION].find_one({"race_code": race_code}, {"fondo_archivo": 1})
-    if anterior and anterior.get("fondo_archivo"):
-        await file_storage.delete(anterior["fondo_archivo"])
+    anterior = await db[COLECCION].find_one({"race_code": race_code}, {f"{ranura}_archivo": 1})
+    if anterior and anterior.get(f"{ranura}_archivo"):
+        await file_storage.delete(anterior[f"{ranura}_archivo"])
 
-    nombre = _nombre_fondo(race_code, EXTENSION[archivo.content_type])
+    nombre = f"dorsal_{ranura}_{race_code}.{EXTENSION[archivo.content_type]}"
     await file_storage.save(nombre, contenido, archivo.content_type, file_storage.FOLDER_DORSALES)
     await db[COLECCION].update_one(
         {"race_code": race_code},
         {"$set": {
-            "fondo_archivo": nombre,
-            "fondo_nombre_original": archivo.filename,
-            "fondo_dpi": dpi,
+            f"{ranura}_archivo": nombre,
+            f"{ranura}_nombre_original": archivo.filename,
+            f"{ranura}_dpi": dpi,
             "updated_at": datetime.now(timezone.utc),
         }},
         upsert=True,
     )
     return {
-        "fondo_archivo": nombre,
-        "fondo_nombre_original": archivo.filename,
-        "fondo_dpi": dpi,
+        "ranura": ranura,
+        "archivo": nombre,
+        "nombre_original": archivo.filename,
+        "dpi": dpi,
         "aviso": None if dpi >= DPI_MINIMO else (
-            f"La imagen queda a {dpi} dpi al tamaño del dorsal; para imprenta se piden 300."
+            f"La imagen queda a {dpi} dpi en su sitio del dorsal; para imprenta se piden 300."
         ),
     }
 
 
-@router.delete("/fondo", dependencies=[solo_atletas])
-async def quitar_fondo(race_code: str = Depends(races.carrera_del_panel), db=Depends(get_db)):
-    guardado = await db[COLECCION].find_one({"race_code": race_code}, {"fondo_archivo": 1})
-    if guardado and guardado.get("fondo_archivo"):
-        await file_storage.delete(guardado["fondo_archivo"])
+@router.delete("/imagen/{ranura}", dependencies=[solo_atletas])
+async def quitar_imagen(
+    ranura: str, race_code: str = Depends(races.carrera_del_panel), db=Depends(get_db)
+):
+    if ranura not in RANURAS:
+        raise HTTPException(status_code=404, detail="Esa ranura no existe")
+    guardado = await db[COLECCION].find_one({"race_code": race_code}, {f"{ranura}_archivo": 1})
+    if guardado and guardado.get(f"{ranura}_archivo"):
+        await file_storage.delete(guardado[f"{ranura}_archivo"])
     await db[COLECCION].update_one(
         {"race_code": race_code},
-        {"$unset": {"fondo_archivo": "", "fondo_nombre_original": "", "fondo_dpi": ""}},
+        {"$unset": {
+            f"{ranura}_archivo": "", f"{ranura}_nombre_original": "", f"{ranura}_dpi": "",
+        }},
     )
-    return {"message": "Diseño base quitado"}
+    return {"message": "Imagen quitada", "ranura": ranura}
 
 
 @router.post("/fuente", dependencies=[solo_atletas])
@@ -394,13 +411,17 @@ async def quitar_fuente(race_code: str = Depends(races.carrera_del_panel), db=De
 # ==================== EL PDF ====================
 
 
-async def _archivo(db, race_code: str, campo: str) -> Optional[bytes]:
-    guardado = await db[COLECCION].find_one({"race_code": race_code}, {campo: 1})
-    nombre = (guardado or {}).get(campo)
-    if not nombre:
-        return None
-    archivo = await file_storage.load(nombre)
-    return archivo[0] if archivo else None
+async def _archivos(db, race_code: str, campos: list) -> dict:
+    """El contenido de los archivos guardados de esa carrera, de una pasada."""
+    guardado = await db[COLECCION].find_one(
+        {"race_code": race_code}, {f"{c}_archivo": 1 for c in campos}
+    ) or {}
+    salida = {}
+    for campo in campos:
+        nombre = guardado.get(f"{campo}_archivo")
+        archivo = await file_storage.load(nombre) if nombre else None
+        salida[campo] = archivo[0] if archivo else None
+    return salida
 
 
 @router.post("/pdf", dependencies=[solo_atletas])
@@ -441,12 +462,8 @@ async def generar_pdf(
             "qr_url": _url_de_escaneo(bib, race_code) if diseno.get("mostrar_qr") else "",
         })
 
-    pdf = dorsales.construir_pdf(
-        lista,
-        diseno,
-        fondo=await _archivo(db, race_code, "fondo_archivo"),
-        fuente=await _archivo(db, race_code, "fuente_archivo"),
-    )
+    archivos = await _archivos(db, race_code, ["fondo", "logo", "patrocinador", "fuente"])
+    pdf = dorsales.construir_pdf(lista, diseno, archivos=archivos, fuente=archivos["fuente"])
     sufijo = lista[0]["numero"] if len(lista) == 1 else f"{len(lista)}"
     return StreamingResponse(
         pdf,

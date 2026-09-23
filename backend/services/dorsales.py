@@ -15,6 +15,11 @@ De su guia salen tres reglas que aqui no se negocian:
 - **Nada importante fuera de la linea de corte**, y anadido nuestro: nada
   importante encima de los ojales, que es por donde entran los imperdibles.
 
+La plantilla es la del dorsal de 2026, que es el que la gente ya reconoce:
+banda arriba con el logo y el nombre de la carrera, franja clara en medio con
+el nombre del corredor sobre un numero grande, y banda abajo con el logo del
+patrocinador. El QR es lo unico nuevo, y va en la franja del medio.
+
 El QR va en vectores, no en mapa de bits: se lee igual a cualquier tamano,
 imprime negro puro (0/0/0/100) y no depende de con que resolucion lo
 rasterice la imprenta. Un QR raster a 150 dpi sobre un dorsal de 8 pulgadas
@@ -66,14 +71,31 @@ HUECO_QR = 0.25 * PULGADA            # entre la columna del QR y el numero
 
 # ============ Valores por defecto del diseno ============
 
+# Los del dorsal de 2026: franja clara arriba y abajo, centro blanco y el
+# numero en azul. Se pueden cambiar todos desde el panel.
 COLOR_FONDO = "#FFFFFF"
-COLOR_BANDA = "#111827"
-COLOR_TEXTO_BANDA = "#FFFFFF"
-COLOR_NUMERO = "#111827"
-COLOR_NOMBRE = "#E8772E"
+COLOR_BANDA = "#A3BECD"
+COLOR_TEXTO_BANDA = "#1F3B57"
+COLOR_NUMERO = "#3A5F80"
+COLOR_NOMBRE = "#3A5F80"
 
-ALTO_BANDA_SUPERIOR = 0.62 * PULGADA
-ALTO_BANDA_INFERIOR = 0.34 * PULGADA
+# Distancia de un borde de corte a la que el ojal ya no estorba: esta a 0.6"
+# con 0.1" de radio. Nada impreso se mete dentro de esa franja -- ni el logo,
+# ni el nombre de la carrera, ni el del patrocinador -- porque por ahi entra
+# el imperdible y lo que quede debajo se pierde. El color de la banda si pasa
+# por encima: el agujero se perfora y el color no estorba.
+LEJOS_DE_LOS_OJALES = OJAL_MARGEN + OJAL_RADIO + 0.09 * PULGADA
+
+# Las tres franjas del dorsal de 2026, de arriba abajo
+ALTO_BANDA_SUPERIOR = 1.15 * PULGADA   # logo + nombre de la carrera
+ALTO_BANDA_INFERIOR = 0.95 * PULGADA   # logo del patrocinador
+AIRE_BANDA = 0.14 * PULGADA            # lo que respira el contenido dentro de su banda
+HUECO_LOGO = 0.16 * PULGADA            # entre el logo y el nombre de la carrera
+
+CUERPO_EVENTO = 0.30 * PULGADA
+CUERPO_PIE = 0.16 * PULGADA
+CUERPO_NOMBRE = 0.26 * PULGADA
+AIRE_SOBRE_EL_NUMERO = 0.10 * PULGADA
 LADO_QR = 40.0 / 25.4 * PULGADA      # 40 mm
 
 # Un QR de version 8 (el de nuestra URL con correccion alta) son 49 modulos.
@@ -226,35 +248,67 @@ def _dibujar_qr(pdf, texto: str, x: float, y: float, lado: float):
 # ============ El fondo que suba la organizacion ============
 
 
-def preparar_fondo(datos: Optional[bytes]) -> Optional[ImageReader]:
-    """La imagen base, ya en CMYK, lista para incrustar.
+def _tinta(color: CMYKColor) -> tuple:
+    """Un color CMYK como los cuatro bytes que entiende Pillow (0 = sin tinta)."""
+    return tuple(
+        max(0, min(255, round(255 * v)))
+        for v in (color.cyan, color.magenta, color.yellow, color.black)
+    )
 
-    Se convierte aqui y no en la subida porque el archivo se guarda tal como
-    lo mando la organizacion: si manana cambia la imprenta y pide RGB, se
-    cambia esta linea y no hay que volver a subir nada.
+
+BLANCO_PAPEL = (0, 0, 0, 0)
+
+
+def _aplanar(datos: bytes, sobre: tuple):
+    """La imagen en CMYK, con la transparencia fundida contra `sobre`.
+
+    Perder el canal alfa no es un descuido: un PDF no puede llevar a la vez
+    una imagen en CMYK y su transparencia -- reportlab, en cuanto ve un PNG
+    con alfa, lo mete en DeviceRGB, que es justo lo que la guia de la imprenta
+    prohibe. Asi que el logo se funde aqui contra el color de la banda sobre
+    la que va a caer, y se funde **en CMYK**: si se hiciera en RGB y se
+    convirtiera despues, Pillow reparte la tinta a su manera y el recuadro del
+    logo saldria de un tono distinto al de la banda, visible a un metro.
+
+    La consecuencia practica: si la organizacion sube su propio arte de fondo,
+    el logo tiene que venir ya dentro de ese arte, porque contra un dibujo no
+    hay color plano contra el que fundir.
+    """
+    imagen = Image.open(io.BytesIO(datos))
+    if imagen.mode not in ("RGBA", "LA", "P"):
+        return imagen.convert("CMYK")
+
+    imagen = imagen.convert("RGBA")
+    lienzo = Image.new("CMYK", imagen.size, sobre)
+    lienzo.paste(imagen.convert("CMYK"), mask=imagen.split()[-1])
+    return lienzo
+
+
+def preparar_imagen(datos: Optional[bytes], sobre: tuple = BLANCO_PAPEL) -> Optional[ImageReader]:
+    """La imagen lista para incrustar, o None si no se deja leer.
+
+    Se convierte al armar el PDF y no al subirla porque el archivo se guarda
+    tal como lo mando la organizacion: si manana cambia la imprenta y pide
+    RGB, se cambia esta funcion y no hay que volver a subir nada.
     """
     if not datos:
         return None
     try:
-        imagen = Image.open(io.BytesIO(datos))
-        if imagen.mode in ("RGBA", "LA", "P"):
-            # Sin canal alfa: el blanco de debajo es el papel
-            fondo = Image.new("RGB", imagen.size, "white")
-            imagen = imagen.convert("RGBA")
-            fondo.paste(imagen, mask=imagen.split()[-1])
-            imagen = fondo
-        return ImageReader(imagen.convert("CMYK"))
+        return ImageReader(_aplanar(datos, sobre))
     except Exception:
-        logger.warning("El diseno base de los dorsales no se pudo leer", exc_info=True)
+        logger.warning("Una imagen de los dorsales no se pudo leer", exc_info=True)
         return None
 
 
-def dpi_del_fondo(datos: Optional[bytes]) -> Optional[int]:
-    """A cuantos puntos por pulgada queda la imagen estirada al tamano del dorsal.
+def dpi_al_imprimir(
+    datos: Optional[bytes], ancho_pulgadas: float, alto_pulgadas: float, cubrir: bool = False
+) -> Optional[int]:
+    """A cuantos puntos por pulgada queda esa imagen en su hueco del dorsal.
 
-    Es el aviso que hace falta antes de mandar a imprenta: una imagen de 800
-    px sobre 8.5 pulgadas son 94 dpi, y eso sale pixelado en un dorsal que se
-    mira de cerca.
+    Es el aviso que hace falta antes de mandar a imprenta: un logo de 300 px
+    en una banda de pulgada y media sale con los bordes rotos, y eso no se ve
+    en la pantalla del panel. `cubrir` es para el arte de fondo, que se recorta
+    para llenar el dorsal entero; los logos entran completos dentro de su caja.
     """
     if not datos:
         return None
@@ -263,9 +317,21 @@ def dpi_del_fondo(datos: Optional[bytes]) -> Optional[int]:
             ancho, alto = imagen.size
     except Exception:
         return None
-    pulgadas_ancho = (ANCHO_CORTE + 2 * SANGRADO) / PULGADA
-    pulgadas_alto = (ALTO_CORTE + 2 * SANGRADO) / PULGADA
-    return int(min(ancho / pulgadas_ancho, alto / pulgadas_alto))
+    if not ancho or not alto:
+        return None
+    lados = (ancho_pulgadas / ancho, alto_pulgadas / alto)
+    pulgadas_por_pixel = max(lados) if cubrir else min(lados)
+    return int(1 / pulgadas_por_pixel) if pulgadas_por_pixel else None
+
+
+def dpi_del_fondo(datos: Optional[bytes]) -> Optional[int]:
+    """El arte de fondo se mide contra el dorsal entero, sangrado incluido."""
+    return dpi_al_imprimir(
+        datos,
+        (ANCHO_CORTE + 2 * SANGRADO) / PULGADA,
+        (ALTO_CORTE + 2 * SANGRADO) / PULGADA,
+        cubrir=True,
+    )
 
 
 def _pintar_fondo(pdf, fondo: ImageReader, x: float, y: float, ancho: float, alto: float):
@@ -290,6 +356,17 @@ def _pintar_fondo(pdf, fondo: ImageReader, x: float, y: float, ancho: float, alt
         alto_final,
     )
     pdf.restoreState()
+
+
+def _pintar_logo(pdf, logo: ImageReader, x: float, y: float, ancho: float, alto: float,
+                 alinear="centro") -> float:
+    """El logo entero dentro de su caja, sin deformarlo. Devuelve lo que ocupa."""
+    ancho_imagen, alto_imagen = logo.getSize()
+    escala = min(ancho / ancho_imagen, alto / alto_imagen)
+    ancho_final, alto_final = ancho_imagen * escala, alto_imagen * escala
+    izquierda = x if alinear == "izquierda" else x + (ancho - ancho_final) / 2
+    pdf.drawImage(logo, izquierda, y + (alto - alto_final) / 2, ancho_final, alto_final)
+    return ancho_final
 
 
 # ============ Marcas y guias ============
@@ -333,7 +410,99 @@ def _guias(pdf, ox: float, oy: float):
 # ============ Un dorsal ============
 
 
-def _una_pagina(pdf, dorsal: dict, opciones: dict, fondo, fuente: str, ox: float, oy: float):
+def _dos_lineas(pdf, texto: str, fuente: str, ancho: float, cuerpo: float) -> list:
+    """El nombre de la carrera partido en dos lineas, como en el dorsal de 2026.
+
+    Se parte por donde las dos queden mas parejas, que es lo que hace un
+    disenador a ojo. Con una barra vertical se manda a mano donde cortar, para
+    los nombres que no se parten bien solos.
+    """
+    if "|" in texto:
+        return [parte.strip() for parte in texto.split("|", 1) if parte.strip()]
+
+    palabras = texto.split()
+    if len(palabras) < 2:
+        return [texto]
+    if pdf.stringWidth(texto, fuente, cuerpo) <= ancho:
+        # Cabe entera y holgada: dos lineas solo si es un nombre largo
+        if len(palabras) < 3:
+            return [texto]
+
+    def desparejo(corte):
+        izquierda = " ".join(palabras[:corte])
+        derecha = " ".join(palabras[corte:])
+        return max(pdf.stringWidth(izquierda, fuente, 1), pdf.stringWidth(derecha, fuente, 1))
+
+    corte = min(range(1, len(palabras)), key=desparejo)
+    return [" ".join(palabras[:corte]), " ".join(palabras[corte:])]
+
+
+def _banda_superior(pdf, opciones, logo, fuente, ox, sx, arriba, ancho_sangrado,
+                    alto_banda, con_bandas, color_banda, color_texto):
+    """Logo a la izquierda y el nombre de la carrera al lado, como en 2026."""
+    if con_bandas:
+        pdf.setFillColor(color_banda)
+        pdf.rect(sx, arriba - alto_banda, ancho_sangrado, alto_banda + SANGRADO, stroke=0, fill=1)
+
+    izquierda = ox + LEJOS_DE_LOS_OJALES
+    derecha = ox + ANCHO_CORTE - LEJOS_DE_LOS_OJALES
+    alto_util = alto_banda - 2 * AIRE_BANDA
+    base = arriba - alto_banda + AIRE_BANDA
+
+    if logo is not None:
+        ocupa = _pintar_logo(pdf, logo, izquierda, base, alto_util, alto_util, alinear="izquierda")
+        izquierda += ocupa + HUECO_LOGO
+
+    evento = (opciones.get("evento") or "").strip()
+    if not evento:
+        return
+
+    ancho = max(derecha - izquierda, 1)
+    lineas = _dos_lineas(pdf, evento, fuente, ancho, CUERPO_EVENTO)
+    interlinea = 1.22
+    cuerpo = CUERPO_EVENTO
+    for linea in lineas:
+        cuerpo = min(cuerpo, ancho / (pdf.stringWidth(linea, fuente, 1) or 1))
+    cuerpo = min(cuerpo, alto_util / (len(lineas) * interlinea))
+
+    alto_mayuscula = cuerpo * _alto_mayusculas(fuente)
+    alto_bloque = alto_mayuscula + (len(lineas) - 1) * cuerpo * interlinea
+    y = base + (alto_util - alto_bloque) / 2 + (len(lineas) - 1) * cuerpo * interlinea
+
+    pdf.setFillColor(color_texto)
+    pdf.setFont(fuente, cuerpo)
+    for linea in lineas:
+        pdf.drawString(izquierda, y, linea)
+        y -= cuerpo * interlinea
+
+
+def _banda_inferior(pdf, opciones, patrocinador, fuente, ox, sx, abajo, sy, ancho_sangrado,
+                    alto_banda, con_bandas, color_banda, color_texto):
+    """El logo del patrocinador; si no lo hay, el pie de texto."""
+    if con_bandas:
+        pdf.setFillColor(color_banda)
+        pdf.rect(sx, sy, ancho_sangrado, alto_banda + SANGRADO, stroke=0, fill=1)
+
+    izquierda = ox + LEJOS_DE_LOS_OJALES
+    ancho = ANCHO_CORTE - 2 * LEJOS_DE_LOS_OJALES
+    alto_util = alto_banda - 2 * AIRE_BANDA
+
+    if patrocinador is not None:
+        _pintar_logo(pdf, patrocinador, izquierda, abajo + AIRE_BANDA, ancho, alto_util)
+        return
+
+    pie = (opciones.get("pie") or "").strip()
+    if pie:
+        pdf.setFillColor(color_texto)
+        _linea_centrada(
+            pdf, pie, ox + ANCHO_CORTE / 2,
+            abajo + (alto_banda - CUERPO_PIE * _alto_mayusculas(fuente)) / 2,
+            fuente, CUERPO_PIE, ancho,
+        )
+
+
+def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
+                ox: float, oy: float):
     color_fondo = _cmyk(opciones.get("color_fondo"), COLOR_FONDO)
     color_banda = _cmyk(opciones.get("color_banda"), COLOR_BANDA)
     color_texto_banda = _cmyk(opciones.get("color_texto_banda"), COLOR_TEXTO_BANDA)
@@ -345,55 +514,43 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, fondo, fuente: str, ox: float
     ancho_sangrado, alto_sangrado = ANCHO_CORTE + 2 * SANGRADO, ALTO_CORTE + 2 * SANGRADO
     pdf.setFillColor(color_fondo)
     pdf.rect(sx, sy, ancho_sangrado, alto_sangrado, stroke=0, fill=1)
-    if fondo is not None:
-        _pintar_fondo(pdf, fondo, sx, sy, ancho_sangrado, alto_sangrado)
+    if imagenes.get("fondo") is not None:
+        _pintar_fondo(pdf, imagenes["fondo"], sx, sy, ancho_sangrado, alto_sangrado)
 
-    # El color del texto del evento y del pie no depende de que haya banda:
-    # con el arte de la organizacion de fondo, la banda desaparece pero el
-    # texto sigue ahi y quien elige el color es quien conoce su arte.
+    # El color del texto de las bandas no depende de que haya banda: con el
+    # arte de la organizacion de fondo la banda desaparece pero el texto sigue
+    # ahi, y quien elige el color es quien conoce su arte.
     con_bandas = bool(opciones.get("mostrar_bandas", True))
-    evento = (opciones.get("evento") or "").strip()
-    pie = (opciones.get("pie") or "").strip()
+    arriba, abajo = oy + ALTO_CORTE, oy
 
-    # --- Banda superior con el nombre del evento ---
-    arriba = oy + ALTO_CORTE
-    alto_banda = ALTO_BANDA_SUPERIOR if evento else 0
-    if evento:
-        if con_bandas:
-            pdf.setFillColor(color_banda)
-            pdf.rect(sx, arriba - alto_banda, ancho_sangrado, alto_banda + SANGRADO, stroke=0, fill=1)
-        pdf.setFillColor(color_texto_banda)
-        _linea_centrada(
-            pdf,
-            evento.upper(),
-            ox + ANCHO_CORTE / 2,
-            arriba - alto_banda + (alto_banda - 0.26 * PULGADA) / 2,
-            fuente,
-            0.26 * PULGADA,
-            ANCHO_CORTE - 2 * MARGEN_SEGURO,
-        )
+    # --- Las dos bandas ---
+    #
+    # Una banda existe si tiene algo que ensenar. El alto se reserva aunque las
+    # bandas esten apagadas: lo que manda la franja del medio es donde caen el
+    # logo y el patrocinador, no si se pinta un rectangulo detras.
+    hay_arriba = bool((opciones.get("evento") or "").strip()) or imagenes.get("logo") is not None
+    hay_abajo = bool((opciones.get("pie") or "").strip()) or imagenes.get("patrocinador") is not None
+    alto_banda = ALTO_BANDA_SUPERIOR if hay_arriba else 0
+    alto_pie = ALTO_BANDA_INFERIOR if hay_abajo else 0
 
-    # --- Banda inferior con el pie (carrera y fecha) ---
-    abajo = oy
-    alto_pie = ALTO_BANDA_INFERIOR if pie else 0
-    if pie:
-        if con_bandas:
-            pdf.setFillColor(color_banda)
-            pdf.rect(sx, sy, ancho_sangrado, alto_pie + SANGRADO, stroke=0, fill=1)
-        pdf.setFillColor(color_texto_banda)
-        _linea_centrada(
-            pdf,
-            pie.upper(),
-            ox + ANCHO_CORTE / 2,
-            abajo + (alto_pie - 0.14 * PULGADA) / 2,
-            fuente,
-            0.14 * PULGADA,
-            ANCHO_CORTE - 2 * MARGEN_SEGURO,
-        )
+    if hay_arriba:
+        _banda_superior(pdf, opciones, imagenes.get("logo"), fuente, ox, sx, arriba,
+                        ancho_sangrado, alto_banda, con_bandas, color_banda, color_texto_banda)
+    if hay_abajo:
+        _banda_inferior(pdf, opciones, imagenes.get("patrocinador"), fuente, ox, sx, abajo, sy,
+                        ancho_sangrado, alto_pie, con_bandas, color_banda, color_texto_banda)
+
+    # --- La franja del medio ---
+    #
+    # Entre las dos bandas, y en todo caso por dentro de los ojales: sin bandas
+    # que la sujeten, el numero se estiraria hasta el imperdible.
+    techo = min(arriba - alto_banda - AIRE_BANDA, arriba - LEJOS_DE_LOS_OJALES)
+    suelo = max(abajo + alto_pie + AIRE_BANDA, abajo + LEJOS_DE_LOS_OJALES)
 
     # --- La columna del QR ---
     lado_qr = float(opciones.get("qr_lado_mm") or 40) / 25.4 * PULGADA
     lado_qr = max(20 / 25.4 * PULGADA, min(lado_qr, 70 / 25.4 * PULGADA))
+    lado_qr = min(lado_qr, max(techo - suelo, 1))
     posicion = (opciones.get("qr_posicion") or "derecha").lower()
     url = (dorsal.get("qr_url") or "").strip()
     con_qr = bool(opciones.get("mostrar_qr", True)) and bool(url)
@@ -401,33 +558,38 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, fondo, fuente: str, ox: float
     izquierda = ox + MARGEN_SEGURO
     derecha = ox + ANCHO_CORTE - MARGEN_SEGURO
     if con_qr:
-        centro_qr = (abajo + alto_pie + arriba - alto_banda) / 2
         if posicion == "izquierda":
-            x_qr = ox + MARGEN_QR
+            x_qr = ox + MARGEN_SEGURO
             izquierda = x_qr + lado_qr + HUECO_QR
         else:
-            x_qr = ox + ANCHO_CORTE - MARGEN_QR - lado_qr
+            x_qr = ox + ANCHO_CORTE - MARGEN_SEGURO - lado_qr
             derecha = x_qr - HUECO_QR
-        _dibujar_qr(pdf, url, x_qr, centro_qr - lado_qr / 2, lado_qr)
+        _dibujar_qr(pdf, url, x_qr, (suelo + techo - lado_qr) / 2, lado_qr)
 
-    # --- El numero y el nombre ---
+    # --- El nombre del corredor, y debajo el numero ---
+    #
+    # Como en 2026: el nombre arriba y pequeno, el numero debajo y enorme. El
+    # nombre va tal como lo escribio el atleta, sin pasarlo a mayusculas: la
+    # personalizacion es suya y "CoachMigue" no es "COACHMIGUE".
     numero = str(dorsal.get("numero") or "").strip()
-    nombre = (dorsal.get("nombre") or "").strip().upper()
+    nombre = (dorsal.get("nombre") or "").strip()
+    # El numero se centra en el hueco que deja el QR, no en el dorsal. Es a
+    # proposito: centrarlo en el dorsal con un QR al lado lo obliga a encoger
+    # casi a la mitad, y en un dorsal lo que hay que leer a treinta metros es
+    # el numero. Sin QR el hueco es el dorsal entero y queda centrado de todas
+    # formas, como en 2026.
     ancho_util = max(derecha - izquierda, 1)
     centro_x = (izquierda + derecha) / 2
-    techo = arriba - alto_banda - 0.18 * PULGADA
-    suelo = abajo + alto_pie + 0.18 * PULGADA
     alto_util = max(techo - suelo, 1)
 
-    alto_nombre = 0.46 * PULGADA if nombre else 0
+    alto_nombre = (CUERPO_NOMBRE * _alto_mayusculas(fuente) + AIRE_SOBRE_EL_NUMERO) if nombre else 0
     cuerpo_numero = _cuerpo_que_cabe(
         pdf, numero, fuente, ancho_util, alto_util - alto_nombre, 3.2 * PULGADA
     )
     alto_numero = cuerpo_numero * _alto_mayusculas(fuente)
 
-    # El bloque numero + nombre, centrado en lo que quede de dorsal
     sobra = alto_util - alto_numero - alto_nombre
-    base_numero = suelo + sobra / 2 + alto_nombre
+    base_numero = suelo + sobra / 2
 
     if numero:
         pdf.setFillColor(color_numero)
@@ -437,7 +599,8 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, fondo, fuente: str, ox: float
     if nombre:
         pdf.setFillColor(color_nombre)
         _linea_centrada(
-            pdf, nombre, centro_x, base_numero - alto_nombre, fuente, 0.34 * PULGADA, ancho_util
+            pdf, nombre, centro_x, base_numero + alto_numero + AIRE_SOBRE_EL_NUMERO,
+            fuente, CUERPO_NOMBRE, ancho_util,
         )
 
     if opciones.get("marcas_corte", True):
@@ -452,15 +615,18 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, fondo, fuente: str, ox: float
 def construir_pdf(
     dorsales: list,
     opciones: Optional[dict] = None,
-    fondo: Optional[bytes] = None,
+    archivos: Optional[dict] = None,
     fuente: Optional[bytes] = None,
 ) -> io.BytesIO:
     """El PDF con un dorsal por pagina.
 
     `dorsales` son diccionarios con `numero`, `nombre` y `qr_url`. `opciones`
     es lo que se parametriza desde el panel (textos, colores, QR, marcas).
+    `archivos` trae el arte de fondo y los dos logos, en bytes tal como se
+    subieron: `fondo`, `logo` y `patrocinador`.
     """
     opciones = dict(opciones or {})
+    archivos = dict(archivos or {})
     con_marcas = bool(opciones.get("marcas_corte", True))
     margen = MARGEN_MARCAS if con_marcas else 0
     ancho_pagina = ANCHO_CORTE + 2 * SANGRADO + 2 * margen
@@ -472,11 +638,22 @@ def construir_pdf(
     pdf = canvas.Canvas(memoria, pagesize=(ancho_pagina, alto_pagina))
     pdf.setTitle(opciones.get("evento") or "Dorsales")
 
-    imagen = preparar_fondo(fondo)
+    # Los logos se funden contra el color sobre el que van a caer: la banda, o
+    # el fondo del dorsal si las bandas estan apagadas.
+    detras = _tinta(
+        _cmyk(opciones.get("color_banda"), COLOR_BANDA)
+        if opciones.get("mostrar_bandas", True)
+        else _cmyk(opciones.get("color_fondo"), COLOR_FONDO)
+    )
+    imagenes = {
+        "fondo": preparar_imagen(archivos.get("fondo")),
+        "logo": preparar_imagen(archivos.get("logo"), detras),
+        "patrocinador": preparar_imagen(archivos.get("patrocinador"), detras),
+    }
     tipografia = registrar_fuente(fuente)
 
     for dorsal in dorsales or []:
-        _una_pagina(pdf, dorsal, opciones, imagen, tipografia, ox, oy)
+        _una_pagina(pdf, dorsal, opciones, imagenes, tipografia, ox, oy)
         pdf.showPage()
 
     if not dorsales:

@@ -65,7 +65,7 @@ def test_no_se_cuela_ni_un_color_rgb():
     salida = dorsales.construir_pdf(
         [DORSAL],
         {**DISENO, "color_nombre": "#E8772E", "color_banda": "#111827"},
-        fondo=memoria.getvalue(),
+        archivos={"fondo": memoria.getvalue()},
     )
     contenido = salida.getvalue()
     assert b"DeviceRGB" not in contenido
@@ -112,7 +112,7 @@ def test_el_dpi_avisa_de_una_imagen_pobre():
 
 def test_un_fondo_ilegible_no_tumba_el_pdf():
     """Se pierde el arte, no la tanda de dorsales."""
-    salida = dorsales.construir_pdf([DORSAL], DISENO, fondo=b"esto no es una imagen")
+    salida = dorsales.construir_pdf([DORSAL], DISENO, archivos={"fondo": b"esto no es una imagen"})
     assert _paginas(salida.getvalue()) == 1
 
 
@@ -211,3 +211,189 @@ def test_el_qr_lleva_el_silencio_que_exige_el_formato():
     # El primer modulo negro no puede empezar pegado al borde del cuadro
     primeros = [r for r in _rectangulos(salida.getvalue()) if abs(r[3] - paso) < 0.01]
     assert min(r[0] for r in primeros) - cuadro[0] >= 4 * paso - 0.01
+
+
+# ---------------- Los ojales ----------------
+#
+# Por los cuatro agujeros entran los imperdibles. Lo que caiga debajo de uno
+# se pierde, y no hay forma de verlo hasta que el dorsal esta impreso y
+# perforado: de ahi que la regla sea del generador y no del ojo de quien
+# revisa la previa.
+
+
+def _textos(pdf: bytes):
+    """Cada texto de la primera pagina como su caja (x0, y0, x1, y1)."""
+    import re as expreg
+
+    from PyPDF2 import PdfReader
+    from reportlab.pdfbase import pdfmetrics
+
+    flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+    cuerpo = None
+    salida = []
+    patron = r"/F\d+ (\d+\.?\d*) Tf|1 0 0 1 (-?\d+\.?\d*) (-?\d+\.?\d*) Tm \(([^)]*)\)"
+    for trozo in expreg.finditer(patron, flujo):
+        if trozo.group(1):
+            cuerpo = float(trozo.group(1))
+            continue
+        if not cuerpo:
+            continue
+        x, y, texto = float(trozo.group(2)), float(trozo.group(3)), trozo.group(4)
+        ancho = pdfmetrics.stringWidth(texto, dorsales.FUENTE_BASE, cuerpo)
+        alto = cuerpo * dorsales._alto_mayusculas(dorsales.FUENTE_BASE)
+        salida.append((x, y, x + ancho, y + alto))
+    assert salida, "no se encontro ni un texto en el PDF"
+    return salida
+
+
+def _ojales(pdf: bytes):
+    """Las cuatro cajas que ocupan los ojales, en coordenadas de la pagina."""
+    from PyPDF2 import PdfReader
+
+    caja = PdfReader(io.BytesIO(pdf)).pages[0].mediabox
+    ox = (float(caja.width) - dorsales.ANCHO_CORTE) / 2
+    oy = (float(caja.height) - dorsales.ALTO_CORTE) / 2
+    radio = dorsales.OJAL_RADIO
+    return [
+        (x - radio, y - radio, x + radio, y + radio)
+        for x in (ox + dorsales.OJAL_MARGEN, ox + dorsales.ANCHO_CORTE - dorsales.OJAL_MARGEN)
+        for y in (oy + dorsales.OJAL_MARGEN, oy + dorsales.ALTO_CORTE - dorsales.OJAL_MARGEN)
+    ]
+
+
+def _ningun_texto_sobre_un_ojal(pdf: bytes):
+    agujeros = _ojales(pdf)
+    for x0, y0, x1, y1 in _textos(pdf):
+        for ax0, ay0, ax1, ay1 in agujeros:
+            assert not (x0 < ax1 and x1 > ax0 and y0 < ay1 and y1 > ay0), (
+                f"un texto ({x0:.1f},{y0:.1f})-({x1:.1f},{y1:.1f}) cae sobre "
+                f"el ojal ({ax0:.1f},{ay0:.1f})-({ax1:.1f},{ay1:.1f})"
+            )
+
+
+def test_el_nombre_del_evento_no_cae_sobre_un_ojal():
+    salida = dorsales.construir_pdf([DORSAL], DISENO)
+    _ningun_texto_sobre_un_ojal(salida.getvalue())
+
+
+def test_sin_bandas_tampoco_sube_el_numero_hasta_el_ojal():
+    """Sin banda superior el numero crece; el tope sigue siendo el ojal."""
+    salida = dorsales.construir_pdf([DORSAL], {**DISENO, "mostrar_bandas": False})
+    _ningun_texto_sobre_un_ojal(salida.getvalue())
+
+
+def test_un_dorsal_pelado_no_se_acerca_a_los_ojales():
+    """Sin evento ni pie no hay bandas que sujeten nada: es el caso feo."""
+    salida = dorsales.construir_pdf(
+        [{"numero": "8", "nombre": "", "qr_url": ""}],
+        {"evento": "", "pie": "", "mostrar_qr": False},
+    )
+    _ningun_texto_sobre_un_ojal(salida.getvalue())
+
+
+def test_el_nombre_de_la_carrera_se_parte_en_dos_lineas():
+    """Como en el dorsal de 2026: "Backyard Ultra" encima de "Santo Domingo"."""
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "evento": "Backyard Ultra Santo Domingo", "mostrar_qr": False}
+    )
+    lineas = [caja for caja in _textos(salida.getvalue()) if caja[3] - caja[1] < 30]
+    # Dos lineas del evento a la misma izquierda y a distinta altura
+    izquierdas = sorted(round(c[0], 1) for c in lineas)
+    assert len(set(izquierdas)) < len(izquierdas), "las lineas del evento no comparten margen"
+
+
+def test_una_barra_manda_donde_se_parte_el_nombre():
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "evento": "Backyard Ultra|Santo Domingo", "mostrar_qr": False}
+    )
+    assert _paginas(salida.getvalue()) == 1
+
+
+# ---------------- Los logos ----------------
+
+
+def _imagenes(pdf: bytes):
+    """Cada imagen dibujada como su caja (x0, y0, x1, y1)."""
+    import re as expreg
+
+    from PyPDF2 import PdfReader
+
+    flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+    patron = r"(\d+\.?\d*) 0 0 (\d+\.?\d*) (-?\d+\.?\d*) (-?\d+\.?\d*) cm\s*/\S+ Do"
+    cajas = []
+    for trozo in expreg.finditer(patron, flujo):
+        ancho, alto, x, y = (float(v) for v in trozo.groups())
+        cajas.append((x, y, x + ancho, y + alto))
+    return cajas
+
+
+def _logo_cuadrado():
+    memoria = io.BytesIO()
+    imagen = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
+    imagen.paste(Image.new("RGB", (300, 300), (232, 119, 46)), (50, 50))
+    imagen.save(memoria, "PNG")
+    return memoria.getvalue()
+
+
+def _logo_apaisado():
+    memoria = io.BytesIO()
+    Image.new("RGB", (1600, 320), (30, 64, 140)).save(memoria, "PNG")
+    return memoria.getvalue()
+
+
+ARCHIVOS = {"logo": _logo_cuadrado(), "patrocinador": _logo_apaisado()}
+
+
+def test_el_dorsal_lleva_los_dos_logos():
+    salida = dorsales.construir_pdf([DORSAL], DISENO, archivos=ARCHIVOS)
+    assert len(_imagenes(salida.getvalue())) == 2
+
+
+def test_los_logos_no_caen_sobre_un_ojal():
+    """Por esos cuatro agujeros entran los imperdibles."""
+    salida = dorsales.construir_pdf([DORSAL], DISENO, archivos=ARCHIVOS)
+    contenido = salida.getvalue()
+    for x0, y0, x1, y1 in _imagenes(contenido):
+        for ax0, ay0, ax1, ay1 in _ojales(contenido):
+            assert not (x0 < ax1 and x1 > ax0 and y0 < ay1 and y1 > ay0), (
+                f"un logo ({x0:.1f},{y0:.1f})-({x1:.1f},{y1:.1f}) cae sobre un ojal"
+            )
+
+
+def test_el_logo_del_patrocinador_va_centrado_abajo():
+    salida = dorsales.construir_pdf([DORSAL], DISENO, archivos=ARCHIVOS)
+    contenido = salida.getvalue()
+    from PyPDF2 import PdfReader
+
+    caja = PdfReader(io.BytesIO(contenido)).pages[0].mediabox
+    centro = float(caja.width) / 2
+    abajo = min(_imagenes(contenido), key=lambda c: c[1])
+    assert abs((abajo[0] + abajo[2]) / 2 - centro) < 1
+
+
+def test_el_recuadro_del_logo_es_exactamente_el_color_de_la_banda():
+    """Si no casa, se ve un rectangulo mas claro alrededor del logo a un metro.
+
+    Pillow no convierte a CMYK como lo hace el resto del dorsal: por eso el
+    logo se funde contra la banda ya en CMYK, y no en RGB.
+    """
+    banda = dorsales._tinta(dorsales._cmyk("#A3BECD"))
+    plano = dorsales._aplanar(_logo_cuadrado(), banda)
+    assert plano.mode == "CMYK"
+    assert plano.getpixel((0, 0)) == banda
+
+
+def test_los_logos_siguen_sin_meter_un_solo_pixel_rgb():
+    """Un PNG con transparencia entra en DeviceRGB si no se aplana antes."""
+    salida = dorsales.construir_pdf([DORSAL], DISENO, archivos=ARCHIVOS)
+    contenido = salida.getvalue()
+    assert b"DeviceRGB" not in contenido
+    assert b"/SMask" not in contenido
+
+
+def test_el_aviso_de_resolucion_mide_el_hueco_de_cada_logo():
+    """Un logo chico en una banda grande sale roto, y eso no se ve en pantalla."""
+    pobre = io.BytesIO()
+    Image.new("RGB", (80, 80)).save(pobre, "PNG")
+    assert dorsales.dpi_al_imprimir(pobre.getvalue(), 0.87, 0.87) == 91
+    assert dorsales.dpi_al_imprimir(_logo_cuadrado(), 0.87, 0.87) == 459
