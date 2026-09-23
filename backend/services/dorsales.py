@@ -87,16 +87,29 @@ COLOR_NOMBRE = "#3A5F80"
 LEJOS_DE_LOS_OJALES = OJAL_MARGEN + OJAL_RADIO + 0.09 * PULGADA
 
 # Las tres franjas del dorsal de 2026, de arriba abajo
-ALTO_BANDA_SUPERIOR = 1.15 * PULGADA   # logo + nombre de la carrera
-ALTO_BANDA_INFERIOR = 0.95 * PULGADA   # logo del patrocinador
+ALTO_BANDA_SUPERIOR = 1.65 * PULGADA   # logo + nombre de la carrera
+ALTO_BANDA_INFERIOR = 0.90 * PULGADA   # logo del patrocinador
 AIRE_BANDA = 0.14 * PULGADA            # lo que respira el contenido dentro de su banda
 HUECO_LOGO = 0.16 * PULGADA            # entre el logo y el nombre de la carrera
+INTERLINEA_EVENTO = 1.18
 
-CUERPO_EVENTO = 0.30 * PULGADA
+# Topes, no medidas: el nombre de la carrera crece hasta llenar el hueco que
+# le deja el logo, y solo para si se sale de su banda.
+CUERPO_EVENTO = 1.0 * PULGADA
 CUERPO_PIE = 0.16 * PULGADA
-CUERPO_NOMBRE = 0.26 * PULGADA
+CUERPO_NOMBRE = 0.44 * PULGADA
 AIRE_SOBRE_EL_NUMERO = 0.10 * PULGADA
 LADO_QR = 40.0 / 25.4 * PULGADA      # 40 mm
+
+# Cuanto de la franja del medio ocupa el numero, de alto. Llenarla entera lo
+# deja desproporcionado: en el dorsal de 2026 ocupa poco mas de la mitad, y
+# el aire de alrededor es lo que lo hace legible de lejos.
+PROPORCION_NUMERO = 0.60
+
+# Las cifras de una tipografia de palo seco vienen todas del mismo ancho, y a
+# cuerpo grande un "1" deja un boquete a cada lado. Un pelo de espacio negativo
+# junta el numero sin llegar a pegar las cifras.
+TRACKING_NUMERO = -0.04
 
 # Un QR de version 8 (el de nuestra URL con correccion alta) son 49 modulos.
 # El silencio de alrededor es obligatorio: sin el, muchos lectores no lo ven.
@@ -279,6 +292,12 @@ def _aplanar(datos: bytes, sobre: tuple):
         return imagen.convert("CMYK")
 
     imagen = imagen.convert("RGBA")
+    # El aire transparente del archivo se recorta antes de nada: si no, un
+    # logo con margen a un lado se centra por su lienzo y sale descentrado en
+    # el dorsal, que es lo que se ve. Se centra la tinta, no el archivo.
+    recorte = imagen.split()[-1].getbbox()
+    if recorte:
+        imagen = imagen.crop(recorte)
     lienzo = Image.new("CMYK", imagen.size, sobre)
     lienzo.paste(imagen.convert("CMYK"), mask=imagen.split()[-1])
     return lienzo
@@ -459,21 +478,24 @@ def _banda_superior(pdf, opciones, logo, fuente, ox, sx, arriba, ancho_sangrado,
 
     ancho = max(derecha - izquierda, 1)
     lineas = _dos_lineas(pdf, evento, fuente, ancho, CUERPO_EVENTO)
-    interlinea = 1.22
+
+    # Crece hasta llenar el hueco que deja el logo. Lo que lo para es el ancho
+    # o el alto de la banda, nunca un tamano fijo: el hueco cambia con lo
+    # ancho que sea el logo y con lo largo que sea el nombre.
     cuerpo = CUERPO_EVENTO
     for linea in lineas:
         cuerpo = min(cuerpo, ancho / (pdf.stringWidth(linea, fuente, 1) or 1))
-    cuerpo = min(cuerpo, alto_util / (len(lineas) * interlinea))
+    alto_por_linea = _alto_mayusculas(fuente) + (len(lineas) - 1) * INTERLINEA_EVENTO
+    cuerpo = min(cuerpo, alto_util / alto_por_linea)
 
-    alto_mayuscula = cuerpo * _alto_mayusculas(fuente)
-    alto_bloque = alto_mayuscula + (len(lineas) - 1) * cuerpo * interlinea
-    y = base + (alto_util - alto_bloque) / 2 + (len(lineas) - 1) * cuerpo * interlinea
+    alto_bloque = cuerpo * alto_por_linea
+    y = base + (alto_util - alto_bloque) / 2 + (len(lineas) - 1) * cuerpo * INTERLINEA_EVENTO
 
     pdf.setFillColor(color_texto)
     pdf.setFont(fuente, cuerpo)
     for linea in lineas:
         pdf.drawString(izquierda, y, linea)
-        y -= cuerpo * interlinea
+        y -= cuerpo * INTERLINEA_EVENTO
 
 
 def _banda_inferior(pdf, opciones, patrocinador, fuente, ox, sx, abajo, sy, ancho_sangrado,
@@ -582,9 +604,11 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
     centro_x = (izquierda + derecha) / 2
     alto_util = max(techo - suelo, 1)
 
-    alto_nombre = (CUERPO_NOMBRE * _alto_mayusculas(fuente) + AIRE_SOBRE_EL_NUMERO) if nombre else 0
+    cuerpo_nombre = min(CUERPO_NOMBRE, ancho_util / (pdf.stringWidth(nombre, fuente, 1) or 1))
+    alto_nombre = (cuerpo_nombre * _alto_mayusculas(fuente) + AIRE_SOBRE_EL_NUMERO) if nombre else 0
     cuerpo_numero = _cuerpo_que_cabe(
-        pdf, numero, fuente, ancho_util, alto_util - alto_nombre, 3.2 * PULGADA
+        pdf, numero, fuente, ancho_util,
+        min(alto_util - alto_nombre, alto_util * PROPORCION_NUMERO), 3.2 * PULGADA,
     )
     alto_numero = cuerpo_numero * _alto_mayusculas(fuente)
 
@@ -592,15 +616,28 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
     base_numero = suelo + sobra / 2
 
     if numero:
+        # El espacio entre cifras solo se toca desde un objeto de texto, y con
+        # el puesto la cuenta del ancho de reportlab ya no vale: se centra a
+        # mano descontando lo que se junta.
+        tracking = TRACKING_NUMERO * cuerpo_numero
+        ancho_numero = pdf.stringWidth(numero, fuente, cuerpo_numero) + (len(numero) - 1) * tracking
+        # El espaciado se queda en el estado del lienzo si no se aisla, y lo
+        # siguiente que se escriba -- el nombre del corredor -- saldria con las
+        # letras montadas unas sobre otras.
+        pdf.saveState()
         pdf.setFillColor(color_numero)
-        pdf.setFont(fuente, cuerpo_numero)
-        pdf.drawCentredString(centro_x, base_numero, numero)
+        cifras = pdf.beginText(centro_x - ancho_numero / 2, base_numero)
+        cifras.setFont(fuente, cuerpo_numero)
+        cifras.setCharSpace(tracking)
+        cifras.textOut(numero)
+        pdf.drawText(cifras)
+        pdf.restoreState()
 
     if nombre:
         pdf.setFillColor(color_nombre)
         _linea_centrada(
             pdf, nombre, centro_x, base_numero + alto_numero + AIRE_SOBRE_EL_NUMERO,
-            fuente, CUERPO_NOMBRE, ancho_util,
+            fuente, cuerpo_nombre, ancho_util,
         )
 
     if opciones.get("marcas_corte", True):

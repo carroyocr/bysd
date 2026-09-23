@@ -38,12 +38,14 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
  * que importa: dónde cae el corte y cómo queda el color en CMYK.
  */
 
+// Los cinco colores del dorsal, nombrados por la franja en la que se ven:
+// "fondo" y "banda" no le dicen nada a quien está mirando el dorsal.
 const COLORES = [
-  { campo: 'color_fondo', etiqueta: 'Fondo' },
-  { campo: 'color_banda', etiqueta: 'Bandas' },
-  { campo: 'color_texto_banda', etiqueta: 'Evento y pie' },
+  { campo: 'color_banda', etiqueta: 'Franjas de arriba y abajo' },
+  { campo: 'color_fondo', etiqueta: 'Franja del centro' },
+  { campo: 'color_texto_banda', etiqueta: 'Nombre de la carrera' },
   { campo: 'color_numero', etiqueta: 'Número' },
-  { campo: 'color_nombre', etiqueta: 'Nombre' },
+  { campo: 'color_nombre', etiqueta: 'Nombre del corredor' },
 ];
 
 const CATEGORIAS = [
@@ -600,7 +602,7 @@ export default function DorsalesManagement() {
             {/* Interruptores */}
             <div className="space-y-2.5 pt-1">
               {[
-                ['mostrar_bandas', 'Bandas de color arriba y abajo'],
+                ['mostrar_bandas', 'Pintar las franjas de arriba y abajo'],
                 ['marcas_corte', 'Marcas de corte para la imprenta'],
                 ['guias', 'Guías de corte, margen seguro y ojales'],
                 ['usar_nombre_si_falta', 'Sin personalización, usar el nombre de pila'],

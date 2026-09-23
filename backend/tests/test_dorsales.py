@@ -8,7 +8,7 @@ import io
 import os
 import sys
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -231,17 +231,25 @@ def _textos(pdf: bytes):
     flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
     cuerpo = None
     salida = []
-    patron = r"/F\d+ (\d+\.?\d*) Tf|1 0 0 1 (-?\d+\.?\d*) (-?\d+\.?\d*) Tm \(([^)]*)\)"
-    for trozo in expreg.finditer(patron, flujo):
-        if trozo.group(1):
-            cuerpo = float(trozo.group(1))
+    # Reportlab unas veces deja el cuerpo en un bloque suelto y otras dentro
+    # del mismo bloque que el texto (cuando lleva espaciado propio). Se mira
+    # bloque a bloque y se guarda el ultimo cuerpo visto.
+    for bloque in expreg.finditer(r"BT(.*?)ET", flujo, expreg.S):
+        dentro = bloque.group(1)
+        cuerpos = expreg.findall(r"/F\d+ (\d+\.?\d*) Tf", dentro)
+        if cuerpos:
+            cuerpo = float(cuerpos[-1])
+        sitio = expreg.search(r"1 0 0 1 (-?\d+\.?\d*) (-?\d+\.?\d*) Tm", dentro)
+        escrito = expreg.search(r"\(([^)]*)\) Tj", dentro)
+        if not (sitio and escrito and cuerpo):
             continue
-        if not cuerpo:
-            continue
-        x, y, texto = float(trozo.group(2)), float(trozo.group(3)), trozo.group(4)
+        texto = escrito.group(1)
+        espaciado = expreg.search(r"(-?\d+\.?\d*) Tc", dentro)
         ancho = pdfmetrics.stringWidth(texto, dorsales.FUENTE_BASE, cuerpo)
-        alto = cuerpo * dorsales._alto_mayusculas(dorsales.FUENTE_BASE)
-        salida.append((x, y, x + ancho, y + alto))
+        if espaciado:
+            ancho += (len(texto) - 1) * float(espaciado.group(1))
+        x, y = float(sitio.group(1)), float(sitio.group(2))
+        salida.append((x, y, x + ancho, y + cuerpo * dorsales._alto_mayusculas(dorsales.FUENTE_BASE)))
     assert salida, "no se encontro ni un texto en el PDF"
     return salida
 
@@ -291,15 +299,48 @@ def test_un_dorsal_pelado_no_se_acerca_a_los_ojales():
     _ningun_texto_sobre_un_ojal(salida.getvalue())
 
 
+def _solo_el_evento(evento):
+    """Un dorsal con el nombre de la carrera y nada mas, para medirlo a solas."""
+    return dorsales.construir_pdf(
+        [{"numero": "", "nombre": "", "qr_url": ""}],
+        {"evento": evento, "pie": "", "mostrar_qr": False, "marcas_corte": False},
+    ).getvalue()
+
+
 def test_el_nombre_de_la_carrera_se_parte_en_dos_lineas():
     """Como en el dorsal de 2026: "Backyard Ultra" encima de "Santo Domingo"."""
-    salida = dorsales.construir_pdf(
-        [DORSAL], {**DISENO, "evento": "Backyard Ultra Santo Domingo", "mostrar_qr": False}
-    )
-    lineas = [caja for caja in _textos(salida.getvalue()) if caja[3] - caja[1] < 30]
-    # Dos lineas del evento a la misma izquierda y a distinta altura
-    izquierdas = sorted(round(c[0], 1) for c in lineas)
-    assert len(set(izquierdas)) < len(izquierdas), "las lineas del evento no comparten margen"
+    lineas = _textos(_solo_el_evento("Backyard Ultra Santo Domingo"))
+    assert len(lineas) == 2
+    assert round(lineas[0][0], 1) == round(lineas[1][0], 1), "no comparten margen izquierdo"
+    assert lineas[0][1] != lineas[1][1], "estan a la misma altura"
+
+
+def test_el_nombre_de_la_carrera_llena_el_ancho_que_le_queda():
+    """El hueco entre el logo y el borde se ocupa: un titulo chico se ve pobre."""
+    lineas = _textos(_solo_el_evento("Backyard Ultra Santo Domingo"))
+    disponible = dorsales.ANCHO_CORTE - 2 * dorsales.LEJOS_DE_LOS_OJALES
+    ocupa = max(caja[2] for caja in lineas) - min(caja[0] for caja in lineas)
+    # No llega al 100%: dos lineas de titulo en una banda de pulgada y media
+    # topan antes con el alto de la banda que con el ancho del dorsal.
+    assert ocupa > 0.78 * disponible, f"el titulo ocupa {ocupa:.0f} de {disponible:.0f}"
+
+
+def test_el_numero_no_se_come_la_franja_entera():
+    """Llenarla de alto lo deja desproporcionado; en 2026 ocupa poco mas de la mitad."""
+    salida = dorsales.construir_pdf([DORSAL], DISENO)
+    numero = max(_textos(salida.getvalue()), key=lambda c: c[3] - c[1])
+    alto_numero = numero[3] - numero[1]
+    franja = dorsales.ALTO_CORTE - dorsales.ALTO_BANDA_SUPERIOR - dorsales.ALTO_BANDA_INFERIOR
+    assert 0.4 * franja < alto_numero < 0.8 * franja
+
+
+def test_el_nombre_del_corredor_se_lee():
+    """Era ridiculamente pequeno al lado del numero: ahora es una quinta parte."""
+    salida = dorsales.construir_pdf([DORSAL], {**DISENO, "pie": ""})
+    cajas = sorted(_textos(salida.getvalue()), key=lambda c: c[3] - c[1])
+    nombre = cajas[0][3] - cajas[0][1]      # el texto mas pequeno del dorsal
+    numero = cajas[-1][3] - cajas[-1][1]
+    assert nombre / numero > 0.18
 
 
 def test_una_barra_manda_donde_se_parte_el_nombre():
@@ -328,9 +369,10 @@ def _imagenes(pdf: bytes):
 
 
 def _logo_cuadrado():
+    """Un circulo naranja, con aire transparente alrededor."""
     memoria = io.BytesIO()
     imagen = Image.new("RGBA", (400, 400), (0, 0, 0, 0))
-    imagen.paste(Image.new("RGB", (300, 300), (232, 119, 46)), (50, 50))
+    ImageDraw.Draw(imagen).ellipse([50, 50, 350, 350], fill=(232, 119, 46, 255))
     imagen.save(memoria, "PNG")
     return memoria.getvalue()
 
@@ -397,3 +439,14 @@ def test_el_aviso_de_resolucion_mide_el_hueco_de_cada_logo():
     Image.new("RGB", (80, 80)).save(pobre, "PNG")
     assert dorsales.dpi_al_imprimir(pobre.getvalue(), 0.87, 0.87) == 91
     assert dorsales.dpi_al_imprimir(_logo_cuadrado(), 0.87, 0.87) == 459
+
+
+def test_el_logo_se_recorta_por_su_tinta():
+    """Con aire a un lado, el logo se centraria por el lienzo y saldria torcido."""
+    memoria = io.BytesIO()
+    imagen = Image.new("RGBA", (400, 200), (0, 0, 0, 0))
+    ImageDraw.Draw(imagen).rectangle([0, 0, 99, 199], fill=(0, 0, 0, 255))
+    imagen.save(memoria, "PNG")
+
+    plano = dorsales._aplanar(memoria.getvalue(), dorsales.BLANCO_PAPEL)
+    assert plano.size == (100, 200)
