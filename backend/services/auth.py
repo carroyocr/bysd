@@ -210,6 +210,7 @@ TAB_PERMISSION_GROUPS = {
     "results-2026": "athletes",     # tab Resultados 2026
     "athlete-profiles": "athletes", # tab Perfiles
     "seleccionados": "athletes",    # tab Seleccionados
+    "dorsales": "athletes",         # tab Dorsales
     "assignments": "volunteers",    # tab Voluntarios (asignaciones)
     "volunteer-profiles": "volunteers",  # tab Perfiles (cuentas de voluntario)
     "shifts": "volunteers",         # tab Turnos

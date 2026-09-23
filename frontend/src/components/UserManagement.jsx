@@ -28,6 +28,7 @@ const PERMISSIONS = [
   { id: 'email-templates', label: 'Correos', description: 'Plantillas de correo' },
   { id: 'results-2026', label: 'Resultados', description: 'Resultados por carrera y su vinculación con los perfiles' },
   { id: 'seleccionados', label: 'Seleccionados', description: 'Roster del Campeonato Mundial' },
+  { id: 'dorsales', label: 'Dorsales', description: 'Diseño y PDF de los dorsales para la imprenta' },
   { id: 'athlete-profiles', label: 'Perfiles', description: 'Perfiles de atletas' },
   { id: 'email-composer', label: 'Enviar Correos', description: 'Envío masivo de correos' },
   { id: 'whatsapp', label: 'WhatsApp', description: 'Envío de mensajes por WhatsApp' },
