@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
-  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed
+  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed, Ticket
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -29,6 +29,7 @@ import WhatsAppComposer from '../components/WhatsAppComposer';
 import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
+import DorsalesManagement from '../components/DorsalesManagement';
 import PrensaManagement from '../components/PrensaManagement';
 import NotasPrensaManagement from '../components/NotasPrensaManagement';
 import PushComposer from '../components/PushComposer';
@@ -79,6 +80,7 @@ const TAB_PERMISSIONS = {
   'tshirt': ['tshirt', 'config'],
   'capacitaciones': ['capacitaciones', 'config'],
   'seleccionados': ['seleccionados', 'athletes'],
+  'dorsales': ['dorsales', 'athletes'],
   'prensa': ['prensa', 'emails'],
   'notas-prensa': ['prensa', 'emails'],
 };
@@ -109,6 +111,7 @@ const ADMIN_SECTIONS = [
       { id: 'athlete-profiles', label: 'Perfiles', icon: Users },
       { id: 'results-2026', label: 'Resultados', icon: Trophy },
       { id: 'seleccionados', label: 'Seleccionados', icon: Medal },
+      { id: 'dorsales', label: 'Dorsales', icon: Ticket },
       { id: 'tshirt', label: 'Camisetas', icon: Shirt },
       { id: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
     ],
@@ -186,6 +189,7 @@ const TAB_VIEWS = {
   'athlete-profiles': () => <AthleteProfilesManagement />,
   'results-2026': () => <ClaimedResultsManagement />,
   'seleccionados': () => <SeleccionadosManagement />,
+  'dorsales': () => <DorsalesManagement />,
   'tshirt': () => <TshirtManagement />,
   'assignments': () => <VolunteerAssignmentsManagement />,
   'volunteer-profiles': () => <VolunteerProfilesManagement />,

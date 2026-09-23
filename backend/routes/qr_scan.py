@@ -282,11 +282,21 @@ def _recortar(dibujo, texto, fuente, ancho_maximo):
     return (texto.rstrip() + "…") if texto else ""
 
 
+def url_de_escaneo(bib: str, race_code: str, base: str) -> str:
+    """Lo que lleva dentro el QR de un corredor: la pagina que anota su vuelta.
+
+    Una sola definicion de la direccion, porque el mismo codigo se imprime
+    desde dos sitios -- la tarjeta de este modulo y el dorsal de la imprenta --
+    y si se separan, un QR bueno y otro que no lleva a ninguna parte.
+    """
+    return f"{base.rstrip('/')}/scan/confirmar?bib={bib}&race={race_code}"
+
+
 def _imagen_qr(bib: str, race_code: str, frontend_url: str, nombre: Optional[str] = None):
     """El QR con el dorsal y el nombre encima."""
     from PIL import Image, ImageDraw
 
-    scan_url = f"{frontend_url}/scan/confirmar?bib={bib}&race={race_code}"
+    scan_url = url_de_escaneo(bib, race_code, frontend_url)
 
     qr = qrcode.QRCode(
         version=1,

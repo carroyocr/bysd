@@ -454,6 +454,10 @@ app.include_router(staff_account_router)
 from routes.carnets_staff import router as carnets_staff_router
 app.include_router(carnets_staff_router)
 
+# Dorsales de la carrera, en PDF para la imprenta
+from routes.dorsales import router as dorsales_router
+app.include_router(dorsales_router)
+
 # Version publicada de la app movil (la app pregunta al abrir)
 from routes.app_version import router as app_version_router
 app.include_router(app_version_router)
