@@ -8,7 +8,7 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
-  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed, Ticket
+  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed, Ticket, HelpCircle
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
@@ -28,6 +28,7 @@ import EmailComposer from '../components/EmailComposer';
 import WhatsAppComposer from '../components/WhatsAppComposer';
 import TshirtManagement from '../components/TshirtManagement';
 import CapacitacionesManagement from '../components/CapacitacionesManagement';
+import PreguntasManagement from '../components/PreguntasManagement';
 import SeleccionadosManagement from '../components/SeleccionadosManagement';
 import DorsalesManagement from '../components/DorsalesManagement';
 import PrensaManagement from '../components/PrensaManagement';
@@ -79,6 +80,7 @@ const TAB_PERMISSIONS = {
   'espectadores': ['espectadores', 'emails'],
   'tshirt': ['tshirt', 'config'],
   'capacitaciones': ['capacitaciones', 'config'],
+  'preguntas': ['preguntas', 'config'],
   'seleccionados': ['seleccionados', 'athletes'],
   'dorsales': ['dorsales', 'athletes'],
   'prensa': ['prensa', 'emails'],
@@ -114,6 +116,7 @@ const ADMIN_SECTIONS = [
       { id: 'dorsales', label: 'Dorsales', icon: Ticket },
       { id: 'tshirt', label: 'Camisetas', icon: Shirt },
       { id: 'capacitaciones', label: 'Actividades', icon: GraduationCap },
+      { id: 'preguntas', label: 'Preguntas', icon: HelpCircle },
     ],
   },
   {
@@ -196,6 +199,7 @@ const TAB_VIEWS = {
   'volunteers': () => <VolunteerConfigManagement />,
   'alimentacion': () => <VolunteerMealsPanel />,
   'capacitaciones': () => <CapacitacionesManagement />,
+  'preguntas': () => <PreguntasManagement />,
   'sponsors': () => <SponsorsManagement />,
   'finances': () => <FinancesManagement />,
   'email-composer': () => <EmailComposer />,

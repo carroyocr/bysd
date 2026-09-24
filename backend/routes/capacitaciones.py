@@ -18,9 +18,12 @@ from datetime import datetime, timezone
 import io
 
 from services.auth import has_permission, verify_admin_token
-from services.rate_limit import limitar_inscripcion_actividad
+from services.env_utils import get_env
+from services.rate_limit import limitar_inscripcion_actividad, limitar_pregunta
 
 router = APIRouter(prefix="/capacitaciones", tags=["capacitaciones"])
+
+SITIO = (get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com") or "").rstrip("/")
 
 
 def _verify_admin(authorization: Optional[str]):
@@ -82,9 +85,94 @@ def _serialize(doc, count=0, my_registered=False):
         "is_free": doc.get("is_free", False),
         "tipo": _tipo_valido(doc.get("tipo")),
         "tipo_label": TIPOS_ACTIVIDAD[_tipo_valido(doc.get("tipo"))],
+        # Las actividades de antes no traen el campo y admiten preguntas: el
+        # QR solo sirve si al escanearlo se puede preguntar, y cerrarlo es lo
+        # excepcional (se hace al terminar la charla).
+        "preguntas_abiertas": doc.get("preguntas_abiertas", True),
         "registered_count": count,
         "my_registered": my_registered,
     }
+
+
+# ---------------- Preguntas de la charla ----------------
+#
+# En la charla se reparte un QR; quien lo escanea deja su pregunta desde el
+# telefono, con su nombre o sin el. Al terminar, quien presenta abre la vista
+# de pantalla completa del panel y las va pasando una a una.
+#
+# Las preguntas no se ven en ningun sitio publico: solo en el panel y en esa
+# pantalla, las dos detras del token. Es a proposito -- lo que llega no esta
+# moderado, y la moderacion es justamente poder borrar antes de ensenarlo.
+
+MAX_PREGUNTA = 500
+MAX_NOMBRE = 60
+COLECCION_PREGUNTAS = "capacitacion_preguntas"
+
+
+class PreguntaNueva(BaseModel):
+    pregunta: str
+    nombre: Optional[str] = None
+    # Marcado, la pregunta sale como anonima **y el nombre no se guarda**. No
+    # basta con no ensenarlo: guardar un nombre que alguien pidio no publicar
+    # es tener un dato que no hacia falta pedir.
+    publicar_nombre: bool = True
+
+
+class PreguntaEstado(BaseModel):
+    respondida: bool
+
+
+class PreguntasAbiertas(BaseModel):
+    abiertas: bool
+
+
+def limpiar_pregunta(pregunta: str, nombre: Optional[str], publicar_nombre: bool) -> dict:
+    """Valida lo que llega del formulario y devuelve lo que se guarda.
+
+    Sin publicar el nombre, el nombre **no se guarda**. No basta con no
+    ensenarlo: guardar un dato que alguien pidio no publicar es haberlo pedido
+    para nada, y el dia que alguien mire la coleccion ahi estara.
+    """
+    texto = " ".join((pregunta or "").split())
+    if len(texto) < 5:
+        raise HTTPException(status_code=400, detail="Escribe tu pregunta")
+    if len(texto) > MAX_PREGUNTA:
+        raise HTTPException(
+            status_code=400, detail=f"La pregunta no puede pasar de {MAX_PREGUNTA} caracteres"
+        )
+
+    quien = " ".join((nombre or "").split())[:MAX_NOMBRE] if publicar_nombre else ""
+    return {"pregunta": texto, "nombre": quien}
+
+
+def _serializar_pregunta(doc) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "pregunta": doc.get("pregunta", ""),
+        "nombre": doc.get("nombre", ""),
+        "anonima": not doc.get("nombre"),
+        "respondida": bool(doc.get("respondida")),
+        "created_at": doc.get("created_at").isoformat() if doc.get("created_at") else None,
+    }
+
+
+async def _actividad(database, cap_id: str) -> dict:
+    from bson import ObjectId
+
+    try:
+        oid = ObjectId(cap_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    cap = await database.capacitaciones.find_one({"_id": oid})
+    if not cap:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    return cap
+
+
+def url_de_preguntas(cap_id: str) -> str:
+    """La direccion que lleva dentro el QR. Una sola definicion: la usan el
+    panel, la imagen del QR y la pagina publica."""
+    return f"{SITIO}/actividad/{cap_id}/preguntas"
 
 
 # ---------------- Admin ----------------
@@ -155,6 +243,7 @@ async def delete_capacitacion(cap_id: str, authorization: Optional[str] = Header
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Capacitación no encontrada")
     await database.capacitacion_registrations.delete_many({"capacitacion_id": cap_id})
+    await database[COLECCION_PREGUNTAS].delete_many({"capacitacion_id": cap_id})
     return {"success": True}
 
 
@@ -174,6 +263,124 @@ async def admin_participants(cap_id: str, authorization: Optional[str] = Header(
          "registered_at": r.get("created_at").isoformat() if r.get("created_at") else None}
         for r in regs
     ]}
+
+
+# ---------------- Preguntas: el lado del panel ----------------
+#
+# Las rutas llevan `{cap_id}/preguntas/...` y no `/admin/preguntas/{id}` a
+# proposito: `@router.delete("/admin/{cap_id}")` ya existe y se llevaria por
+# delante cualquier ruta de un solo segmento bajo /admin.
+
+
+@router.get("/admin/{cap_id}/preguntas")
+async def listar_preguntas(cap_id: str, authorization: Optional[str] = Header(None)):
+    """Las preguntas de esa actividad, de la mas vieja a la mas nueva.
+
+    Ese orden es el de la sala: se responden por turno de llegada.
+    """
+    from server import db as database
+
+    _verify_admin(authorization)
+    cap = await _actividad(database, cap_id)
+    docs = await database[COLECCION_PREGUNTAS].find(
+        {"capacitacion_id": cap_id}
+    ).sort("created_at", 1).to_list(1000)
+
+    return {
+        "actividad": _serialize(cap),
+        "url": url_de_preguntas(cap_id),
+        "preguntas": [_serializar_pregunta(d) for d in docs],
+        "pendientes": sum(1 for d in docs if not d.get("respondida")),
+    }
+
+
+@router.delete("/admin/{cap_id}/preguntas/{pregunta_id}")
+async def borrar_pregunta(
+    cap_id: str, pregunta_id: str, authorization: Optional[str] = Header(None)
+):
+    """Quita una pregunta. Es el boton de moderar: lo que no debe salir en
+    pantalla se borra, y se borra de verdad."""
+    from server import db as database
+    from bson import ObjectId
+
+    _verify_admin(authorization)
+    try:
+        oid = ObjectId(pregunta_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    r = await database[COLECCION_PREGUNTAS].delete_one(
+        {"_id": oid, "capacitacion_id": cap_id}
+    )
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Pregunta no encontrada")
+    return {"success": True}
+
+
+@router.put("/admin/{cap_id}/preguntas/{pregunta_id}")
+async def marcar_pregunta(
+    cap_id: str, pregunta_id: str, data: PreguntaEstado,
+    authorization: Optional[str] = Header(None),
+):
+    """Marca la pregunta como respondida, o la devuelve a la cola."""
+    from server import db as database
+    from bson import ObjectId
+
+    _verify_admin(authorization)
+    try:
+        oid = ObjectId(pregunta_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    r = await database[COLECCION_PREGUNTAS].update_one(
+        {"_id": oid, "capacitacion_id": cap_id},
+        {"$set": {"respondida": data.respondida}},
+    )
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Pregunta no encontrada")
+    return {"success": True}
+
+
+@router.put("/admin/{cap_id}/preguntas-abiertas")
+async def abrir_preguntas(
+    cap_id: str, data: PreguntasAbiertas, authorization: Optional[str] = Header(None)
+):
+    """Abre o cierra la recogida. Cerrada, el QR sigue llevando a la pagina,
+    que dice que ya no se reciben preguntas en vez de dar un error."""
+    from server import db as database
+
+    _verify_admin(authorization)
+    cap = await _actividad(database, cap_id)
+    await database.capacitaciones.update_one(
+        {"_id": cap["_id"]}, {"$set": {"preguntas_abiertas": data.abiertas}}
+    )
+    return {"success": True, "preguntas_abiertas": data.abiertas}
+
+
+@router.get("/admin/{cap_id}/preguntas/qr")
+async def qr_de_preguntas(cap_id: str, authorization: Optional[str] = Header(None)):
+    """El QR que se proyecta o se imprime, en PNG.
+
+    Se dibuja aqui y no en el navegador porque asi el panel, la descarga y
+    cualquier cartel que se haga despues llevan el mismo codigo: uno solo que
+    apunta a `url_de_preguntas`.
+    """
+    import qrcode
+
+    from server import db as database
+
+    _verify_admin(authorization)
+    await _actividad(database, cap_id)
+
+    codigo = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, border=2, box_size=16)
+    codigo.add_data(url_de_preguntas(cap_id))
+    codigo.make(fit=True)
+
+    buf = io.BytesIO()
+    codigo.make_image(fill_color="black", back_color="white").convert("RGB").save(buf, format="PNG")
+    return Response(
+        content=buf.getvalue(),
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="preguntas-{cap_id}.png"'},
+    )
 
 
 @router.get("/admin/{cap_id}/attendance")
@@ -252,6 +459,28 @@ async def attendance_pdf(cap_id: str, authorization: Optional[str] = Header(None
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="asistencia-{safe_name}.pdf"'},
     )
+
+
+# ---------------- Preguntas: lo que manda quien escanea el QR ----------------
+
+@router.post("/{cap_id}/preguntas")
+async def dejar_pregunta(cap_id: str, data: PreguntaNueva, request: Request):
+    """Lo que manda quien escanea el QR. Sin cuenta y sin contrasena."""
+    from server import db as database
+
+    limitar_pregunta(request)
+
+    cap = await _actividad(database, cap_id)
+    if not cap.get("preguntas_abiertas", True):
+        raise HTTPException(status_code=403, detail="Esta actividad ya no recibe preguntas")
+
+    await database[COLECCION_PREGUNTAS].insert_one({
+        "capacitacion_id": cap_id,
+        **limpiar_pregunta(data.pregunta, data.nombre, data.publicar_nombre),
+        "respondida": False,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return {"success": True}
 
 
 @router.get("/tipos")
