@@ -11,9 +11,19 @@ correos: el logo es azul oscuro y sobre el naranja no se lee. El logo va en PNG
 donde esta `public/sponsors/`.
 """
 
+from pathlib import Path
+from typing import Optional
+
 from services.env_utils import get_env
 
 BASE_URL = get_env("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+
+# Los correos enlazan el logo desde el sitio, pero un PDF necesita el archivo
+# aqui: el dorsal y el carnet se arman en el backend, que en Render es otro
+# servicio y no tiene el `public/` del frontend a mano. Por eso hay una copia,
+# igual que la del logo de la carrera en `static/carnet/`. Si se cambia el arte
+# de una marca, hay que cambiar las dos.
+LOGOS = Path(__file__).resolve().parent.parent / "static" / "marca"
 
 # El rotulo va en ingles porque asi esta el arte oficial de la carrera.
 ETIQUETA = "PRESENTED BY"
@@ -26,6 +36,9 @@ CEDIMAT = {
     "nombre": "CEDIMAT",
     "descripcion": "CEDIMAT Plaza de la Salud",
     "logo": "/sponsors/cedimat.png",
+    # Para los PDF: el de color va sobre fondo claro y el blanco sobre oscuro.
+    "archivo": "cedimat.png",
+    "archivo_blanco": "cedimat-blanco.png",
     "web": "https://cedimat.com",
 }
 
@@ -39,6 +52,22 @@ def presenting(race_code: str = None) -> dict | None:
     """La marca que presenta esa carrera, o None si esa edicion no tiene."""
     codigo = (race_code or CARRERA_POR_DEFECTO).upper()
     return PRESENTING_POR_CARRERA.get(codigo)
+
+
+def logo_impreso(race_code: str = None, blanco: bool = False) -> Optional[bytes]:
+    """El logo de la marca que presenta esa carrera, para meterlo en un PDF.
+
+    Devuelve None si esa edicion no lleva naming o si falta el archivo: quien
+    lo pida imprime sin marca, que es preferible a no imprimir el dorsal.
+    """
+    nombre = (presenting(race_code) or {}).get("archivo_blanco" if blanco else "archivo")
+    if not nombre:
+        return None
+
+    archivo = LOGOS / nombre
+    if not archivo.exists():
+        return None
+    return archivo.read_bytes()
 
 
 def bloque_html(race_code: str = None, base_url: str = None) -> str:

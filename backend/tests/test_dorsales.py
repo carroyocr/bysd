@@ -254,6 +254,19 @@ def _textos(pdf: bytes):
     return salida
 
 
+def _textos_planos(pdf: bytes):
+    """Solo las cadenas escritas, con los acentos ya desescapados."""
+    import re as expreg
+
+    from PyPDF2 import PdfReader
+
+    flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+    return [
+        expreg.sub(r"\\(\d{3})", lambda m: chr(int(m.group(1), 8)), trozo.group(1))
+        for trozo in expreg.finditer(r"\(([^)]*)\) Tj", flujo)
+    ]
+
+
 def _ojales(pdf: bytes):
     """Las cuatro cajas que ocupan los ojales, en coordenadas de la pagina."""
     from PyPDF2 import PdfReader
@@ -450,3 +463,65 @@ def test_el_logo_se_recorta_por_su_tinta():
 
     plano = dorsales._aplanar(memoria.getvalue(), dorsales.BLANCO_PAPEL)
     assert plano.size == (100, 200)
+
+
+# ---------------- La marca que presenta la carrera ----------------
+#
+# No se sube: sale de `services/marca.py`, el mismo sitio del que la toman el
+# sitio, la app y los correos. Va con el rotulo "PRESENTED BY" encima, y solo
+# ella: un logo subido a mano puede ser cualquier patrocinador, y decir que
+# presenta el evento seria afirmar algo que nadie ha dicho.
+
+
+ROTULO = {"rotulo_presenting": "PRESENTED BY"}
+
+
+def test_la_marca_que_presenta_va_con_su_rotulo():
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "pie": "", **ROTULO},
+        archivos={"presenting": _logo_apaisado()},
+    )
+    contenido = salida.getvalue()
+    assert len(_imagenes(contenido)) == 1
+    assert any(t.startswith("PRESENTED BY") for t in _textos_planos(contenido))
+
+
+def test_el_rotulo_queda_encima_del_logo():
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "pie": "", **ROTULO},
+        archivos={"presenting": _logo_apaisado()},
+    )
+    contenido = salida.getvalue()
+    logo = _imagenes(contenido)[0]
+    rotulo = next(c for c in _textos(contenido) if c[1] > logo[3])
+    assert rotulo[1] >= logo[3]
+
+
+def test_un_logo_subido_a_mano_manda_y_va_sin_rotulo():
+    """Puede ser cualquier patrocinador: el rotulo afirmaria lo que no se sabe."""
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "pie": "", **ROTULO},
+        archivos={"patrocinador": _logo_apaisado(), "presenting": _logo_cuadrado()},
+    )
+    contenido = salida.getvalue()
+    assert len(_imagenes(contenido)) == 1   # solo el subido a mano
+    assert not any(t.startswith("PRESENTED BY") for t in _textos_planos(contenido))
+
+
+def test_una_carrera_sin_naming_cae_en_el_pie():
+    salida = dorsales.construir_pdf([DORSAL], {**DISENO, **ROTULO})
+    contenido = salida.getvalue()
+    assert not _imagenes(contenido)
+    assert any(t.startswith("Campeonato Mundial") for t in _textos_planos(contenido))
+
+
+def test_la_marca_que_presenta_tampoco_toca_los_ojales():
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**DISENO, "pie": "", **ROTULO},
+        archivos={"logo": _logo_cuadrado(), "presenting": _logo_apaisado()},
+    )
+    contenido = salida.getvalue()
+    for x0, y0, x1, y1 in _imagenes(contenido):
+        for ax0, ay0, ax1, ay1 in _ojales(contenido):
+            assert not (x0 < ax1 and x1 > ax0 and y0 < ay1 and y1 > ay0)
+    _ningun_texto_sobre_un_ojal(contenido)

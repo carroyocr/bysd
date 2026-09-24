@@ -19,7 +19,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from services import carnet_staff, rate_limit, races
+from services import carnet_staff, marca, rate_limit, races
 from services.auth import require_admin, require_permission
 from services.env_utils import get_env
 
@@ -96,11 +96,17 @@ def _uno_por_evento(registros: list) -> list:
 
 async def _armar_carnets(db, registros: list) -> list:
     cache = {}
+    marcas = {}
     carnets = []
     for r in registros:
         evento = r.get("evento") or "carrera"
         email = (r.get("email") or "").lower()
         codigo = await _codigo_de(db, r)
+        # La marca que presenta esa edicion. Se lee una vez por carrera: el
+        # logo son 60 KB y una tanda son doscientos carnets.
+        race_code = r.get("race_code")
+        if race_code not in marcas:
+            marcas[race_code] = marca.logo_impreso(race_code)
         carnets.append({
             "nombre": (r.get("nombre") or "").strip(),
             "apellidos": (r.get("apellidos") or "").strip(),
@@ -112,6 +118,8 @@ async def _armar_carnets(db, registros: list) -> list:
             "contacto_telefono": r.get("contacto_emergencia_telefono"),
             "numero": _numero(codigo),
             "url_verificacion": f"{SITIO}/staff/verificar/{codigo}",
+            "presenting_logo": marcas[race_code],
+            "presenting_etiqueta": marca.ETIQUETA if marcas[race_code] else "",
         })
     return carnets
 

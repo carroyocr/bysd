@@ -126,3 +126,78 @@ def test_sin_carnets_sale_una_hoja_que_lo_dice():
 
     salida = carnet_staff.construir_pdf([])
     assert len(PdfReader(io.BytesIO(salida.getvalue())).pages) == 1
+
+
+# ---------------- La marca que presenta la carrera ----------------
+
+
+def _imagenes(pdf: bytes):
+    """Cada imagen dibujada como su caja (x0, y0, x1, y1)."""
+    from PyPDF2 import PdfReader
+
+    flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+    patron = r"(\d+\.?\d*) 0 0 (\d+\.?\d*) (-?\d+\.?\d*) (-?\d+\.?\d*) cm\s*/\S+ Do"
+    return [
+        (x, y, x + ancho, y + alto)
+        for ancho, alto, x, y in (
+            tuple(float(v) for v in m.groups()) for m in re.finditer(patron, flujo)
+        )
+    ]
+
+
+def _logo_falso():
+    from PIL import Image
+
+    memoria = io.BytesIO()
+    Image.new("RGBA", (800, 213), (30, 64, 140, 255)).save(memoria, "PNG")
+    return memoria.getvalue()
+
+
+def con_marca(**extra):
+    return carnet(**extra) | {
+        "presenting_logo": _logo_falso(),
+        "presenting_etiqueta": "PRESENTED BY",
+    }
+
+
+def test_el_carnet_lleva_la_marca_que_presenta_la_carrera():
+    contenido = carnet_staff.construir_pdf([con_marca()]).getvalue()
+    assert _linea(contenido, "PRESENTED BY")
+    # El logo de la carrera arriba, el QR y el de la marca: tres imagenes
+    assert len(_imagenes(contenido)) == 3
+
+
+def test_el_rotulo_va_encima_del_logo_de_la_marca():
+    contenido = carnet_staff.construir_pdf([con_marca()]).getvalue()
+    rotulo = _linea(contenido, "PRESENTED BY")[3]
+    logos = sorted(_imagenes(contenido), key=lambda c: c[1])
+    assert logos[0][3] < rotulo, "el logo de la marca deberia quedar debajo del rotulo"
+
+
+def test_una_edicion_sin_naming_no_pinta_nada():
+    """Las ediciones anteriores no llevan marca, y no es un error."""
+    contenido = carnet_staff.construir_pdf([carnet()]).getvalue()
+    textos = [t for t, _c, _x, _y in _textos(contenido)]
+    assert "PRESENTED BY" not in textos
+    assert len(_imagenes(contenido)) == 2   # el logo de la carrera y el QR
+
+
+def test_la_marca_no_se_come_los_datos_del_reverso():
+    """Lo ultimo de los datos tiene que quedar por encima del aviso."""
+    contenido = carnet_staff.construir_pdf([con_marca()]).getvalue()
+    numero = _linea(contenido, "STF-")[3]
+    aviso = _linea(contenido, "Personal e intransferible")[3]
+    assert numero - aviso > 4 * carnet_staff.mm
+
+
+def test_el_espaciado_del_rotulo_no_se_pega_al_lienzo():
+    """Si se escapa, el texto de despues sale con las letras despegadas."""
+    from PyPDF2 import PdfReader
+
+    contenido = carnet_staff.construir_pdf([con_marca()]).getvalue()
+    flujo = PdfReader(io.BytesIO(contenido)).pages[0].get_contents().get_data().decode("latin-1")
+    for bloque in re.finditer(r"BT(.*?)ET", flujo, re.S):
+        if "Tc" in bloque.group(1):
+            # Todo bloque con espaciado propio va envuelto en q/Q
+            inicio = flujo.rindex("q", 0, bloque.start())
+            assert "Q" not in flujo[inicio:bloque.start()]
