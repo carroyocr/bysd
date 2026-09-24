@@ -66,7 +66,9 @@ const RANURAS = [
   {
     id: 'patrocinador',
     etiqueta: 'Logo del patrocinador',
-    ayuda: 'Va centrado en la banda de abajo. Apaisado, PNG con fondo transparente.',
+    ayuda: 'Solo si quieres otro distinto al que presenta la carrera. Sin subir nada, '
+      + 'la banda de abajo lleva ya el «PRESENTED BY» con la marca de la edición. '
+      + 'Apaisado, PNG con fondo transparente, y va sin rótulo.',
   },
   {
     id: 'fondo',
@@ -476,7 +478,7 @@ export default function DorsalesManagement() {
                 placeholder="Déjalo vacío para quitar la banda de abajo"
               />
               <p className="text-xs text-muted-foreground">
-                Solo se imprime si no hay logo de patrocinador: esa banda es suya.
+                Solo se imprime si la banda de abajo no lleva ningún logo: es suya.
               </p>
             </div>
 

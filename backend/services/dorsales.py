@@ -88,7 +88,7 @@ LEJOS_DE_LOS_OJALES = OJAL_MARGEN + OJAL_RADIO + 0.09 * PULGADA
 
 # Las tres franjas del dorsal de 2026, de arriba abajo
 ALTO_BANDA_SUPERIOR = 1.65 * PULGADA   # logo + nombre de la carrera
-ALTO_BANDA_INFERIOR = 0.90 * PULGADA   # logo del patrocinador
+ALTO_BANDA_INFERIOR = 1.05 * PULGADA   # rotulo y logo de quien presenta
 AIRE_BANDA = 0.14 * PULGADA            # lo que respira el contenido dentro de su banda
 HUECO_LOGO = 0.16 * PULGADA            # entre el logo y el nombre de la carrera
 INTERLINEA_EVENTO = 1.18
@@ -105,6 +105,12 @@ LADO_QR = 40.0 / 25.4 * PULGADA      # 40 mm
 # deja desproporcionado: en el dorsal de 2026 ocupa poco mas de la mitad, y
 # el aire de alrededor es lo que lo hace legible de lejos.
 PROPORCION_NUMERO = 0.60
+
+# El rotulo "PRESENTED BY" sobre el logo de quien presenta la carrera. Va
+# pequeno y con las letras separadas, como en el sitio y en los correos.
+CUERPO_ROTULO = 0.10 * PULGADA
+AIRE_ROTULO = 0.06 * PULGADA
+TRACKING_ROTULO = 0.16
 
 # Las cifras de una tipografia de palo seco vienen todas del mismo ancho, y a
 # cuerpo grande un "1" deja un boquete a cada lado. Un pelo de espacio negativo
@@ -217,6 +223,23 @@ def _linea_centrada(pdf, texto, cx, y, fuente, cuerpo, ancho):
     cuerpo = min(cuerpo, ancho / por_unidad)
     pdf.setFont(fuente, cuerpo)
     pdf.drawCentredString(cx, y, _recortar(pdf, texto, fuente, cuerpo, ancho))
+
+
+def _espaciado(pdf, texto, cx, y, fuente, cuerpo, tracking_relativo):
+    """Una linea centrada con las letras separadas.
+
+    Va dentro de q/Q: el espaciado se queda en el estado del lienzo y lo
+    siguiente que se escriba saldria con las letras despegadas.
+    """
+    tracking = tracking_relativo * cuerpo
+    ancho = pdf.stringWidth(texto, fuente, cuerpo) + (len(texto) - 1) * tracking
+    pdf.saveState()
+    linea = pdf.beginText(cx - ancho / 2, y)
+    linea.setFont(fuente, cuerpo)
+    linea.setCharSpace(tracking)
+    linea.textOut(texto)
+    pdf.drawText(linea)
+    pdf.restoreState()
 
 
 # ============ El QR, en vectores ============
@@ -498,9 +521,16 @@ def _banda_superior(pdf, opciones, logo, fuente, ox, sx, arriba, ancho_sangrado,
         y -= cuerpo * INTERLINEA_EVENTO
 
 
-def _banda_inferior(pdf, opciones, patrocinador, fuente, ox, sx, abajo, sy, ancho_sangrado,
-                    alto_banda, con_bandas, color_banda, color_texto):
-    """El logo del patrocinador; si no lo hay, el pie de texto."""
+def _banda_inferior(pdf, opciones, patrocinador, presenting, fuente, ox, sx, abajo, sy,
+                    ancho_sangrado, alto_banda, con_bandas, color_banda, color_texto):
+    """El patrocinador de abajo, en este orden: el logo que se haya subido, la
+    marca que presenta la carrera, o el pie de texto.
+
+    El rotulo "PRESENTED BY" solo acompana a la marca que presenta la carrera,
+    que es la que el sistema conoce. Un logo subido a mano va solo: puede ser
+    cualquier patrocinador, y poner encima que presenta el evento seria decir
+    algo que nadie ha dicho.
+    """
     if con_bandas:
         pdf.setFillColor(color_banda)
         pdf.rect(sx, sy, ancho_sangrado, alto_banda + SANGRADO, stroke=0, fill=1)
@@ -511,6 +541,21 @@ def _banda_inferior(pdf, opciones, patrocinador, fuente, ox, sx, abajo, sy, anch
 
     if patrocinador is not None:
         _pintar_logo(pdf, patrocinador, izquierda, abajo + AIRE_BANDA, ancho, alto_util)
+        return
+
+    if presenting is not None:
+        rotulo = (opciones.get("rotulo_presenting") or "").strip()
+        alto_rotulo = (CUERPO_ROTULO * _alto_mayusculas(fuente) + AIRE_ROTULO) if rotulo else 0
+        _pintar_logo(
+            pdf, presenting, izquierda, abajo + AIRE_BANDA, ancho, alto_util - alto_rotulo
+        )
+        if rotulo:
+            pdf.setFillColor(color_texto)
+            _espaciado(
+                pdf, rotulo, ox + ANCHO_CORTE / 2,
+                abajo + alto_banda - AIRE_BANDA - CUERPO_ROTULO * _alto_mayusculas(fuente),
+                fuente, CUERPO_ROTULO, TRACKING_ROTULO,
+            )
         return
 
     pie = (opciones.get("pie") or "").strip()
@@ -551,7 +596,11 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
     # bandas esten apagadas: lo que manda la franja del medio es donde caen el
     # logo y el patrocinador, no si se pinta un rectangulo detras.
     hay_arriba = bool((opciones.get("evento") or "").strip()) or imagenes.get("logo") is not None
-    hay_abajo = bool((opciones.get("pie") or "").strip()) or imagenes.get("patrocinador") is not None
+    hay_abajo = (
+        bool((opciones.get("pie") or "").strip())
+        or imagenes.get("patrocinador") is not None
+        or imagenes.get("presenting") is not None
+    )
     alto_banda = ALTO_BANDA_SUPERIOR if hay_arriba else 0
     alto_pie = ALTO_BANDA_INFERIOR if hay_abajo else 0
 
@@ -559,8 +608,9 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
         _banda_superior(pdf, opciones, imagenes.get("logo"), fuente, ox, sx, arriba,
                         ancho_sangrado, alto_banda, con_bandas, color_banda, color_texto_banda)
     if hay_abajo:
-        _banda_inferior(pdf, opciones, imagenes.get("patrocinador"), fuente, ox, sx, abajo, sy,
-                        ancho_sangrado, alto_pie, con_bandas, color_banda, color_texto_banda)
+        _banda_inferior(pdf, opciones, imagenes.get("patrocinador"), imagenes.get("presenting"),
+                        fuente, ox, sx, abajo, sy, ancho_sangrado, alto_pie, con_bandas,
+                        color_banda, color_texto_banda)
 
     # --- La franja del medio ---
     #
@@ -659,8 +709,10 @@ def construir_pdf(
 
     `dorsales` son diccionarios con `numero`, `nombre` y `qr_url`. `opciones`
     es lo que se parametriza desde el panel (textos, colores, QR, marcas).
-    `archivos` trae el arte de fondo y los dos logos, en bytes tal como se
-    subieron: `fondo`, `logo` y `patrocinador`.
+    `archivos` trae, en bytes, el arte de fondo (`fondo`), el logo de la
+    carrera (`logo`), el del patrocinador que se haya subido a mano
+    (`patrocinador`) y el de la marca que presenta la carrera (`presenting`),
+    que es el que lleva el rotulo encima.
     """
     opciones = dict(opciones or {})
     archivos = dict(archivos or {})
@@ -686,6 +738,7 @@ def construir_pdf(
         "fondo": preparar_imagen(archivos.get("fondo")),
         "logo": preparar_imagen(archivos.get("logo"), detras),
         "patrocinador": preparar_imagen(archivos.get("patrocinador"), detras),
+        "presenting": preparar_imagen(archivos.get("presenting"), detras),
     }
     tipografia = registrar_fuente(fuente)
 

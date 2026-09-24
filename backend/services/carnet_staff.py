@@ -84,6 +84,22 @@ def _recortar(pdf, texto: str, fuente: str, tamano: float, ancho: float) -> str:
     return texto + "…"
 
 
+def _espaciado(pdf, texto: str, cx: float, y: float, fuente: str, tamano: float, tracking: float = 1.1):
+    """Una linea centrada con las letras separadas, para los rotulos pequenos.
+
+    Va dentro de q/Q: el espaciado se queda en el estado del lienzo y lo
+    siguiente que se escriba saldria con las letras despegadas.
+    """
+    ancho = pdf.stringWidth(texto, fuente, tamano) + (len(texto) - 1) * tracking
+    pdf.saveState()
+    linea = pdf.beginText(cx - ancho / 2, y)
+    linea.setFont(fuente, tamano)
+    linea.setCharSpace(tracking)
+    linea.textOut(texto)
+    pdf.drawText(linea)
+    pdf.restoreState()
+
+
 def _centrado(pdf, texto: str, cx: float, y: float, fuente: str, tamano: float, ancho: float, minimo: float = 6):
     tamano = _ajustar(pdf, texto, fuente, tamano, ancho, minimo)
     texto = _recortar(pdf, texto, fuente, tamano, ancho)
@@ -187,7 +203,9 @@ def _reverso(pdf, carnet: dict, x: float, y: float):
     pdf.setFillColor(NARANJA)
     pdf.rect(x, arriba - 3 * mm, ANCHO + SANGRADO, 3 * mm + SANGRADO, stroke=0, fill=1)
 
-    lado_qr = 28 * mm
+    # 21 mm son 0.6 mm por modulo con esta direccion: de sobra para un telefono
+    # a un palmo, y deja sitio abajo para la marca que presenta la carrera.
+    lado_qr = 21 * mm
     qr_y = arriba - 6.5 * mm - lado_qr
     if carnet.get("url_verificacion"):
         pdf.drawImage(_qr(carnet["url_verificacion"]), cx - lado_qr / 2, qr_y, lado_qr, lado_qr)
@@ -217,10 +235,28 @@ def _reverso(pdf, carnet: dict, x: float, y: float):
     dato("Carnet N.º", [carnet.get("numero") or "—"], linea)
 
     alto_pie = 6 * mm
+
+    # Quien presenta la carrera, debajo de los datos. Sale de la marca de la
+    # edicion, no de nada que se suba: es la misma que acompana al logo en el
+    # sitio, la app y los correos. Las ediciones sin naming no pintan nada y el
+    # aviso sube a ocupar su sitio.
+    linea_aviso = y + alto_pie + 2.5 * mm
+    if carnet.get("presenting_logo"):
+        alto_marca = 7 * mm
+        base_marca = y + alto_pie + 3 * mm
+        etiqueta = carnet.get("presenting_etiqueta") or ""
+        if etiqueta:
+            pdf.setFillColor(GRIS)
+            _espaciado(pdf, etiqueta, cx, base_marca + alto_marca + 1.6 * mm, "Helvetica-Bold", 5)
+        imagen = ImageReader(io.BytesIO(carnet["presenting_logo"]))
+        ancho_imagen, alto_imagen = imagen.getSize()
+        ancho_marca = ancho_imagen * alto_marca / alto_imagen
+        pdf.drawImage(imagen, cx - ancho_marca / 2, base_marca, ancho_marca, alto_marca, mask="auto")
+        linea_aviso = base_marca + alto_marca + 5 * mm
+
     pdf.setFillColor(GRIS)
     pdf.setFont("Helvetica", 6.5)
-    pdf.drawCentredString(cx, y + alto_pie + 5.5 * mm, "Personal e intransferible.")
-    pdf.drawCentredString(cx, y + alto_pie + 2.5 * mm, "Portarlo visible durante todo el evento.")
+    pdf.drawCentredString(cx, linea_aviso, "Personal e intransferible · portarlo visible")
 
     pdf.setFillColor(OSCURO)
     pdf.rect(x, y - SANGRADO, ANCHO + SANGRADO, alto_pie + SANGRADO, stroke=0, fill=1)
@@ -255,8 +291,9 @@ def construir_pdf(carnets: list, titulo: str = "Carnets de staff") -> io.BytesIO
     """Devuelve el PDF con todos los carnets, cuatro por hoja.
 
     Cada carnet es un dict con: nombre, apellidos, puesto, evento, tipo_sangre,
-    contacto_nombre, contacto_relacion, contacto_telefono, numero
-    y url_verificacion.
+    contacto_nombre, contacto_relacion, contacto_telefono, numero,
+    url_verificacion y, si la edicion lleva naming, presenting_logo (bytes) y
+    presenting_etiqueta.
     """
     memoria = io.BytesIO()
     hoja = landscape(letter)

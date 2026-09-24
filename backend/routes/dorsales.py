@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from services import dorsales, file_storage, races
+from services import dorsales, file_storage, marca, races
 from services.auth import require_permission
 from services.env_utils import get_env
 
@@ -79,6 +79,7 @@ DISENO_POR_DEFECTO = {
     "qr_lado_mm": 40,
     "marcas_corte": True,
     "guias": False,
+    "rotulo_presenting": marca.ETIQUETA,
     "usar_nombre_si_falta": True,
 }
 
@@ -212,6 +213,7 @@ class Diseno(BaseModel):
     qr_lado_mm: Optional[float] = Field(None, ge=20, le=70)
     marcas_corte: Optional[bool] = None
     guias: Optional[bool] = None
+    rotulo_presenting: Optional[str] = Field(None, max_length=40)
     usar_nombre_si_falta: Optional[bool] = None
 
 
@@ -463,6 +465,12 @@ async def generar_pdf(
         })
 
     archivos = await _archivos(db, race_code, ["fondo", "logo", "patrocinador", "fuente"])
+    # La marca que presenta la carrera no se sube: vive en `services/marca.py`,
+    # el mismo sitio del que salen el sitio, la app y los correos. Si la
+    # organizacion sube un logo a mano, ese manda.
+    archivos["presenting"] = marca.logo_impreso(race_code)
+    diseno.setdefault("rotulo_presenting", marca.ETIQUETA)
+
     pdf = dorsales.construir_pdf(lista, diseno, archivos=archivos, fuente=archivos["fuente"])
     sufijo = lista[0]["numero"] if len(lista) == 1 else f"{len(lista)}"
     return StreamingResponse(
