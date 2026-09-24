@@ -28,7 +28,6 @@ NARANJA_CLARO = HexColor("#F5B98A")
 OSCURO = HexColor("#111827")
 GRIS = HexColor("#6B7280")
 GRIS_CLARO = HexColor("#D1D5DB")
-FONDO_FOTO = HexColor("#F3F4F6")
 
 # Tamano de tarjeta de identificacion (CR80), en vertical
 ANCHO = 54 * mm
@@ -39,6 +38,15 @@ COLUMNAS = 2
 FILAS = 2
 HUECO_COLUMNAS = 16 * mm
 HUECO_FILAS = 14 * mm
+
+# El nombre manda en la tarjeta y los apellidos acompanan. Son topes: si el
+# nombre es largo, `_ajustar` lo encoge hasta que quepa.
+CUERPO_NOMBRE = 30
+CUERPO_APELLIDOS = 13
+CUERPO_PUESTO = 9
+HUECO_APELLIDOS = 4.5 * mm      # entre el nombre y los apellidos
+HUECO_PUESTO = 7 * mm           # entre los apellidos y la raya del puesto
+ALTO_MAYUSCULA = 0.72           # alto de una mayuscula por unidad de cuerpo
 
 SANGRADO = 1.5 * mm
 MARCA_SEPARACION = 3 * mm   # entre el borde de corte y el inicio de la marca
@@ -83,12 +91,6 @@ def _centrado(pdf, texto: str, cx: float, y: float, fuente: str, tamano: float, 
     pdf.drawCentredString(cx, y, texto)
 
 
-def _iniciales(carnet: dict) -> str:
-    return "".join(
-        (parte.strip()[:1] for parte in (carnet.get("nombre") or "", carnet.get("apellidos") or "") if parte.strip())
-    ).upper() or "?"
-
-
 def _anverso(pdf, carnet: dict, x: float, y: float, logo):
     """Cara de delante. (x, y) es la esquina inferior izquierda; sangra por
     arriba, por abajo y por la izquierda, que son bordes de corte."""
@@ -111,37 +113,50 @@ def _anverso(pdf, carnet: dict, x: float, y: float, logo):
     pdf.setFont("Helvetica", 8.5)
     pdf.drawString(texto_x, arriba - 12 * mm, "SANTO DOMINGO")
 
-    # Foto, o las iniciales mientras no haya
-    lado_foto = 27 * mm
-    foto_x = cx - lado_foto / 2
-    foto_y = arriba - alto_cabecera - 4 * mm - lado_foto
-    pdf.setFillColor(FONDO_FOTO)
-    pdf.rect(foto_x, foto_y, lado_foto, lado_foto, stroke=0, fill=1)
-    if carnet.get("foto"):
-        pdf.drawImage(ImageReader(io.BytesIO(carnet["foto"])), foto_x, foto_y, lado_foto, lado_foto,
-                      preserveAspectRatio=True, anchor="c", mask="auto")
-    else:
-        pdf.setFillColor(GRIS)
-        pdf.setFont("Helvetica-Bold", 27)
-        pdf.drawCentredString(cx, foto_y + lado_foto / 2 - 9.5, _iniciales(carnet))
-    pdf.setStrokeColor(NARANJA)
-    pdf.setLineWidth(1.4)
-    pdf.rect(foto_x, foto_y, lado_foto, lado_foto, stroke=1, fill=0)
-
-    # Nombre en dos lineas: nombre y apellidos
-    pdf.setFillColor(OSCURO)
-    linea = foto_y - 5.5 * mm
-    for parte in (carnet.get("nombre") or "", carnet.get("apellidos") or ""):
-        if parte.strip():
-            _centrado(pdf, parte.strip(), cx, linea, "Helvetica-Bold", 12, util, minimo=8)
-            linea -= 5 * mm
-
-    pdf.setFillColor(GRIS)
-    _centrado(pdf, carnet.get("puesto") or "Voluntario", cx, linea - 0.5 * mm, "Helvetica", 8, util)
-
-    # Franja STAFF y, debajo, el evento
+    # El nombre, que es lo unico que hay que leer de lejos
+    #
+    # Donde estaba la foto va ahora el nombre. Nunca llego a haberla -- el
+    # registro de voluntario no pide una -- y el recuadro salia siempre con
+    # las iniciales dentro, ocupando un tercio de la tarjeta para decir dos
+    # letras. Ese sitio se lo queda el nombre, que es lo que se busca cuando
+    # alguien mira un carnet.
     alto_evento = 6 * mm
     alto_staff = 11 * mm
+    techo = arriba - alto_cabecera - 6 * mm
+    suelo = y + alto_evento + alto_staff + 6 * mm
+
+    nombre = (carnet.get("nombre") or "").strip()
+    apellidos = (carnet.get("apellidos") or "").strip()
+    puesto = carnet.get("puesto") or "Voluntario"
+
+    cuerpo_nombre = _ajustar(pdf, nombre, "Helvetica-Bold", CUERPO_NOMBRE, util, minimo=11) if nombre else 0
+    cuerpo_apellidos = (
+        _ajustar(pdf, apellidos, "Helvetica-Bold", CUERPO_APELLIDOS, util, minimo=8) if apellidos else 0
+    )
+
+    alto_bloque = (
+        cuerpo_nombre * ALTO_MAYUSCULA
+        + (HUECO_APELLIDOS + cuerpo_apellidos * ALTO_MAYUSCULA if apellidos else 0)
+        + HUECO_PUESTO + CUERPO_PUESTO * ALTO_MAYUSCULA
+    )
+    linea = suelo + (techo - suelo - alto_bloque) / 2 + alto_bloque - cuerpo_nombre * ALTO_MAYUSCULA
+
+    pdf.setFillColor(OSCURO)
+    if nombre:
+        _centrado(pdf, nombre, cx, linea, "Helvetica-Bold", cuerpo_nombre, util, minimo=11)
+    if apellidos:
+        linea -= HUECO_APELLIDOS + cuerpo_apellidos * ALTO_MAYUSCULA
+        _centrado(pdf, apellidos, cx, linea, "Helvetica-Bold", cuerpo_apellidos, util, minimo=8)
+
+    linea -= HUECO_PUESTO
+    pdf.setStrokeColor(NARANJA)
+    pdf.setLineWidth(1.2)
+    pdf.line(cx - 9 * mm, linea + 3.2 * mm, cx + 9 * mm, linea + 3.2 * mm)
+
+    pdf.setFillColor(GRIS)
+    _centrado(pdf, puesto, cx, linea - CUERPO_PUESTO * ALTO_MAYUSCULA, "Helvetica", CUERPO_PUESTO, util)
+
+    # Franja STAFF y, debajo, el evento
     pdf.setFillColor(OSCURO)
     pdf.rect(x - SANGRADO, y - SANGRADO, ANCHO + SANGRADO, alto_evento + SANGRADO, stroke=0, fill=1)
     pdf.setFillColor(GRIS_CLARO)
@@ -240,8 +255,8 @@ def construir_pdf(carnets: list, titulo: str = "Carnets de staff") -> io.BytesIO
     """Devuelve el PDF con todos los carnets, cuatro por hoja.
 
     Cada carnet es un dict con: nombre, apellidos, puesto, evento, tipo_sangre,
-    contacto_nombre, contacto_relacion, contacto_telefono, numero,
-    url_verificacion y, si la hay, foto (bytes).
+    contacto_nombre, contacto_relacion, contacto_telefono, numero
+    y url_verificacion.
     """
     memoria = io.BytesIO()
     hoja = landscape(letter)
