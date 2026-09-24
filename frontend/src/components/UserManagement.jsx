@@ -35,6 +35,7 @@ const PERMISSIONS = [
   { id: 'tshirt', label: 'Camisetas', description: 'Votación de camisetas' },
   { id: 'prensa', label: 'Prensa', description: 'Contactos de medios y entrevistas' },
   { id: 'capacitaciones', label: 'Capacitaciones', description: 'Gestión de capacitaciones' },
+  { id: 'preguntas', label: 'Preguntas', description: 'Preguntas del público en las charlas' },
   { id: 'users', label: 'Usuarios', description: 'Gestionar usuarios y permisos' },
   { id: 'race-config', label: 'Carrera', description: 'Configuración de la carrera' },
 ];

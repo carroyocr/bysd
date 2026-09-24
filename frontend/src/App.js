@@ -19,6 +19,7 @@ import LiveDashboardPage from './pages/LiveDashboardPage';
 import ComunidadPage from './pages/ComunidadPage';
 import EnviarAnimoPage from './pages/EnviarAnimoPage';
 import MensajesPresentacionPage from './pages/MensajesPresentacionPage';
+import PreguntasPresentacionPage from './pages/PreguntasPresentacionPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import RaceControlPage from './pages/RaceControlPage';
 import AdminPage from './pages/AdminPage';
@@ -26,6 +27,7 @@ import SurveyPage from './pages/SurveyPage';
 import InscripcionPage from './pages/InscripcionPage';
 import VoluntarioRegistroPage from './pages/VoluntarioRegistroPage';
 import ActividadRegistroPage from './pages/ActividadRegistroPage';
+import PreguntasPublicPage from './pages/PreguntasPublicPage';
 import PrensaPage from './pages/PrensaPage';
 import NotaPrensaPage from './pages/NotaPrensaPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
@@ -59,6 +61,8 @@ export default function App() {
           <Route path="/admin/race-control" element={<RaceControlPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/mensajes/presentacion" element={<MensajesPresentacionPage />} />
+          {/* Preguntas de una actividad, para proyectar al terminar la charla */}
+          <Route path="/admin/preguntas/:id" element={<PreguntasPresentacionPage />} />
           
           {/* QR Scanner routes without Navigation/Footer - optimized for mobile */}
           <Route path="/scan" element={<QRScannerPage />} />
@@ -113,6 +117,7 @@ export default function App() {
                     {/* Inscripción a una charla o actividad sin cuenta: el
                         enlace se copia desde el panel y se reparte */}
                     <Route path="/actividad/:id" element={<ActividadRegistroPage />} />
+                    <Route path="/actividad/:id/preguntas" element={<PreguntasPublicPage />} />
                     {/* Athlete Profile + Legacy routes */}
                     <Route path="/mi-perfil" element={<MyProfilePage />} />
                     {/* Perfil del espectador. Aparte de /mi-perfil, que es el

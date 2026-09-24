@@ -142,3 +142,18 @@ def limitar_inscripcion_actividad(request: Optional[Request]) -> None:
         "inscripcion-actividad", ip_cliente(request), limite=15, ventana_segundos=600,
         mensaje="Ya registraste varias inscripciones. Espera unos minutos.",
     )
+
+
+def limitar_pregunta(request: Optional[Request]) -> None:
+    """40 preguntas por IP cada 10 minutos.
+
+    El limite es alto a proposito: en una charla la sala entera esta en el
+    mismo wifi y sale por una sola IP, asi que un tope bajo no corta al que
+    molesta, corta a los ultimos cuarenta que quisieron preguntar. Lo que se
+    frena aqui es el guion que dispara cientos; a la pregunta inapropiada
+    suelta se le quita desde el panel, que para eso esta.
+    """
+    comprobar(
+        "pregunta-actividad", ip_cliente(request), limite=40, ventana_segundos=600,
+        mensaje="Se recibieron muchas preguntas desde esta conexión. Espera unos minutos.",
+    )

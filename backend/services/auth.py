@@ -222,6 +222,7 @@ TAB_PERMISSION_GROUPS = {
     "race-config": "config",        # tab Carrera
     "tshirt": "config",             # tab Camisetas
     "capacitaciones": "config",     # tab Capacitaciones
+    "preguntas": "config",          # tab Preguntas de la charla
 }
 
 
