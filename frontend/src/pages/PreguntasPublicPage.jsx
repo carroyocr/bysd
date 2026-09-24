@@ -77,7 +77,7 @@ export default function PreguntasPublicPage() {
 
   if (cargando) {
     return (
-      <div className="flex items-center justify-center py-32 text-muted-foreground">
+      <div className="flex items-center justify-center pt-32 pb-20 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin mr-2" /> Cargando…
       </div>
     );
@@ -85,7 +85,7 @@ export default function PreguntasPublicPage() {
 
   if (!actividad) {
     return (
-      <div className="max-w-md mx-auto px-4 py-20 text-center text-muted-foreground">
+      <div className="max-w-md mx-auto px-4 pt-24 pb-20 text-center text-muted-foreground">
         No encontramos esa actividad.
       </div>
     );
@@ -94,7 +94,8 @@ export default function PreguntasPublicPage() {
   const cerrada = !actividad.preguntas_abiertas;
 
   return (
-    <div className="max-w-md mx-auto px-4 py-10 space-y-4">
+    // pt-20: la barra de navegacion es fija y taparia el titulo
+    <div className="max-w-md mx-auto px-4 pt-20 sm:pt-24 pb-12 space-y-4">
       <div className="text-center space-y-1">
         <HelpCircle className="w-8 h-8 mx-auto text-primary" />
         <h1 className="text-xl font-bold">Preguntas</h1>
