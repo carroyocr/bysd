@@ -81,6 +81,15 @@ services:
       - type: rewrite
         source: /garmin/en/
         destination: /garmin/en/index.html
+      # Propuestas de patrocinio: paginas sueltas que se mandan por enlace al
+      # patrocinador. Mismo motivo que /garmin -- sin la regla explicita, el
+      # comodin de abajo se las traga y el cliente aterriza en la portada.
+      - type: rewrite
+        source: /propuesta/226ers
+        destination: /propuesta/226ers/index.html
+      - type: rewrite
+        source: /propuesta/226ers/
+        destination: /propuesta/226ers/index.html
       - type: rewrite
         source: /*
         destination: /index.html
