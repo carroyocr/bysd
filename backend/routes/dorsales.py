@@ -78,6 +78,8 @@ DISENO_POR_DEFECTO = {
     "qr_posicion": "derecha",
     "qr_lado_mm": 40,
     "marcas_corte": True,
+    "linea_corte": True,
+    "color_linea_corte": dorsales.COLOR_LINEA_CORTE,
     "guias": False,
     "rotulo_presenting": marca.ETIQUETA,
     "usar_nombre_si_falta": True,
@@ -212,6 +214,8 @@ class Diseno(BaseModel):
     qr_posicion: Optional[str] = None
     qr_lado_mm: Optional[float] = Field(None, ge=20, le=70)
     marcas_corte: Optional[bool] = None
+    linea_corte: Optional[bool] = None
+    color_linea_corte: Optional[str] = None
     guias: Optional[bool] = None
     rotulo_presenting: Optional[str] = Field(None, max_length=40)
     usar_nombre_si_falta: Optional[bool] = None

@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import {
   Search, Medal, Shield, RefreshCw, Loader2, Trash2, ArrowLeftRight, UserPlus,
-  Pencil, X, Save, Download
+  Pencil, X, Save, Download, ListOrdered
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -38,6 +38,7 @@ export default function SeleccionadosManagement() {
   // Alta manual de un seleccionado externo (no corrió el evento previo)
   const [showManualForm, setShowManualForm] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [renumerando, setRenumerando] = useState(false);
   const [manualData, setManualData] = useState({ ...MANUAL_VACIO });
   const [savingManual, setSavingManual] = useState(false);
 
@@ -144,6 +145,34 @@ export default function SeleccionadosManagement() {
 
   // El taller de camisetas trabaja con una hoja, no con la pantalla: sexo,
   // talla, el nombre completo y el que va estampado.
+  // Las altas y bajas de la nómina dejan huecos: alguien se cae y su número
+  // se queda vacío, y el que entra después se lleva el siguiente libre. Esto
+  // los cierra, sin reordenar a nadie que no tenga por qué moverse.
+  const handleRenumerar = async () => {
+    if (!window.confirm(
+      'Se van a repartir los dorsales de corrido: 1 en adelante para la selección '
+      + 'y la reserva a continuación.\n\n¿Continuar?'
+    )) return;
+    setRenumerando(true);
+    try {
+      const res = await adminFetch(`${API_URL}/api/seleccionados/admin/renumerar`, {
+        method: 'POST',
+      });
+      const datos = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(datos.detail || 'No se pudieron renumerar');
+      await loadData();
+      toast.success(
+        datos.cambiados
+          ? `${datos.cambiados} dorsal(es) cambiado(s) de ${datos.total}`
+          : 'Los dorsales ya estaban de corrido'
+      );
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setRenumerando(false);
+    }
+  };
+
   const handleExportCamisetas = async () => {
     setExportando(true);
     try {
@@ -306,6 +335,22 @@ export default function SeleccionadosManagement() {
             del evento previo (BYSD-2026)
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRenumerar}
+          disabled={renumerando || seleccionados.length === 0}
+          title="Reparte los dorsales de corrido: la selección desde el 1 y la reserva a continuación"
+          data-testid="renumerar-dorsales"
+        >
+          {renumerando ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <ListOrdered className="w-4 h-4 mr-2" />
+          )}
+          Renumerar dorsales
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -320,6 +365,7 @@ export default function SeleccionadosManagement() {
           )}
           Camisetas (CSV)
         </Button>
+        </div>
       </div>
 
       {/* Stats */}
