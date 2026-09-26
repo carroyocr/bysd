@@ -46,6 +46,7 @@ const COLORES = [
   { campo: 'color_texto_banda', etiqueta: 'Nombre de la carrera' },
   { campo: 'color_numero', etiqueta: 'Número' },
   { campo: 'color_nombre', etiqueta: 'Nombre del corredor' },
+  { campo: 'color_linea_corte', etiqueta: 'Línea de corte' },
 ];
 
 const CATEGORIAS = [
@@ -227,6 +228,7 @@ export default function DorsalesManagement() {
     mostrar_bandas: d.mostrar_bandas, mostrar_qr: d.mostrar_qr,
     qr_posicion: d.qr_posicion, qr_lado_mm: Number(d.qr_lado_mm) || 40,
     marcas_corte: d.marcas_corte, guias: d.guias,
+    linea_corte: d.linea_corte, color_linea_corte: d.color_linea_corte,
     usar_nombre_si_falta: d.usar_nombre_si_falta,
   });
 
@@ -605,6 +607,7 @@ export default function DorsalesManagement() {
             <div className="space-y-2.5 pt-1">
               {[
                 ['mostrar_bandas', 'Pintar las franjas de arriba y abajo'],
+                ['linea_corte', 'Línea de corte con las esquinas redondeadas'],
                 ['marcas_corte', 'Marcas de corte para la imprenta'],
                 ['guias', 'Guías de corte, margen seguro y ojales'],
                 ['usar_nombre_si_falta', 'Sin personalización, usar el nombre de pila'],
@@ -618,7 +621,9 @@ export default function DorsalesManagement() {
                 </div>
               ))}
               <p className="text-xs text-muted-foreground">
-                Las guías son para revisar en pantalla. Quítalas antes de mandar el archivo.
+                La línea de corte se imprime: es para recortar a mano. Si el archivo va
+                a una imprenta que troquela, quítala —el troquel ya redondea— o saldrá
+                impresa en los 160 dorsales. Las guías son solo para revisar en pantalla.
               </p>
             </div>
 

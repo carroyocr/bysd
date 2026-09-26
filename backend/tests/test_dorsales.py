@@ -525,3 +525,95 @@ def test_la_marca_que_presenta_tampoco_toca_los_ojales():
         for ax0, ay0, ax1, ay1 in _ojales(contenido):
             assert not (x0 < ax1 and x1 > ax0 and y0 < ay1 and y1 > ay0)
     _ningun_texto_sobre_un_ojal(contenido)
+
+
+# ---------------- La linea de corte ----------------
+#
+# Esta se imprime, a diferencia de las guias: es la que sigue con la tijera
+# quien recorta a mano. Va justo sobre el borde de corte, con las esquinas
+# redondeadas de la plantilla, para que al recortar se vaya con el recorte.
+
+
+def _trazos(pdf: bytes):
+    """Los caminos que se trazan (`S`) en la primera pagina, con sus puntos."""
+    import re as expreg
+
+    from PyPDF2 import PdfReader
+
+    flujo = PdfReader(io.BytesIO(pdf)).pages[0].get_contents().get_data().decode("latin-1")
+    caminos = []
+    for bloque in expreg.finditer(r"n\n(.*?)\nS", flujo, expreg.S):
+        puntos = [
+            (float(x), float(y))
+            for x, y in expreg.findall(r"(-?\d+\.?\d*) (-?\d+\.?\d*)(?= [mlc]|\n)", bloque.group(1))
+        ]
+        if puntos:
+            caminos.append(puntos)
+    return caminos
+
+
+def _caja_de_corte(pdf: bytes):
+    from PyPDF2 import PdfReader
+
+    caja = PdfReader(io.BytesIO(pdf)).pages[0].mediabox
+    ox = (float(caja.width) - dorsales.ANCHO_CORTE) / 2
+    oy = (float(caja.height) - dorsales.ALTO_CORTE) / 2
+    return ox, oy, ox + dorsales.ANCHO_CORTE, oy + dorsales.ALTO_CORTE
+
+
+SIN_ADORNOS = {"evento": "", "pie": "", "mostrar_qr": False, "marcas_corte": False}
+
+
+def test_la_linea_de_corte_cae_sobre_el_borde_de_corte():
+    """Ni dentro ni fuera: encima, para que se vaya con el recorte."""
+    salida = dorsales.construir_pdf([DORSAL], {**SIN_ADORNOS, "linea_corte": True})
+    contenido = salida.getvalue()
+    caminos = _trazos(contenido)
+    assert len(caminos) == 1, "deberia haber un solo trazo: la linea de corte"
+
+    puntos = caminos[0]
+    x0, y0, x1, y1 = _caja_de_corte(contenido)
+    assert abs(min(p[0] for p in puntos) - x0) < 0.01
+    assert abs(min(p[1] for p in puntos) - y0) < 0.01
+    assert abs(max(p[0] for p in puntos) - x1) < 0.01
+    assert abs(max(p[1] for p in puntos) - y1) < 0.01
+
+
+def test_las_esquinas_llevan_el_radio_de_la_plantilla():
+    """0.375 pulgadas, las mismas que troquela la imprenta."""
+    salida = dorsales.construir_pdf([DORSAL], {**SIN_ADORNOS, "linea_corte": True})
+    contenido = salida.getvalue()
+    puntos = _trazos(contenido)[0]
+    x0, y0, _x1, _y1 = _caja_de_corte(contenido)
+
+    # El tramo recto de abajo empieza a un radio de la esquina
+    en_el_borde = sorted(p[0] for p in puntos if abs(p[1] - y0) < 0.01)
+    assert abs(en_el_borde[0] - (x0 + dorsales.RADIO_ESQUINA)) < 0.01
+
+
+def test_sin_pedirla_no_se_dibuja():
+    """Mandando el archivo a una imprenta que troquela, la linea sobra."""
+    salida = dorsales.construir_pdf([DORSAL], SIN_ADORNOS)
+    assert not _trazos(salida.getvalue())
+
+
+def test_la_linea_de_corte_tampoco_mete_color_rgb():
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**SIN_ADORNOS, "linea_corte": True, "color_linea_corte": "#6B7280"}
+    )
+    assert b"DeviceRGB" not in salida.getvalue()
+
+
+def test_la_linea_va_encima_del_arte_y_no_debajo():
+    """Debajo, el fondo la taparia y no habria por donde recortar."""
+    imagen = io.BytesIO()
+    Image.new("RGB", (2550, 1725), (20, 20, 20)).save(imagen, "PNG")
+    salida = dorsales.construir_pdf(
+        [DORSAL], {**SIN_ADORNOS, "linea_corte": True},
+        archivos={"fondo": imagen.getvalue()},
+    )
+    contenido = salida.getvalue()
+    from PyPDF2 import PdfReader
+
+    flujo = PdfReader(io.BytesIO(contenido)).pages[0].get_contents().get_data().decode("latin-1")
+    assert flujo.rindex("Do") < flujo.rindex("S"), "la linea se dibuja antes que el fondo"

@@ -112,6 +112,13 @@ CUERPO_ROTULO = 0.10 * PULGADA
 AIRE_ROTULO = 0.06 * PULGADA
 TRACKING_ROTULO = 0.16
 
+# La linea por donde se recorta el dorsal, con las esquinas redondeadas de la
+# plantilla. Va impresa, no es una guia: es para recortar a mano cuando el
+# dorsal no sale de la imprenta con su troquel. Gris medio porque tiene que
+# verse igual sobre la franja clara del centro que sobre las de color.
+COLOR_LINEA_CORTE = "#6B7280"
+GROSOR_LINEA_CORTE = 0.5
+
 # Las cifras de una tipografia de palo seco vienen todas del mismo ancho, y a
 # cuerpo grande un "1" deja un boquete a cada lado. Un pelo de espacio negativo
 # junta el numero sin llegar a pegar las cifras.
@@ -425,6 +432,22 @@ def _marcas_de_corte(pdf, ox: float, oy: float):
             pdf.line(x, y + dy * desde, x, y + dy * (desde + LARGO_MARCA))
 
 
+def _linea_de_corte(pdf, ox: float, oy: float, color):
+    """La linea por donde recortar, con las esquinas de la plantilla.
+
+    Esta se imprime, a diferencia de las guias: quien recorta a mano necesita
+    verla. Va encima del arte -- si fuera debajo, el fondo la taparia -- y
+    justo sobre el borde de corte, asi que al recortar se va con el recorte.
+
+    Mandando el archivo a una imprenta que troquela, sobra: el troquel ya
+    redondea y la linea saldria impresa en los 160 dorsales.
+    """
+    pdf.setStrokeColor(color)
+    pdf.setLineWidth(GROSOR_LINEA_CORTE)
+    pdf.setDash()
+    pdf.roundRect(ox, oy, ANCHO_CORTE, ALTO_CORTE, RADIO_ESQUINA, stroke=1, fill=0)
+
+
 def _guias(pdf, ox: float, oy: float):
     """La linea de corte, el margen seguro y los ojales, en rosa.
 
@@ -690,6 +713,8 @@ def _una_pagina(pdf, dorsal: dict, opciones: dict, imagenes: dict, fuente: str,
             fuente, cuerpo_nombre, ancho_util,
         )
 
+    if opciones.get("linea_corte"):
+        _linea_de_corte(pdf, ox, oy, _cmyk(opciones.get("color_linea_corte"), COLOR_LINEA_CORTE))
     if opciones.get("marcas_corte", True):
         _marcas_de_corte(pdf, ox, oy)
     if opciones.get("guias"):
