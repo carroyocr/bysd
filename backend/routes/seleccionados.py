@@ -48,6 +48,39 @@ async def _siguiente_dorsal(db) -> str:
     return f"{(max(numeros) if numeros else 0) + 1:03d}"
 
 
+# Orden en el que se reparten los dorsales: primero la seleccion, detras la
+# reserva. Lo que no traiga categoria va al final, que es mejor que perderlo.
+ORDEN_CATEGORIAS = {"titular": 0, "reserva": 1}
+
+
+def _orden_de_dorsal(bib) -> tuple:
+    """Para ordenar dorsales que son cadenas: "009" antes que "023"."""
+    texto = str(bib or "")
+    digitos = re.sub(r"\D", "", texto)
+    return (0, int(digitos)) if digitos else (1, texto)
+
+
+def plan_de_renumeracion(inscripciones: list) -> list:
+    """Los dorsales que le tocan a cada inscripcion: 1..N la seleccion y la
+    reserva a continuacion.
+
+    No reordena a nadie: respeta el orden que ya tenian y solo cierra los
+    huecos que dejan las altas y bajas de la nomina. Reordenar por nombre
+    cambiaria el dorsal de gente que no tiene por que cambiarlo.
+
+    Devuelve la lista entera de (inscripcion, dorsal_nuevo), tambien las que
+    no cambian: quien lo aplique decide, y quien lo lea ve el cuadro completo.
+    """
+    ordenadas = sorted(
+        inscripciones,
+        key=lambda i: (
+            ORDEN_CATEGORIAS.get((i.get("categoria") or "").lower(), 2),
+            _orden_de_dorsal(i.get("bib")),
+        ),
+    )
+    return [(i, f"{n:03d}") for n, i in enumerate(ordenadas, start=1)]
+
+
 async def _correo_conocido(db, seleccionado: dict) -> Optional[str]:
     """Correo del atleta, si se puede averiguar por su paso por 2026."""
     from bson import ObjectId
@@ -178,6 +211,54 @@ async def list_seleccionados(db=Depends(get_db)):
             "reservas": len(docs) - titulares,
             "total": len(docs),
         },
+    }
+
+
+@router.post("/admin/renumerar", dependencies=[solo_atletas])
+async def renumerar_dorsales(db=Depends(get_db)):
+    """Reparte los dorsales del campeonato de corrido: 1..N la seleccion y la
+    reserva a continuacion.
+
+    Las altas y bajas de la nomina dejan huecos -- alguien se cae y su numero
+    se queda vacio -- y el que entra despues se lleva el siguiente libre, que
+    puede ser el 23 con la seleccion en el 14. Esto los cierra.
+
+    Se hace en dos pasadas, por los numeros de paso: renumerar en el sitio
+    puede chocar a mitad de camino (dar el 005 a uno cuando el 005 todavia es
+    de otro), y aunque el indice de dorsales no sea unico, dos corredores con
+    el mismo numero durante un instante es un dorsal mal impreso esperando a
+    pasar.
+    """
+    inscripciones = await db.registrations.find(
+        {"race_code": MUNDIAL}, {"_id": 1, "bib": 1, "categoria": 1, "nombre": 1, "apellidos": 1}
+    ).to_list(500)
+
+    plan = plan_de_renumeracion(inscripciones)
+    cambian = [(i, nuevo) for i, nuevo in plan if str(i.get("bib") or "") != nuevo]
+
+    for paso, (inscripcion, _nuevo) in enumerate(cambian):
+        await db.registrations.update_one(
+            {"_id": inscripcion["_id"]}, {"$set": {"bib": f"TMP-{paso}"}}
+        )
+    ahora = datetime.now(timezone.utc)
+    for inscripcion, nuevo in cambian:
+        await db.registrations.update_one(
+            {"_id": inscripcion["_id"]}, {"$set": {"bib": nuevo, "updated_at": ahora}}
+        )
+
+    return {
+        "success": True,
+        "total": len(plan),
+        "cambiados": len(cambian),
+        "dorsales": [
+            {
+                "nombre": f"{i.get('nombre', '')} {i.get('apellidos', '')}".strip(),
+                "categoria": i.get("categoria") or "",
+                "antes": str(i.get("bib") or ""),
+                "ahora": nuevo,
+            }
+            for i, nuevo in plan
+        ],
     }
 
 
