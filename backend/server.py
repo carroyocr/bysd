@@ -458,6 +458,10 @@ app.include_router(carnets_staff_router)
 from routes.dorsales import router as dorsales_router
 app.include_router(dorsales_router)
 
+# Vistas de la transmision (OBS)
+from routes.overlay import router as overlay_router
+app.include_router(overlay_router)
+
 # Version publicada de la app movil (la app pregunta al abrir)
 from routes.app_version import router as app_version_router
 app.include_router(app_version_router)
