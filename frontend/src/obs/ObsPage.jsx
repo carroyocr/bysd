@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
+import usePatrocinadores, { urlLogo } from './usePatrocinadores';
 import './obs.css';
 
 /**
@@ -14,6 +15,7 @@ import './obs.css';
  *   /obs/barra?clave=...&race=BYSD-2027
  *   /obs/crono?clave=...
  *   /obs/clasificacion?clave=...&filas=10
+ *   /obs/patrocinadores?clave=...
  */
 export default function ObsPage() {
   const { vista } = useParams();
@@ -45,6 +47,9 @@ export default function ObsPage() {
   const { datos, error, anuncio, cuentaAtras, esperandoSalida } = useTransmision({
     clave, raceCode, clasificacion: filas,
   });
+  // Solo la vista de patrocinadores lo usa, pero un hook no puede ir dentro
+  // de un if: se declara siempre y en las demás vistas queda apagado.
+  const patrocinador = usePatrocinadores(raceCode, vista === 'patrocinadores');
 
   // Es una función que devuelve marcado, no un componente: un componente
   // definido aquí dentro sería uno nuevo en cada latido del reloj y React
@@ -82,6 +87,37 @@ export default function ObsPage() {
         <div className="obs-crono-rotulo">{rotuloCrono}</div>
         <div className="obs-crono-digitos">{digitos}</div>
       </div>
+    );
+  }
+
+  if (vista === 'patrocinadores') {
+    // La misma barra, con el patrocinador donde iban los datos de carrera y
+    // la vuelta en el bloque rojo. Sin patrocinadores encendidos no se pinta
+    // nada: mejor un hueco que una barra que anuncia a nadie.
+    return enLienzo(
+      patrocinador && (
+        <div className="obs-barra obs-entra" key={patrocinador.id}>
+          <div className="obs-marca">
+            <div className="obs-marca-arriba">VUELTA</div>
+            <div className="obs-marca-grande">{r.vuelta}</div>
+          </div>
+          {urlLogo(patrocinador.logo_url) && (
+            <div className="obs-logo">
+              <img src={urlLogo(patrocinador.logo_url)} alt="" />
+            </div>
+          )}
+          <div className="obs-cuerpo">
+            <div className="obs-antetitulo">Patrocinador</div>
+            <div className="obs-titulo">{patrocinador.name}</div>
+            {patrocinador.text && <div className="obs-texto">{patrocinador.text}</div>}
+          </div>
+          <div className="obs-crono">
+            <div className="obs-crono-rotulo">{rotuloCrono}</div>
+            <div className="obs-crono-digitos">{digitos}</div>
+          </div>
+          <div className="obs-progreso" style={{ width: `${avance * 100}%` }} />
+        </div>
+      )
     );
   }
 

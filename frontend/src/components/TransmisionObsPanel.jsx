@@ -28,6 +28,13 @@ const VISTAS = [
     alto: 1080,
   },
   {
+    id: 'patrocinadores',
+    nombre: 'Patrocinadores',
+    descripcion: 'La misma barra, con el patrocinador de turno (logo, nombre y su frase), la vuelta en curso y la cuenta regresiva. Rota por los patrocinadores encendidos para la app, cada 10 segundos.',
+    ancho: 1920,
+    alto: 1080,
+  },
+  {
     id: 'clasificacion',
     nombre: 'Clasificación',
     descripcion: 'Los primeros puestos con dorsal, nombre, vueltas y kilómetros. Con &filas=15 se alarga.',
