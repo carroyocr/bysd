@@ -103,8 +103,27 @@ export default function TransmisionObsPanel() {
   const direccion = (vista) =>
     `${sitio}/obs/${vista}?clave=${encodeURIComponent(clave || '')}&race=${encodeURIComponent(raceCode || '')}`;
 
-  const direccionCharla = (actividad) =>
-    `${sitio}/obs/charla?actividad=${encodeURIComponent(actividad.id)}&race=${encodeURIComponent(raceCode || '')}`;
+  // Sin numero, rota por todos los expositores; con numero (1, 2, 3…) se
+  // queda en ese: una fuente de OBS por expositor.
+  const direccionCharla = (actividad, expositor = null) =>
+    `${sitio}/obs/charla?actividad=${encodeURIComponent(actividad.id)}&race=${encodeURIComponent(raceCode || '')}`
+    + (expositor ? `&expositor=${expositor}` : '');
+
+  const filaDireccion = (url, clave) => (
+    <div className="flex flex-col sm:flex-row gap-2" key={clave}>
+      <Input readOnly value={url} onFocus={(e) => e.target.select()} className="font-mono text-xs" data-testid={`obs-url-${clave}`} />
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => copiar(url)}>
+          <Copy className="w-4 h-4 mr-2" />
+          Copiar
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => window.open(`${url}&fondo=oscuro`, '_blank')} title="Verla en el navegador, sobre fondo oscuro">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          Ver
+        </Button>
+      </div>
+    </div>
+  );
 
   const copiar = async (texto) => {
     try {
@@ -179,14 +198,16 @@ export default function TransmisionObsPanel() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            La misma barra, sin datos de carrera: la hora, el patrocinador de turno y quien expone
-            (nombre y especialidad). Los expositores se ponen en cada actividad, en Atletas → Actividades.
+            La misma barra, sin datos de carrera: la hora, quien expone (nombre y especialidad) en el centro
+            y el patrocinador de turno en la esquina derecha. Hay una dirección por expositor, para tener
+            una fuente de OBS por cada uno y cambiar de escena cuando cambia quien habla; la dirección
+            general rota por todos. Los expositores se ponen en cada actividad, en Atletas → Actividades.
             No lleva clave: no enseña nada que no sea público.
           </p>
           {actividades.length === 0 ? (
             <p className="text-sm text-muted-foreground italic">No hay actividades creadas.</p>
           ) : actividades.map((a) => (
-            <div key={a.id} className="space-y-1">
+            <div key={a.id} className="space-y-2">
               <div className="text-sm font-medium">
                 {a.name}
                 <span className="text-muted-foreground font-normal"> · {a.datetime ? String(a.datetime).slice(0, 10) : ''}</span>
@@ -194,19 +215,21 @@ export default function TransmisionObsPanel() {
                   <span className="text-xs text-amber-600 ml-2">sin expositores</span>
                 )}
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input readOnly value={direccionCharla(a)} onFocus={(e) => e.target.select()} className="font-mono text-xs" data-testid={`obs-url-charla-${a.id}`} />
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => copiar(direccionCharla(a))}>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copiar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => window.open(`${direccionCharla(a)}&fondo=oscuro`, '_blank')} title="Verla en el navegador, sobre fondo oscuro">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Ver
-                  </Button>
+              {(a.expositores || []).map((e, i) => (
+                <div key={i} className="space-y-1 pl-3 border-l-2 border-muted">
+                  <div className="text-xs text-muted-foreground">
+                    {e.nombre}{e.especialidad ? ` · ${e.especialidad}` : ''}
+                  </div>
+                  {filaDireccion(direccionCharla(a, i + 1), `charla-${a.id}-${i + 1}`)}
                 </div>
-              </div>
+              ))}
+              {(a.expositores || []).length > 1 && (
+                <div className="space-y-1 pl-3 border-l-2 border-muted">
+                  <div className="text-xs text-muted-foreground">Todos, rotando cada 10 segundos</div>
+                  {filaDireccion(direccionCharla(a), `charla-${a.id}`)}
+                </div>
+              )}
+              {(a.expositores || []).length === 0 && filaDireccion(direccionCharla(a), `charla-${a.id}`)}
             </div>
           ))}
         </CardContent>

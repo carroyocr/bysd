@@ -138,28 +138,29 @@
    lleva cinco caracteres y no tres */
 .obs-hora { font-size: 40px; }
 
-/* Caja del expositor de la charla, en el sitio del cronometro */
-.obs-expositor {
+/* Caja del patrocinador en la charla, en el sitio del cronometro: el logo
+   en su caja blanca y, al lado, el nombre y la frase */
+.obs-patrocinio {
   flex: 0 0 auto;
-  max-width: 560px;
-  min-width: 320px;
+  max-width: 720px;
   padding: 0 30px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+  align-items: center;
+  gap: 22px;
   background: var(--caja);
   border-left: 3px solid var(--rojo);
 }
-.obs-expositor-nombre {
-  font-size: 34px;
+.obs-logo-chico { width: 150px; height: 92px; margin-left: 0; padding: 8px 12px; }
+.obs-patrocinio-texto { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.obs-patrocinio-nombre {
+  font-size: 32px;
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.obs-expositor-especialidad {
-  font-size: 22px;
+.obs-patrocinio-frase {
+  font-size: 20px;
   line-height: 1.2;
   color: var(--azul-claro);
   white-space: nowrap;
