@@ -10,9 +10,11 @@ const RECARGAR_MS = 60 * 1000;
  *
  * La ficha se relee cada minuto: si en mitad de la charla se agrega un
  * expositor en el panel, entra sin tocar OBS. Con varios expositores se
- * rotan cada 10 segundos; con uno, se queda fijo.
+ * rotan cada 10 segundos; con uno, se queda fijo. `expositorFijo` (1, 2, 3…)
+ * clava uno concreto: es lo que permite una fuente de OBS por expositor y
+ * cambiar de escena cuando cambia quien habla.
  */
-export default function useCharla(actividadId, activo = true) {
+export default function useCharla(actividadId, activo = true, expositorFijo = null) {
   const [actividad, setActividad] = useState(null);
   const [error, setError] = useState(null);
   const [indice, setIndice] = useState(0);
@@ -60,10 +62,18 @@ export default function useCharla(actividadId, activo = true) {
     return () => clearInterval(id);
   }, [expositores.length]);
 
+  let expositor = null;
+  if (expositores.length) {
+    const fijo = Number(expositorFijo);
+    expositor = fijo >= 1 && fijo <= expositores.length
+      ? expositores[fijo - 1]
+      : expositores[indice % expositores.length];
+  }
+
   return {
     actividad,
     error,
-    expositor: expositores.length ? expositores[indice % expositores.length] : null,
+    expositor,
     hora: ahora.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' }),
   };
 }
