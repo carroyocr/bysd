@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
 import './obs.css';
@@ -7,7 +7,7 @@ import './obs.css';
  * Las vistas que se enlazan en OBS como "Fuente de navegador".
  *
  * Son páginas sueltas, sin menú ni pie y con el fondo transparente, porque
- * debajo va el video. Todo lo que cambia (carrera, clave, tema) viaja en la
+ * debajo va el video. Todo lo que cambia (carrera, clave, filas) viaja en la
  * dirección: OBS solo sabe abrir una dirección, no tiene dónde configurar
  * nada. El panel arma esas direcciones y las da para copiar.
  *
@@ -31,26 +31,38 @@ export default function ObsPage() {
     return () => { document.body.style.background = previo; };
   }, []);
 
+  // El lienzo mide 1920x1080 siempre y se encoge entero para caber en la
+  // ventana. En OBS, que abre justo a esa medida, la escala es 1 y no se toca
+  // nada; en una ventana normal se ve igual, en pequeño.
+  const [escala, setEscala] = useState(1);
+  useLayoutEffect(() => {
+    const ajustar = () => setEscala(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    ajustar();
+    window.addEventListener('resize', ajustar);
+    return () => window.removeEventListener('resize', ajustar);
+  }, []);
+
   const { datos, error, anuncio, cuentaAtras, esperandoSalida } = useTransmision({
     clave, raceCode, clasificacion: filas,
   });
 
-  const clases = `obs-raiz${fondo ? ` obs-fondo-${fondo}` : ''}`;
+  // Es una función que devuelve marcado, no un componente: un componente
+  // definido aquí dentro sería uno nuevo en cada latido del reloj y React
+  // volvería a montar la barra una vez por segundo, cortando la animación.
+  const enLienzo = (contenido) => (
+    <div className={`obs-raiz${fondo ? ` obs-fondo-${fondo}` : ''}`}>
+      <div className="obs-lienzo" style={{ transform: `scale(${escala})` }}>
+        {contenido}
+      </div>
+    </div>
+  );
 
   if (!clave) {
-    return (
-      <div className={clases}>
-        <div className="obs-aviso">Falta la clave de transmisión en la dirección.</div>
-      </div>
-    );
+    return enLienzo(<div className="obs-aviso">Falta la clave de transmisión en la dirección.</div>);
   }
 
   if (error || !datos) {
-    return (
-      <div className={clases}>
-        {error && <div className="obs-aviso">{error}</div>}
-      </div>
-    );
+    return enLienzo(error ? <div className="obs-aviso">{error}</div> : null);
   }
 
   const { totales, reloj: r, clasificacion } = datos;
@@ -61,98 +73,80 @@ export default function ObsPage() {
     ? Math.max(0, Math.min(1, (duracion - cuentaAtras) / duracion))
     : 0;
 
-  const etiquetaCrono = esperandoSalida ? 'Salida en' : r.terminada ? 'Carrera terminada' : 'Próxima vuelta en';
+  const rotuloCrono = esperandoSalida ? 'Salida en' : r.terminada ? 'Carrera terminada' : 'Próxima vuelta';
+  const digitos = r.terminada ? '--:--' : reloj(cuentaAtras);
 
   if (vista === 'crono') {
-    return (
-      <div className={clases}>
-        <div className="obs-crono-suelto">
-          <div className="obs-etiqueta">{etiquetaCrono}</div>
-          <div className="obs-digitos">{r.terminada ? '--:--' : reloj(cuentaAtras)}</div>
-        </div>
+    return enLienzo(
+      <div className="obs-crono-suelto">
+        <div className="obs-crono-rotulo">{rotuloCrono}</div>
+        <div className="obs-crono-digitos">{digitos}</div>
       </div>
     );
   }
 
   if (vista === 'clasificacion') {
-    return (
-      <div className={clases}>
-        <div className="obs-clasificacion">
-          <h2>Clasificación · Vuelta {r.vuelta}</h2>
-          {clasificacion.map((c, i) => (
-            <div key={c.bib} className={`obs-fila${['retired', 'dns'].includes(c.status) ? ' obs-fuera' : ''}`}>
-              <span className="obs-puesto">{i + 1}</span>
-              <span className="obs-bib">{c.bib}</span>
-              <span className="obs-nombre">{`${c.nombre} ${c.apellidos}`.trim()}</span>
-              <span className="obs-vueltas">{c.vueltas}</span>
-              <span className="obs-km">{c.km.toFixed(1)} km</span>
-            </div>
-          ))}
-        </div>
+    return enLienzo(
+      <div className="obs-clasificacion">
+        <h2>Clasificación · Vuelta {r.vuelta}</h2>
+        {clasificacion.map((c, i) => (
+          <div key={c.bib} className={`obs-fila${['retired', 'dns'].includes(c.status) ? ' obs-fuera' : ''}`}>
+            <span className="obs-puesto">{i + 1}</span>
+            <span className="obs-bib">{c.bib}</span>
+            <span className="obs-nombre">{`${c.nombre} ${c.apellidos}`.trim()}</span>
+            <span className="obs-vueltas">{c.vueltas}</span>
+            <span className="obs-km">{c.km.toFixed(1)} km</span>
+          </div>
+        ))}
       </div>
     );
   }
 
-  return (
-    <div className={clases}>
-      {anuncio ? (
-        <div className="obs-barra obs-entra" key={anuncio.id}>
-          <div className="obs-dorsal">{anuncio.bib}</div>
-          <div className="obs-atleta">
-            <div className="obs-atleta-vuelta">Completa la vuelta {anuncio.vuelta}</div>
-            <div className="obs-atleta-nombre">{anuncio.nombre}</div>
-          </div>
-          <div className="obs-datos" style={{ flex: '0 0 auto' }}>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Vuelta</div>
-              <div className="obs-valor">{reloj(anuncio.duracion_seg)}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Vueltas</div>
-              <div className="obs-valor">{anuncio.vuelta}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Km</div>
-              <div className="obs-valor">{anuncio.km}</div>
-            </div>
-          </div>
-          <div className="obs-crono-barra">
-            <div className="obs-etiqueta">Descanso</div>
-            <div className="obs-valor">{reloj(cuentaAtras)}</div>
+  return enLienzo(
+    anuncio ? (
+      <div className="obs-barra obs-entra" key={anuncio.id}>
+        <div className="obs-marca">
+          <div className="obs-marca-arriba">DORSAL</div>
+          <div className="obs-marca-grande">{anuncio.bib}</div>
+        </div>
+        <div className="obs-cuerpo">
+          <div className="obs-antetitulo">Completa la vuelta {anuncio.vuelta}</div>
+          <div className="obs-titulo">{anuncio.nombre}</div>
+          <div className="obs-linea">
+            <span className="obs-dato"><span className="obs-cifra">{reloj(anuncio.duracion_seg)}</span><span className="obs-palabra">vuelta</span></span>
+            <span className="obs-dato"><span className="obs-cifra">{anuncio.vuelta}</span><span className="obs-palabra">vueltas</span></span>
+            <span className="obs-dato"><span className="obs-cifra">{anuncio.km}</span><span className="obs-palabra">km</span></span>
           </div>
         </div>
-      ) : (
-        <div className="obs-barra">
-          <div className="obs-rotulo">EN VIVO</div>
-          <div className="obs-datos">
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Inicio</div>
-              <div className="obs-valor">{horaCorta(r.hora_inicio)}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Vuelta</div>
-              <div className="obs-valor">{r.vuelta}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">Km recorridos</div>
-              <div className="obs-valor">{totales.km_recorridos}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">En carrera</div>
-              <div className="obs-valor">{totales.en_carrera}</div>
-            </div>
-            <div className="obs-dato">
-              <div className="obs-etiqueta">DNS</div>
-              <div className="obs-valor">{totales.dns}</div>
-            </div>
-          </div>
-          <div className="obs-crono-barra">
-            <div className="obs-etiqueta">{etiquetaCrono}</div>
-            <div className="obs-valor">{r.terminada ? '--:--' : reloj(cuentaAtras)}</div>
-          </div>
-          <div className="obs-progreso" style={{ width: `${avance * 100}%` }} />
+        <div className="obs-crono">
+          <div className="obs-crono-rotulo">Descanso</div>
+          <div className="obs-crono-digitos">{digitos}</div>
         </div>
-      )}
-    </div>
+      </div>
+    ) : (
+      <div className="obs-barra">
+        <div className="obs-marca">
+          <div className="obs-marca-arriba">EN VIVO</div>
+        </div>
+        <div className="obs-cuerpo">
+          <div className="obs-antetitulo">Backyard Ultra Santo Domingo</div>
+          <div className="obs-titulo">
+            Vuelta {r.vuelta}
+            <span style={{ fontWeight: 400, color: '#c3cad6' }}> · Salida {horaCorta(r.hora_inicio)}</span>
+          </div>
+          <div className="obs-linea">
+            <span className="obs-dato"><span className="obs-cifra">{totales.km_recorridos}</span><span className="obs-palabra">km</span></span>
+            <span className="obs-dato"><span className="obs-cifra">{totales.en_carrera}</span><span className="obs-palabra">en carrera</span></span>
+            <span className="obs-dato"><span className="obs-cifra">{totales.dnf}</span><span className="obs-palabra">DNF</span></span>
+            <span className="obs-dato"><span className="obs-cifra">{totales.dns}</span><span className="obs-palabra">DNS</span></span>
+          </div>
+        </div>
+        <div className="obs-crono">
+          <div className="obs-crono-rotulo">{rotuloCrono}</div>
+          <div className="obs-crono-digitos">{digitos}</div>
+        </div>
+        <div className="obs-progreso" style={{ width: `${avance * 100}%` }} />
+      </div>
+    )
   );
 }
