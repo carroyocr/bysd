@@ -150,11 +150,13 @@
   to { opacity: 1; transform: none; }
 }
 
-/* ---------- Cronómetro suelto ---------- */
+/* ---------- Cronómetro suelto y clasificación ----------
+   Van en la esquina inferior derecha, a la misma altura del borde que la
+   barra: son para escenas donde la barra no está. */
 
 .obs-crono-suelto {
   position: absolute;
-  top: 70px;
+  bottom: 60px;
   right: 70px;
   min-width: 360px;
   padding: 22px 40px;
@@ -171,8 +173,8 @@
 
 .obs-clasificacion {
   position: absolute;
-  top: 70px;
-  left: 70px;
+  bottom: 60px;
+  right: 70px;
   width: 660px;
   background: var(--caja);
   border-top: 6px solid var(--rojo);
