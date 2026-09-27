@@ -95,7 +95,6 @@
 
 .obs-titulo {
   font-size: 36px;
- 
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
@@ -129,7 +128,6 @@
 }
 .obs-crono-digitos {
   font-size: 56px;
- 
   line-height: 1.1;
   color: #fff;
   font-variant-numeric: tabular-nums;
@@ -175,19 +173,18 @@
   position: absolute;
   bottom: 60px;
   right: 70px;
-  width: 660px;
+  width: 495px;
   background: var(--caja);
-  border-top: 6px solid var(--rojo);
-  border-radius: 14px;
+  border-top: 4px solid var(--rojo);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 .obs-clasificacion h2 {
   margin: 0;
-  padding: 16px 26px;
-  font-size: 26px;
- 
-  letter-spacing: 3px;
+  padding: 12px 20px;
+  font-size: 20px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   background: var(--azul);
   color: #fff;
@@ -195,26 +192,25 @@
 .obs-fila {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 11px 26px;
+  gap: 16px;
+  padding: 8px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 28px;
+  font-size: 21px;
 }
-.obs-fila .obs-puesto { width: 40px; color: var(--azul-claro); font-variant-numeric: tabular-nums; }
+.obs-fila .obs-puesto { width: 30px; color: var(--azul-claro); font-variant-numeric: tabular-nums; }
 .obs-fila .obs-bib {
-  width: 82px;
-  padding: 3px 0;
+  width: 62px;
+  padding: 2px 0;
   text-align: center;
   background: var(--rojo);
-  border-radius: 8px;
-  font-size: 25px;
- 
+  border-radius: 6px;
+  font-size: 19px;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
 .obs-fila .obs-nombre { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .obs-fila .obs-vueltas { font-variant-numeric: tabular-nums; }
-.obs-fila .obs-km { width: 130px; text-align: right; color: var(--azul-claro); font-size: 25px; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-km { width: 98px; text-align: right; color: var(--azul-claro); font-size: 19px; font-variant-numeric: tabular-nums; }
 .obs-fila.obs-fuera { opacity: 0.5; }
 
 /* ---------- Aviso de configuración ---------- */
