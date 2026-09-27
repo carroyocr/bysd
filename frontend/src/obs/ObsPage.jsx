@@ -134,7 +134,7 @@ export default function ObsPage() {
           <div className="obs-antetitulo">{datos.carrera.nombre}</div>
           <div className="obs-titulo">
             Vuelta {r.vuelta}
-            <span style={{ fontWeight: 400, color: '#a9c6f2' }}> · Salida {horaCorta(r.hora_inicio)}</span>
+            <span style={{ color: '#a9c6f2' }}> · Salida {horaCorta(r.hora_inicio)}</span>
           </div>
           <div className="obs-linea">
             <span className="obs-dato"><span className="obs-cifra">{totales.km_recorridos}</span><span className="obs-palabra">km</span></span>

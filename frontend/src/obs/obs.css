@@ -69,14 +69,15 @@
   background: var(--rojo);
   text-align: center;
 }
-.obs-marca-arriba { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: #ffd9de; }
-.obs-marca-grande { font-size: 48px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.obs-marca-arriba { font-size: 17px; line-height: 1.2; letter-spacing: 3px; color: #ffd9de; }
+.obs-marca-grande { font-size: 46px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 
 .obs-cuerpo {
   flex: 1;
   min-width: 0;
-  /* Las tres lineas (20 + 38 + 27 px) mas los huecos tienen que caber en los
-     138 px de la barra: si no, la del medio se pierde. */
+  /* Las tres lineas (19 + 36 + 26 px, con su altura de linea) mas los huecos
+     y el margen suman 127 px: caben en los 138 de la barra con aire. Si se
+     pasan, la del medio se pierde. */
   padding: 12px 30px;
   display: flex;
   flex-direction: column;
@@ -85,27 +86,27 @@
 }
 
 .obs-antetitulo {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.2;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--azul-claro);
 }
 
 .obs-titulo {
-  font-size: 38px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 36px;
+ 
+  line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* Fila de datos: cada dato con su número grande y su palabra pequeña */
-.obs-linea { display: flex; align-items: baseline; gap: 28px; font-size: 27px; }
+.obs-linea { display: flex; align-items: baseline; gap: 28px; font-size: 26px; line-height: 1.2; }
 .obs-linea .obs-dato { white-space: nowrap; }
-.obs-linea .obs-cifra { font-weight: 800; font-variant-numeric: tabular-nums; }
-.obs-linea .obs-palabra { font-size: 20px; color: var(--azul-claro); margin-left: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.obs-linea .obs-cifra { font-variant-numeric: tabular-nums; }
+.obs-linea .obs-palabra { font-size: 19px; color: var(--azul-claro); margin-left: 8px; text-transform: uppercase; letter-spacing: 1px; }
 
 /* Recuadro del cronómetro, a la derecha de la barra */
 .obs-crono {
@@ -120,16 +121,16 @@
   border-left: 3px solid var(--rojo);
 }
 .obs-crono-rotulo {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--azul-claro);
 }
 .obs-crono-digitos {
-  font-size: 58px;
-  font-weight: 800;
-  line-height: 1.05;
+  font-size: 56px;
+ 
+  line-height: 1.1;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
@@ -183,7 +184,7 @@
   margin: 0;
   padding: 16px 26px;
   font-size: 26px;
-  font-weight: 800;
+ 
   letter-spacing: 3px;
   text-transform: uppercase;
   background: var(--azul);
@@ -197,7 +198,7 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 28px;
 }
-.obs-fila .obs-puesto { width: 40px; color: var(--azul-claro); font-weight: 700; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-puesto { width: 40px; color: var(--azul-claro); font-variant-numeric: tabular-nums; }
 .obs-fila .obs-bib {
   width: 82px;
   padding: 3px 0;
@@ -205,12 +206,12 @@
   background: var(--rojo);
   border-radius: 8px;
   font-size: 25px;
-  font-weight: 800;
+ 
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
 .obs-fila .obs-nombre { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.obs-fila .obs-vueltas { font-weight: 800; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-vueltas { font-variant-numeric: tabular-nums; }
 .obs-fila .obs-km { width: 130px; text-align: right; color: var(--azul-claro); font-size: 25px; font-variant-numeric: tabular-nums; }
 .obs-fila.obs-fuera { opacity: 0.5; }
 
