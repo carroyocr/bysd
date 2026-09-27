@@ -55,6 +55,8 @@ export default function TransmisionObsPanel() {
   const [clave, setClave] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [cambiando, setCambiando] = useState(false);
+  // Las charlas tienen su propia barra, una direccion por actividad
+  const [actividades, setActividades] = useState([]);
 
   const sitio = window.location.origin;
 
@@ -75,6 +77,13 @@ export default function TransmisionObsPanel() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  useEffect(() => {
+    adminFetch(`${API_URL}/api/capacitaciones/admin/list`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setActividades(d?.capacitaciones || []))
+      .catch(() => { /* sin actividades no hay charlas que transmitir */ });
+  }, []);
+
   const cambiarClave = async () => {
     if (!window.confirm('Las direcciones que ya repartiste dejarán de funcionar y habrá que volver a pegarlas en OBS. ¿Cambiar la clave?')) return;
     setCambiando(true);
@@ -93,6 +102,9 @@ export default function TransmisionObsPanel() {
 
   const direccion = (vista) =>
     `${sitio}/obs/${vista}?clave=${encodeURIComponent(clave || '')}&race=${encodeURIComponent(raceCode || '')}`;
+
+  const direccionCharla = (actividad) =>
+    `${sitio}/obs/charla?actividad=${encodeURIComponent(actividad.id)}&race=${encodeURIComponent(raceCode || '')}`;
 
   const copiar = async (texto) => {
     try {
@@ -160,6 +172,45 @@ export default function TransmisionObsPanel() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Charlas y actividades</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            La misma barra, sin datos de carrera: la hora, el patrocinador de turno y quien expone
+            (nombre y especialidad). Los expositores se ponen en cada actividad, en Atletas → Actividades.
+            No lleva clave: no enseña nada que no sea público.
+          </p>
+          {actividades.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">No hay actividades creadas.</p>
+          ) : actividades.map((a) => (
+            <div key={a.id} className="space-y-1">
+              <div className="text-sm font-medium">
+                {a.name}
+                <span className="text-muted-foreground font-normal"> · {a.datetime ? String(a.datetime).slice(0, 10) : ''}</span>
+                {(a.expositores || []).length === 0 && (
+                  <span className="text-xs text-amber-600 ml-2">sin expositores</span>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input readOnly value={direccionCharla(a)} onFocus={(e) => e.target.select()} className="font-mono text-xs" data-testid={`obs-url-charla-${a.id}`} />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => copiar(direccionCharla(a))}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => window.open(`${direccionCharla(a)}&fondo=oscuro`, '_blank')} title="Verla en el navegador, sobre fondo oscuro">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Ver
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

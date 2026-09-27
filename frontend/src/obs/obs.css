@@ -134,6 +134,39 @@
   text-overflow: ellipsis;
 }
 
+/* La hora, en el bloque rojo de la charla: mas chica que un dorsal porque
+   lleva cinco caracteres y no tres */
+.obs-hora { font-size: 40px; }
+
+/* Caja del expositor de la charla, en el sitio del cronometro */
+.obs-expositor {
+  flex: 0 0 auto;
+  max-width: 560px;
+  min-width: 320px;
+  padding: 0 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  background: var(--caja);
+  border-left: 3px solid var(--rojo);
+}
+.obs-expositor-nombre {
+  font-size: 34px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obs-expositor-especialidad {
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--azul-claro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Recuadro del cronómetro, a la derecha de la barra */
 .obs-crono {
   flex: 0 0 auto;
