@@ -32,10 +32,14 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 
-  --naranja: #e8772e;
-  --naranja-claro: #f7b27a;
-  --panel: linear-gradient(90deg, rgba(10, 15, 28, 0.96) 0%, rgba(23, 32, 50, 0.94) 100%);
-  --caja: rgba(10, 15, 28, 0.96);
+  /* Blanco, azul y rojo: los colores de la bandera. El azul es el fondo, el
+     rojo el acento (bloque del dorsal, filete y progreso) y el blanco, el
+     texto. Nada de naranja aqui: en pantalla compite con el rojo. */
+  --azul: #05306e;
+  --azul-claro: #a9c6f2;
+  --rojo: #ce1126;
+  --panel: linear-gradient(90deg, rgba(3, 26, 62, 0.96) 0%, rgba(8, 54, 118, 0.94) 100%);
+  --caja: rgba(3, 26, 62, 0.97);
 }
 
 /* ---------- Barra inferior ---------- */
@@ -49,11 +53,11 @@
   display: flex;
   align-items: stretch;
   background: var(--panel);
-  border-top: 6px solid var(--naranja);
+  border-top: 6px solid var(--rojo);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* Bloque naranja de la izquierda: el rótulo EN VIVO o el dorsal que llega */
+/* Bloque rojo de la izquierda: el rótulo EN VIVO o el dorsal que llega */
 .obs-marca {
   flex: 0 0 auto;
   min-width: 138px;
@@ -62,10 +66,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--naranja);
+  background: var(--rojo);
   text-align: center;
 }
-.obs-marca-arriba { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: #401a02; }
+.obs-marca-arriba { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: #ffd9de; }
 .obs-marca-grande { font-size: 48px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 
 .obs-cuerpo {
@@ -85,7 +89,7 @@
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--naranja-claro);
+  color: var(--azul-claro);
 }
 
 .obs-titulo {
@@ -101,7 +105,7 @@
 .obs-linea { display: flex; align-items: baseline; gap: 28px; font-size: 27px; }
 .obs-linea .obs-dato { white-space: nowrap; }
 .obs-linea .obs-cifra { font-weight: 800; font-variant-numeric: tabular-nums; }
-.obs-linea .obs-palabra { font-size: 20px; color: #c3cad6; margin-left: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.obs-linea .obs-palabra { font-size: 20px; color: var(--azul-claro); margin-left: 8px; text-transform: uppercase; letter-spacing: 1px; }
 
 /* Recuadro del cronómetro, a la derecha de la barra */
 .obs-crono {
@@ -113,20 +117,20 @@
   align-items: center;
   justify-content: center;
   background: var(--caja);
-  border-left: 3px solid rgba(232, 119, 46, 0.5);
+  border-left: 3px solid var(--rojo);
 }
 .obs-crono-rotulo {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #c3cad6;
+  color: var(--azul-claro);
 }
 .obs-crono-digitos {
   font-size: 58px;
   font-weight: 800;
   line-height: 1.05;
-  color: var(--naranja);
+  color: #fff;
   font-variant-numeric: tabular-nums;
 }
 
@@ -135,7 +139,7 @@
   left: 0;
   bottom: 0;
   height: 6px;
-  background: var(--naranja);
+  background: var(--rojo);
   transition: width 1s linear;
 }
 
@@ -154,7 +158,7 @@
   min-width: 360px;
   padding: 22px 40px;
   background: var(--caja);
-  border-top: 6px solid var(--naranja);
+  border-top: 6px solid var(--rojo);
   border-radius: 14px;
   text-align: center;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
@@ -170,7 +174,7 @@
   left: 70px;
   width: 660px;
   background: var(--caja);
-  border-top: 6px solid var(--naranja);
+  border-top: 6px solid var(--rojo);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
@@ -182,8 +186,8 @@
   font-weight: 800;
   letter-spacing: 3px;
   text-transform: uppercase;
-  background: var(--naranja);
-  color: #2a1000;
+  background: var(--azul);
+  color: #fff;
 }
 .obs-fila {
   display: flex;
@@ -193,21 +197,21 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 28px;
 }
-.obs-fila .obs-puesto { width: 40px; color: #9aa4b5; font-weight: 700; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-puesto { width: 40px; color: var(--azul-claro); font-weight: 700; font-variant-numeric: tabular-nums; }
 .obs-fila .obs-bib {
   width: 82px;
   padding: 3px 0;
   text-align: center;
-  background: var(--naranja);
+  background: var(--rojo);
   border-radius: 8px;
   font-size: 25px;
   font-weight: 800;
-  color: #2a1000;
+  color: #fff;
   font-variant-numeric: tabular-nums;
 }
 .obs-fila .obs-nombre { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .obs-fila .obs-vueltas { font-weight: 800; font-variant-numeric: tabular-nums; }
-.obs-fila .obs-km { width: 130px; text-align: right; color: #9aa4b5; font-size: 25px; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-km { width: 130px; text-align: right; color: var(--azul-claro); font-size: 25px; font-variant-numeric: tabular-nums; }
 .obs-fila.obs-fuera { opacity: 0.5; }
 
 /* ---------- Aviso de configuración ---------- */
