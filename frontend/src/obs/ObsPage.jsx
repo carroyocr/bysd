@@ -129,7 +129,9 @@ export default function ObsPage() {
           <div className="obs-marca-arriba">EN VIVO</div>
         </div>
         <div className="obs-cuerpo">
-          <div className="obs-antetitulo">Backyard Ultra Santo Domingo</div>
+          {/* El nombre sale de la carrera que se está transmitiendo: el
+              campeonato y la carrera abierta no se llaman igual */}
+          <div className="obs-antetitulo">{datos.carrera.nombre}</div>
           <div className="obs-titulo">
             Vuelta {r.vuelta}
             <span style={{ fontWeight: 400, color: '#c3cad6' }}> · Salida {horaCorta(r.hora_inicio)}</span>
