@@ -8,9 +8,10 @@ import {
   LogOut, Settings, ClipboardList, Users, ChevronLeft, ChevronDown, Flag, UserPlus,
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
-  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed
+  Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed, MonitorPlay
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
+import TransmisionObsPanel from '../components/TransmisionObsPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
@@ -53,6 +54,8 @@ const TAB_PERMISSIONS = {
   // entrar a cualquiera de las dos partes, y dentro se le ensena la suya.
   'control': ['race-control', 'laps', 'control'],
   'lap-registry': ['laps', 'control'],
+  // Las vistas de OBS las arma quien lleva el control de la carrera.
+  'transmision': ['race-control', 'control'],
   // Tambien lo abre quien lleva las comunicaciones: es el mismo trabajo
   // que el envio de correos, con otro canal.
   'app-avisos': ['app-avisos', 'control', 'emails'],
@@ -97,6 +100,7 @@ const ADMIN_SECTIONS = [
     icon: Radio,
     items: [
       { id: 'control', label: 'Control de Carrera', icon: Radio },
+      { id: 'transmision', label: 'Transmisión (OBS)', icon: MonitorPlay },
       { id: 'animos', label: 'Ánimos Reportados', icon: ShieldAlert },
     ],
   },
@@ -179,6 +183,7 @@ const TAB_VIEWS = {
       puedeVerVueltas={permisos.vueltas}
     />
   ),
+  'transmision': () => <TransmisionObsPanel />,
   'app-avisos': () => <PushComposer />,
   'animos': () => <CheerModerationPanel />,
   'espectadores': () => <EspectadoresManagement />,

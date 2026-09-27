@@ -37,6 +37,7 @@ import MiCuentaPage from './pages/MiCuentaPage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import VerificarCarnetPage from './pages/VerificarCarnetPage';
+import ObsPage from './obs/ObsPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
 import useAndroidBack from './lib/androidBack';
@@ -66,6 +67,10 @@ export default function App() {
 
           {/* BYSD Live: app movil de seguimiento para espectadores, sin Navigation/Footer */}
           <Route path="/live/*" element={<LiveApp />} />
+
+          {/* Vistas de la transmision para OBS: sin Navigation/Footer y con el
+              fondo transparente, porque debajo va el video */}
+          <Route path="/obs/:vista" element={<ObsPage />} />
           
           {/* Public routes with Navigation/Footer */}
           <Route

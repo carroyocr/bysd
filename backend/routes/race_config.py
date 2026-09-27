@@ -106,7 +106,7 @@ async def get_active_race(db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"is_active": True}, 
-        {"_id": 0, "scan_key": 0}
+        {"_id": 0, "scan_key": 0, "overlay_key": 0}
     )
     
     if not config:
@@ -228,7 +228,7 @@ async def get_all_races(db=Depends(lambda: None)):
     
     races = await database.race_configurations.find(
         {}, 
-        {"_id": 0, "scan_key": 0}
+        {"_id": 0, "scan_key": 0, "overlay_key": 0}
     ).sort("created_at", -1).to_list(100)
     
     # Ensure legacy race BYSD-2026 is always included for historical results
@@ -250,7 +250,7 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"code": code}, 
-        {"_id": 0, "scan_key": 0}
+        {"_id": 0, "scan_key": 0, "overlay_key": 0}
     )
     
     # If not found in DB, check if it's a legacy race

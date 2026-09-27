@@ -1,0 +1,188 @@
+/*
+ * Vistas para OBS. Se diseñan sobre un lienzo de 1920 x 1080, que es la
+ * resolución con la que se transmite, y todo se mide en píxeles de ese lienzo
+ * multiplicados por --s: si la fuente de navegador se abre a otro tamaño, la
+ * barra se encoge entera en vez de descolocarse.
+ *
+ * El fondo es transparente a propósito: OBS pone debajo el video. Con
+ * ?fondo=oscuro se ve sobre negro, para revisarla en el navegador.
+ */
+.obs-raiz {
+  --s: calc(100vw / 1920);
+  --naranja: #e8772e;
+  --oscuro: rgba(17, 24, 39, 0.92);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #fff;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.obs-raiz.obs-fondo-oscuro { background: #0b1220; }
+.obs-raiz.obs-fondo-verde { background: #00b140; }
+
+/* ---------- Barra inferior ---------- */
+
+.obs-barra {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(120px * var(--s));
+  display: flex;
+  align-items: stretch;
+  background: var(--oscuro);
+  border-top: calc(5px * var(--s)) solid var(--naranja);
+}
+
+.obs-rotulo {
+  display: flex;
+  align-items: center;
+  padding: 0 calc(26px * var(--s));
+  background: var(--naranja);
+  font-size: calc(24px * var(--s));
+  font-weight: 700;
+  letter-spacing: calc(4px * var(--s));
+}
+
+.obs-datos { display: flex; flex: 1; align-items: center; min-width: 0; }
+
+.obs-dato {
+  padding: 0 calc(30px * var(--s));
+  border-right: calc(1px * var(--s)) solid rgba(255, 255, 255, 0.14);
+}
+
+.obs-dato:last-child { border-right: none; }
+.obs-etiqueta { font-size: calc(20px * var(--s)); color: #9ca3af; }
+.obs-valor { font-size: calc(40px * var(--s)); font-weight: 700; line-height: 1.15; }
+
+.obs-crono-barra { padding: 0 calc(34px * var(--s)); text-align: right; align-self: center; }
+.obs-crono-barra .obs-valor {
+  font-size: calc(58px * var(--s));
+  color: var(--naranja);
+  font-variant-numeric: tabular-nums;
+}
+
+.obs-progreso {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: calc(6px * var(--s));
+  background: var(--naranja);
+  transition: width 1s linear;
+}
+
+/* ---------- Anuncio de llegada, dentro de la barra ---------- */
+
+.obs-dorsal {
+  display: flex;
+  align-items: center;
+  padding: 0 calc(30px * var(--s));
+  background: var(--naranja);
+  font-size: calc(52px * var(--s));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.obs-atleta { flex: 1; min-width: 0; padding: 0 calc(30px * var(--s)); align-self: center; }
+.obs-atleta-vuelta {
+  font-size: calc(22px * var(--s));
+  letter-spacing: calc(2px * var(--s));
+  color: #f5b98a;
+  text-transform: uppercase;
+}
+.obs-atleta-nombre {
+  font-size: calc(48px * var(--s));
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.obs-entra { animation: obs-entra 0.35s ease-out; }
+@keyframes obs-entra {
+  from { opacity: 0; transform: translateY(calc(30px * var(--s))); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------- Cronómetro solo ---------- */
+
+.obs-crono-suelto {
+  position: absolute;
+  top: calc(60px * var(--s));
+  right: calc(60px * var(--s));
+  padding: calc(24px * var(--s)) calc(40px * var(--s));
+  background: var(--oscuro);
+  border-top: calc(5px * var(--s)) solid var(--naranja);
+  border-radius: calc(12px * var(--s));
+  text-align: center;
+}
+.obs-crono-suelto .obs-etiqueta { font-size: calc(26px * var(--s)); }
+.obs-crono-suelto .obs-digitos {
+  font-size: calc(120px * var(--s));
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--naranja);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Clasificación ---------- */
+
+.obs-clasificacion {
+  position: absolute;
+  top: calc(60px * var(--s));
+  left: calc(60px * var(--s));
+  width: calc(600px * var(--s));
+  background: var(--oscuro);
+  border-top: calc(5px * var(--s)) solid var(--naranja);
+  border-radius: calc(12px * var(--s));
+  overflow: hidden;
+}
+.obs-clasificacion h2 {
+  margin: 0;
+  padding: calc(18px * var(--s)) calc(26px * var(--s));
+  font-size: calc(28px * var(--s));
+  font-weight: 700;
+  letter-spacing: calc(2px * var(--s));
+  text-transform: uppercase;
+}
+.obs-fila {
+  display: flex;
+  align-items: center;
+  gap: calc(18px * var(--s));
+  padding: calc(12px * var(--s)) calc(26px * var(--s));
+  border-top: calc(1px * var(--s)) solid rgba(255, 255, 255, 0.1);
+  font-size: calc(28px * var(--s));
+}
+.obs-fila .obs-puesto { width: calc(42px * var(--s)); color: #9ca3af; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-bib {
+  width: calc(78px * var(--s));
+  padding: calc(2px * var(--s)) 0;
+  text-align: center;
+  background: var(--naranja);
+  border-radius: calc(6px * var(--s));
+  font-size: calc(24px * var(--s));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.obs-fila .obs-nombre { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.obs-fila .obs-vueltas { font-weight: 700; font-variant-numeric: tabular-nums; }
+.obs-fila .obs-km { width: calc(120px * var(--s)); text-align: right; color: #9ca3af; font-variant-numeric: tabular-nums; }
+.obs-fila.obs-fuera { opacity: 0.55; }
+
+/* ---------- Aviso de configuración ---------- */
+
+.obs-aviso {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: calc(24px * var(--s)) calc(36px * var(--s));
+  background: var(--oscuro);
+  border-radius: calc(12px * var(--s));
+  font-size: calc(28px * var(--s));
+  text-align: center;
+}
