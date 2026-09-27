@@ -13,7 +13,7 @@ import re
 from fastapi import APIRouter, HTTPException, Header, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime, timezone
 import io
 
@@ -60,6 +60,11 @@ TIPOS_ACTIVIDAD = {
 TIPO_POR_DEFECTO = "capacitacion"
 
 
+class Expositor(BaseModel):
+    nombre: str
+    especialidad: Optional[str] = ""
+
+
 class CapacitacionCreate(BaseModel):
     name: str
     datetime: str            # ISO string (fecha y hora)
@@ -68,6 +73,19 @@ class CapacitacionCreate(BaseModel):
     cost: float = 0.0
     is_free: bool = False
     tipo: str = TIPO_POR_DEFECTO
+    # Quien presenta: nombre y especialidad. Salen en la transmision (OBS).
+    expositores: List[Expositor] = []
+
+
+def _expositores_limpios(lista) -> list:
+    """Solo los que tienen nombre; la especialidad puede ir vacia."""
+    limpios = []
+    for e in lista or []:
+        datos = e if isinstance(e, dict) else e.dict()
+        nombre = (datos.get("nombre") or "").strip()
+        if nombre:
+            limpios.append({"nombre": nombre, "especialidad": (datos.get("especialidad") or "").strip()})
+    return limpios
 
 
 def _tipo_valido(tipo: Optional[str]) -> str:
@@ -85,6 +103,7 @@ def _serialize(doc, count=0, my_registered=False):
         "is_free": doc.get("is_free", False),
         "tipo": _tipo_valido(doc.get("tipo")),
         "tipo_label": TIPOS_ACTIVIDAD[_tipo_valido(doc.get("tipo"))],
+        "expositores": doc.get("expositores") or [],
         # Las actividades de antes no traen el campo y admiten preguntas: el
         # QR solo sirve si al escanearlo se puede preguntar, y cerrarlo es lo
         # excepcional (se hace al terminar la charla).
@@ -189,6 +208,7 @@ async def create_capacitacion(data: CapacitacionCreate, authorization: Optional[
         "cost": 0.0 if data.is_free else float(data.cost or 0),
         "is_free": data.is_free,
         "tipo": _tipo_valido(data.tipo),
+        "expositores": _expositores_limpios(data.expositores),
         "created_at": datetime.now(timezone.utc),
     }
     res = await database.capacitaciones.insert_one(doc)
@@ -212,11 +232,33 @@ async def update_capacitacion(cap_id: str, data: CapacitacionCreate, authorizati
         "cost": 0.0 if data.is_free else float(data.cost or 0),
         "is_free": data.is_free,
         "tipo": _tipo_valido(data.tipo),
+        "expositores": _expositores_limpios(data.expositores),
     }
     r = await database.capacitaciones.update_one({"_id": oid}, {"$set": upd})
     if r.matched_count == 0:
         raise HTTPException(status_code=404, detail="Capacitación no encontrada")
     return {"success": True}
+
+
+class ListaExpositores(BaseModel):
+    expositores: List[Expositor] = []
+
+
+@router.put("/admin/{cap_id}/expositores")
+async def guardar_expositores(cap_id: str, data: ListaExpositores, authorization: Optional[str] = Header(None)):
+    """Los expositores de una actividad, sin tocar el resto de la ficha."""
+    from server import db as database
+    from bson import ObjectId
+    _verify_admin(authorization)
+    try:
+        oid = ObjectId(cap_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID inválido")
+    limpios = _expositores_limpios(data.expositores)
+    r = await database.capacitaciones.update_one({"_id": oid}, {"$set": {"expositores": limpios}})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Actividad no encontrada")
+    return {"success": True, "expositores": limpios}
 
 
 @router.get("/admin/list")

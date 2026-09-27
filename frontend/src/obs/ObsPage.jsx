@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
 import usePatrocinadores, { urlLogo } from './usePatrocinadores';
+import useCharla from './useCharla';
 import './obs.css';
 
 /**
@@ -16,6 +17,7 @@ import './obs.css';
  *   /obs/crono?clave=...
  *   /obs/clasificacion?clave=...&filas=10
  *   /obs/patrocinadores?clave=...
+ *   /obs/charla?actividad=<id>&race=BYSD-2027   (sin clave: no lleva datos de carrera)
  */
 export default function ObsPage() {
   const { vista } = useParams();
@@ -49,7 +51,8 @@ export default function ObsPage() {
   });
   // Solo la vista de patrocinadores lo usa, pero un hook no puede ir dentro
   // de un if: se declara siempre y en las demás vistas queda apagado.
-  const patrocinador = usePatrocinadores(raceCode, vista === 'patrocinadores');
+  const patrocinador = usePatrocinadores(raceCode, vista === 'patrocinadores' || vista === 'charla');
+  const charla = useCharla(params.get('actividad'), vista === 'charla');
 
   // Es una función que devuelve marcado, no un componente: un componente
   // definido aquí dentro sería uno nuevo en cada latido del reloj y React
@@ -61,6 +64,50 @@ export default function ObsPage() {
       </div>
     </div>
   );
+
+  if (vista === 'charla') {
+    // La barra de una charla: nada de carrera. La hora en el bloque rojo, el
+    // patrocinador de turno en el cuerpo y quien expone en la caja de la
+    // derecha, donde en la carrera va el cronómetro.
+    if (charla.error) return enLienzo(<div className="obs-aviso">{charla.error}</div>);
+    const expositor = charla.expositor;
+    return enLienzo(
+      (patrocinador || expositor) && (
+        <div className="obs-barra">
+          <div className="obs-marca">
+            <div className="obs-marca-arriba">HORA</div>
+            <div className="obs-marca-grande obs-hora">{charla.hora}</div>
+          </div>
+          {patrocinador ? (
+            <>
+              {urlLogo(patrocinador.logo_url) && (
+                <div className="obs-logo">
+                  <img src={urlLogo(patrocinador.logo_url)} alt="" />
+                </div>
+              )}
+              <div className="obs-cuerpo obs-entra" key={patrocinador.id}>
+                <div className="obs-antetitulo">Patrocinador</div>
+                <div className="obs-titulo">{patrocinador.name}</div>
+                {patrocinador.text && <div className="obs-texto">{patrocinador.text}</div>}
+              </div>
+            </>
+          ) : (
+            <div className="obs-cuerpo">
+              <div className="obs-antetitulo">{charla.actividad?.tipo_label || 'Actividad'}</div>
+              <div className="obs-titulo">{charla.actividad?.name}</div>
+            </div>
+          )}
+          {expositor && (
+            <div className="obs-expositor obs-entra" key={`${expositor.nombre}-${expositor.especialidad}`}>
+              <div className="obs-crono-rotulo">Expositor</div>
+              <div className="obs-expositor-nombre">{expositor.nombre}</div>
+              {expositor.especialidad && <div className="obs-expositor-especialidad">{expositor.especialidad}</div>}
+            </div>
+          )}
+        </div>
+      )
+    );
+  }
 
   if (!clave) {
     return enLienzo(<div className="obs-aviso">Falta la clave de transmisión en la dirección.</div>);

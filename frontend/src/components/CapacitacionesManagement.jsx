@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { GraduationCap, Plus, Trash2, Loader2, Users, Download, Calendar, Clock, DollarSign, X, FileText, Link2 } from 'lucide-react';
+import { GraduationCap, Plus, Trash2, Loader2, Users, Download, Calendar, Clock, DollarSign, X, FileText, Link2, Mic2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { token as sesionToken } from '../lib/sesion';
 
@@ -20,7 +20,8 @@ const TIPOS_RESPALDO = [
   { value: 'otro', label: 'Otra actividad' },
 ];
 
-const emptyForm = { name: '', datetime: '', duration: '', program: '', cost: '', is_free: false, tipo: 'capacitacion' };
+const emptyForm = { name: '', datetime: '', duration: '', program: '', cost: '', is_free: false, tipo: 'capacitacion', expositores: [] };
+const expositorVacio = { nombre: '', especialidad: '' };
 
 export default function CapacitacionesManagement() {
   const [items, setItems] = useState([]);
@@ -86,6 +87,7 @@ export default function CapacitacionesManagement() {
           cost: form.is_free ? 0 : parseFloat(form.cost || 0),
           is_free: form.is_free,
           tipo: form.tipo,
+          expositores: form.expositores.filter((e) => e.nombre.trim()),
         }),
       });
       if (res.ok) {
@@ -98,6 +100,31 @@ export default function CapacitacionesManagement() {
       toast.error('Error de conexión');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Los expositores se editan desde la tarjeta de la actividad: nombre y
+  // especialidad, que es lo que sale en la barra de la transmision.
+  const [editandoExpositores, setEditandoExpositores] = useState(null); // { id, lista }
+  const [guardandoExpositores, setGuardandoExpositores] = useState(false);
+
+  const guardarExpositores = async () => {
+    if (!editandoExpositores) return;
+    setGuardandoExpositores(true);
+    try {
+      const res = await fetch(`${API_URL}/api/capacitaciones/admin/${editandoExpositores.id}/expositores`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ expositores: editandoExpositores.lista.filter((e) => e.nombre.trim()) }),
+      });
+      if (!res.ok) throw new Error('No se pudieron guardar los expositores');
+      toast.success('Expositores guardados');
+      setEditandoExpositores(null);
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setGuardandoExpositores(false);
     }
   };
 
@@ -139,6 +166,36 @@ export default function CapacitacionesManagement() {
     try { return new Date(iso).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' }); }
     catch { return iso; }
   };
+
+  // Marcado del editor de expositores. Es una funcion, no un componente
+  // definido aqui dentro: un componente anidado se remonta en cada tecla y
+  // los campos pierden el foco.
+  const editorExpositores = (lista, cambiar, prefijo) => (
+    <div className="space-y-2">
+      {lista.map((e, i) => (
+        <div key={i} className="flex gap-2 items-center">
+          <Input
+            value={e.nombre}
+            onChange={(ev) => cambiar(lista.map((x, j) => (j === i ? { ...x, nombre: ev.target.value } : x)))}
+            placeholder="Nombre"
+            data-testid={`${prefijo}-nombre-${i}`}
+          />
+          <Input
+            value={e.especialidad}
+            onChange={(ev) => cambiar(lista.map((x, j) => (j === i ? { ...x, especialidad: ev.target.value } : x)))}
+            placeholder="Especialidad"
+            data-testid={`${prefijo}-especialidad-${i}`}
+          />
+          <Button size="sm" variant="ghost" onClick={() => cambiar(lista.filter((_, j) => j !== i))} className="text-red-500 shrink-0" title="Quitar">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      ))}
+      <Button size="sm" variant="outline" onClick={() => cambiar([...lista, { ...expositorVacio }])} data-testid={`${prefijo}-agregar`}>
+        <Plus className="w-4 h-4 mr-1.5" />Agregar expositor
+      </Button>
+    </div>
+  );
 
   return (
     <div className="space-y-6" data-testid="capacitaciones-management">
@@ -186,6 +243,11 @@ export default function CapacitacionesManagement() {
             <div className="space-y-2">
               <Label>Programa</Label>
               <Textarea value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} rows={4} placeholder="Describe el programa, la agenda o el lugar..." data-testid="cap-program" />
+            </div>
+            <div className="space-y-2">
+              <Label>Expositores</Label>
+              <p className="text-xs text-muted-foreground">Nombre y especialidad. Salen en la barra de la transmisión (OBS).</p>
+              {editorExpositores(form.expositores, (lista) => setForm({ ...form, expositores: lista }), 'cap-expositor')}
             </div>
             <div className="grid sm:grid-cols-2 gap-4 items-end">
               <div className="space-y-2">
@@ -235,6 +297,40 @@ export default function CapacitacionesManagement() {
                       <span className="flex items-center gap-1 text-[#E8772E] font-medium"><Users className="w-4 h-4" />{c.registered_count} inscritos</span>
                     </div>
                     {c.program && <p className="text-sm text-muted-foreground mt-2 line-clamp-2 whitespace-pre-wrap">{c.program}</p>}
+
+                    {/* Expositores: se ven en la tarjeta y se editan ahi mismo */}
+                    <div className="mt-3">
+                      {editandoExpositores?.id === c.id ? (
+                        <div className="space-y-2">
+                          {editorExpositores(editandoExpositores.lista, (lista) => setEditandoExpositores({ id: c.id, lista }), `exp-${c.id}`)}
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={guardarExpositores} disabled={guardandoExpositores} className="bg-[#E8772E] hover:bg-[#d06a28]" data-testid={`save-expositores-${c.id}`}>
+                              {guardandoExpositores && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Guardar expositores
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditandoExpositores(null)}>Cancelar</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                          <Mic2 className="w-4 h-4 text-muted-foreground" />
+                          {(c.expositores || []).length === 0 ? (
+                            <span className="text-muted-foreground italic">Sin expositores</span>
+                          ) : (c.expositores || []).map((e, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded-full bg-muted">
+                              {e.nombre}{e.especialidad ? <span className="text-muted-foreground"> · {e.especialidad}</span> : null}
+                            </span>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setEditandoExpositores({ id: c.id, lista: (c.expositores || []).length ? c.expositores.map((e) => ({ ...e })) : [{ ...expositorVacio }] })}
+                            className="text-[#E8772E] hover:underline"
+                            data-testid={`edit-expositores-${c.id}`}
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button size="sm" variant="outline" onClick={() => openParticipants(c)} data-testid={`view-participants-${c.id}`}>
