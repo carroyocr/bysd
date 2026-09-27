@@ -156,16 +156,18 @@
   position: absolute;
   bottom: 60px;
   right: 70px;
-  min-width: 360px;
-  padding: 22px 40px;
+  /* La misma caja que lleva el cronometro dentro de la barra */
+  height: 138px;
+  min-width: 280px;
+  padding: 0 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: var(--caja);
   border-top: 6px solid var(--rojo);
-  border-radius: 14px;
-  text-align: center;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
 }
-.obs-crono-suelto .obs-crono-rotulo { font-size: 22px; }
-.obs-crono-suelto .obs-crono-digitos { font-size: 108px; }
 
 /* ---------- Clasificación ---------- */
 
