@@ -93,10 +93,13 @@ class RaceConfigUpdate(BaseModel):
     # demas. Antes se deducia de si la carrera tenia patrocinadores
     # publicados, y eso dejaba enlaces muertos en el menu.
     show_sponsors_page: Optional[bool] = None
-    # Registro publico de voluntarios para la carrera (el campeonato mundial
-    # siempre esta abierto). Apagado mientras solo se reclutan voluntarios
-    # para el campeonato.
+    # Registro publico de voluntarios, uno por evento. El de la carrera nace
+    # apagado (se enciende cuando toca reclutar para enero) y el del campeonato
+    # nace encendido, que es como estuvo desde que existe: el interruptor se
+    # agrego para poder cerrarlo cuando el equipo este completo, no para
+    # cambiar el punto de partida.
     show_volunteer_carrera: Optional[bool] = None
+    show_volunteer_campeonato: Optional[bool] = None
 
 
 @router.get("/active")
@@ -143,6 +146,8 @@ async def get_active_race(db=Depends(lambda: None)):
     # Por defecto apagado: solo se reciben voluntarios del campeonato mundial
     if "show_volunteer_carrera" not in config:
         config["show_volunteer_carrera"] = False
+    if "show_volunteer_campeonato" not in config:
+        config["show_volunteer_campeonato"] = True
 
     return config
 
@@ -189,7 +194,8 @@ async def get_page_visibility(db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"is_active": True},
-        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_sponsors_page": 1, "show_volunteer_carrera": 1, "name": 1, "code": 1}
+        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_sponsors_page": 1, "show_volunteer_carrera": 1,
+         "show_volunteer_campeonato": 1, "name": 1, "code": 1}
     )
 
     # La sala de prensa no tiene interruptor: se ensena cuando hay al menos una
@@ -204,6 +210,7 @@ async def get_page_visibility(db=Depends(lambda: None)):
             "show_preregistration": True,
             "show_sponsors_page": True,
             "show_volunteer_carrera": False,
+            "show_volunteer_campeonato": True,
             "show_press_page": hay_notas,
             "race_name": "Backyard Ultra Santo Domingo",
             "race_code": ""
@@ -216,6 +223,9 @@ async def get_page_visibility(db=Depends(lambda: None)):
         "show_preregistration": config.get("show_preregistration", True),
         "show_sponsors_page": config.get("show_sponsors_page", True) is not False,
         "show_volunteer_carrera": config.get("show_volunteer_carrera", False) is True,
+        # Encendido salvo que se apague a mano: llevaba abierto desde siempre
+        # y un documento antiguo sin el campo no puede cerrarlo de golpe.
+        "show_volunteer_campeonato": config.get("show_volunteer_campeonato", True) is not False,
         "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
         "race_code": config.get("code", "")
     }
