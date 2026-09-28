@@ -35,9 +35,13 @@ from pymongo import MongoClient
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 
-# Sin MONGO_URL en el entorno vale la del backend, como hace `server.py`: asi
-# el ensayo contra la base local se lanza sin preparar nada.
-load_dotenv(os.path.join(RAIZ, ".env"))
+# Sin MONGO_URL en el entorno valen las del backend, como hace `server.py`:
+# asi el ensayo contra la base local se lanza sin preparar nada. Con MONGO_URL
+# puesta no se toca el `.env`: si solo se saltara esa variable, el DB_NAME del
+# fichero se colaria junto a la URL de produccion y el script miraria una base
+# que no existe -0 logos revisados y ni un aviso-.
+if not os.environ.get("MONGO_URL"):
+    load_dotenv(os.path.join(RAIZ, ".env"))
 
 from services import logos  # noqa: E402
 
