@@ -63,7 +63,7 @@ export default function SateliteChampionship() {
               <Globe className="w-4 h-4" />
               Evento Internacional
             </Badge>
-            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
+            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
               Campeonato Mundial por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

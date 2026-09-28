@@ -24,7 +24,7 @@ export default function Logistics() {
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
           <div className="text-center space-y-4">
-            <h2 className="font-display text-4xl sm:text-5xl text-foreground">
+            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
               Instalaciones y Servicios
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
