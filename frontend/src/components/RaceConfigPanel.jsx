@@ -71,7 +71,8 @@ export default function RaceConfigPanel() {
     show_community_page: true,
     show_preregistration: true,
     show_sponsors_page: true,
-    show_volunteer_carrera: false
+    show_volunteer_carrera: false,
+    show_volunteer_campeonato: true
   });
 
   const token = sesionToken();
@@ -112,7 +113,8 @@ export default function RaceConfigPanel() {
         show_preregistration: activeData.show_preregistration !== false,
         show_sponsors_page: activeData.show_sponsors_page !== false,
         // Apagado salvo que esté explícitamente encendido
-        show_volunteer_carrera: activeData.show_volunteer_carrera === true
+        show_volunteer_carrera: activeData.show_volunteer_carrera === true,
+        show_volunteer_campeonato: activeData.show_volunteer_campeonato !== false
       });
       
       // Load notification counts if race has manuals
@@ -1602,13 +1604,51 @@ export default function RaceConfigPanel() {
                     <div className="mt-3 pt-3 border-t border-dashed">
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         {editForm.show_volunteer_carrera ? (
-                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se puede postular a la carrera y al campeonato</>
+                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se reciben voluntarios para la carrera</>
                         ) : (
-                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - Solo se reciben voluntarios del Campeonato Mundial</>
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - No se reciben voluntarios para la carrera</>
                         )}
                       </p>
                     </div>
                   </div>
+                  {/* Volunteer Registration (campeonato) Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_volunteer_campeonato ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_volunteer_campeonato ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Users className={`w-5 h-5 ${editForm.show_volunteer_campeonato ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Voluntarios del Campeonato Mundial</h4>
+                          <p className="text-sm text-muted-foreground">Postulaciones para el campeonato</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_volunteer_campeonato}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_volunteer_campeonato: checked})}
+                        data-testid="toggle-volunteer-campeonato"
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_volunteer_campeonato ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se reciben voluntarios para el campeonato</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - No se reciben voluntarios para el campeonato</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!editForm.show_volunteer_carrera && !editForm.show_volunteer_campeonato && (
+                    <div className="p-3 border border-amber-200 bg-amber-50 rounded-lg">
+                      <p className="text-xs text-amber-800 flex items-center gap-1.5">
+                        <EyeOff className="w-3 h-3" />
+                        Con los dos apagados no se reciben voluntarios para nada: la
+                        página de postulación lo dirá en vez de pedir datos.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

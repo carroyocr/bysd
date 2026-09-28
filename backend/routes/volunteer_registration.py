@@ -30,12 +30,24 @@ def evento_query(evento: str) -> dict:
 def eventos_abiertos(active_race: Optional[dict]) -> List[str]:
     """Eventos que aceptan postulaciones NUEVAS de voluntarios.
 
-    El campeonato siempre está abierto. El registro para la carrera se
-    enciende desde el panel (race_configurations.show_volunteer_carrera) y
-    está apagado por defecto, para no confundir a quien se postula."""
-    if (active_race or {}).get("show_volunteer_carrera") is True:
-        return ["carrera", "campeonato"]
-    return ["campeonato"]
+    Cada uno tiene su interruptor en el panel. El de la carrera nace apagado
+    (se enciende cuando toca reclutar para enero) y el del campeonato nace
+    encendido, que es como estuvo desde que existe: un documento de carrera
+    antiguo, sin el campo, no puede quedarse cerrado de golpe.
+
+    Puede devolver la lista vacia -- los dos apagados -- y eso es una respuesta
+    valida, no un error: significa que ya no se reciben voluntarios. Quien la
+    use tiene que decirlo en pantalla en vez de enseñar un selector sin nada.
+    """
+    carrera = (active_race or {}).get("show_volunteer_carrera") is True
+    campeonato = (active_race or {}).get("show_volunteer_campeonato") is not False
+
+    abiertos = []
+    if carrera:
+        abiertos.append("carrera")
+    if campeonato:
+        abiertos.append("campeonato")
+    return abiertos
 
 
 def nombre_evento(active_race: Optional[dict], evento: Optional[str]) -> str:

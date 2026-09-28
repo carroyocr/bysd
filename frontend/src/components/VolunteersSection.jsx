@@ -162,9 +162,22 @@ export default function VolunteersSection() {
                   <p className="text-muted-foreground">
                     ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
                   </p>
-                  {config?.show_volunteer_carrera !== true && (
+                  {config?.show_volunteer_carrera !== true
+                    && config?.show_volunteer_campeonato !== false && (
                     <p className="text-sm font-medium text-primary">
                       Por ahora solo recibimos postulaciones para el Campeonato Mundial por Equipos.
+                    </p>
+                  )}
+                  {config?.show_volunteer_carrera === true
+                    && config?.show_volunteer_campeonato === false && (
+                    <p className="text-sm font-medium text-primary">
+                      Por ahora solo recibimos postulaciones para la carrera.
+                    </p>
+                  )}
+                  {config?.show_volunteer_carrera !== true
+                    && config?.show_volunteer_campeonato === false && (
+                    <p className="text-sm font-medium text-primary">
+                      Por ahora no estamos recibiendo postulaciones de voluntarios.
                     </p>
                   )}
                 </div>
