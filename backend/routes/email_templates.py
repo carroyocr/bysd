@@ -468,6 +468,98 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "recordatorio_pago",
+        "name": "Recordatorio de pago - con plazo o cancelar",
+        "description": (
+            "El recordatorio de la fecha límite, con los dos enlaces: pedir plazo "
+            "abonando una parte, o cancelar y liberar el cupo"
+        ),
+        "subject": "Tu cupo en {{race_name}}: hasta el 30 de septiembre",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Falta tu pago"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu inscripción a <strong>{{race_name}}</strong> sigue pendiente de pago. "
+                "El plazo para completarla vence el <strong>30 de septiembre</strong>."),
+            e.separador(),
+            e.h2("¿Necesitas más tiempo?"),
+            e.p("No hace falta que pierdas el cupo. Puedes abonar una parte ahora "
+                "—desde RD$ 1,000— y proponer tú mismo la fecha en la que saldas el "
+                "resto, hasta el <strong>15 de noviembre</strong>. Con el abono "
+                "aprobado, tu cupo queda reservado."),
+            e.boton("Pedir más tiempo para pagar", "{{athlete_plazo_link}}"),
+            e.separador(),
+            e.h2("¿Ya no vas a participar?"),
+            e.p("Dínoslo y liberas el cupo para alguien de la lista de espera. "
+                "Se agradece más de lo que parece."),
+            e.boton("Cancelar mi inscripción", "{{athlete_cancel_link}}"),
+            e.separador(),
+            e.p("Si ya pagaste y no nos has enviado el comprobante, hazlo desde tu "
+                "perfil y no hace falta que hagas nada más.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_solicitado",
+        "name": "Plazo de pago - solicitud recibida",
+        "description": "Se envía cuando el atleta pide plazo y envía su abono",
+        "subject": "Recibimos tu solicitud - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Solicitud recibida"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Recibimos tu abono y tu propuesta de fecha. La revisamos y te "
+                "confirmamos por este mismo medio."),
+            e.linea("Abonaste", "RD$ {{plazo_monto}}"),
+            e.linea("Queda por pagar", "RD$ {{plazo_restante}}"),
+            e.linea("Fecha que propones", "{{plazo_fecha}}"),
+            e.separador(),
+            e.p("Tu cupo queda reservado en cuanto aprobemos la solicitud.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_aprobado",
+        "name": "Plazo de pago - aprobado",
+        "description": "Se envía cuando la organización aprueba el plazo",
+        "subject": "Tu cupo está reservado - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Cupo reservado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Aprobamos tu abono: tu cupo en <strong>{{race_name}}</strong> queda "
+                "reservado."),
+            e.linea("Abonado", "RD$ {{plazo_monto}}"),
+            e.linea("Queda por pagar", "RD$ {{plazo_restante}}"),
+            e.linea("Fecha acordada", "{{plazo_fecha}}"),
+            e.separador(),
+            e.p("Cuando completes el pago, sube el comprobante desde tu perfil."),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_rechazado",
+        "name": "Plazo de pago - no aprobado",
+        "description": "Se envía cuando la organización no aprueba el plazo",
+        "subject": "Sobre tu solicitud de plazo - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("No pudimos aprobar tu solicitud"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Revisamos tu solicitud de plazo para <strong>{{race_name}}</strong> y "
+                "no pudimos aprobarla."),
+            e.linea("Motivo", "{{plazo_motivo}}"),
+            e.separador(),
+            e.p("Puedes volver a enviarla corrigiendo lo que haga falta:"),
+            e.boton("Enviar otra solicitud", "{{athlete_plazo_link}}"),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
         "id": "athlete_cancellation",
         "name": "Confirmación de Cancelación - Atleta",
         "description": "Se envía cuando un atleta cancela su registro",

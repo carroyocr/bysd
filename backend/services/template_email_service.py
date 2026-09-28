@@ -339,7 +339,9 @@ def build_athlete_data(athlete: Dict, edit_token: str = None) -> Dict[str, str]:
     edit_link = ""
     if edit_token:
         edit_link = f"{BASE_URL}/inscripcion/editar/{edit_token}"
-    
+
+    token_propio = edit_token or athlete.get("edit_token") or ""
+
     return {
         "athlete_nombre": nombre,
         "athlete_apellidos": apellidos,
@@ -353,6 +355,13 @@ def build_athlete_data(athlete: Dict, edit_token: str = None) -> Dict[str, str]:
         "athlete_total_km": str(athlete.get("total_km", 0)),
         "athlete_status": athlete.get("status", ""),
         "athlete_edit_link": edit_link,
+        # Los dos enlaces del recordatorio de pago. Salen del token del propio
+        # registro y no del parametro `edit_token`, que casi nadie pasa: si
+        # dependieran de el llegarian vacios justo en el correo que importa.
+        # `athlete_edit_link` se queda como estaba, para no cambiar lo que ya
+        # se envia con las plantillas de siempre.
+        "athlete_plazo_link": f"{BASE_URL}/plazo-de-pago?token={token_propio}" if token_propio else "",
+        "athlete_cancel_link": f"{BASE_URL}/cancelar-registro?token={token_propio}" if token_propio else "",
     }
 
 

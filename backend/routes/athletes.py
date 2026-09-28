@@ -1201,6 +1201,16 @@ async def get_my_races(authorization: str = Header(None)):
             "status": reg.get("status", "registered"),
             "payment_status": reg.get("payment_status", "pending"),
             "payment_receipt_status": reg.get("payment_receipt", {}).get("status") if reg.get("payment_receipt") else None,
+            # Solo lo que el perfil necesita pintar: el estado y la fecha
+            # acordada. El comprobante del abono se queda en el panel.
+            "plazo_pago": (
+                {
+                    "estado": reg["plazo_pago"].get("estado"),
+                    "fecha_propuesta": reg["plazo_pago"].get("fecha_propuesta"),
+                    "monto_abonado": reg["plazo_pago"].get("monto_abonado"),
+                }
+                if reg.get("plazo_pago") else None
+            ),
             "edit_token": edit_token,
             "laps_completed": reg.get("laps_completed", 0),
             "is_active": race_config.get("is_active", False) if race_config else False

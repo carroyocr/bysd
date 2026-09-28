@@ -8,7 +8,7 @@ import os
 import secrets
 import hashlib
 
-from services import rate_limit
+from services import plazos, rate_limit
 from services.auth import require_permission
 
 router = APIRouter(prefix="/api/registration", tags=["registration"])
@@ -1381,6 +1381,137 @@ async def get_payment_info_for_athlete(token: str):
     }
 
 
+# ==================== PLAZO PARA TERMINAR DE PAGAR ====================
+#
+# Quien no llega a la fecha limite abona una parte, propone cuando salda el
+# resto y con eso conserva el cupo. Las reglas viven en `services/plazos.py`;
+# aqui solo esta el cableado.
+#
+# Va por token y no por sesion a proposito: el enlace sale en un correo a
+# ciento veinte personas, y obligar a iniciar sesion primero es perder a la
+# mitad por el camino.
+
+
+@router.get("/plazo/{token}")
+async def ver_plazo(token: str):
+    """Lo que necesita la pagina del plazo: la carrera, lo que cuesta y si se
+    puede pedir."""
+    registration = await registrations_collection.find_one(
+        {"edit_token": token},
+        {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "race_code": 1, "bib": 1,
+         "status": 1, "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1},
+    )
+    if not registration:
+        raise HTTPException(status_code=404, detail="No encontramos tu inscripción")
+
+    carrera = await db["race_configurations"].find_one(
+        {"code": registration.get("race_code")},
+        {"_id": 0, "name": 1, "date": 1, "registration_cost": 1,
+         "payment_account_name": 1, "payment_account_id": 1, "payment_bank_name": 1,
+         "payment_account_type": 1, "payment_account_number": 1},
+    ) or {}
+
+    costo = float(carrera.get("registration_cost") or 0)
+    return {
+        "nombre": f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip(),
+        "email": registration.get("email"),
+        "carrera": carrera,
+        "costo": costo,
+        "abono_minimo": plazos.ABONO_MINIMO,
+        "fecha_tope": plazos.FECHA_TOPE.isoformat(),
+        "hoy": plazos.hoy().isoformat(),
+        "plazo": registration.get("plazo_pago"),
+        "impedimento": plazos.puede_solicitar(registration),
+    }
+
+
+@router.post("/plazo/{token}")
+async def pedir_plazo(
+    token: str,
+    monto_abonado: str = Form(...),
+    fecha_propuesta: str = Form(...),
+    payment_date: str = Form(...),
+    bank_origin: str = Form(...),
+    transfer_number: Optional[str] = Form(None),
+    receipt_image: UploadFile = File(...),
+):
+    """Pide plazo: abono, fecha propuesta y el comprobante del abono."""
+    registration = await registrations_collection.find_one({"edit_token": token})
+    if not registration:
+        raise HTTPException(status_code=404, detail="No encontramos tu inscripción")
+
+    impedimento = plazos.puede_solicitar(registration)
+    if impedimento:
+        raise HTTPException(status_code=400, detail=impedimento)
+
+    carrera = await db["race_configurations"].find_one(
+        {"code": registration.get("race_code")}, {"registration_cost": 1}
+    ) or {}
+    solicitud = plazos.revisar_solicitud(
+        monto_abonado, fecha_propuesta, float(carrera.get("registration_cost") or 0)
+    )
+
+    # El comprobante del abono se guarda igual que cualquier otro: en GridFS,
+    # que el disco del contenedor se borra en cada despliegue.
+    from services import file_storage
+
+    permitidos = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]
+    if receipt_image.content_type not in permitidos:
+        raise HTTPException(status_code=400, detail="Formato no válido. Usa JPG, PNG, WebP o PDF.")
+
+    contenido = await receipt_image.read()
+    if len(contenido) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="El archivo no puede pasar de 10MB")
+
+    ext = receipt_image.filename.split(".")[-1] if "." in receipt_image.filename else "jpg"
+    tipo = receipt_image.content_type
+    if tipo != "application/pdf":
+        contenido, ext, tipo = file_storage.compress_image(contenido, ext, tipo)
+
+    nombre_archivo = (
+        f"abono_{registration['race_code']}_"
+        f"{registration['email'].replace('@', '_')}_{secrets.token_hex(6)}.{ext}"
+    )
+    await file_storage.save(nombre_archivo, contenido, tipo, file_storage.FOLDER_RECEIPTS)
+
+    solicitud["comprobante"] = {
+        "image_path": f"/api/uploads/receipts/{nombre_archivo}",
+        "payment_date": payment_date,
+        "bank_origin": bank_origin,
+        "transfer_number": transfer_number,
+    }
+
+    await registrations_collection.update_one(
+        {"edit_token": token},
+        {"$set": {"plazo_pago": solicitud, "updated_at": datetime.now(timezone.utc)}},
+    )
+
+    try:
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_athlete_data
+        )
+
+        carrera_completa = await db["race_configurations"].find_one(
+            {"code": registration.get("race_code")}
+        )
+        await send_email_with_template(
+            db=db,
+            template_id="plazo_solicitado",
+            to_email=registration.get("email"),
+            data={
+                **build_race_data(carrera_completa),
+                **build_athlete_data(registration),
+                "plazo_monto": f"{solicitud['monto_abonado']:,.0f}",
+                "plazo_fecha": solicitud["fecha_propuesta"],
+                "plazo_restante": f"{plazos.restante(solicitud, float(carrera.get('registration_cost') or 0)):,.0f}",
+            },
+        )
+    except Exception as e:
+        print(f"Error enviando el correo de solicitud de plazo: {e}")
+
+    return {"message": "Solicitud enviada", "plazo": solicitud}
+
+
 @router.post("/submit-payment-receipt/{token}")
 async def submit_payment_receipt(
     token: str,
@@ -1531,6 +1662,122 @@ async def get_pending_receipts(race_code: str):
     }
 
 
+@admin_router.get("/plazos")
+async def listar_plazos(race_code: str, estado: Optional[str] = None):
+    """Las solicitudes de plazo de una carrera, de la mas vieja a la mas nueva.
+
+    Ese orden es el de la cola: quien lo pidio primero se revisa primero.
+    """
+    filtro = {"race_code": race_code, "plazo_pago": {"$exists": True}}
+    if estado in plazos.ESTADOS:
+        filtro["plazo_pago.estado"] = estado
+
+    registros = await registrations_collection.find(
+        filtro,
+        {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "bib": 1, "telefono": 1,
+         "status": 1, "payment_status": 1, "plazo_pago": 1},
+    ).to_list(1000)
+    registros.sort(key=lambda r: (r.get("plazo_pago") or {}).get("solicitado_at") or datetime.min)
+
+    carrera = await db["race_configurations"].find_one(
+        {"code": race_code}, {"registration_cost": 1}
+    ) or {}
+    costo = float(carrera.get("registration_cost") or 0)
+
+    for r in registros:
+        plazo = r.get("plazo_pago") or {}
+        if plazo.get("solicitado_at"):
+            plazo["solicitado_at"] = plazo["solicitado_at"].isoformat()
+        if plazo.get("revisado_at"):
+            plazo["revisado_at"] = plazo["revisado_at"].isoformat()
+        r["restante"] = plazos.restante(plazo, costo)
+
+    return {
+        "race_code": race_code,
+        "costo": costo,
+        "total": len(registros),
+        "pendientes": sum(
+            1 for r in registros
+            if (r.get("plazo_pago") or {}).get("estado") == plazos.PENDIENTE
+        ),
+        "solicitudes": registros,
+    }
+
+
+@admin_router.put("/plazo/{email}")
+async def revisar_plazo(
+    email: str, race_code: str, aprobado: bool, motivo: Optional[str] = None
+):
+    """Aprueba o rechaza una solicitud de plazo.
+
+    El cupo se asegura aqui, no al enviarla: si bastara con enviarla,
+    cualquiera reservaria un cupo escribiendo una fecha.
+
+    Aprobar **no** marca la inscripcion como pagada -- falta el resto -- pero
+    si anota el abono como ingreso. Cuando llegue el pago final,
+    `review-receipt` descuenta lo ya abonado para no contarlo dos veces.
+    """
+    registro = await registrations_collection.find_one(
+        {"email": email.lower(), "race_code": race_code}
+    )
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    plazo = registro.get("plazo_pago") or {}
+    if not plazo:
+        raise HTTPException(status_code=400, detail="Ese atleta no pidió plazo")
+
+    estado = plazos.APROBADO if aprobado else plazos.RECHAZADO
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"$set": {
+            "plazo_pago.estado": estado,
+            "plazo_pago.revisado_at": datetime.now(timezone.utc),
+            "plazo_pago.motivo_rechazo": (motivo or "") if not aprobado else "",
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+
+    if aprobado:
+        try:
+            from routes.finances import create_payment_income
+
+            nombre = f"{registro.get('nombre', '')} {registro.get('apellidos', '')}".strip()
+            await create_payment_income(
+                email=email.lower(),
+                nombre=f"{nombre} (abono)",
+                monto=float(plazo.get("monto_abonado") or 0),
+                race_code=race_code,
+            )
+        except Exception as e:
+            print(f"Error anotando el ingreso del abono: {e}")
+
+    try:
+        from services.template_email_service import (
+            send_email_with_template, build_race_data, build_athlete_data
+        )
+
+        carrera = await db["race_configurations"].find_one({"code": race_code})
+        costo = float((carrera or {}).get("registration_cost") or 0)
+        await send_email_with_template(
+            db=db,
+            template_id="plazo_aprobado" if aprobado else "plazo_rechazado",
+            to_email=email.lower(),
+            data={
+                **build_race_data(carrera),
+                **build_athlete_data(registro),
+                "plazo_monto": f"{float(plazo.get('monto_abonado') or 0):,.0f}",
+                "plazo_fecha": plazo.get("fecha_propuesta", ""),
+                "plazo_restante": f"{plazos.restante(plazo, costo):,.0f}",
+                "plazo_motivo": motivo or "",
+            },
+        )
+    except Exception as e:
+        print(f"Error enviando el correo de revision del plazo: {e}")
+
+    return {"success": True, "estado": estado}
+
+
 @admin_router.put("/review-receipt/{email}")
 async def review_payment_receipt(email: str, race_code: str, approved: bool):
     """Approve or reject a payment receipt"""
@@ -1580,10 +1827,18 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
             registration_cost = race_config.get("registration_cost", 3500) if race_config else 3500
             
             nombre = f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip()
+            # Quien vino por el plazo ya tiene su abono anotado como ingreso al
+            # aprobarselo: aqui solo entra lo que quedaba.
+            plazo = registration.get("plazo_pago") or {}
+            monto = (
+                plazos.restante(plazo, registration_cost)
+                if plazo.get("estado") == plazos.APROBADO
+                else registration_cost
+            )
             await create_payment_income(
                 email=email.lower(),
                 nombre=nombre,
-                monto=registration_cost,
+                monto=monto,
                 race_code=race_code
             )
         except Exception as e:

@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap, ChevronDown } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap, ChevronDown, CalendarClock } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
@@ -1402,6 +1402,10 @@ export default function MyProfilePage() {
                             race.status !== 'waitlist' &&
                             race.payment_status !== 'paid' &&
                             !race.payment_receipt_status;
+                          // Pedir plazo tiene sentido en el mismo caso que subir
+                          // el comprobante, salvo que ya se haya pedido uno.
+                          const plazo = race.plazo_pago || null;
+                          const showPlazoLink = showPaymentLink && !plazo;
                           
                           return (
                             <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>
@@ -1425,6 +1429,17 @@ export default function MyProfilePage() {
                                   <Button size="sm" variant="default" onClick={() => window.open(`/subir-comprobante?token=${race.edit_token}`, '_blank')} data-testid={`upload-receipt-btn-${race.registration_id}`}>
                                     <Upload className="w-3 h-3 mr-2" /> Subir Comprobante de Pago
                                   </Button>
+                                )}
+                                {showPlazoLink && (
+                                  <Button size="sm" variant="outline" onClick={() => window.open(`/plazo-de-pago?token=${race.edit_token}`, '_blank')} data-testid={`plazo-btn-${race.registration_id}`}>
+                                    <CalendarClock className="w-3 h-3 mr-2" /> Solicitar mas tiempo para pagar
+                                  </Button>
+                                )}
+                                {plazo?.estado === 'pendiente' && (
+                                  <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu solicitud de plazo esta en revision</p>
+                                )}
+                                {plazo?.estado === 'aprobado' && (
+                                  <p className="text-xs text-emerald-600 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Plazo aprobado: saldas el {plazo.fecha_propuesta}</p>
                                 )}
                                 {receiptPending && (
                                   <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu comprobante esta siendo revisado por el equipo</p>
