@@ -2645,6 +2645,20 @@ async def _template_global_data(database) -> dict:
     }
 
 
+def _enlaces_del_destinatario(edit_token) -> dict:
+    """Los enlaces que dependen de la inscripcion, con la misma forma que en
+    `build_athlete_data`: una sola definicion de cada direccion."""
+    from services.template_email_service import BASE_URL
+
+    if not edit_token:
+        return {"athlete_plazo_link": "", "athlete_cancel_link": "", "athlete_edit_link": ""}
+    return {
+        "athlete_plazo_link": f"{BASE_URL}/plazo-de-pago?token={edit_token}",
+        "athlete_cancel_link": f"{BASE_URL}/cancelar-registro?token={edit_token}",
+        "athlete_edit_link": f"{BASE_URL}/inscripcion/editar/{edit_token}",
+    }
+
+
 def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
     """Combina los datos globales con los del destinatario, exponiendo tanto las
     variables del compositor ({{nombre}}) como las de plantilla ({{athlete_*}})."""
@@ -2660,6 +2674,10 @@ def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
         "athlete_apellidos": apellidos,
         "athlete_nombre_completo": recipient.get("nombre_completo", "") or "",
         "athlete_email": recipient.get("email", "") or "",
+        "athlete_bib": recipient.get("bib", "") or "",
+        # Los enlaces personales de cada uno. Sin inscripcion no hay token y
+        # se quedan vacios: la plantilla que los use es para inscritos.
+        **_enlaces_del_destinatario(recipient.get("edit_token")),
     }
 
 
@@ -2837,6 +2855,52 @@ async def admin_email_recipient_options(authorization: str = Header(None)):
     }
 
 
+async def _con_enlaces_de_inscripcion(database, recipients: list, race_code=None) -> list:
+    """Adjunta a cada destinatario el token de su inscripcion.
+
+    De ahi salen los enlaces personales del correo -- pedir plazo, cancelar --,
+    que hasta ahora no existian en el compositor: la plantilla los pedia y el
+    envio no los traia, asi que los botones salian apuntando a ninguna parte.
+
+    El token se crea si falta. Muchas inscripciones nunca lo tuvieron porque se
+    generaba al entrar al perfil, y son justo las de quien no ha pasado por ahi
+    -- que es la gente a la que va este correo.
+    """
+    correos = {(r.get("email") or "").lower() for r in recipients if r.get("email")}
+    if not correos:
+        return recipients
+
+    filtro = {"email": {"$in": list(correos)}}
+    if not race_code:
+        activa = await database.race_configurations.find_one({"is_active": True}, {"code": 1})
+        race_code = (activa or {}).get("code")
+    if race_code:
+        filtro["race_code"] = race_code
+
+    inscripciones = await database.registrations.find(
+        filtro, {"email": 1, "edit_token": 1, "bib": 1}
+    ).to_list(5000)
+
+    por_correo = {}
+    for inscripcion in inscripciones:
+        token = inscripcion.get("edit_token")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            await database.registrations.update_one(
+                {"_id": inscripcion["_id"]}, {"$set": {"edit_token": token}}
+            )
+        por_correo[(inscripcion.get("email") or "").lower()] = {
+            "edit_token": token,
+            "bib": str(inscripcion.get("bib") or ""),
+        }
+
+    for r in recipients:
+        datos = por_correo.get((r.get("email") or "").lower())
+        if datos:
+            r.update(datos)
+    return recipients
+
+
 @router.post("/admin/email-recipients")
 async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: str = Header(None)):
     """Admin: Get list of email recipients based on filter"""
@@ -2854,6 +2918,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
                     "email": email, "nombre": "", "apellidos": "",
                     "nombre_completo": "", "source": "manual"
                 })
+        recipients = await _con_enlaces_de_inscripcion(database, recipients, data.race_code)
         return {"recipients": recipients, "total": len(recipients)}
 
     if data.filter_type == "volunteers":
@@ -2977,6 +3042,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
             if str(a["_id"]) not in inscribed_ids:
                 recipients.append(build_athlete(a, "no inscrito"))
 
+    recipients = await _con_enlaces_de_inscripcion(database, recipients, data.race_code)
     return {"recipients": recipients, "total": len(recipients)}
 
 
@@ -3078,12 +3144,16 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
 
     _verify_email_admin(authorization)
 
-    # Sample recipient so the admin sees how merge variables render
+    # Destinatario de mentira, para que se vea como quedan las variables. Lleva
+    # un token de ejemplo a proposito: sin el, los enlaces personales salian
+    # vacios en la previa y parecian rotos cuando en el envio real funcionan.
     sample = {
         "nombre": "Juan",
         "apellidos": "Pérez",
         "nombre_completo": "Juan Pérez",
         "email": "juan.perez@ejemplo.com",
+        "bib": "001",
+        "edit_token": "TOKEN-DE-EJEMPLO",
     }
 
     if data.template_mode:

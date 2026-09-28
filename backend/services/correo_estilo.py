@@ -10,7 +10,8 @@ importa va en negrita dentro del propio texto, no metida en una tabla gris. Los
 enlaces que hay que pulsar son botones; los demas van subrayados y en el texto.
 
 Ancho, tamano y colores estan pensados para leerse en el telefono, que es donde
-se abre casi todo: cuerpo de 17px, interlineado ancho y un solo color de acento.
+se abre casi todo: cuerpo de 17px, interlineado ancho y botones en negro sobre
+blanco, que es lo que mejor aguanta el modo oscuro de los clientes de correo.
 """
 import re
 from typing import Iterable, Optional
@@ -23,7 +24,7 @@ FUENTE = ("-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto,
 TINTA = "#1d1d1f"        # el texto
 APAGADO = "#6e6e73"      # lo secundario: pies, aclaraciones
 LINEA = "#d2d2d7"        # las lineas finas
-ACENTO = "#E8772E"       # el naranja de la marca: botones y poco mas
+BOTON = "#000000"        # el fondo de los botones, con la letra en blanco
 FONDO = "#ffffff"
 
 ANCHO = 600
@@ -77,7 +78,7 @@ def boton(texto: str, url: str) -> str:
     return f"""
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 8px 0 24px 0;">
                 <tr>
-                    <td align="center" bgcolor="{ACENTO}" style="border-radius: 8px;">
+                    <td align="center" bgcolor="{BOTON}" style="border-radius: 8px;">
                         <a href="{url}" style="display: inline-block; padding: 14px 28px; font-family: {FUENTE}; font-size: 16px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;">{texto}</a>
                     </td>
                 </tr>
