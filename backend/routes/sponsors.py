@@ -20,7 +20,7 @@ import re
 import unicodedata
 
 from services.auth import require_permission
-from services import sponsor_categories, patrocinios
+from services import sponsor_categories, patrocinios, logos
 
 router = APIRouter(prefix="/api/sponsors", tags=["sponsors"])
 
@@ -416,6 +416,18 @@ async def subir_imagen(
         contenido, ext_original, file.content_type
     )
 
+    # El logo, ademas, se recorta al borde de la tinta. El margen que trae
+    # dentro cada archivo va del 0 % al 77 % segun quien lo exporto, y la
+    # vitrina escala el lienzo, no la tinta: sin recortar, un logo sale enorme
+    # y el de al lado diminuto aunque la caja sea la misma. Recortado, la
+    # proporcion del archivo es la de la tinta y la vitrina puede nivelar por
+    # superficie. Ver `services/logos.py`.
+    logo_opaco = None
+    if tipo == "logo":
+        contenido, ext, content_type, logo_opaco = logos.recortar(
+            contenido, ext, content_type
+        )
+
     filename = nombre_archivo(race_code, doc["name"], tipo, ext)
     await file_storage.save(filename, contenido, content_type, file_storage.FOLDER_SPONSORS)
 
@@ -426,10 +438,14 @@ async def subir_imagen(
     url = f"/api/uploads/sponsors/{filename}?v={version}"
 
     if es_de_la_marca:
-        await db.sponsors.update_one(
-            {"id": sponsor_id},
-            {"$set": {campo: url, "updated_at": datetime.now(timezone.utc)}},
-        )
+        cambios = {campo: url, "updated_at": datetime.now(timezone.utc)}
+        # Un logo sin transparencia ensena su rectangulo sobre cualquier fondo
+        # que no sea el suyo. Aqui no se le quita el fondo -seria adivinar que
+        # forma parte del margen y no de la marca-, se anota, y quien lo pinta
+        # le da una placa.
+        if logo_opaco is not None:
+            cambios["logo_opaco"] = logo_opaco
+        await db.sponsors.update_one({"id": sponsor_id}, {"$set": cambios})
     else:
         part[campo] = url
         await _guardar_participaciones(db, sponsor_id, doc["participaciones"])
