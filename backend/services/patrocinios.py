@@ -179,6 +179,11 @@ def vista_vitrina(doc: dict, part: dict) -> dict:
     Es la lista corta de siempre: el logo, el nombre y la categoria, que es lo
     que distingue un nivel de otro. Mismas claves que antes de partir la ficha
     en dos: quien lo lee no se entera del cambio.
+
+    `logo_opaco` se anadio despues y no sustituye a nada: dice si el archivo
+    llega sin transparencia, para que el sitio le ponga una placa y no ensene
+    su rectangulo sobre el papel. Quien no lo conozca -las apps instaladas- lo
+    ignora y sigue viendo la misma forma de siempre.
     """
     return {
         "id": part.get("id"),
@@ -188,6 +193,7 @@ def vista_vitrina(doc: dict, part: dict) -> dict:
         "race_code": part.get("race_code"),
         "is_active": doc.get("is_active", True),
         "propuesta_categoria": part.get("propuesta_categoria"),
+        "logo_opaco": doc.get("logo_opaco", False),
     }
 
 
