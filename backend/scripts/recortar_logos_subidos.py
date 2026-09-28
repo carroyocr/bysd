@@ -29,9 +29,15 @@ import os
 import sys
 
 import gridfs
+from dotenv import load_dotenv
 from pymongo import MongoClient
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, RAIZ)
+
+# Sin MONGO_URL en el entorno vale la del backend, como hace `server.py`: asi
+# el ensayo contra la base local se lanza sin preparar nada.
+load_dotenv(os.path.join(RAIZ, ".env"))
 
 from services import logos  # noqa: E402
 
