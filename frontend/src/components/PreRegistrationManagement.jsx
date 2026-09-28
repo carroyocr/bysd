@@ -50,6 +50,7 @@ export default function PreRegistrationManagement() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [activeAthletesCount, setActiveAthletesCount] = useState(0);
   const [pendingReceipts, setPendingReceipts] = useState([]);
+  const [plazos, setPlazos] = useState([]);
   const [sortByExperience, setSortByExperience] = useState(false);
   const [removingBib, setRemovingBib] = useState(null);
   const [autoAssigningBibs, setAutoAssigningBibs] = useState(false);
@@ -62,12 +63,13 @@ export default function PreRegistrationManagement() {
     
     setLoading(true);
     try {
-      const [regsRes, statsRes, bibRes, countRes, receiptsRes] = await Promise.all([
+      const [regsRes, statsRes, bibRes, countRes, receiptsRes, plazosRes] = await Promise.all([
         adminFetch(`${API_URL}/api/registration/admin/list/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/stats/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/active-athletes-count/${raceCode}`),
-        adminFetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`)
+        adminFetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/plazos?race_code=${raceCode}&estado=pendiente`)
       ]);
       
       if (regsRes.ok) {
@@ -90,6 +92,10 @@ export default function PreRegistrationManagement() {
         setActiveAthletesCount(data.count || 0);
       }
       
+      if (plazosRes.ok) {
+        const data = await plazosRes.json();
+        setPlazos(data.solicitudes || []);
+      }
       if (receiptsRes.ok) {
         const data = await receiptsRes.json();
         setPendingReceipts(data.registrations || []);
@@ -140,6 +146,29 @@ export default function PreRegistrationManagement() {
       toast.error(error.message);
     } finally {
       setSendingReminder(false);
+    }
+  };
+
+  // El cupo se asegura aqui, no cuando el atleta envia la solicitud: si
+  // bastara con enviarla, cualquiera reservaria un cupo escribiendo una fecha.
+  const handleRevisarPlazo = async (email, aprobado) => {
+    let motivo = '';
+    if (!aprobado) {
+      motivo = window.prompt('¿Por qué no se aprueba? (se lo decimos al atleta)') || '';
+      if (!motivo.trim()) return;
+    }
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/registration/admin/plazo/${encodeURIComponent(email)}`
+        + `?race_code=${raceCode}&aprobado=${aprobado}`
+        + (motivo ? `&motivo=${encodeURIComponent(motivo)}` : ''),
+        { method: 'PUT' }
+      );
+      if (!res.ok) throw new Error('No se pudo revisar la solicitud');
+      toast.success(aprobado ? 'Plazo aprobado: el cupo queda reservado' : 'Solicitud rechazada');
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
     }
   };
 
@@ -820,6 +849,85 @@ export default function PreRegistrationManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Solicitudes de plazo */}
+      {plazos.length > 0 && (
+        <Card className="border-amber-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-amber-500" />
+              Solicitudes de plazo ({plazos.length})
+            </CardTitle>
+            <CardDescription>
+              Abonaron una parte y proponen fecha para saldar. El cupo queda
+              reservado al aprobar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {plazos.map((reg) => (
+                <div key={reg.email} className="border rounded-lg p-4 bg-white">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold">
+                        {reg.nombre} {reg.apellidos}
+                        {reg.bib && <span className="ml-2 text-muted-foreground">#{reg.bib}</span>}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{reg.email}</p>
+                      <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                        <Badge variant="outline">
+                          Abonó RD$ {Number(reg.plazo_pago?.monto_abonado || 0).toLocaleString('es-DO')}
+                        </Badge>
+                        <Badge variant="outline">
+                          Queda RD$ {Number(reg.restante || 0).toLocaleString('es-DO')}
+                        </Badge>
+                        <Badge className="bg-amber-500">
+                          Salda el {reg.plazo_pago?.fecha_propuesta}
+                        </Badge>
+                        {reg.plazo_pago?.comprobante?.bank_origin && (
+                          <Badge variant="outline">{reg.plazo_pago.comprobante.bank_origin}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {reg.plazo_pago?.comprobante?.image_path && (
+                        <a
+                          href={`${API_URL}${reg.plazo_pago.comprobante.image_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileImage className="w-4 h-4" />
+                          Ver comprobante del abono
+                        </a>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600"
+                          onClick={() => handleRevisarPlazo(reg.email, true)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Aprobar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => handleRevisarPlazo(reg.email, false)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Rechazar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Receipts List */}
       {pendingReceipts.length > 0 && (

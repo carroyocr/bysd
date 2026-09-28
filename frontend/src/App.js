@@ -31,6 +31,7 @@ import PreguntasPublicPage from './pages/PreguntasPublicPage';
 import PrensaPage from './pages/PrensaPage';
 import NotaPrensaPage from './pages/NotaPrensaPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
+import PlazoPagoPage from './pages/PlazoPagoPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
@@ -115,6 +116,7 @@ export default function App() {
                     <Route path="/album" element={<AlbumPage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
+                    <Route path="/plazo-de-pago" element={<PlazoPagoPage />} />
                     {/* Cancel Registration */}
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
