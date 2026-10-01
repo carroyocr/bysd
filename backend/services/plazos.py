@@ -100,6 +100,40 @@ def monto_esperado(registro: dict, costo: float) -> float:
     return float(costo or 0)
 
 
+# Como se ve el pago en el panel. Son cuatro y no dos porque "pendiente" a
+# secas escondia a quien ya abono una parte: el saldo que falta no es el
+# costo entero, y el cupo ya esta reservado.
+PAGO_PAGADO = "pagado"
+PAGO_ABONO = "abono"
+PAGO_PENDIENTE = "pendiente"
+PAGO_SIN_COSTO = "sin_costo"
+ESTADOS_PAGO = (PAGO_PAGADO, PAGO_ABONO, PAGO_PENDIENTE, PAGO_SIN_COSTO)
+
+
+def estado_pago(registro: dict) -> str:
+    """El estado del pago tal como lo lee el panel.
+
+    La cortesia manda sobre todo: por dentro cuenta como pagado, pero decir
+    "pagado" esconderia que entro sin costo. Un plazo pendiente o rechazado
+    **no** es un abono: ese dinero todavia no cuenta y el saldo es el total.
+    """
+    if registro.get("inscripcion_cortesia"):
+        return PAGO_SIN_COSTO
+    if registro.get("payment_status") == "paid":
+        return PAGO_PAGADO
+    if (registro.get("plazo_pago") or {}).get("estado") == APROBADO:
+        return PAGO_ABONO
+    return PAGO_PENDIENTE
+
+
+def saldo_pendiente(registro: dict, costo: float) -> float:
+    """Lo que le falta por pagar a un inscrito: nada si pago o entro sin
+    costo; si no, lo que se espera de su comprobante."""
+    if estado_pago(registro) in (PAGO_PAGADO, PAGO_SIN_COSTO):
+        return 0.0
+    return monto_esperado(registro, costo)
+
+
 def comprobar_pago_completo(monto_pagado, registro: dict, costo: float) -> Optional[float]:
     """El control de la pagina de subir comprobante: que lo que se declara
     pagado cubra lo que se debe.

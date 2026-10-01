@@ -655,6 +655,11 @@ async def list_registrations(race_code: str, status: Optional[str] = None):
         query,
         {"_id": 0, "edit_token": 0}
     ).sort("bib_number", 1).to_list(1000)
+
+    carrera = await db["race_configurations"].find_one(
+        {"code": race_code}, {"registration_cost": 1}
+    ) or {}
+    costo = float(carrera.get("registration_cost") or 0)
     
     # Convert datetime objects
     for reg in registrations:
@@ -662,9 +667,15 @@ async def list_registrations(race_code: str, status: Optional[str] = None):
             reg["created_at"] = reg["created_at"].isoformat()
         if reg.get("updated_at"):
             reg["updated_at"] = reg["updated_at"].isoformat()
+        # El estado del pago como lo lee el panel y lo que falta por pagar.
+        # Se calculan aqui y no en la tabla para que el filtro, la columna y
+        # el CSV cuenten lo mismo.
+        reg["estado_pago"] = plazos.estado_pago(reg)
+        reg["saldo_pendiente"] = plazos.saldo_pendiente(reg, costo)
     
     return {
         "race_code": race_code,
+        "costo": costo,
         "total": len(registrations),
         "registrations": registrations
     }

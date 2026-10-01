@@ -41,6 +41,7 @@ export default function PreRegistrationManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPago, setFilterPago] = useState('all');
   const [editingEmail, setEditingEmail] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -387,8 +388,9 @@ export default function PreRegistrationManagement() {
         (reg.bib && reg.bib.toString().includes(searchTerm));
       
       const matchesFilter = filterStatus === 'all' || reg.status === filterStatus;
+      const matchesPago = filterPago === 'all' || reg.estado_pago === filterPago;
       
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesPago;
     });
     
     // Sort by experience if enabled (only for active + paid athletes)
@@ -413,7 +415,7 @@ export default function PreRegistrationManagement() {
     }
     
     return result;
-  }, [registrations, searchTerm, filterStatus, sortByExperience]);
+  }, [registrations, searchTerm, filterStatus, filterPago, sortByExperience]);
 
   const startEditing = (reg) => {
     setEditingEmail(reg.email);
@@ -676,7 +678,8 @@ export default function PreRegistrationManagement() {
     const headers = [
       'BIB', 'Nombre', 'Apellidos', 'Email', 'Teléfono', 'Nacionalidad', 
       'Ciudad', 'Fecha Nacimiento', 'Sexo', 'Talla', 'Personalización',
-      'Tipo Sangre', 'Estado', 'Pago', 'Sin Costo', 'Motivo Sin Costo', 'Fecha Registro'
+      'Tipo Sangre', 'Estado', 'Pago', 'Abonado', 'Saldo Pendiente', 'Salda el',
+      'Sin Costo', 'Motivo Sin Costo', 'Fecha Registro'
     ];
 
     const rows = filteredRegistrations.map(reg => [
@@ -693,7 +696,10 @@ export default function PreRegistrationManagement() {
       reg.personalizacion_camiseta,
       reg.tipo_sangre,
       reg.status,
-      reg.payment_status,
+      reg.estado_pago || reg.payment_status,
+      reg.estado_pago === 'abono' ? Number(reg.plazo_pago?.monto_abonado || 0) : '',
+      reg.saldo_pendiente ?? '',
+      reg.estado_pago === 'abono' ? (reg.plazo_pago?.fecha_propuesta || '') : '',
       reg.inscripcion_cortesia ? 'Sí' : '',
       // Las comas parten la fila del CSV: el motivo es texto libre
       (reg.cortesia_motivo || '').replace(/,/g, ';'),
@@ -738,7 +744,27 @@ export default function PreRegistrationManagement() {
     if (reg.payment_status === 'paid') {
       return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Pagado</Badge>;
     }
+    // Abonó una parte con plazo aprobado: el cupo está reservado y lo que
+    // falta no es el costo entero. Decir "Pendiente" lo escondía.
+    if (reg.estado_pago === 'abono') {
+      return (
+        <Badge className="bg-amber-500" title={`Salda el ${reg.plazo_pago?.fecha_propuesta || ''}`}>
+          <Wallet className="w-3 h-3 mr-1" />Abono
+        </Badge>
+      );
+    }
     return <Badge variant="outline" className="border-yellow-500 text-yellow-600"><AlertCircle className="w-3 h-3 mr-1" />Pendiente</Badge>;
+  };
+
+  // Lo que le falta por pagar, debajo del estado. Solo cuando debe algo.
+  const getSaldo = (reg) => {
+    if (!(Number(reg.saldo_pendiente) > 0)) return null;
+    const abono = reg.estado_pago === 'abono';
+    return (
+      <p className={`text-xs mt-1 ${abono ? 'text-amber-700 font-medium' : 'text-muted-foreground'}`}>
+        Saldo RD$ {Number(reg.saldo_pendiente).toLocaleString('es-DO')}
+      </p>
+    );
   };
 
   if (loading) {
@@ -1213,6 +1239,18 @@ export default function PreRegistrationManagement() {
               <option value="active">Activo</option>
               <option value="waitlist">Lista de Espera</option>
             </select>
+            <select
+              value={filterPago}
+              onChange={(e) => setFilterPago(e.target.value)}
+              className="px-3 py-2 border rounded-md bg-background"
+              data-testid="filter-pago"
+            >
+              <option value="all">Todos los pagos</option>
+              <option value="pagado">Pagado</option>
+              <option value="abono">Abono (con saldo)</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="sin_costo">Sin costo</option>
+            </select>
           </div>
 
           {/* Registrations Table */}
@@ -1378,7 +1416,10 @@ export default function PreRegistrationManagement() {
                             <option value="paid">Pagado</option>
                           </select>
                         ) : (
-                          getPaymentBadge(reg)
+                          <>
+                            {getPaymentBadge(reg)}
+                            {getSaldo(reg)}
+                          </>
                         )}
                       </td>
                       <td className="py-3 px-2 text-right">
@@ -1477,6 +1518,13 @@ export default function PreRegistrationManagement() {
                                 <p>Talla: {reg.talla_camiseta}</p>
                                 <p>Experiencia: {reg.anos_experiencia} años</p>
                                 <p>Máx. Distancia: {reg.maxima_distancia_km} km</p>
+                                {reg.estado_pago === 'abono' && (
+                                  <p className="text-amber-700">
+                                    Abonó RD$ {Number(reg.plazo_pago?.monto_abonado || 0).toLocaleString('es-DO')}
+                                    {' · '}Saldo RD$ {Number(reg.saldo_pendiente || 0).toLocaleString('es-DO')}
+                                    {reg.plazo_pago?.fecha_propuesta && <> · Salda el {reg.plazo_pago.fecha_propuesta}</>}
+                                  </p>
+                                )}
                               </div>
                             </div>
                             <div>
