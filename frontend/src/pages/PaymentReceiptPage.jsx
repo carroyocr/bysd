@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { 
   Upload, Calendar, Building2, Hash, CheckCircle, AlertCircle, 
-  Loader2, CreditCard, FileText, ArrowLeft, ImageIcon
+  Loader2, CreditCard, FileText, ArrowLeft, ImageIcon, Wallet, CalendarClock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Navigation from '../components/Navigation';
@@ -29,7 +29,8 @@ export default function PaymentReceiptPage() {
   const [formData, setFormData] = useState({
     payment_date: '',
     bank_origin: '',
-    transfer_number: ''
+    transfer_number: '',
+    monto_pagado: ''
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -94,6 +95,15 @@ export default function PaymentReceiptPage() {
     }
   };
 
+  // Lo que tiene que cubrir el comprobante: el costo, o lo que faltaba si ya
+  // hay un plazo aprobado. Por debajo de eso es un abono y va por el plazo:
+  // si se sube como pago completo, lo que falta desaparece de los papeles.
+  const montoEsperado = Number(data?.monto_esperado ?? data?.race_config?.registration_cost ?? 0);
+  const montoDeclarado = Number(formData.monto_pagado) || 0;
+  const esAbono = montoEsperado > 0 && montoDeclarado > 0 && montoDeclarado < montoEsperado;
+  const plazoAprobado = data?.registration?.plazo_pago?.estado === 'aprobado'
+    ? data.registration.plazo_pago : null;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -111,6 +121,15 @@ export default function PaymentReceiptPage() {
       toast.error('Por favor indica el banco desde donde realizaste el pago');
       return;
     }
+
+    if (!(Number(formData.monto_pagado) > 0)) {
+      toast.error('Indica cuánto pagaste');
+      return;
+    }
+    if (esAbono) {
+      toast.error('Eso es un abono: pide más tiempo para pagar y súbelo por ahí');
+      return;
+    }
     
     setSubmitting(true);
     
@@ -119,6 +138,7 @@ export default function PaymentReceiptPage() {
       submitData.append('receipt_image', selectedFile);
       submitData.append('payment_date', formData.payment_date);
       submitData.append('bank_origin', formData.bank_origin);
+      submitData.append('monto_pagado', formData.monto_pagado);
       if (formData.transfer_number) {
         submitData.append('transfer_number', formData.transfer_number);
       }
@@ -253,10 +273,15 @@ export default function PaymentReceiptPage() {
           <CardContent>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-green-600">Monto:</span>
+                <span className="text-green-600">{plazoAprobado ? 'Te falta pagar:' : 'Monto:'}</span>
                 <p className="font-bold text-green-800 text-lg">
-                  RD$ {race_config?.registration_cost?.toLocaleString() || '3,500'}
+                  RD$ {montoEsperado > 0 ? montoEsperado.toLocaleString('es-DO') : (race_config?.registration_cost?.toLocaleString('es-DO') || '-')}
                 </p>
+                {plazoAprobado && (
+                  <p className="text-xs text-green-700">
+                    Ya abonaste RD$ {Number(plazoAprobado.monto_abonado || 0).toLocaleString('es-DO')}
+                  </p>
+                )}
               </div>
               <div>
                 <span className="text-green-600">Banco:</span>
@@ -317,6 +342,46 @@ export default function PaymentReceiptPage() {
                   required
                   data-testid="payment-date-input"
                 />
+              </div>
+
+              {/* Monto pagado */}
+              <div className="space-y-2">
+                <Label htmlFor="monto_pagado" className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-gray-500" />
+                  ¿Cuánto pagaste? (RD$) *
+                </Label>
+                <Input
+                  id="monto_pagado"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  step="1"
+                  placeholder={montoEsperado > 0 ? String(montoEsperado) : ''}
+                  value={formData.monto_pagado}
+                  onChange={(e) => setFormData(prev => ({ ...prev, monto_pagado: e.target.value }))}
+                  required
+                  data-testid="monto-pagado-input"
+                />
+                {esAbono && (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 space-y-2" data-testid="abono-aviso">
+                    <p>
+                      Eso no cubre lo que falta (RD$ {montoEsperado.toLocaleString('es-DO')}), así que
+                      es un <strong>abono</strong>. Los abonos van por «más tiempo para pagar»: ahí se
+                      anota lo que abonaste y cuándo saldas el resto, y tu cupo queda reservado.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400 text-amber-800 hover:bg-amber-100"
+                      onClick={() => navigate(`/plazo-de-pago?token=${token}`)}
+                      data-testid="ir-a-plazo-btn"
+                    >
+                      <CalendarClock className="w-4 h-4 mr-2" />
+                      Pedir más tiempo para pagar
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Bank Origin */}
@@ -407,7 +472,7 @@ export default function PaymentReceiptPage() {
               <Button
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={submitting || !selectedFile}
+                disabled={submitting || !selectedFile || esAbono}
                 data-testid="submit-receipt-btn"
               >
                 {submitting ? (

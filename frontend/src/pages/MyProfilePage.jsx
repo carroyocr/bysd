@@ -1394,7 +1394,7 @@ export default function MyProfilePage() {
                       <div className="space-y-4">
                         {myRaces.map(race => {
                           const canCancel = !race.payment_receipt_status && race.status === 'registered';
-                          const receiptPending = race.payment_receipt_status === 'pending';
+                          const receiptPending = race.payment_receipt_status === 'pending_review';
                           // Desde la lista de espera no se paga: aun no hay cupo,
                           // y cobrar antes obliga a devolver el dinero. Con un
                           // comprobante ya enviado, otro solo duplica la revision.
