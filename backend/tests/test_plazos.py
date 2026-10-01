@@ -269,3 +269,34 @@ def test_al_mover_rigen_las_mismas_reglas_del_abono():
         plazos.desde_comprobante(RECIBO, 500, None, COSTO, desde=HOY)
     with pytest.raises(HTTPException):
         plazos.desde_comprobante(RECIBO, 1500, "2026-12-01", COSTO, desde=HOY)
+
+
+# ---------------- Como se ve el pago en el panel ----------------
+
+
+def test_el_estado_del_pago_distingue_el_abono():
+    assert plazos.estado_pago(registro()) == plazos.PAGO_PENDIENTE
+    assert plazos.estado_pago(registro(payment_status="paid")) == plazos.PAGO_PAGADO
+    con_abono = registro(plazo_pago={"estado": plazos.APROBADO, "monto_abonado": 1500})
+    assert plazos.estado_pago(con_abono) == plazos.PAGO_ABONO
+    # Un plazo sin aprobar no es un abono: ese dinero todavia no cuenta
+    sin_aprobar = registro(plazo_pago={"estado": plazos.PENDIENTE, "monto_abonado": 1500})
+    assert plazos.estado_pago(sin_aprobar) == plazos.PAGO_PENDIENTE
+
+
+def test_la_cortesia_manda_sobre_el_estado_del_pago():
+    """Por dentro cuenta como pagado, pero decir pagado esconde que entro sin costo."""
+    cortesia = registro(payment_status="paid", inscripcion_cortesia=True)
+    assert plazos.estado_pago(cortesia) == plazos.PAGO_SIN_COSTO
+    assert plazos.saldo_pendiente(cortesia, COSTO) == 0
+
+
+def test_el_saldo_pendiente():
+    assert plazos.saldo_pendiente(registro(), COSTO) == COSTO
+    assert plazos.saldo_pendiente(registro(payment_status="paid"), COSTO) == 0
+    con_abono = registro(plazo_pago={"estado": plazos.APROBADO, "monto_abonado": 1500})
+    assert plazos.saldo_pendiente(con_abono, COSTO) == 2500.0
+    # Pago el resto: ya no debe nada aunque el plazo siga ahi
+    saldado = registro(payment_status="paid",
+                       plazo_pago={"estado": plazos.APROBADO, "monto_abonado": 1500})
+    assert plazos.saldo_pendiente(saldado, COSTO) == 0
