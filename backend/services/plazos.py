@@ -88,6 +88,93 @@ def restante(plazo: Optional[dict], costo: float) -> float:
     return max(float(costo or 0) - abonado, 0)
 
 
+def monto_esperado(registro: dict, costo: float) -> float:
+    """Lo que tiene que traer un comprobante de pago completo.
+
+    Con un plazo aprobado es lo que faltaba; si no, el costo entero. Un plazo
+    pendiente o rechazado no descuenta nada: ese abono todavia no cuenta.
+    """
+    plazo = registro.get("plazo_pago") or {}
+    if plazo.get("estado") == APROBADO:
+        return restante(plazo, costo)
+    return float(costo or 0)
+
+
+def comprobar_pago_completo(monto_pagado, registro: dict, costo: float) -> Optional[float]:
+    """El control de la pagina de subir comprobante: que lo que se declara
+    pagado cubra lo que se debe.
+
+    Hay quien paga una parte y la sube como si fuera el pago entero. Si pasa,
+    el panel la aprueba como pago completo y lo que falta desaparece de los
+    papeles. Declarar el monto es lo que lo frena: un monto por debajo de lo
+    esperado es un abono y va por el plazo, no por aqui.
+
+    El monto es opcional porque las apps ya instaladas no lo mandan; si no
+    llega, no se comprueba nada y se devuelve None. Si llega, se devuelve el
+    numero para guardarlo con el comprobante.
+    """
+    if monto_pagado in (None, ""):
+        return None
+    try:
+        pagado = float(monto_pagado)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Escribe cuánto pagaste")
+    if pagado <= 0:
+        raise HTTPException(status_code=400, detail="Escribe cuánto pagaste")
+
+    esperado = monto_esperado(registro, costo)
+    if esperado and pagado < esperado:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Lo que pagaste (RD$ {pagado:,.0f}) no cubre lo que falta "
+                f"(RD$ {esperado:,.0f}). Si es un abono, pide más tiempo para "
+                "pagar: ahí se anota lo abonado y cuándo saldas el resto."
+            ),
+        )
+    return pagado
+
+
+def puede_pasar_a_plazo(registro: dict) -> Optional[str]:
+    """None si el comprobante se puede tomar como abono; si no, por que no.
+
+    Solo se mueve un comprobante que aun esta en revision. Uno ya aprobado
+    entro en finanzas como pago completo, y moverlo sin deshacer eso deja un
+    ingreso que no existe.
+    """
+    recibo = registro.get("payment_receipt") or {}
+    if not recibo:
+        return "Este atleta no tiene comprobante que mover."
+    if recibo.get("status") != "pending_review":
+        return "Solo se puede tomar como abono un comprobante que esté en revisión."
+    if registro.get("payment_status") == "paid":
+        return "Esta inscripción ya está pagada completa."
+    if (registro.get("plazo_pago") or {}).get("estado") == APROBADO:
+        return "Ya tiene un plazo aprobado: este comprobante sería el pago final."
+    return None
+
+
+def desde_comprobante(recibo: dict, monto_abonado, fecha_propuesta, costo: float,
+                      desde: Optional[date] = None) -> dict:
+    """Convierte un comprobante enviado como pago completo en una solicitud de
+    plazo: mismas reglas que si la hubiera pedido el atleta, con el comprobante
+    que ya subio.
+
+    Sin fecha propuesta se toma el tope: el atleta no la propuso, y el tope es
+    lo mas que la organizacion puede conceder.
+    """
+    fecha = fecha_propuesta if fecha_propuesta not in (None, "") else FECHA_TOPE.isoformat()
+    solicitud = revisar_solicitud(monto_abonado, fecha, costo, desde=desde)
+    solicitud["origen"] = "comprobante"
+    solicitud["comprobante"] = {
+        "image_path": recibo.get("image_path"),
+        "payment_date": recibo.get("payment_date"),
+        "bank_origin": recibo.get("bank_origin"),
+        "transfer_number": recibo.get("transfer_number"),
+    }
+    return solicitud
+
+
 def cupo_asegurado(registro: dict) -> bool:
     """Si el cupo esta a salvo: pagado del todo, o con el plazo ya aprobado.
 

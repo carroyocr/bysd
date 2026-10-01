@@ -9,7 +9,7 @@ import {
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
   Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown,
-  QrCode, ArrowUpCircle, Ticket
+  QrCode, ArrowUpCircle, Ticket, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
@@ -166,6 +166,43 @@ export default function PreRegistrationManagement() {
       );
       if (!res.ok) throw new Error('No se pudo revisar la solicitud');
       toast.success(aprobado ? 'Plazo aprobado: el cupo queda reservado' : 'Solicitud rechazada');
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    }
+  };
+
+  // Un abono subido por el boton del pago completo. Aprobarlo tal cual lo
+  // marcaria como pagado y lo que falta se perderia; rechazarlo le hace
+  // subirlo otra vez. Esto lo pasa al plazo, con el abono anotado y la
+  // fecha para saldar, y lo aprueba de una vez.
+  const handleReciboComoAbono = async (reg) => {
+    const monto = window.prompt(
+      `¿Cuánto abonó ${reg.nombre}? (lo que dice el comprobante, en RD$)`,
+      reg.payment_receipt?.monto_pagado ? String(reg.payment_receipt.monto_pagado) : ''
+    );
+    if (monto === null || !monto.trim()) return;
+    const fecha = window.prompt(
+      '¿Hasta cuándo tiene para saldar el resto? (AAAA-MM-DD; vacío = la fecha tope)',
+      ''
+    );
+    if (fecha === null) return;
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/registration/admin/receipt-a-plazo/${encodeURIComponent(reg.email)}`
+        + `?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            monto_abonado: Number(monto.replace(/[^\d.]/g, '')),
+            fecha_propuesta: fecha.trim() || null,
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'No se pudo pasar el comprobante a abono');
+      toast.success('Tomado como abono: plazo aprobado y cupo reservado');
       loadData();
     } catch (err) {
       toast.error(err.message || 'Error de conexión');
@@ -959,6 +996,16 @@ export default function PreRegistrationManagement() {
                             Ref: {reg.payment_receipt.transfer_number}
                           </Badge>
                         )}
+                        {reg.payment_receipt?.monto_pagado != null && (
+                          <Badge variant="outline">
+                            Declaró RD$ {Number(reg.payment_receipt.monto_pagado).toLocaleString('es-DO')}
+                          </Badge>
+                        )}
+                        {reg.plazo_pago?.estado === 'aprobado' && (
+                          <Badge className="bg-amber-500">
+                            Pago final: abonó RD$ {Number(reg.plazo_pago.monto_abonado || 0).toLocaleString('es-DO')}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -973,7 +1020,7 @@ export default function PreRegistrationManagement() {
                           Ver Comprobante
                         </a>
                       )}
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
                           className="bg-green-500 hover:bg-green-600"
@@ -982,6 +1029,18 @@ export default function PreRegistrationManagement() {
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Aprobar
                         </Button>
+                        {reg.plazo_pago?.estado !== 'aprobado' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                            title="El comprobante es de una parte del pago: pasarlo al plazo para terminar de pagar"
+                            onClick={() => handleReciboComoAbono(reg)}
+                          >
+                            <Wallet className="w-4 h-4 mr-1" />
+                            Es un abono
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"

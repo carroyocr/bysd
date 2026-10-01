@@ -1361,7 +1361,7 @@ async def get_payment_info_for_athlete(token: str):
     registration = await registrations_collection.find_one(
         {"edit_token": token},
         {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "race_code": 1, 
-         "payment_status": 1, "payment_receipt": 1}
+         "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1}
     )
     
     if not registration:
@@ -1374,10 +1374,23 @@ async def get_payment_info_for_athlete(token: str):
          "payment_bank_name": 1, "payment_account_type": 1, "payment_account_number": 1,
          "registration_cost": 1}
     )
-    
+
+    # Lo que tiene que cubrir el comprobante: el costo, o lo que faltaba si ya
+    # tiene un plazo aprobado. La pagina lo enseña y comprueba contra el.
+    costo = float((race_config or {}).get("registration_cost") or 0)
+    plazo = registration.get("plazo_pago") or {}
+    for campo in ("solicitado_at", "revisado_at"):
+        if hasattr(plazo.get(campo), "isoformat"):
+            plazo[campo] = plazo[campo].isoformat()
+    recibo = registration.get("payment_receipt") or {}
+    for campo in ("submitted_at", "reviewed_at"):
+        if hasattr(recibo.get(campo), "isoformat"):
+            recibo[campo] = recibo[campo].isoformat()
+
     return {
         "registration": registration,
-        "race_config": race_config or {}
+        "race_config": race_config or {},
+        "monto_esperado": plazos.monto_esperado(registration, costo),
     }
 
 
@@ -1518,7 +1531,8 @@ async def submit_payment_receipt(
     payment_date: str = Form(...),
     bank_origin: str = Form(...),
     transfer_number: Optional[str] = Form(None),
-    receipt_image: UploadFile = File(...)
+    receipt_image: UploadFile = File(...),
+    monto_pagado: Optional[str] = Form(None),
 ):
     """Submit payment receipt with image and details"""
     # Find registration by token
@@ -1548,6 +1562,17 @@ async def submit_payment_receipt(
             status_code=400,
             detail="Tu pago ya esta confirmado.",
         )
+
+    # Un abono subido como pago completo se aprobaria como tal y lo que falta
+    # desapareceria de los papeles. Si el atleta declara cuanto pago y no
+    # cubre lo que debe, se le manda al plazo. Es opcional porque las apps ya
+    # instaladas no lo mandan.
+    carrera = await db["race_configurations"].find_one(
+        {"code": registration.get("race_code")}, {"registration_cost": 1}
+    ) or {}
+    pagado = plazos.comprobar_pago_completo(
+        monto_pagado, registration, float(carrera.get("registration_cost") or 0)
+    )
 
     # Validate file type
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"]
@@ -1589,6 +1614,7 @@ async def submit_payment_receipt(
         "payment_date": payment_date,
         "bank_origin": bank_origin,
         "transfer_number": transfer_number,
+        "monto_pagado": pagado,
         "submitted_at": datetime.now(timezone.utc),
         "status": "pending_review"  # pending_review, approved, rejected
     }
@@ -1778,6 +1804,72 @@ async def revisar_plazo(
     return {"success": True, "estado": estado}
 
 
+class ReciboComoAbono(BaseModel):
+    """Lo que el panel decide al tomar un comprobante como abono."""
+    monto_abonado: float
+    fecha_propuesta: Optional[str] = None
+
+
+@admin_router.post("/receipt-a-plazo/{email}")
+async def tomar_recibo_como_abono(
+    email: str,
+    race_code: str,
+    datos: ReciboComoAbono,
+    usuario: dict = Depends(require_permission("athletes")),
+):
+    """Mueve un comprobante enviado como pago completo al plazo para terminar
+    de pagar, y lo aprueba.
+
+    Pasa cuando alguien abona una parte y la sube por el boton del pago
+    completo. Aprobarlo tal cual lo marcaria como pagado y lo que falta se
+    perderia; rechazarlo le hace subirlo otra vez. Esto lo deja donde va: el
+    abono anotado, la fecha para saldar y el cupo reservado.
+
+    Se aprueba de una vez porque quien lo mueve tiene el comprobante delante
+    y acaba de decidir que el dinero entro: es la misma revision que haria en
+    la cola del plazo, un clic despues. Por eso pasa por `revisar_plazo`, que
+    es quien anota el ingreso y avisa al atleta.
+    """
+    registro = await registrations_collection.find_one(
+        {"email": email.lower(), "race_code": race_code}
+    )
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    impedimento = plazos.puede_pasar_a_plazo(registro)
+    if impedimento:
+        raise HTTPException(status_code=400, detail=impedimento)
+
+    carrera = await db["race_configurations"].find_one(
+        {"code": race_code}, {"registration_cost": 1}
+    ) or {}
+    solicitud = plazos.desde_comprobante(
+        registro["payment_receipt"],
+        datos.monto_abonado,
+        datos.fecha_propuesta,
+        float(carrera.get("registration_cost") or 0),
+    )
+    solicitud["movido_por"] = usuario.get("username", "")
+
+    # El comprobante deja de estar en revision: ya vive dentro del plazo. Sin
+    # quitarlo, el perfil le seguiria escondiendo al atleta el boton para
+    # subir el pago final.
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {
+            "$set": {"plazo_pago": solicitud, "updated_at": datetime.now(timezone.utc)},
+            "$unset": {"payment_receipt": ""},
+        },
+    )
+
+    resultado = await revisar_plazo(email, race_code, aprobado=True)
+    return {
+        "success": True,
+        "estado": resultado["estado"],
+        "plazo": {k: v for k, v in solicitud.items() if k != "solicitado_at"},
+    }
+
+
 @admin_router.put("/review-receipt/{email}")
 async def review_payment_receipt(email: str, race_code: str, approved: bool):
     """Approve or reject a payment receipt"""
@@ -1864,10 +1956,11 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         else:
             payment_date_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
         
+        # Quien vino por el plazo pago aqui solo lo que faltaba.
         merge_data = {
             **build_race_data(race_config),
             **build_athlete_data(registration),
-            "payment_amount": f"RD${registration_cost:,.0f}",
+            "payment_amount": f"RD${plazos.monto_esperado(registration, registration_cost):,.0f}",
             "payment_date": payment_date_str,
         }
         

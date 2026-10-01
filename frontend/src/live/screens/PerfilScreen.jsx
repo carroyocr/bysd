@@ -271,7 +271,10 @@ export default function PerfilScreen() {
   const [receiptRace, setReceiptRace] = useState(null);
   const [receiptInfo, setReceiptInfo] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
-  const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
+  const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '', monto_pagado: '' });
+  // Lo que tiene que cubrir el comprobante (el costo, o lo que faltaba con un
+  // plazo aprobado). Por debajo es un abono y va por el plazo, no por aquí.
+  const [montoEsperado, setMontoEsperado] = useState(0);
   const [submittingReceipt, setSubmittingReceipt] = useState(false);
 
   // Plazo para terminar de pagar: se abona una parte, se propone cuándo se
@@ -945,17 +948,22 @@ export default function PerfilScreen() {
   const openReceiptForm = async (race) => {
     setReceiptRace(race.registration_id);
     setReceiptFile(null);
-    setReceiptData({ payment_date: '', bank_origin: '', transfer_number: '' });
+    setReceiptData({ payment_date: '', bank_origin: '', transfer_number: '', monto_pagado: '' });
     setReceiptInfo(null);
+    setMontoEsperado(0);
     setMsg(null);
     try {
       const res = await fetch(`${API}/api/registration/payment-info/${race.edit_token}`);
       if (res.ok) {
         const data = await res.json();
         setReceiptInfo(data.race_config || null);
+        setMontoEsperado(Number(data.monto_esperado ?? data.race_config?.registration_cost ?? 0));
       }
     } catch { /* la info bancaria es opcional */ }
   };
+
+  const montoDeclarado = Number(receiptData.monto_pagado) || 0;
+  const reciboEsAbono = montoEsperado > 0 && montoDeclarado > 0 && montoDeclarado < montoEsperado;
 
   const pickReceiptFile = (e) => {
     const file = e.target.files[0];
@@ -986,6 +994,14 @@ export default function PerfilScreen() {
       setMsg({ type: 'error', text: 'Indica el banco desde donde pagaste' });
       return;
     }
+    if (!(montoDeclarado > 0)) {
+      setMsg({ type: 'error', text: 'Indica cuánto pagaste' });
+      return;
+    }
+    if (reciboEsAbono) {
+      setMsg({ type: 'error', text: 'Eso es un abono: pide más tiempo para pagar y súbelo por ahí' });
+      return;
+    }
     setSubmittingReceipt(true);
     setMsg(null);
     try {
@@ -993,6 +1009,7 @@ export default function PerfilScreen() {
       fd.append('receipt_image', receiptFile);
       fd.append('payment_date', receiptData.payment_date);
       fd.append('bank_origin', receiptData.bank_origin);
+      fd.append('monto_pagado', receiptData.monto_pagado);
       if (receiptData.transfer_number) fd.append('transfer_number', receiptData.transfer_number);
       const res = await fetch(`${API}/api/registration/submit-payment-receipt/${race.edit_token}`, {
         method: 'POST',
@@ -1708,10 +1725,35 @@ export default function PerfilScreen() {
                             {receiptInfo.payment_account_type && <> · {receiptInfo.payment_account_type}</>}
                             {receiptInfo.payment_account_number && <> · Cuenta {receiptInfo.payment_account_number}</>}
                             {receiptInfo.payment_account_name && <> · A nombre de {receiptInfo.payment_account_name}</>}
-                            {receiptInfo.registration_cost && (
-                              <> · Monto RD${Number(receiptInfo.registration_cost).toLocaleString('es-DO')}</>
+                            {montoEsperado > 0 && (
+                              <> · {race.plazo_pago?.estado === 'aprobado' ? 'Te falta' : 'Monto'} {pesos(montoEsperado)}</>
                             )}
                           </p>
+                        </div>
+                      )}
+                      <Field T={T} label="¿Cuánto pagaste? (RD$) *">
+                        <TextInput
+                          T={T}
+                          type="number"
+                          inputMode="numeric"
+                          value={receiptData.monto_pagado}
+                          onChange={(e) => setReceiptData((p) => ({ ...p, monto_pagado: e.target.value }))}
+                          placeholder={montoEsperado > 0 ? String(montoEsperado) : ''}
+                        />
+                      </Field>
+                      {reciboEsAbono && (
+                        <div className={`rounded-xl px-3 py-3 space-y-2 ${T.itraBox}`}>
+                          <p className={`text-xs leading-relaxed ${T.muted}`}>
+                            Eso no cubre lo que falta ({pesos(montoEsperado)}), así que es un <strong>abono</strong>.
+                            Los abonos van por «más tiempo para pagar»: ahí se anota lo que abonaste y
+                            cuándo saldas el resto, y tu cupo queda reservado.
+                          </p>
+                          <button
+                            onClick={() => { setReceiptRace(null); abrirFormPlazo(race); }}
+                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                          >
+                            <CalendarClock className="w-3.5 h-3.5 text-[#E77622]" /> Pedir más tiempo para pagar
+                          </button>
                         </div>
                       )}
                       <Field T={T} label="Comprobante (JPG, PNG, WebP o PDF) *">
@@ -1745,7 +1787,7 @@ export default function PerfilScreen() {
                         <button onClick={() => setReceiptRace(null)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
                           Cancelar
                         </button>
-                        <button onClick={() => submitReceipt(race)} disabled={submittingReceipt} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                        <button onClick={() => submitReceipt(race)} disabled={submittingReceipt || reciboEsAbono} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
                           {submittingReceipt ? 'Enviando…' : 'Enviar'}
                         </button>
                       </div>
