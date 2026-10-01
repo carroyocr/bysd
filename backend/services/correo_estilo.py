@@ -85,6 +85,27 @@ def boton(texto: str, url: str) -> str:
             </table>"""
 
 
+# El fondo del boton dentro de un HTML ya armado. Es el mismo trozo que
+# escribe `boton()`, y se busca entero -no el color suelto- para no tocar
+# ningun otro `bgcolor` que pueda haber en el correo.
+_FONDO_DEL_BOTON = re.compile(
+    r'(<td align="center" bgcolor=")#[0-9A-Fa-f]{6}(" style="border-radius: 8px;">)'
+)
+
+
+def recolorear_botones(html: str) -> str:
+    """Pone el color de boton de hoy en un HTML que se armo con el de ayer.
+
+    Las plantillas se guardan en la base con su HTML ya montado, y el sembrado
+    solo inserta las que faltan: nunca reescribe una que ya existe. Asi que
+    cambiar `BOTON` aqui no cambia nada de lo que ya se sembro, y los correos
+    siguen saliendo del color viejo sin que nada falle ni avise. Esto es lo que
+    pone al dia lo guardado, y por eso vive junto al color y no en un guion
+    suelto con el codigo copiado.
+    """
+    return _FONDO_DEL_BOTON.sub(rf"\g<1>{BOTON}\g<2>", html or "")
+
+
 def cifra(etiqueta: str, valor: str) -> str:
     """El dato que es el correo entero: el numero de corredor, el monto, las
     vueltas. Grande y sin caja; el tamano ya lo destaca.
