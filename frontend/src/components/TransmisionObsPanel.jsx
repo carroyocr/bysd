@@ -35,6 +35,13 @@ const VISTAS = [
     alto: 1080,
   },
   {
+    id: 'patrocinador-esquina',
+    nombre: 'Patrocinador (esquina)',
+    descripcion: 'Solo el patrocinador de turno —logo, nombre y su frase— en la esquina inferior derecha, sin datos de carrera. Sirve con la barra puesta o sin ella. Rota cada 10 segundos y no necesita la clave.',
+    ancho: 1920,
+    alto: 1080,
+  },
+  {
     id: 'clasificacion',
     nombre: 'Clasificación',
     descripcion: 'Los primeros puestos con dorsal, nombre, vueltas y kilómetros. Con &filas=15 se alarga.',

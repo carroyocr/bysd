@@ -17,6 +17,7 @@ import './obs.css';
  *   /obs/crono?clave=...
  *   /obs/clasificacion?clave=...&filas=10
  *   /obs/patrocinadores?clave=...
+ *   /obs/patrocinador-esquina?race=BYSD-2027                 (sin clave: no lleva datos de carrera)
  *   /obs/charla?actividad=<id>&race=BYSD-2027&expositor=1   (sin clave: no lleva datos de carrera)
  */
 export default function ObsPage() {
@@ -51,7 +52,10 @@ export default function ObsPage() {
   });
   // Solo la vista de patrocinadores lo usa, pero un hook no puede ir dentro
   // de un if: se declara siempre y en las demás vistas queda apagado.
-  const patrocinador = usePatrocinadores(raceCode, vista === 'patrocinadores' || vista === 'charla');
+  const patrocinador = usePatrocinadores(
+    raceCode,
+    ['patrocinadores', 'patrocinador-esquina', 'charla'].includes(vista),
+  );
   const charla = useCharla(params.get('actividad'), vista === 'charla', params.get('expositor'));
 
   // Es una función que devuelve marcado, no un componente: un componente
@@ -104,6 +108,31 @@ export default function ObsPage() {
               </div>
             </div>
           )}
+        </div>
+      )
+    );
+  }
+
+  if (vista === 'patrocinador-esquina') {
+    // El mismo bloque de patrocinador que lleva la barra de las charlas, pero
+    // solo él y en la esquina, donde van el cronómetro suelto y la
+    // clasificación: sirve para cualquier escena, con barra o sin ella, y no
+    // tapa lo que pase por el centro del video.
+    // Va antes de la comprobación de la clave: los patrocinadores son los
+    // mismos que los de la app y no llevan ningún dato de carrera.
+    return enLienzo(
+      patrocinador && (
+        <div className="obs-patrocinio obs-patrocinio-suelto obs-entra" key={patrocinador.id}>
+          {urlLogo(patrocinador.logo_url) && (
+            <div className="obs-logo obs-logo-chico">
+              <img src={urlLogo(patrocinador.logo_url)} alt="" />
+            </div>
+          )}
+          <div className="obs-patrocinio-texto">
+            <div className="obs-crono-rotulo">Patrocinador</div>
+            <div className="obs-patrocinio-nombre">{patrocinador.name}</div>
+            {patrocinador.text && <div className="obs-patrocinio-frase">{patrocinador.text}</div>}
+          </div>
         </div>
       )
     );

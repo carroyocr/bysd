@@ -168,6 +168,18 @@
   text-overflow: ellipsis;
 }
 
+/* El mismo bloque, suelto en la esquina inferior derecha: la vista que lleva
+   solo al patrocinador. Conserva el filete rojo de la izquierda y añade el de
+   arriba, que es el que tienen las piezas que van sin barra. */
+.obs-patrocinio-suelto {
+  position: absolute;
+  bottom: 60px;
+  right: 70px;
+  height: 138px;
+  border-top: 6px solid var(--rojo);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
 /* Recuadro del cronómetro, a la derecha de la barra */
 .obs-crono {
   flex: 0 0 auto;
