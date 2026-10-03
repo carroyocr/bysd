@@ -168,6 +168,23 @@
   text-overflow: ellipsis;
 }
 
+/* Super de texto libre: dos lineas cuyo tamano llega del panel (40 y 28 px
+   al 100 %). Al 135 % suman 110 px con el hueco, que es lo que cabe en la
+   barra; por eso el panel no deja pasar de ahi. */
+.obs-super-linea1 {
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obs-super-linea2 {
+  line-height: 1.2;
+  color: var(--azul-claro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Recuadro del cronómetro, a la derecha de la barra */
 .obs-crono {
   flex: 0 0 auto;

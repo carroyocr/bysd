@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
 import usePatrocinadores, { urlLogo } from './usePatrocinadores';
 import useCharla from './useCharla';
+import useSuper from './useSuper';
 import './obs.css';
 
 /**
@@ -18,6 +19,7 @@ import './obs.css';
  *   /obs/clasificacion?clave=...&filas=10
  *   /obs/patrocinadores?clave=...
  *   /obs/charla?actividad=<id>&race=BYSD-2027&expositor=1   (sin clave: no lleva datos de carrera)
+ *   /obs/super?id=<id>   (dos líneas de texto libre, escritas en el panel)
  */
 export default function ObsPage() {
   const { vista } = useParams();
@@ -51,7 +53,13 @@ export default function ObsPage() {
   });
   // Solo la vista de patrocinadores lo usa, pero un hook no puede ir dentro
   // de un if: se declara siempre y en las demás vistas queda apagado.
-  const patrocinador = usePatrocinadores(raceCode, vista === 'patrocinadores' || vista === 'charla');
+  // El super sabe de qué carrera es: sus patrocinadores salen de ahí, y la
+  // dirección no tiene que llevar más que su id.
+  const superTexto = useSuper(params.get('id'), vista === 'super');
+  const patrocinador = usePatrocinadores(
+    vista === 'super' ? (superTexto.datos?.race_code || '') : raceCode,
+    vista === 'patrocinadores' || vista === 'charla' || (vista === 'super' && !!superTexto.datos),
+  );
   const charla = useCharla(params.get('actividad'), vista === 'charla', params.get('expositor'));
 
   // Es una función que devuelve marcado, no un componente: un componente
@@ -90,6 +98,43 @@ export default function ObsPage() {
               <div className="obs-titulo">{charla.actividad.name}</div>
             </div>
           )}
+          {patrocinador && (
+            <div className="obs-patrocinio obs-entra" key={patrocinador.id}>
+              {urlLogo(patrocinador.logo_url) && (
+                <div className="obs-logo obs-logo-chico">
+                  <img src={urlLogo(patrocinador.logo_url)} alt="" />
+                </div>
+              )}
+              <div className="obs-patrocinio-texto">
+                <div className="obs-crono-rotulo">Patrocinador</div>
+                <div className="obs-patrocinio-nombre">{patrocinador.name}</div>
+                {patrocinador.text && <div className="obs-patrocinio-frase">{patrocinador.text}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    );
+  }
+
+  if (vista === 'super') {
+    // La barra de la charla con texto libre: la hora, dos líneas escritas en
+    // el panel y el patrocinador de turno a la derecha. El tamaño es un
+    // porcentaje que se sube o se baja desde el panel.
+    if (superTexto.error) return enLienzo(<div className="obs-aviso">{superTexto.error}</div>);
+    const su = superTexto.datos;
+    const factor = (su?.tamano || 100) / 100;
+    return enLienzo(
+      su && (
+        <div className="obs-barra">
+          <div className="obs-marca">
+            <div className="obs-marca-arriba">HORA</div>
+            <div className="obs-marca-grande obs-hora">{superTexto.hora}</div>
+          </div>
+          <div className="obs-cuerpo">
+            {su.linea1 && <div className="obs-super-linea1" style={{ fontSize: `${40 * factor}px` }}>{su.linea1}</div>}
+            {su.linea2 && <div className="obs-super-linea2" style={{ fontSize: `${28 * factor}px` }}>{su.linea2}</div>}
+          </div>
           {patrocinador && (
             <div className="obs-patrocinio obs-entra" key={patrocinador.id}>
               {urlLogo(patrocinador.logo_url) && (
