@@ -163,8 +163,8 @@ def verify_admin_token(authorization: Optional[str]) -> dict:
     panel se firmaba con esta clave. Ahora el corredor y el espectador tambien
     llevan token, asi que aqui se comprueba el rol: sin esta linea, cualquiera
     con cuenta entraria en las rutas que solo piden "token valido" —las cuatro
-    de `/api/staff/mi-perfil`, el cambio de contrasena de `users.py` y las que
-    cuelgan de `race.verify_token`.
+    de `/api/staff/mi-perfil`, el cambio de contrasena de `users.py` y las
+    de `race_config` y `race`, que desde entonces piden ademas su permiso.
 
     Se mantiene el nombre a proposito: asi todo lo que ya llamaba a esta funcion
     queda protegido sin tener que tocarlo.
