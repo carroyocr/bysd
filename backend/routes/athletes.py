@@ -339,19 +339,23 @@ async def register_athlete(data: AthleteRegisterRequest, request: Request = None
     from services import cuentas as servicio_cuentas
 
     try:
-        cuenta = await servicio_cuentas.crear(
-            database,
-            email=data.email,
-            password=data.password,
-            nombre=data.nombre,
-            apellidos=data.apellidos,
-            roles=[servicio_cuentas.ATLETA],
-            email_verified=False,
-            athlete_profile_id=resultado.inserted_id,
-        )
-        await database.athletes.update_one(
-            {"_id": resultado.inserted_id}, {"$set": {"account_id": cuenta["_id"]}}
-        )
+        # Quien ya tenia cuenta —de espectador o del equipo— no recibe otra: el
+        # perfil se le ata al verificar el correo, que es cuando demuestra que
+        # es suyo. Ver `cuentas.enlazar_corredor`.
+        if not await servicio_cuentas.por_email(database, data.email):
+            cuenta = await servicio_cuentas.crear(
+                database,
+                email=data.email,
+                password=data.password,
+                nombre=data.nombre,
+                apellidos=data.apellidos,
+                roles=[servicio_cuentas.ATLETA],
+                email_verified=False,
+                athlete_profile_id=resultado.inserted_id,
+            )
+            await database.athletes.update_one(
+                {"_id": resultado.inserted_id}, {"$set": {"account_id": cuenta["_id"]}}
+            )
     except Exception as e:
         # Que falle esto no puede tumbar un alta que por lo demas fue bien: la
         # persona queda como quedaban todas antes de la cuenta unica y el script
@@ -466,13 +470,19 @@ async def verify_email(data: VerifyEmailRequest, request: Request = None):
     # El mismo cambio, en la cuenta. Si no, el login —que ya lee de `accounts`—
     # seguiria diciendo que el correo esta sin verificar despues de haberlo
     # verificado, y la persona quedaria dando vueltas sin ningun error visible.
+    #
+    # Y si la cuenta existia de antes —quien era voluntario y ahora se hace el
+    # perfil de corredor—, aqui se le ata el perfil y gana el rol. Con cuenta,
+    # la sesion sale ya con todos sus roles: en la app ve sus dos zonas sin
+    # tener que salir y volver a entrar.
     from services import cuentas as servicio_cuentas
-    await servicio_cuentas.sincronizar_credenciales(
-        database, athlete["email"], email_verified=True
-    )
+    cuenta = await servicio_cuentas.enlazar_corredor(database, athlete)
+    cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
 
-    # Generate token
-    token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
+    if cuenta:
+        token = servicio_cuentas.emitir_token(cuenta)
+    else:
+        token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
     
     return {
         "success": True,
@@ -559,6 +569,9 @@ async def login_athlete(data: AthleteLoginRequest, request: Request = None):
 
     cuenta = await servicio_cuentas.autenticar(database, data.email, data.password)
     if cuenta:
+        # Quien abrio su cuenta como voluntario y luego se hizo el perfil de
+        # corredor: el rol se le suma aqui, en vez de decirle que no lo tiene.
+        cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
         if servicio_cuentas.ATLETA not in (cuenta.get("roles") or []):
             raise HTTPException(
                 status_code=403,

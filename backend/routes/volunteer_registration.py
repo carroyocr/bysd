@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Literal, List
 from datetime import datetime, timezone, timedelta
+import logging
 import random
 import string
 
@@ -656,20 +657,25 @@ async def register_volunteer(
     # Cuenta para entrar a su perfil y ver sus turnos. Sin ningun permiso: solo
     # lo suyo. Los permisos (escaner, fichas medicas) los da despues la
     # organizacion desde la pestana Usuarios.
-    if password and len(password) >= 8 and not await db.admin_users.find_one({"username": email}):
-        import bcrypt
+    #
+    # Va a la cuenta unica: quien ya tenia cuenta —el corredor que ademas se
+    # apunta de voluntario— gana el rol de equipo en esa misma en vez de quedar
+    # con dos identidades. El correo viene demostrado por el codigo de este
+    # mismo registro.
+    try:
+        from services import cuentas as servicio_cuentas
 
-        ahora = datetime.now(timezone.utc)
-        await db.admin_users.insert_one({
-            "username": email,
-            "password": bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
-            "nombre": f"{data.nombre} {data.apellidos}".strip(),
-            "email": email,
-            "permissions": [],
-            "es_voluntario": True,
-            "created_at": ahora,
-            "updated_at": ahora,
-        })
+        await servicio_cuentas.cuenta_de_equipo(
+            db,
+            email,
+            password=password if len(password) >= servicio_cuentas.MIN_PASSWORD else None,
+            nombre=data.nombre,
+            apellidos=data.apellidos,
+        )
+    except Exception as e:
+        # Que falle esto no tumba un registro que por lo demas fue bien: la
+        # persona se pone la contrasena despues con su codigo.
+        logging.error("No se pudo preparar la cuenta del voluntario %s: %s", email, e)
 
     # Clean up session
     await db.volunteer_sessions.delete_many({"email": email})
@@ -908,11 +914,26 @@ async def get_volunteer_profiles(race_code: Optional[str] = None):
 
     correos = list({r.get("email", "").lower() for r in registrations if r.get("email")})
 
-    cuentas = await db.admin_users.find(
+    # La cuenta vive en `accounts`. `admin_users` se mira todavia por quien se
+    # puso contrasena antes de que eso pasara a la cuenta unica y aun no ha
+    # vuelto a entrar. La cuenta de un corredor o de un espectador cuenta si el
+    # correo esta verificado: con eso el acceso ya le suma el rol de equipo.
+    heredadas = await db.admin_users.find(
         {"username": {"$in": correos}},
         {"_id": 0, "username": 1, "password": 1, "permissions": 1}
     ).to_list(1000)
-    cuenta_por_correo = {c["username"]: c for c in cuentas}
+    cuenta_por_correo = {c["username"]: c for c in heredadas}
+
+    unificadas = await db.accounts.find(
+        {"email": {"$in": correos}},
+        {"_id": 0, "email": 1, "password_hash": 1, "permissions": 1, "roles": 1, "email_verified": 1}
+    ).to_list(2000)
+    for c in unificadas:
+        if "staff" in (c.get("roles") or []) or c.get("email_verified"):
+            cuenta_por_correo[c["email"]] = {
+                "password": c.get("password_hash"),
+                "permissions": c.get("permissions") or [],
+            }
 
     # Los turnos asignados viven en volunteer_assignments, no en el registro.
     # Se filtra por carrera: el mismo correo puede haber sido voluntario en

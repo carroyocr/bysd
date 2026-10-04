@@ -17,12 +17,11 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
-from services import rate_limit
-from services.auth import encode_admin_token, require_admin, require_permission
+from services import cuentas, rate_limit
+from services.auth import require_admin, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +53,31 @@ async def _buscar_voluntario(db, email: str) -> Optional[dict]:
     return docs[0] if docs else None
 
 
+async def _acceso_de_equipo(db, email: str, voluntario: Optional[dict]) -> dict:
+    """Con que entra al equipo quien tiene este correo, si entra con algo.
+
+    La cuenta vive en `accounts`. La de un corredor o un espectador cuenta aqui
+    solo si la persona es voluntaria y su correo esta verificado: es lo que hace
+    que el acceso le sume el rol (`cuentas.poner_al_dia`). `admin_users` se mira
+    todavia por quien se puso contrasena antes de que esto pasara a `accounts` y
+    aun no ha vuelto a entrar.
+    """
+    cuenta = await cuentas.por_email(db, email)
+    if cuenta and cuentas.STAFF not in (cuenta.get("roles") or []):
+        if not (voluntario and cuenta.get("email_verified")):
+            cuenta = None
+
+    heredado = await db.admin_users.find_one({"username": email})
+    return {
+        "cuenta": cuenta,
+        "heredado": heredado,
+        "tiene_cuenta": bool(cuenta or heredado),
+        "tiene_password": bool(
+            cuenta.get("password_hash") if cuenta else (heredado or {}).get("password")
+        ),
+    }
+
+
 # ==================== ESTADO DE LA CUENTA ====================
 
 
@@ -81,12 +105,12 @@ async def estado_de_la_cuenta(email: EmailStr, request: Request = None):
 
     correo = email.lower().strip()
     voluntario = await _buscar_voluntario(db, correo)
-    usuario = await db.admin_users.find_one({"username": correo}, {"password": 1})
+    acceso = await _acceso_de_equipo(db, correo, voluntario)
 
     return {
         "es_voluntario": voluntario is not None,
-        "tiene_cuenta": usuario is not None,
-        "tiene_password": bool(usuario and usuario.get("password")),
+        "tiene_cuenta": acceso["tiene_cuenta"],
+        "tiene_password": acceso["tiene_password"],
     }
 
 
@@ -134,11 +158,11 @@ async def solicitar_codigo(datos: SolicitarCodigo, request: Request = None):
     email = datos.email.lower().strip()
 
     voluntario = await _buscar_voluntario(db, email)
-    usuario = await db.admin_users.find_one({"username": email})
+    acceso = await _acceso_de_equipo(db, email, voluntario)
 
     # Se responde lo mismo exista o no la cuenta: si no, esto seria una forma
     # comoda de averiguar quien esta apuntado como voluntario.
-    if voluntario or usuario:
+    if voluntario or acceso["tiene_cuenta"]:
         await enviar_codigo_password(db, email)
 
     return {
@@ -170,47 +194,41 @@ async def definir_password(datos: DefinirPassword, request: Request = None):
         raise HTTPException(status_code=400, detail="El codigo caduco. Pide uno nuevo.")
 
     voluntario = await _buscar_voluntario(db, email)
-    usuario = await db.admin_users.find_one({"username": email})
-    if not voluntario and not usuario:
+    acceso = await _acceso_de_equipo(db, email, voluntario)
+    if not voluntario and not acceso["tiene_cuenta"]:
         raise HTTPException(status_code=404, detail="Ese correo no tiene cuenta en el equipo")
 
-    hashed = bcrypt.hashpw(datos.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    ahora = datetime.now(timezone.utc)
+    heredado = acceso["heredado"]
 
-    if usuario:
-        # Cuenta que ya existia (por ejemplo, alguien del equipo con permisos):
-        # se le cambia la contrasena y no se le tocan los permisos.
+    # La contrasena va a la cuenta unica, que es de donde lee cualquier acceso.
+    # Antes se guardaba en `admin_users`, y a quien ya tenia cuenta de corredor
+    # eso le dejaba una contrasena que no abria nada: el acceso miraba primero
+    # su cuenta, donde seguia la otra. Si la persona ya tenia cuenta gana aqui
+    # el rol de equipo en esa misma; los permisos no se tocan.
+    cuenta = await cuentas.cuenta_de_equipo(
+        db,
+        email,
+        password=datos.password,
+        nombre=(voluntario or {}).get("nombre") or (heredado or {}).get("nombre") or "",
+        apellidos=(voluntario or {}).get("apellidos") or "",
+        permissions=(heredado or {}).get("permissions"),
+    )
+    cuenta = await cuentas.poner_al_dia(db, cuenta)
+
+    if heredado:
+        # Mientras `admin_users` siga viva, que no guarde una contrasena vieja.
         await db.admin_users.update_one(
-            {"username": email}, {"$set": {"password": hashed, "updated_at": ahora}}
+            {"username": email},
+            {"$set": {"password": cuenta["password_hash"], "updated_at": datetime.now(timezone.utc)}},
         )
-        permisos = usuario.get("permissions", [])
-        nombre = usuario.get("nombre") or f"{voluntario.get('nombre','')} {voluntario.get('apellidos','')}".strip()
-    else:
-        nombre = f"{voluntario.get('nombre', '')} {voluntario.get('apellidos', '')}".strip()
-        permisos = []   # solo su perfil; los permisos los da la organizacion
-        await db.admin_users.insert_one({
-            "username": email,
-            "password": hashed,
-            "nombre": nombre,
-            "email": email,
-            "permissions": permisos,
-            "es_voluntario": True,
-            "created_at": ahora,
-            "updated_at": ahora,
-        })
 
     await db.volunteer_verification_tokens.delete_many({"email": email})
 
-    token = encode_admin_token({
-        "username": email,
-        "is_admin": False,
-        "permissions": permisos,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=12),
-    })
+    permisos = cuenta.get("permissions") or []
     return {
-        "token": token,
+        "token": cuentas.emitir_token(cuenta),
         "username": email,
-        "nombre": nombre,
+        "nombre": f"{cuenta.get('nombre') or ''} {cuenta.get('apellidos') or ''}".strip(),
         "is_admin": False,
         "permissions": permisos,
     }
