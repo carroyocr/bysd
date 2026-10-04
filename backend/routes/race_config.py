@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Header
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
@@ -17,16 +17,18 @@ ROUTES_DIR.mkdir(parents=True, exist_ok=True)
 MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
-from services.auth import require_permission, verify_admin_token
+from services.auth import require_permission
 from services import races as carreras
 
 # Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
+#
+# Aqui hubo un `verify_token` que solo pedia ser del equipo, y de el colgaban
+# crear, editar y publicar carreras, subir logos y manuales y mandar el correo
+# masivo del manual. Ser del equipo no es un permiso: una cuenta de staff se
+# crea sola desde la app y nace sin ninguno, asi que cualquiera con una podia
+# cambiar la carrera que ensena el sitio. Nada de este router va con menos que
+# "config".
 solo_config = Depends(require_permission("config"))
-
-
-async def verify_token(authorization: Optional[str] = Header(None)):
-    """Verify JWT token from Authorization header"""
-    return verify_admin_token(authorization)
 
 
 class PaymentInfoModel(BaseModel):
@@ -277,7 +279,7 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
 @router.post("/create")
 async def create_race(
     config: RaceConfigCreate,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Crea una carrera. Con `copiar_de`, hereda lo que se reutiliza de otra."""
@@ -381,7 +383,7 @@ async def _copiar_turnos(database, origen_code: str, destino_code: str) -> int:
 async def update_race(
     code: str,
     config: RaceConfigUpdate,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Update a race configuration"""
@@ -413,7 +415,7 @@ async def update_race(
 @router.post("/activate/{code}")
 async def activate_race(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Set a race as the active one (archives the previous active race)"""
@@ -499,7 +501,7 @@ async def reabrir_carrera(code: str):
 async def upload_logo(
     code: str,
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Upload a logo for a race (legacy endpoint - uploads to logo_url)"""
@@ -544,7 +546,7 @@ async def upload_race_image(
     code: str,
     image_type: str,
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """
@@ -813,7 +815,7 @@ async def upload_manual(
     code: str,
     manual_type: str,  # "runners" or "volunteers"
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Upload a manual (PDF) for a race - runners or volunteers"""
@@ -858,7 +860,7 @@ async def upload_manual(
 async def delete_manual(
     code: str,
     manual_type: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Delete a manual for a race"""
@@ -924,7 +926,7 @@ async def get_race_manuals(code: str, db=Depends(lambda: None)):
 @router.get("/notify-runners-count/{code}")
 async def get_runners_count_for_notification(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Get count of active runners who will receive the manual notification"""
@@ -942,7 +944,7 @@ async def get_runners_count_for_notification(
 @router.get("/notify-volunteers-count/{code}")
 async def get_volunteers_count_for_notification(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Get count of registered volunteers who will receive the manual notification"""
@@ -959,7 +961,7 @@ async def get_volunteers_count_for_notification(
 @router.post("/notify-runners-manual/{code}")
 async def notify_runners_manual_available(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Send email notification to all active runners that the manual is available"""
@@ -1028,7 +1030,7 @@ async def notify_runners_manual_available(
 @router.post("/notify-volunteers-manual/{code}")
 async def notify_volunteers_manual_available(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Send email notification to all registered volunteers that the manual is available"""
