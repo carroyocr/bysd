@@ -66,13 +66,17 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     # la migracion dejaria al administrador fuera de su propio panel.
     from services import cuentas as servicio_cuentas
 
-    cuenta = await database[servicio_cuentas.COLECCION].find_one(
-        {"$or": [{"email": usuario}, {"staff_username": usuario}]}
-    )
+    cuenta = await servicio_cuentas.del_equipo(database, usuario)
+    if not cuenta:
+        # El voluntario que solo existe en `admin_users`: al acertar su
+        # contrasena se le hace la cuenta, y sigue por el camino de todos.
+        cuenta = await servicio_cuentas.adoptar_del_panel(database, usuario, credentials.password)
 
     if cuenta:
         if not servicio_cuentas.verificar_password(credentials.password, cuenta.get("password_hash")):
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        # El corredor que ademas es voluntario gana aqui su rol de equipo.
+        cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
         if servicio_cuentas.STAFF not in (cuenta.get("roles") or []):
             raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
 

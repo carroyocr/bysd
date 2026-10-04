@@ -264,6 +264,197 @@ async def anadir_rol(db, cuenta_id, rol: str, permissions=None) -> None:
     await db[COLECCION].update_one({"_id": cuenta_id}, cambios)
 
 
+# ==================== UNA PERSONA, UNA CUENTA ====================
+#
+# La migracion junto a quien ya era corredor y del equipo el dia que se corrio,
+# pero fue un script de una vez. Quien se apunto de voluntario despues teniendo
+# ya cuenta de corredor —o al reves— se quedo con el rol de siempre: la ficha
+# nueva existia, la cuenta no se enteraba, y en la app solo salia uno de los dos
+# accesos. Lo de aqui abajo es lo que mantiene eso al dia sin otro script.
+#
+# La regla que no se puede saltar: un rol se suma por coincidencia de correo
+# solo si el correo de la cuenta esta demostrado. La cuenta de espectador nace
+# sin verificar, asi que cualquiera puede crear una con el correo de otro; si
+# bastara con que el correo coincidiera, esa cuenta heredaria la ficha medica
+# del voluntario o del corredor de verdad.
+
+
+async def poner_al_dia(db, cuenta: Optional[dict]) -> Optional[dict]:
+    """Suma a la cuenta los roles que la persona ya se gano por otro camino.
+
+    Se llama en cada acceso, antes de mirar los roles: el voluntario que ademas
+    corre entra una vez y ve sus dos zonas. Devuelve la cuenta como queda.
+    """
+    if not cuenta or not cuenta.get("email_verified"):
+        return cuenta
+
+    correo = cuenta.get("email")
+    roles = list(cuenta.get("roles") or [FAN])
+    nuevos, campos = [], {}
+
+    if STAFF not in roles and await db.volunteer_registrations.find_one(
+        {"email": correo, "status": {"$ne": "cancelled"}}, {"_id": 1}
+    ):
+        nuevos.append(STAFF)
+
+    perfil = None
+    if ATLETA not in roles:
+        perfil = await db.athletes.find_one(
+            {"email": correo, "email_verified": True}, {"_id": 1}
+        )
+        if perfil:
+            nuevos.append(ATLETA)
+            campos["athlete_profile_id"] = perfil["_id"]
+
+    if not nuevos:
+        return cuenta
+
+    campos["updated_at"] = datetime.now(timezone.utc)
+    await db[COLECCION].update_one(
+        {"_id": cuenta["_id"]},
+        {"$addToSet": {"roles": {"$each": nuevos}}, "$set": campos},
+    )
+    if perfil:
+        await db.athletes.update_one(
+            {"_id": perfil["_id"]}, {"$set": {"account_id": cuenta["_id"]}}
+        )
+    return {**cuenta, **campos, "roles": roles + nuevos}
+
+
+async def enlazar_corredor(db, perfil: dict) -> Optional[dict]:
+    """Ata a su cuenta el perfil de corredor que acaba de verificar su correo.
+
+    Lo normal es que la cuenta la haya creado el propio registro de corredor y
+    aqui solo se marque como verificada. El otro caso es el de quien ya tenia
+    cuenta —de espectador o del equipo— y se hace despues el perfil: el alta no
+    pudo crear otra con el mismo correo, asi que el perfil quedo suelto. Se le
+    ata aqui, que es cuando demuestra con el codigo que el correo es suyo, y la
+    cuenta toma la contrasena del perfil: es la que acaba de elegir, y deja
+    fuera a quien hubiera abierto antes una cuenta con un correo ajeno.
+
+    Devuelve la cuenta como queda, o None si no la hay.
+    """
+    cuenta = await por_email(db, perfil.get("email"))
+    if not cuenta:
+        return None
+
+    cambios = {"email_verified": True, "updated_at": datetime.now(timezone.utc)}
+    if cuenta.get("athlete_profile_id") != perfil["_id"]:
+        cambios["athlete_profile_id"] = perfil["_id"]
+        if perfil.get("password_hash"):
+            cambios["password_hash"] = perfil["password_hash"]
+
+    await db[COLECCION].update_one(
+        {"_id": cuenta["_id"]}, {"$addToSet": {"roles": ATLETA}, "$set": cambios}
+    )
+    await db.athletes.update_one({"_id": perfil["_id"]}, {"$set": {"account_id": cuenta["_id"]}})
+
+    roles = cuenta.get("roles") or [FAN]
+    return {**cuenta, **cambios, "roles": roles if ATLETA in roles else [*roles, ATLETA]}
+
+
+async def fijar_password(db, cuenta: dict, password: str) -> dict:
+    """Cambia la contrasena de quien acaba de demostrar su correo con un codigo.
+
+    Deja ademas el correo como verificado —el codigo lo demuestra igual— y copia
+    el cambio al perfil de corredor, que conserva su propio `password_hash` y
+    tiene endpoints que comprueban la contrasena actual contra ese campo.
+    """
+    ahora = datetime.now(timezone.utc)
+    cambios = {"password_hash": hash_password(password), "email_verified": True, "updated_at": ahora}
+
+    await db[COLECCION].update_one({"_id": cuenta["_id"]}, {"$set": cambios})
+    if cuenta.get("athlete_profile_id"):
+        await db.athletes.update_one({"_id": cuenta["athlete_profile_id"]}, {"$set": cambios})
+    return {**cuenta, **cambios}
+
+
+async def cuenta_de_equipo(
+    db,
+    email: str,
+    password: Optional[str] = None,
+    nombre: str = "",
+    apellidos: str = "",
+    permissions=None,
+) -> Optional[dict]:
+    """La cuenta de alguien del equipo que acaba de demostrar su correo.
+
+    Es la salida de los dos caminos del voluntario —apuntarse y ponerse
+    contrasena—, que van los dos con un codigo al correo. Si la persona ya tenia
+    cuenta, de corredor o de espectador, gana el rol en esa misma cuenta; si no,
+    se le crea. La contrasena que escribe ahi pasa a ser la de la cuenta: es la
+    ultima que eligio y la eligio con el correo demostrado.
+
+    Sin contrasena y sin cuenta no hay nada que crear: devuelve None y la
+    persona se la pondra despues con su codigo.
+    """
+    cuenta = await por_email(db, email)
+    if not cuenta:
+        if not password:
+            return None
+        return await crear(
+            db, email=email, password=password, nombre=nombre, apellidos=apellidos,
+            roles=[STAFF], permissions=permissions, email_verified=True,
+        )
+
+    if password:
+        cuenta = await fijar_password(db, cuenta, password)
+
+    # Cuenta sin verificar y sin contrasena nueva: no se sabe si quien la abrio
+    # es quien acaba de demostrar el correo. Se queda como esta.
+    if not cuenta.get("email_verified"):
+        return cuenta
+
+    roles = cuenta.get("roles") or [FAN]
+    if STAFF not in roles:
+        await anadir_rol(db, cuenta["_id"], STAFF)
+        cuenta = {**cuenta, "roles": [*roles, STAFF]}
+    return cuenta
+
+
+async def del_equipo(db, usuario: str) -> Optional[dict]:
+    """La cuenta de alguien del equipo, por su correo o por su usuario del panel."""
+    usuario = normalizar_email(usuario)
+    if not usuario:
+        return None
+    return await db[COLECCION].find_one(
+        {"$or": [{"email": usuario}, {"staff_username": usuario}]}
+    )
+
+
+async def adoptar_del_panel(db, usuario: str, password: str) -> Optional[dict]:
+    """Crea la cuenta de quien solo existe en `admin_users`, al acertar su contrasena.
+
+    Entre la migracion y este cambio, el voluntario que se ponia contrasena
+    seguia naciendo en `admin_users`: entraba por el acceso de staff, que cae a
+    esa coleccion, pero no por la puerta unica de la app, que solo mira
+    `accounts`. Aqui se le hace la cuenta en el momento de entrar, con la misma
+    forma que le habria dado la migracion.
+
+    Solo para usuarios que son un correo: es la identidad de una cuenta.
+    """
+    usuario = normalizar_email(usuario)
+    if "@" not in usuario or await del_equipo(db, usuario):
+        return None
+
+    heredado = await db.admin_users.find_one({"username": usuario})
+    if not heredado or not verificar_password(password, heredado.get("password")):
+        return None
+
+    return await crear(
+        db,
+        email=usuario,
+        password=password,
+        nombre=heredado.get("nombre") or "",
+        roles=[STAFF],
+        permissions=heredado.get("permissions"),
+        # Las cuentas de voluntario salieron de un codigo enviado al correo; las
+        # que creo el panel a mano, no.
+        email_verified=bool(heredado.get("es_voluntario")),
+        staff_username=usuario,
+    )
+
+
 def publica(cuenta: dict) -> dict:
     """La cuenta tal como puede salir en una respuesta: sin hash ni codigos."""
     return {

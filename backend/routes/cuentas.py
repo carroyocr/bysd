@@ -281,7 +281,14 @@ async def login(datos: Acceso, request: Request = None):
 
     cuenta = await cuentas.autenticar(db, datos.email, datos.password)
     if not cuenta:
+        # El voluntario que se puso contrasena cuando eso aun se guardaba solo
+        # en `admin_users`: se le hace la cuenta aqui, al acertar.
+        cuenta = await cuentas.adoptar_del_panel(db, datos.email, datos.password)
+    if not cuenta:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+    # Quien corre y ademas es voluntario entra una vez y ve sus dos zonas.
+    cuenta = await cuentas.poner_al_dia(db, cuenta)
 
     # El corredor sin correo verificado no entra, igual que en
     # `/api/athletes/login`. Sin esta linea, esta puerta seria la forma comoda
@@ -319,7 +326,7 @@ async def verificar(datos: Codigo, request: Request = None):
                   "updated_at": datetime.now(timezone.utc)}},
     )
     cuenta["email_verified"] = True
-    return _sesion(cuenta)
+    return _sesion(await cuentas.poner_al_dia(db, cuenta))
 
 
 @router.post("/reenviar-codigo")
@@ -577,6 +584,13 @@ async def borrar_cuenta(payload: dict = Depends(require_cuenta)):
             {"account_id": cuenta["_id"]}, {"$unset": {"account_id": ""}}
         )
         await db[cuentas.COLECCION].delete_one({"_id": cuenta["_id"]})
+
+    # Y lo que quede suyo en `admin_users`. Sin esto, la contrasena de alli
+    # seguiria abriendo el acceso del equipo, que al acertar le volveria a
+    # crear la cuenta (`cuentas.adoptar_del_panel`): borrar no borraria nada.
+    usuarios = [u for u in (email, (cuenta or {}).get("staff_username")) if u]
+    if usuarios:
+        await db.admin_users.delete_many({"username": {"$in": usuarios}})
 
     return {"success": True}
 

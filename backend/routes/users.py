@@ -9,8 +9,14 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import bcrypt
 
-from services import rate_limit
+from services import cuentas, rate_limit
 from services.auth import require_admin, require_permission
+
+# Desde la cuenta unica, el acceso lee de `accounts`: los permisos, la
+# contrasena y el propio rol de equipo salen de ahi. `admin_users` sigue viva
+# hasta que se retire, pero lo que se cambie solo en ella no llega a ningun
+# acceso de quien ya tiene cuenta. Por eso cada escritura de este fichero va a
+# las dos, y la lista sale de las dos.
 
 # La gestion de usuarios es la operacion mas sensible del panel: crear un
 # usuario aqui equivale a repartir acceso al resto. Se exige el permiso
@@ -49,11 +55,17 @@ async def cambiar_password(
     rate_limit.limitar_login(request, usuario.get("username", ""))
 
     username = (usuario.get("username") or "").lower()
-    registro = await db.admin_users.find_one({"username": username})
-    if not registro:
+    cuenta = await cuentas.del_equipo(db, username)
+    registro = await db.admin_users.find_one(
+        {"username": (cuenta or {}).get("staff_username") or username}
+    )
+    if not cuenta and not registro:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if not bcrypt.checkpw(datos.password_actual.encode("utf-8"), registro["password"].encode("utf-8")):
+    # La contrasena que vale es la de la cuenta, que es con la que se entra.
+    actual = cuenta["password_hash"] if cuenta else registro["password"]
+
+    if not cuentas.verificar_password(datos.password_actual, actual):
         raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
 
     if len(datos.password_nueva) < MIN_PASSWORD:
@@ -62,16 +74,44 @@ async def cambiar_password(
             detail=f"La contraseña nueva debe tener al menos {MIN_PASSWORD} caracteres",
         )
 
-    if bcrypt.checkpw(datos.password_nueva.encode("utf-8"), registro["password"].encode("utf-8")):
+    if cuentas.verificar_password(datos.password_nueva, actual):
         raise HTTPException(status_code=400, detail="La contraseña nueva debe ser distinta de la actual")
 
-    hashed = bcrypt.hashpw(datos.password_nueva.encode("utf-8"), bcrypt.gensalt())
-    await db.admin_users.update_one(
-        {"username": username},
-        {"$set": {"password": hashed.decode("utf-8"), "updated_at": datetime.now(timezone.utc)}},
-    )
+    hashed = cuentas.hash_password(datos.password_nueva)
+    ahora = datetime.now(timezone.utc)
+    if cuenta:
+        await db[cuentas.COLECCION].update_one(
+            {"_id": cuenta["_id"]}, {"$set": {"password_hash": hashed, "updated_at": ahora}}
+        )
+        # El perfil de corredor guarda su copia y hay endpoints que la miran.
+        if cuenta.get("athlete_profile_id"):
+            await db.athletes.update_one(
+                {"_id": cuenta["athlete_profile_id"]},
+                {"$set": {"password_hash": hashed, "updated_at": ahora}},
+            )
+    if registro:
+        await db.admin_users.update_one(
+            {"_id": registro["_id"]}, {"$set": {"password": hashed, "updated_at": ahora}}
+        )
 
     return {"message": "Contraseña actualizada. Vuelve a iniciar sesión."}
+
+
+async def _cuenta_del_equipo(db, username: str) -> Optional[dict]:
+    """La cuenta con rol de equipo que corresponde a un usuario de la lista.
+
+    Se busca por el usuario y, si no, por el correo de su fila de `admin_users`:
+    los usuarios cortos de antes ("geizel26") tienen la cuenta a su correo.
+    """
+    username = (username or "").strip().lower()
+    cuenta = await cuentas.del_equipo(db, username)
+    if not cuenta:
+        fila = await db.admin_users.find_one({"username": username}, {"email": 1})
+        if fila and fila.get("email"):
+            cuenta = await cuentas.por_email(db, fila["email"])
+    if cuenta and cuentas.STAFF not in (cuenta.get("roles") or []):
+        return None
+    return cuenta
 
 
 class UserCreate(BaseModel):
@@ -108,19 +148,50 @@ async def get_users():
     users = await db.admin_users.find(
         {},
         {"_id": 0, "password": 0}  # Exclude password
-    ).to_list(100)
-    
+    ).to_list(1000)
+
+    # Las cuentas del equipo. Los permisos que se ensenan son los de la cuenta,
+    # que son los que valen al entrar; y quien tiene el rol sin fila en
+    # `admin_users` —el staff que se dio de alta en la app, el corredor que
+    # ademas es voluntario— sale tambien, o no habria forma de darle permisos.
+    del_equipo = await db[cuentas.COLECCION].find(
+        {"roles": cuentas.STAFF},
+        {"email": 1, "staff_username": 1, "nombre": 1, "apellidos": 1,
+         "permissions": 1, "is_admin": 1, "created_at": 1},
+    ).to_list(2000)
+    por_usuario = {}
+    for c in del_equipo:
+        por_usuario[c.get("email")] = c
+        if c.get("staff_username"):
+            por_usuario[c["staff_username"]] = c
+
     result = []
+    vistas = set()
     for user in users:
+        cuenta = por_usuario.get(user.get("username")) or por_usuario.get((user.get("email") or "").lower())
+        if cuenta:
+            vistas.add(cuenta["_id"])
         result.append(UserResponse(
             username=user.get("username"),
             nombre=user.get("nombre"),
             email=user.get("email"),
-            permissions=user.get("permissions", []),
+            permissions=(cuenta or user).get("permissions") or [],
             is_admin=user.get("username") == "admin",
             created_at=user.get("created_at")
         ))
-    
+
+    for c in del_equipo:
+        if c["_id"] in vistas:
+            continue
+        result.append(UserResponse(
+            username=c.get("staff_username") or c.get("email"),
+            nombre=f"{c.get('nombre') or ''} {c.get('apellidos') or ''}".strip() or None,
+            email=c.get("email") if "@" in (c.get("email") or "") else None,
+            permissions=c.get("permissions") or [],
+            is_admin=bool(c.get("is_admin")),
+            created_at=c.get("created_at"),
+        ))
+
     return result
 
 
@@ -198,19 +269,18 @@ async def update_permissions(username: str, update: PermissionsUpdate):
     if username.lower() == "admin":
         raise HTTPException(status_code=400, detail="No se pueden modificar los permisos del administrador principal")
     
-    result = await db.admin_users.update_one(
-        {"username": username.lower()},
-        {
-            "$set": {
-                "permissions": update.permissions,
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
-    )
-    
-    if result.matched_count == 0:
+    cambios = {"permissions": update.permissions, "updated_at": datetime.now(timezone.utc)}
+    result = await db.admin_users.update_one({"username": username.lower()}, {"$set": cambios})
+
+    # Y en la cuenta, que es de donde los lee el acceso. Sin esto el panel dice
+    # "permisos actualizados" y la persona sigue entrando con los de antes.
+    cuenta = await _cuenta_del_equipo(db, username)
+    if cuenta:
+        await db[cuentas.COLECCION].update_one({"_id": cuenta["_id"]}, {"$set": cambios})
+
+    if result.matched_count == 0 and not cuenta:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
+
     return {"message": "Permisos actualizados"}
 
 
@@ -223,11 +293,26 @@ async def delete_user(username: str):
     if username.lower() == "admin":
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
     
+    # Antes de borrar la fila: la cuenta puede estar atada a ella por el correo.
+    cuenta = await _cuenta_del_equipo(db, username)
+    if cuenta and cuenta.get("is_admin"):
+        raise HTTPException(status_code=400, detail="No se puede eliminar el administrador principal")
+
     result = await db.admin_users.delete_one({"username": username.lower()})
-    
-    if result.deleted_count == 0:
+
+    # La cuenta no se borra —puede ser tambien la de un corredor—: pierde el
+    # rol de equipo y los permisos, que es lo que este boton quita. Sin esto,
+    # el usuario "eliminado" seguia entrando al panel con su cuenta.
+    if cuenta:
+        await db[cuentas.COLECCION].update_one(
+            {"_id": cuenta["_id"]},
+            {"$pull": {"roles": cuentas.STAFF},
+             "$set": {"permissions": [], "updated_at": datetime.now(timezone.utc)}},
+        )
+
+    if result.deleted_count == 0 and not cuenta:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
+
     return {"message": "Usuario eliminado"}
 
 
@@ -247,8 +332,17 @@ async def update_user(username: str, update: UserUpdate):
         {"username": username.lower()},
         {"$set": update_data}
     )
-    
+
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    
+        # Quien solo tiene cuenta: se le corrige el nombre. El correo no, que
+        # ahi es la identidad con la que entra.
+        cuenta = await _cuenta_del_equipo(db, username)
+        if not cuenta:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        if update.nombre is not None:
+            await db[cuentas.COLECCION].update_one(
+                {"_id": cuenta["_id"]},
+                {"$set": {"nombre": update.nombre, "apellidos": "", "updated_at": update_data["updated_at"]}},
+            )
+
     return {"message": "Usuario actualizado"}
