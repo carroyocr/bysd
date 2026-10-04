@@ -316,7 +316,14 @@ async def verificar(datos: Codigo, request: Request = None):
         raise HTTPException(status_code=404, detail="No hay cuenta con ese correo")
 
     if cuenta.get("email_verified"):
-        return _sesion(cuenta)
+        # Aqui se devolvia la sesion sin mirar el codigo: bastaba con saber el
+        # correo de una cuenta verificada —la de cualquier corredor, la de
+        # alguien del equipo con permisos— para entrar en ella. Quien ya tiene
+        # el correo confirmado no tiene nada que hacer en esta ruta.
+        raise HTTPException(
+            status_code=409,
+            detail="Ese correo ya esta confirmado. Entra con tu contrasena.",
+        )
 
     await _comprobar_codigo(db, cuenta, datos.code, "verificar")
 
