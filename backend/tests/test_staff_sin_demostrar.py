@@ -202,7 +202,9 @@ def test_las_rutas_del_voluntario_cuelgan_de_la_comprobacion():
         ("GET", "/api/staff/mi-perfil/turnos-disponibles"),
         ("PUT", "/api/staff/mi-perfil/turnos"),
         ("GET", "/api/staff/mi-perfil/carnet"),
-        ("GET", "/api/staff/mi-perfil/postulaciones"),
+        ("GET", "/api/staff/mi-perfil/turnos"),
+        ("POST", "/api/staff/mi-perfil/turnos/{slot_id}/solicitar"),
+        ("DELETE", "/api/staff/mi-perfil/turnos/{slot_id}/solicitud"),
         ("PUT", "/api/staff/mi-perfil/datos"),
         ("POST", "/api/staff/mi-perfil/turnos/{slot_id}/confirmar"),
     }
@@ -259,38 +261,6 @@ def test_quien_se_puso_contrasena_con_su_codigo_ve_su_ficha(monkeypatch, correos
         return await staff_account.mi_perfil(auth.decodificar(cuentas.emitir_token(cuenta)))
 
     assert correr(caso, monkeypatch)["perfil"]["tipo_sangre"] == "O+"
-
-
-def test_el_voluntario_recibe_la_llave_para_editar_su_postulacion(monkeypatch, correos):
-    """Una por evento y solo de su edicion mas reciente; la del ano pasado no."""
-    async def caso(db):
-        ahora = datetime.now(timezone.utc)
-        await db.race_configurations.insert_one({"code": "MUNDIAL-2026", "name": "Backyard Ultra SD"})
-        await db.volunteer_registrations.insert_many([
-            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "BYSD-2025",
-             "evento": "carrera", "edit_token": "la-del-ano-pasado", "created_at": ahora - timedelta(days=300)},
-            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "MUNDIAL-2026",
-             "evento": "carrera", "edit_token": "llave-carrera", "created_at": ahora - timedelta(days=2)},
-            # Postulacion de antes de que existieran las llaves: se le genera.
-            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "MUNDIAL-2026",
-             "evento": "campeonato", "created_at": ahora - timedelta(days=1)},
-            {"email": CORREO, "nombre": "Ana", "status": "cancelled", "race_code": "MUNDIAL-2026",
-             "evento": "campeonato", "edit_token": "cancelada", "created_at": ahora},
-        ])
-        cuenta = await cuentas.cuenta_de_equipo(db, CORREO, password=CLAVE, nombre="Ana")
-        payload = auth.decodificar(cuentas.emitir_token(cuenta))
-        respuesta = await staff_account.mis_postulaciones(payload)
-        guardada = await db.volunteer_registrations.find_one(
-            {"email": CORREO, "evento": "campeonato", "status": "confirmed"})
-        return respuesta["postulaciones"], guardada
-
-    postulaciones, guardada = correr(caso, monkeypatch)
-    por_evento = {p["evento"]: p for p in postulaciones}
-    assert set(por_evento) == {"carrera", "campeonato"}
-    assert por_evento["carrera"]["edit_token"] == "llave-carrera"
-    assert por_evento["carrera"]["evento_nombre"] == "Backyard Ultra SD"
-    assert len(por_evento["campeonato"]["edit_token"]) == 32
-    assert guardada["edit_token"] == por_evento["campeonato"]["edit_token"]
 
 
 # ==================== Lo que el voluntario hace con lo suyo ====================
@@ -407,6 +377,131 @@ def test_la_confirmacion_no_pasa_a_quien_hereda_el_turno(monkeypatch, correos):
     reasignado, suelto = correr(caso, monkeypatch)
     assert staff_account.turno_confirmado(reasignado) is False
     assert suelto["email_asignado"] is None and "confirmado_por" not in suelto
+
+
+# ==================== La pestana Turnos ====================
+
+
+async def _carrera_y_campeonato(db):
+    """Una voluntaria apuntada a los dos eventos, con turnos de cada uno."""
+    ahora = datetime.now(timezone.utc)
+    await db.race_configurations.insert_one(
+        {"code": "BYSD-2027", "name": "Backyard Ultra Santo Domingo 2027", "date": "2027-01-23",
+         "is_active": True})
+    await db.volunteer_event_schedules.insert_one({"evento": "campeonato", "fecha_inicio": "2026-10-17"})
+    base = {"email": CORREO, "nombre": "Ana", "apellidos": "Perez", "status": "confirmed",
+            "race_code": "BYSD-2027"}
+    await db.volunteer_registrations.insert_many([
+        {**base, "evento": "carrera", "slots_interes": [11], "created_at": ahora - timedelta(days=2)},
+        {**base, "evento": "campeonato", "slots_interes": [21, 22], "created_at": ahora - timedelta(days=1)},
+        # Otra voluntaria que ya pidio un turno: queda reservado para ella.
+        {"email": "otra@correo.com", "nombre": "Eva", "status": "confirmed", "race_code": "BYSD-2027",
+         "evento": "carrera", "slots_interes": [13], "created_at": ahora},
+    ])
+
+    def turno(id_, evento, puesto, letra, inicio, fin, dia_tipo, asignado=None):
+        return {"id": id_, "evento": evento, "puesto": puesto, "turno": letra, "hora_inicio": inicio,
+                "hora_fin": fin, "dia_tipo": dia_tipo, "email_asignado": asignado, "race_code": "BYSD-2027"}
+
+    await db.volunteer_assignments.insert_many([
+        turno(11, "carrera", "Meta", "A", "06:00", "10:00", "carrera"),
+        turno(12, "carrera", "Hidratacion", "B", "10:00", "14:00", "carrera"),
+        turno(13, "carrera", "Corral", "B", "10:00", "14:00", "carrera"),
+        turno(14, "carrera", "Registro", "A", "06:00", "10:00", "carrera"),
+        turno(21, "campeonato", "Meta", "A", "07:00", "11:00", "carrera_dia1", asignado=CORREO),
+        turno(22, "campeonato", "Hidratacion", "G", "07:00", "11:00", "carrera_dia2"),
+        turno(23, "campeonato", "Meta", "A", "07:00", "11:00", "carrera_dia1"),
+        turno(24, "campeonato", "Corral", "H", "11:00", "15:00", "carrera_dia2", asignado="otra@correo.com"),
+    ])
+
+
+def test_los_turnos_salen_por_evento_en_sus_tres_estados(monkeypatch, correos):
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        return await staff_account.mis_turnos(await _sesion_de_la_voluntaria(db))
+
+    eventos = correr(caso, monkeypatch)["eventos"]
+    assert [(e["evento"], e["etiqueta"]) for e in eventos] == [
+        ("campeonato", "Campeonato"), ("carrera", "Backyard 2027")]
+    campeonato, carrera = eventos
+
+    # Campeonato: el 21 ya es suyo, el 22 lo pidio y sigue pendiente.
+    assert [t["slot_id"] for t in campeonato["asignados"]] == [21]
+    assert campeonato["asignados"][0]["confirmado"] is False
+    assert campeonato["asignados"][0]["dia"] == "2026-10-17"
+    assert [t["slot_id"] for t in campeonato["solicitados"]] == [22]
+    assert campeonato["solicitados"][0]["dia"] == "2026-10-18"
+    # No se le ofrece otra plaza del puesto y turno que ya tiene (el 23), ni el
+    # que es de otra persona (el 24), ni el que ya pidio.
+    assert campeonato["disponibles"] == []
+
+    # Carrera: pidio el 11; el 13 esta reservado por otra voluntaria.
+    assert [t["slot_id"] for t in carrera["solicitados"]] == [11]
+    assert carrera["asignados"] == []
+    assert [t["slot_id"] for t in carrera["disponibles"]] == [14, 12]
+    assert carrera["disponibles"][0]["dia"] == "2027-01-23"
+
+
+def test_pedir_un_turno_lo_suma_a_la_postulacion_de_su_evento(monkeypatch, correos):
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        await staff_account.solicitar_turno(12, payload)
+        return (
+            await db.volunteer_registrations.find_one({"email": CORREO, "evento": "carrera"}),
+            await db.volunteer_registrations.find_one({"email": CORREO, "evento": "campeonato"}),
+        )
+
+    carrera, campeonato = correr(caso, monkeypatch)
+    assert carrera["slots_interes"] == [11, 12]
+    assert campeonato["slots_interes"] == [21, 22]
+
+
+def test_no_se_pide_lo_reservado_por_otro_ni_lo_que_se_pisa_con_lo_suyo(monkeypatch, correos):
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        errores = []
+        # 13: lo pidio otra voluntaria. 14: misma hora que el 11, que ya pidio.
+        # 24: ya es de otra persona.
+        for slot_id in (13, 14, 24):
+            with pytest.raises(HTTPException) as error:
+                await staff_account.solicitar_turno(slot_id, payload)
+            errores.append(error.value.status_code)
+        return errores, await db.volunteer_registrations.find_one({"email": CORREO, "evento": "carrera"})
+
+    errores, carrera = correr(caso, monkeypatch)
+    assert errores == [400, 400, 400]
+    assert carrera["slots_interes"] == [11]
+
+
+def test_sin_postulacion_en_un_evento_no_se_piden_sus_turnos(monkeypatch, correos):
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        await db.volunteer_registrations.delete_one({"email": CORREO, "evento": "campeonato"})
+        payload = await _sesion_de_la_voluntaria(db)
+        with pytest.raises(HTTPException) as error:
+            await staff_account.solicitar_turno(22, payload)
+        return error.value
+
+    assert correr(caso, monkeypatch).status_code == 404
+
+
+def test_retirar_una_solicitud_deja_el_turno_libre_para_los_demas(monkeypatch, correos):
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        await staff_account.retirar_solicitud(11, payload)
+        return (
+            await db.volunteer_registrations.find_one({"email": CORREO, "evento": "carrera"}),
+            await staff_account.mis_turnos(payload),
+        )
+
+    registro, turnos = correr(caso, monkeypatch)
+    assert registro["slots_interes"] == []
+    carrera = next(e for e in turnos["eventos"] if e["evento"] == "carrera")
+    assert carrera["solicitados"] == []
+    assert 11 in [t["slot_id"] for t in carrera["disponibles"]]
 
 
 # ==================== El camino de vuelta ====================

@@ -373,48 +373,183 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
     }
 
 
-@router.get("/mi-perfil/postulaciones")
-async def mis_postulaciones(payload: dict = Depends(equipo_con_correo_demostrado)):
-    """Las postulaciones del voluntario, con la llave para editar cada una.
+async def _postulaciones(db, email: str) -> list:
+    """Los registros del voluntario en su edicion mas reciente, uno por evento.
 
-    En la web, editar la postulacion era pedir un enlace al correo y esperar a
-    que llegara. Quien ya entro con su cuenta demostro lo mismo que demuestra
-    abrir ese correo, asi que se le da el enlace directamente. Solo las de su
-    edicion mas reciente, una por evento, como el carnet.
+    Quien se apunto a la carrera y al campeonato tiene dos, y cada uno guarda
+    los turnos que pidio para su evento.
     """
-    from server import db
-    from routes.volunteer_registration import generate_edit_token, nombre_evento
-
-    email = (payload.get("username") or "").lower()
     registros = await db.volunteer_registrations.find(
         {"email": email, "status": {"$ne": "cancelled"}}
     ).sort("created_at", -1).to_list(20)
     if not registros:
-        return {"postulaciones": []}
+        return []
+
+    edicion = registros[0].get("race_code")
+    unicos, vistos = [], set()
+    for r in registros:
+        evento = r.get("evento") or "carrera"
+        if r.get("race_code") == edicion and evento not in vistos:
+            vistos.add(evento)
+            unicos.append(r)
+    return unicos
+
+
+def _etiqueta_evento(carrera: Optional[dict], evento: str) -> str:
+    """El nombre corto con el que se elige el evento en la pantalla."""
+    from routes.volunteer_registration import nombre_evento
+
+    if evento == "campeonato":
+        return "Campeonato"
+    anio = str((carrera or {}).get("date") or "")[:4]
+    return f"Backyard {anio}" if anio.isdigit() else nombre_evento(carrera, evento)
+
+
+def _orden_de_turno(turno: dict):
+    return (turno.get("dia") or "", turno.get("hora_inicio") or "", turno.get("puesto") or "")
+
+
+@router.get("/mi-perfil/turnos")
+async def mis_turnos(payload: dict = Depends(equipo_con_correo_demostrado)):
+    """Los turnos del voluntario, evento por evento, en sus tres estados.
+
+    - **solicitados**: los que pidio y la organizacion aun no le ha asignado.
+    - **asignados**: los que ya son suyos, con si los reconfirmo o no.
+    - **disponibles**: los que puede pedir, sin los que ya tiene o ya pidio.
+
+    Es la pestana «Turnos» de la web. Va todo en una llamada para que cambiar
+    de evento en la pantalla no tenga que volver al servidor.
+    """
+    from server import db
+    from routes.volunteer_registration import (
+        fecha_base_evento, fecha_de_slot, get_available_slots, nombre_evento,
+    )
+
+    email = (payload.get("username") or "").lower()
+    registros = await _postulaciones(db, email)
+    if not registros:
+        return {"eventos": []}
 
     edicion = registros[0].get("race_code")
     carrera = await db.race_configurations.find_one({"code": edicion}) if edicion else None
+    mios = await db.volunteer_assignments.find({"email_asignado": email}, {"_id": 0}).to_list(200)
 
-    postulaciones, vistos = [], set()
-    for r in registros:
-        evento = r.get("evento") or "carrera"
-        if r.get("race_code") != edicion or evento in vistos:
-            continue
-        vistos.add(evento)
+    eventos = []
+    for registro in registros:
+        evento = registro.get("evento") or "carrera"
+        base = await fecha_base_evento(db, evento)
 
-        llave = r.get("edit_token")
-        if not llave:
-            llave = generate_edit_token()
-            await db.volunteer_registrations.update_one(
-                {"_id": r["_id"]}, {"$set": {"edit_token": llave}}
-            )
-        postulaciones.append({
+        def legible(slot: dict) -> dict:
+            return {**_turno_legible(slot), "dia": fecha_de_slot(slot, base)}
+
+        asignados = [s for s in mios if (s.get("evento") or "carrera") == evento]
+        ids_asignados = {s.get("id") for s in asignados}
+
+        pedidos = [i for i in (registro.get("slots_interes") or []) if i not in ids_asignados]
+        docs = await db.volunteer_assignments.find(
+            {"id": {"$in": pedidos}}, {"_id": 0}
+        ).to_list(200) if pedidos else []
+        # El que acabo en manos de otra persona ya no es una solicitud viva.
+        solicitados = [d for d in docs if not d.get("email_asignado")]
+
+        # Un mismo puesto y turno tiene varias plazas: si ya tiene una, o ya la
+        # pidio, no se le ofrece otra igual.
+        ya_tiene = {
+            (s.get("puesto"), s.get("turno")) for s in [*asignados, *solicitados]
+        }
+        oferta = await get_available_slots(evento=evento, email=email)
+        disponibles = [
+            {
+                "slot_id": t.get("slot_id"),
+                "puesto": puesto.get("puesto"),
+                "descripcion": puesto.get("descripcion") or "",
+                "turno": t.get("turno"),
+                "dia": t.get("fecha"),
+                "hora_inicio": t.get("hora_inicio"),
+                "hora_fin": t.get("hora_fin"),
+                "plazas": t.get("available_count"),
+            }
+            for puesto in oferta.get("positions") or []
+            for t in puesto.get("turnos") or []
+            if (puesto.get("puesto"), t.get("turno")) not in ya_tiene
+        ]
+
+        eventos.append({
             "evento": evento,
-            "evento_nombre": nombre_evento(carrera, evento),
-            "edit_token": llave,
+            "etiqueta": _etiqueta_evento(carrera, evento),
+            "nombre": nombre_evento(carrera, evento),
+            "solicitados": sorted((legible(s) for s in solicitados), key=_orden_de_turno),
+            "asignados": sorted((legible(s) for s in asignados), key=_orden_de_turno),
+            "disponibles": sorted(disponibles, key=_orden_de_turno),
         })
 
-    return {"postulaciones": postulaciones}
+    # El campeonato va antes: es el que llega primero en el calendario.
+    eventos.sort(key=lambda e: 0 if e["evento"] == "campeonato" else 1)
+    return {"eventos": eventos}
+
+
+@router.post("/mi-perfil/turnos/{slot_id}/solicitar")
+async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario pide un turno libre. Es una solicitud: asigna la organizacion.
+
+    Mientras tanto el turno queda reservado para el (`slots_reservados`), igual
+    que cuando se elige en el formulario de la postulacion.
+    """
+    from server import db
+    from routes.volunteer_registration import validar_slots_libres, validar_sin_solapes
+
+    email = (payload.get("username") or "").lower()
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Ese turno no existe")
+
+    evento = slot.get("evento") or "carrera"
+    registro = next(
+        (r for r in await _postulaciones(db, email) if (r.get("evento") or "carrera") == evento),
+        None,
+    )
+    if not registro:
+        raise HTTPException(status_code=404, detail="No tienes una postulacion para ese evento")
+
+    pedidos = list(registro.get("slots_interes") or [])
+    if slot_id in pedidos:
+        return {"success": True}
+
+    # Que siga libre —otro pudo pedirlo mientras la pantalla estaba abierta— y
+    # que no se pise con lo que ya pidio ni con lo que ya le asignaron.
+    await validar_slots_libres(db, [slot_id], email)
+    suyos = await db.volunteer_assignments.find(
+        {"email_asignado": email}, {"_id": 0, "id": 1, "evento": 1}
+    ).to_list(200)
+    ids_suyos = [s["id"] for s in suyos if (s.get("evento") or "carrera") == evento]
+    await validar_sin_solapes(db, [*pedidos, *ids_suyos, slot_id], evento)
+
+    await db.volunteer_registrations.update_one(
+        {"_id": registro["_id"]},
+        {"$addToSet": {"slots_interes": slot_id},
+         "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"success": True}
+
+
+@router.delete("/mi-perfil/turnos/{slot_id}/solicitud")
+async def retirar_solicitud(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario retira un turno que habia pedido y aun no le asignaron.
+
+    El turno vuelve a quedar libre para los demas. Si ya se lo asignaron no es
+    esta ruta: ese se suelta con `DELETE /mi-perfil/turnos/{slot_id}`.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+    ids = [r["_id"] for r in await _postulaciones(db, email)]
+    await db.volunteer_registrations.update_many(
+        {"_id": {"$in": ids}},
+        {"$pull": {"slots_interes": slot_id},
+         "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"success": True}
 
 
 @router.delete("/mi-perfil/turnos/{slot_id}")
@@ -546,15 +681,12 @@ async def editar_mis_datos(datos: MisDatos, payload: dict = Depends(equipo_con_c
     if cambios.get("alergias") == "No":
         cambios["alergias_detalle"] = None
 
-    registros = await db.volunteer_registrations.find(
-        {"email": email, "status": {"$ne": "cancelled"}}
-    ).sort("created_at", -1).to_list(20)
+    registros = await _postulaciones(db, email)
     if not registros:
         raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
 
     if cambios:
-        edicion = registros[0].get("race_code")
-        ids = [r["_id"] for r in registros if r.get("race_code") == edicion]
+        ids = [r["_id"] for r in registros]
         await db.volunteer_registrations.update_many(
             {"_id": {"$in": ids}},
             {"$set": {**cambios, "updated_at": datetime.now(timezone.utc)}},

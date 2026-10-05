@@ -47,6 +47,7 @@ SIN_FICHA = f"nadie-{MARCA}@prueba.example"
 VETERANA = f"veterana-{MARCA}@prueba.example"
 NUEVA = f"nueva-{MARCA}@prueba.example"
 TURNO = 900000 + int(MARCA[:4], 16)
+LIBRE = TURNO + 100000
 CLAVE_INTRUSO = "la-del-intruso-123"
 CLAVE_DUENA = "la-de-la-duena-456"
 
@@ -78,6 +79,10 @@ async def sembrar(db):
         "hora_inicio": "06:00:00", "hora_fin": "10:00:00",
         "email_asignado": VOLUNTARIA, "nombre_asignado": "Ana Prueba",
     })
+    await db.volunteer_assignments.insert_one({
+        "id": LIBRE, "puesto": f"Puesto de prueba {MARCA}", "turno": "Z", "dia": "2026-10-18",
+        "hora_inicio": "12:00:00", "hora_fin": "16:00:00", "evento": "carrera", "email_asignado": None,
+    })
 
 
 async def limpiar(db):
@@ -86,7 +91,7 @@ async def limpiar(db):
     await db.admin_users.delete_many({"username": correos})
     await db.volunteer_registrations.delete_many({"email": correos})
     await db.volunteer_verification_tokens.delete_many({"email": correos})
-    await db.volunteer_assignments.delete_many({"id": TURNO})
+    await db.volunteer_assignments.delete_many({"id": {"$in": [TURNO, LIBRE]}})
 
 
 async def codigo_de(db, correo, campo="verification_code"):
@@ -143,9 +148,16 @@ async def main():
             revisar("ni ver los turnos como si fuera ella", r.status_code == 403, r.text[:160])
             r = await c.get("/api/staff/mi-perfil/carnet", headers=cab(intruso))
             revisar("ni bajarse su carnet", r.status_code == 403, r.text[:160])
-            r = await c.get("/api/staff/mi-perfil/postulaciones", headers=cab(intruso))
-            revisar("ni llevarse el enlace para editar su postulacion",
-                    r.status_code == 403 and "edit_token" not in r.text, r.text[:160])
+            r = await c.get("/api/staff/mi-perfil/turnos", headers=cab(intruso))
+            revisar("ni ver sus turnos por evento", r.status_code == 403, r.text[:160])
+            r = await c.post(f"/api/staff/mi-perfil/turnos/{LIBRE}/solicitar", headers=cab(intruso))
+            registro = await db.volunteer_registrations.find_one({"email": VOLUNTARIA})
+            revisar("ni pedir turnos en su nombre",
+                    r.status_code == 403 and registro["slots_interes"] == [TURNO], r.text[:160])
+            r = await c.delete(f"/api/staff/mi-perfil/turnos/{TURNO}/solicitud", headers=cab(intruso))
+            registro = await db.volunteer_registrations.find_one({"email": VOLUNTARIA})
+            revisar("ni retirarle una solicitud",
+                    r.status_code == 403 and registro["slots_interes"] == [TURNO], r.text[:160])
             r = await c.put("/api/staff/mi-perfil/datos", headers=cab(intruso),
                             json={"telefono": "000", "contacto_emergencia_telefono": "000"})
             registro = await db.volunteer_registrations.find_one({"email": VOLUNTARIA})
@@ -269,15 +281,30 @@ async def main():
             r = await c.get("/api/staff/mi-perfil", headers=cab(nueva))
             revisar("ve sus datos", (r.json().get("perfil") or {}).get("telefono") == "809-555-0100",
                     r.text[:200])
-            r = await c.get("/api/staff/mi-perfil/postulaciones", headers=cab(nueva))
-            postulaciones = r.json().get("postulaciones") or []
-            revisar("y recibe el enlace para editar su postulacion",
-                    r.status_code == 200 and len(postulaciones) == 1 and postulaciones[0]["edit_token"],
-                    r.text[:200])
-            if postulaciones:
-                r = await c.get(f"/api/volunteer-registration/by-token/{postulaciones[0]['edit_token']}")
-                revisar("que abre la suya", r.status_code == 200 and r.json().get("email") == NUEVA,
-                        r.text[:160])
+
+            print("\nLa pestana Turnos: solicitados, asignados y disponibles")
+            r = await c.get("/api/staff/mi-perfil/turnos", headers=cab(nueva))
+            eventos = r.json().get("eventos") or []
+            carrera = next((e for e in eventos if e["evento"] == "carrera"), None)
+            revisar("sale su evento con sus tres listas",
+                    r.status_code == 200 and carrera is not None
+                    and {"solicitados", "asignados", "disponibles"} <= set(carrera), r.text[:200])
+            revisar("el turno libre de la prueba figura entre los disponibles",
+                    carrera and LIBRE in [t["slot_id"] for t in carrera["disponibles"]], str(carrera)[:200])
+            r = await c.post(f"/api/staff/mi-perfil/turnos/{LIBRE}/solicitar", headers=cab(nueva))
+            r2 = await c.get("/api/staff/mi-perfil/turnos", headers=cab(nueva))
+            carrera = next(e for e in r2.json()["eventos"] if e["evento"] == "carrera")
+            revisar("lo pide y pasa a solicitados",
+                    r.status_code == 200 and LIBRE in [t["slot_id"] for t in carrera["solicitados"]]
+                    and LIBRE not in [t["slot_id"] for t in carrera["disponibles"]], r.text[:200])
+            r = await c.post(f"/api/staff/mi-perfil/turnos/{LIBRE}/solicitar", headers=cab(duena))
+            revisar("otra voluntaria ya no puede pedir ese mismo turno", r.status_code == 400, r.text[:160])
+            r = await c.delete(f"/api/staff/mi-perfil/turnos/{LIBRE}/solicitud", headers=cab(nueva))
+            r2 = await c.get("/api/staff/mi-perfil/turnos", headers=cab(nueva))
+            carrera = next(e for e in r2.json()["eventos"] if e["evento"] == "carrera")
+            revisar("cancela la solicitud y el turno vuelve a estar disponible",
+                    r.status_code == 200 and carrera["solicitados"] == []
+                    and LIBRE in [t["slot_id"] for t in carrera["disponibles"]], r.text[:200])
             r = await c.get("/api/staff/account-status", params={"email": f"nadie-mas-{MARCA}@prueba.example"})
             revisar("un correo que no es de nadie no pasa del primer paso",
                     r.json().get("es_voluntario") is False and r.json().get("tiene_cuenta") is False,

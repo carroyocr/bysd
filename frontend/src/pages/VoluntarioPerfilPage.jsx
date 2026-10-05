@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LogIn, LogOut, Loader2, KeyRound, MailCheck, User, HeartPulse, CalendarClock,
-  MapPin, IdCard, Edit2, UserPlus, ArrowLeft, Save, CheckCircle2, X, ListChecks,
+  MapPin, IdCard, Edit2, UserPlus, ArrowLeft, Save, CheckCircle2, X, Plus, ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -678,92 +678,200 @@ function TarjetaSalud({ p, onGuardado }) {
   );
 }
 
+/** Una fila de turno: día, horario y puesto a la izquierda; sus botones a la derecha. */
+function FilaTurno({ turno, children }) {
+  return (
+    <div
+      className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+      data-testid={`voluntario-turno-${turno.slot_id}`}
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-semibold capitalize">{diaDelTurno(turno.dia)}</p>
+        <p className="text-sm text-muted-foreground">
+          {soloHora(turno.hora_inicio)} – {soloHora(turno.hora_fin)}
+          {turno.turno ? ` · Turno ${turno.turno}` : ''}
+        </p>
+        <p className="text-sm mt-1 flex items-start gap-1.5">
+          <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <span>{turno.puesto}</span>
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function BotonCancelar({ ocupado, girando, onClick, testId }) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+      disabled={ocupado}
+      onClick={onClick}
+      data-testid={testId}
+    >
+      {girando
+        ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        : <X className="w-4 h-4 mr-2" />}
+      Cancelar
+    </Button>
+  );
+}
+
+/** Los turnos disponibles, juntos por puesto y en el orden en que llegan. */
+function agruparPorPuesto(turnos) {
+  const grupos = new Map();
+  turnos.forEach((t) => {
+    if (!grupos.has(t.puesto)) grupos.set(t.puesto, { puesto: t.puesto, descripcion: t.descripcion, turnos: [] });
+    grupos.get(t.puesto).turnos.push(t);
+  });
+  return [...grupos.values()].sort((a, b) => a.puesto.localeCompare(b.puesto, 'es'));
+}
+
+function SeccionTurnos({ titulo, nota, testId, children }) {
+  return (
+    <section className="pt-5 first:pt-0" data-testid={testId}>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{titulo}</h3>
+      {nota && <p className="text-sm text-muted-foreground mt-1">{nota}</p>}
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
 /**
- * Los turnos que le asignaron, cada uno con sus dos botones.
+ * La pestaña «Turnos»: se elige el evento y, dentro, hasta tres secciones.
  *
- * «Confirmar» es para que el voluntario reconfirme que va: entre que se asigna
- * un turno y llega el evento pasan semanas, y así la organización sabe con
- * quién sigue contando sin llamar uno por uno. «Cancelar» lo deja libre para
- * otra persona.
+ * - **Solicitados**: los que pidió y la organización aún no le asignó. Se
+ *   pueden cancelar.
+ * - **Asignados**: los que ya son suyos. «Confirmar» es reconfirmar que va
+ *   —entre que se asigna un turno y llega el evento pasan semanas, y así la
+ *   organización sabe con quién sigue contando—; «Cancelar» lo deja libre.
+ * - **Disponibles**: los que puede pedir.
+ *
+ * Cada sección sale solo si tiene algo dentro. Tras cada acción se vuelve a
+ * pedir todo al servidor: pedir o soltar un turno cambia también lo que queda
+ * disponible, y recalcularlo aquí sería adivinar.
  */
-function TarjetaTurnos({ turnos, onConfirmado, onCancelado }) {
-  // { id, accion } del turno que se está confirmando o cancelando
+function TarjetaTurnos({ onAsignadosCambian }) {
+  // undefined = cargando · [] = sin postulaciones
+  const [eventos, setEventos] = useState(undefined);
+  const [elegido, setElegido] = useState(null);
+  // { id, accion } del turno sobre el que se está actuando
   const [enCurso, setEnCurso] = useState(null);
   const [aviso, setAviso] = useState(null);
 
-  const llamar = async (turno, accion) => {
+  const cargar = useCallback(async () => {
+    try {
+      const r = await sesionFetch(`${API}/api/staff/mi-perfil/turnos`);
+      if (!r.ok) throw new Error();
+      const lista = (await r.json()).eventos || [];
+      setEventos(lista);
+      setElegido((actual) => (lista.some((e) => e.evento === actual) ? actual : (lista[0]?.evento || null)));
+      onAsignadosCambian(lista.flatMap((e) => e.asignados));
+    } catch {
+      setEventos((actual) => actual || []);
+      setAviso({ tipo: 'error', texto: 'No se pudieron cargar los turnos. Inténtalo de nuevo.' });
+    }
+  }, [onAsignadosCambian]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const ACCIONES = {
+    confirmar: { metodo: 'POST', ruta: (id) => `/turnos/${id}/confirmar`, listo: 'Turno confirmado. Gracias: contamos contigo.' },
+    cancelar: { metodo: 'DELETE', ruta: (id) => `/turnos/${id}`, listo: 'Turno cancelado. Quedó libre para otro voluntario.' },
+    solicitar: { metodo: 'POST', ruta: (id) => `/turnos/${id}/solicitar`, listo: 'Turno solicitado. La organización confirmará la asignación.' },
+    retirar: { metodo: 'DELETE', ruta: (id) => `/turnos/${id}/solicitud`, listo: 'Solicitud cancelada.' },
+  };
+
+  const actuar = async (turno, accion) => {
+    const { metodo, ruta, listo } = ACCIONES[accion];
     setEnCurso({ id: turno.slot_id, accion });
     setAviso(null);
     let r;
     try {
-      r = await sesionFetch(
-        accion === 'confirmar'
-          ? `${API}/api/staff/mi-perfil/turnos/${turno.slot_id}/confirmar`
-          : `${API}/api/staff/mi-perfil/turnos/${turno.slot_id}`,
-        { method: accion === 'confirmar' ? 'POST' : 'DELETE' },
-      );
+      r = await sesionFetch(`${API}/api/staff/mi-perfil${ruta(turno.slot_id)}`, { method: metodo });
     } catch {
       setEnCurso(null);
       setAviso({ tipo: 'error', texto: 'No se pudo conectar. Inténtalo de nuevo.' });
       return;
     }
     const datos = await r.json().catch(() => ({}));
+    await cargar();
     setEnCurso(null);
-    if (!r.ok) {
-      setAviso({ tipo: 'error', texto: datos.detail || 'No se pudo completar. Inténtalo de nuevo.' });
-      return;
-    }
-    if (accion === 'confirmar') {
-      onConfirmado(datos.turno);
-      setAviso({ tipo: 'ok', texto: 'Turno confirmado. Gracias: contamos contigo.' });
-    } else {
-      onCancelado(turno.slot_id);
-      setAviso({ tipo: 'ok', texto: 'Turno cancelado. Quedó libre para otro voluntario.' });
-    }
+    setAviso(r.ok
+      ? { tipo: 'ok', texto: listo }
+      : { tipo: 'error', texto: typeof datos.detail === 'string' ? datos.detail : 'No se pudo completar. Inténtalo de nuevo.' });
   };
 
-  const cancelar = (turno) => {
+  const cancelarAsignado = (turno) => {
     if (!window.confirm(`¿Cancelar tu turno de ${turno.puesto}? Quedará libre para otro voluntario.`)) return;
-    llamar(turno, 'cancelar');
+    actuar(turno, 'cancelar');
   };
+
+  const haciendo = (turno, accion) => enCurso?.id === turno.slot_id && enCurso.accion === accion;
+  const evento = (eventos || []).find((e) => e.evento === elegido);
 
   return (
     <Card data-testid="voluntario-turnos">
       <CardContent className="pt-6">
-        <h2 className="text-base font-semibold mb-3">Turnos asignados</h2>
+        <h2 className="text-base font-semibold mb-3">Turnos</h2>
 
-        {turnos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No tienes turnos asignados por ahora. La organización te avisará por
-            correo cuando los confirme.
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground mb-3">
-              Confirma cada turno para que sepamos que contamos contigo. Si no
-              puedes cubrir alguno, cancélalo y quedará libre para otra persona.
-            </p>
-            <div className="divide-y divide-border">
-              {turnos.map((t) => {
-                const ocupado = enCurso?.id === t.slot_id;
-                return (
-                  <div
-                    key={t.slot_id}
-                    className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                    data-testid={`voluntario-turno-${t.slot_id}`}
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold capitalize">{diaDelTurno(t.dia)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
-                        {t.turno ? ` · Turno ${t.turno}` : ''}
-                      </p>
-                      <p className="text-sm mt-1 flex items-start gap-1.5">
-                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                        <span>{t.puesto}</span>
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
+        {eventos === undefined && (
+          <div className="flex justify-center py-8 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        )}
+
+        {eventos && eventos.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="Evento">
+            {eventos.map((e) => (
+              <Button
+                key={e.evento}
+                size="sm"
+                variant={e.evento === elegido ? 'default' : 'outline'}
+                onClick={() => { setElegido(e.evento); setAviso(null); }}
+                title={e.nombre}
+                data-testid={`voluntario-evento-${e.evento}`}
+              >
+                {e.etiqueta}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {evento && (
+          <div className="divide-y divide-border space-y-5">
+            {evento.solicitados.length > 0 && (
+              <SeccionTurnos
+                titulo="Turnos solicitados"
+                nota="Los pediste y están pendientes de que la organización los asigne."
+                testId="voluntario-turnos-solicitados"
+              >
+                <div className="divide-y divide-border">
+                  {evento.solicitados.map((t) => (
+                    <FilaTurno key={t.slot_id} turno={t}>
+                      <BotonCancelar
+                        ocupado={!!enCurso}
+                        girando={haciendo(t, 'retirar')}
+                        onClick={() => actuar(t, 'retirar')}
+                        testId={`voluntario-retirar-${t.slot_id}`}
+                      />
+                    </FilaTurno>
+                  ))}
+                </div>
+              </SeccionTurnos>
+            )}
+
+            {evento.asignados.length > 0 && (
+              <SeccionTurnos
+                titulo="Turnos asignados"
+                nota="Confirma cada uno para que sepamos que contamos contigo. Si no puedes cubrirlo, cancélalo."
+                testId="voluntario-turnos-asignados"
+              >
+                <div className="divide-y divide-border">
+                  {evento.asignados.map((t) => (
+                    <FilaTurno key={t.slot_id} turno={t}>
                       {t.confirmado ? (
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 px-2">
                           <CheckCircle2 className="w-4 h-4" />
@@ -772,39 +880,93 @@ function TarjetaTurnos({ turnos, onConfirmado, onCancelado }) {
                       ) : (
                         <Button
                           size="sm"
-                          disabled={ocupado}
-                          onClick={() => llamar(t, 'confirmar')}
+                          disabled={!!enCurso}
+                          onClick={() => actuar(t, 'confirmar')}
                           data-testid={`voluntario-confirmar-${t.slot_id}`}
                         >
-                          {ocupado && enCurso.accion === 'confirmar'
+                          {haciendo(t, 'confirmar')
                             ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             : <CheckCircle2 className="w-4 h-4 mr-2" />}
                           Confirmar
                         </Button>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                        disabled={ocupado}
-                        onClick={() => cancelar(t)}
-                        data-testid={`voluntario-cancelar-${t.slot_id}`}
-                      >
-                        {ocupado && enCurso.accion === 'cancelar'
-                          ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          : <X className="w-4 h-4 mr-2" />}
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
+                      <BotonCancelar
+                        ocupado={!!enCurso}
+                        girando={haciendo(t, 'cancelar')}
+                        onClick={() => cancelarAsignado(t)}
+                        testId={`voluntario-cancelar-${t.slot_id}`}
+                      />
+                    </FilaTurno>
+                  ))}
+                </div>
+              </SeccionTurnos>
+            )}
+
+            {evento.disponibles.length > 0 && (
+              <SeccionTurnos
+                titulo="Turnos disponibles"
+                nota="Pide los que puedas cubrir. Es una solicitud: la organización confirma después."
+                testId="voluntario-turnos-disponibles"
+              >
+                {/* Por puesto y plegados: en un evento con todo por cubrir son
+                    decenas de turnos, y sueltos tapaban lo demás. */}
+                <div className="space-y-2">
+                  {agruparPorPuesto(evento.disponibles).map((grupo) => (
+                    <details
+                      key={grupo.puesto}
+                      className="rounded-lg border border-border px-3 group"
+                      data-testid="voluntario-puesto-disponible"
+                    >
+                      <summary className="cursor-pointer list-none py-3 flex items-center justify-between gap-3">
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold">{grupo.puesto}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {grupo.turnos.length} turno{grupo.turnos.length === 1 ? '' : 's'} con plazas
+                          </span>
+                        </span>
+                        <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                      </summary>
+                      {grupo.descripcion && (
+                        <p className="text-sm text-muted-foreground pb-3">{grupo.descripcion}</p>
+                      )}
+                      <div className="divide-y divide-border border-t border-border pt-3 pb-3">
+                        {grupo.turnos.map((t) => (
+                          <FilaTurno key={t.slot_id} turno={t}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!!enCurso}
+                              onClick={() => actuar(t, 'solicitar')}
+                              data-testid={`voluntario-solicitar-${t.slot_id}`}
+                            >
+                              {haciendo(t, 'solicitar')
+                                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                : <Plus className="w-4 h-4 mr-2" />}
+                              Solicitar
+                            </Button>
+                          </FilaTurno>
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </SeccionTurnos>
+            )}
+
+            {evento.solicitados.length + evento.asignados.length + evento.disponibles.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No hay turnos para {evento.nombre} por ahora.
+              </p>
+            )}
+          </div>
+        )}
+
+        {eventos && eventos.length === 0 && !aviso && (
+          <p className="text-sm text-muted-foreground">No tienes postulaciones con turnos.</p>
         )}
 
         {aviso && (
-          <p className={`text-sm mt-3 ${aviso.tipo === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
+          <p className={`text-sm mt-4 ${aviso.tipo === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
             {aviso.texto}
           </p>
         )}
@@ -813,10 +975,9 @@ function TarjetaTurnos({ turnos, onConfirmado, onCancelado }) {
   );
 }
 
-function FichaVoluntario({ datos, postulaciones, onPerfil, onTurnos }) {
+function FichaVoluntario({ datos, onPerfil, onTurnos }) {
   const p = datos.perfil;
-  const turnos = datos.turnos || [];
-  const sinConfirmar = turnos.filter((t) => !t.confirmado).length;
+  const sinConfirmar = (datos.turnos || []).filter((t) => !t.confirmado).length;
   const [bajando, setBajando] = useState(false);
   const [errorCarnet, setErrorCarnet] = useState('');
 
@@ -860,10 +1021,7 @@ function FichaVoluntario({ datos, postulaciones, onPerfil, onTurnos }) {
           </TabsTrigger>
           <TabsTrigger value="turnos" className={pestana} data-testid="voluntario-tab-turnos">
             <CalendarClock className="w-4 h-4 shrink-0" />
-            <span>
-              Turnos asignados
-              {turnos.length > 0 && <span className="opacity-60 font-normal"> · {turnos.length}</span>}
-            </span>
+            Turnos
           </TabsTrigger>
         </TabsList>
 
@@ -876,41 +1034,25 @@ function FichaVoluntario({ datos, postulaciones, onPerfil, onTurnos }) {
         </TabsContent>
 
         <TabsContent value="turnos" className="mt-4">
-          <TarjetaTurnos
-            turnos={turnos}
-            onConfirmado={(turno) => onTurnos((lista) => lista.map((t) => (t.slot_id === turno.slot_id ? turno : t)))}
-            onCancelado={(slotId) => onTurnos((lista) => lista.filter((t) => t.slot_id !== slotId))}
-          />
+          <TarjetaTurnos onAsignadosCambian={onTurnos} />
         </TabsContent>
       </Tabs>
 
       {sinConfirmar > 0 && (
         <p className="text-sm text-amber-700" data-testid="voluntario-turnos-por-confirmar">
           Tienes {sinConfirmar} turno{sinConfirmar === 1 ? '' : 's'} por confirmar en la
-          pestaña «Turnos asignados».
+          pestaña «Turnos».
         </p>
       )}
 
-      {/* Fuera de las pestañas: el carnet y la postulación valen para las tres. */}
+      {/* Fuera de las pestañas: el carnet vale para las tres. */}
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={descargarCarnet} disabled={bajando}>
-            {bajando
-              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              : <IdCard className="w-4 h-4 mr-2" />}
-            Descargar mi carnet (PDF)
-          </Button>
-          {postulaciones.map((post) => (
-            <Link key={post.evento} to={`/voluntarios/registro?token=${post.edit_token}`}>
-              <Button variant="outline" data-testid={`voluntario-editar-${post.evento}`}>
-                <ListChecks className="w-4 h-4 mr-2" />
-                {postulaciones.length > 1
-                  ? `Cambiar los turnos que pedí · ${post.evento_nombre}`
-                  : 'Cambiar los turnos que pedí'}
-              </Button>
-            </Link>
-          ))}
-        </div>
+        <Button variant="outline" onClick={descargarCarnet} disabled={bajando}>
+          {bajando
+            ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            : <IdCard className="w-4 h-4 mr-2" />}
+          Descargar mi carnet (PDF)
+        </Button>
         {errorCarnet && <p className="text-sm text-red-600">{errorCarnet}</p>}
       </div>
     </>
@@ -924,7 +1066,6 @@ function FichaVoluntario({ datos, postulaciones, onPerfil, onTurnos }) {
 export default function VoluntarioPerfilPage() {
   // undefined = cargando · null = sin sesión que valga aquí · objeto = perfil
   const [datos, setDatos] = useState(undefined);
-  const [postulaciones, setPostulaciones] = useState([]);
   const [aviso, setAviso] = useState('');
 
   const cargar = useCallback(async () => {
@@ -969,25 +1110,20 @@ export default function VoluntarioPerfilPage() {
 
     setAviso('');
     setDatos(perfil);
-
-    if (perfil.perfil) {
-      try {
-        const rp = await sesionFetch(`${API}/api/staff/mi-perfil/postulaciones`);
-        setPostulaciones(rp.ok ? ((await rp.json()).postulaciones || []) : []);
-      } catch {
-        setPostulaciones([]);
-      }
-    } else {
-      setPostulaciones([]);
-    }
   }, []);
+
+  // La pestaña de turnos avisa de cómo quedan los asignados tras cada acción,
+  // para que el aviso de «por confirmar» no se quede atrás.
+  const alCambiarAsignados = useCallback(
+    (turnos) => setDatos((d) => (d ? { ...d, turnos } : d)),
+    [],
+  );
 
   useEffect(() => { cargar(); }, [cargar]);
 
   const salir = () => {
     cerrarSesionCuenta();
     setAviso('');
-    setPostulaciones([]);
     setDatos(null);
   };
 
@@ -1063,9 +1199,8 @@ export default function VoluntarioPerfilPage() {
         {p && (
           <FichaVoluntario
             datos={datos}
-            postulaciones={postulaciones}
             onPerfil={(perfil) => setDatos((d) => ({ ...d, perfil }))}
-            onTurnos={(cambiar) => setDatos((d) => ({ ...d, turnos: cambiar(d.turnos || []) }))}
+            onTurnos={alCambiarAsignados}
           />
         )}
       </div>
