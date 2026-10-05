@@ -203,6 +203,8 @@ def test_las_rutas_del_voluntario_cuelgan_de_la_comprobacion():
         ("PUT", "/api/staff/mi-perfil/turnos"),
         ("GET", "/api/staff/mi-perfil/carnet"),
         ("GET", "/api/staff/mi-perfil/postulaciones"),
+        ("PUT", "/api/staff/mi-perfil/datos"),
+        ("POST", "/api/staff/mi-perfil/turnos/{slot_id}/confirmar"),
     }
     vistas = set()
     for ruta in server.app.routes:
@@ -289,6 +291,122 @@ def test_el_voluntario_recibe_la_llave_para_editar_su_postulacion(monkeypatch, c
     assert por_evento["carrera"]["evento_nombre"] == "Backyard Ultra SD"
     assert len(por_evento["campeonato"]["edit_token"]) == 32
     assert guardada["edit_token"] == por_evento["campeonato"]["edit_token"]
+
+
+# ==================== Lo que el voluntario hace con lo suyo ====================
+
+
+async def _sesion_de_la_voluntaria(db):
+    cuenta = await cuentas.cuenta_de_equipo(db, CORREO, password=CLAVE, nombre="Ana")
+    return auth.decodificar(cuentas.emitir_token(cuenta))
+
+
+def test_el_voluntario_corrige_sus_datos_y_valen_para_sus_dos_postulaciones(monkeypatch, correos):
+    async def caso(db):
+        await _voluntaria(db)
+        # La misma persona, apuntada tambien al campeonato.
+        await db.volunteer_registrations.insert_one({
+            "email": CORREO, "nombre": "Ana", "apellidos": "Perez", "status": "confirmed",
+            "telefono": "809-555-0100", "race_code": "MUNDIAL-2026", "evento": "campeonato",
+            "slots_interes": [], "created_at": datetime.now(timezone.utc) - timedelta(days=1),
+        })
+        payload = await _sesion_de_la_voluntaria(db)
+        respuesta = await staff_account.editar_mis_datos(
+            staff_account.MisDatos(telefono=" 829-555-0200 ", apellidos="Perez Soto"), payload)
+        return (
+            respuesta,
+            await db.volunteer_registrations.find({"email": CORREO}).to_list(10),
+            await db.volunteer_assignments.find_one({"id": 7}),
+        )
+
+    respuesta, registros, turno = correr(caso, monkeypatch)
+    assert respuesta["perfil"]["telefono"] == "829-555-0200"
+    assert {r["telefono"] for r in registros} == {"829-555-0200"}
+    assert {r["apellidos"] for r in registros} == {"Perez Soto"}
+    # Lo que no mando no se toca, y los turnos tampoco pasan por aqui.
+    assert next(r for r in registros if r["evento"] == "carrera")["tipo_sangre"] == "O+"
+    assert next(r for r in registros if r["evento"] == "carrera")["slots_interes"] == [7]
+    # El nombre viaja copiado en el turno asignado.
+    assert turno["nombre_asignado"] == "Ana Perez Soto"
+
+
+def test_lo_obligatorio_se_corrige_pero_no_se_deja_vacio(monkeypatch, correos):
+    async def caso(db):
+        await _voluntaria(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        with pytest.raises(HTTPException) as error:
+            await staff_account.editar_mis_datos(
+                staff_account.MisDatos(contacto_emergencia_telefono="  "), payload)
+        return error.value, await db.volunteer_registrations.find_one({"email": CORREO})
+
+    error, registro = correr(caso, monkeypatch)
+    assert error.status_code == 400
+    assert registro["contacto_emergencia_telefono"] == "809-555-0199"
+
+
+def test_decir_que_no_hay_condicion_medica_borra_el_detalle(monkeypatch, correos):
+    async def caso(db):
+        await _voluntaria(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        await staff_account.editar_mis_datos(staff_account.MisDatos(condicion_medica="No"), payload)
+        return await db.volunteer_registrations.find_one({"email": CORREO})
+
+    registro = correr(caso, monkeypatch)
+    assert registro["condicion_medica"] == "No"
+    assert registro["condicion_medica_detalle"] is None
+
+
+def test_el_voluntario_reconfirma_su_turno(monkeypatch, correos):
+    async def caso(db):
+        await _voluntaria(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        antes = await staff_account.mi_perfil(payload)
+        primera = await staff_account.confirmar_turno(7, payload)
+        guardada = (await db.volunteer_assignments.find_one({"id": 7}))["confirmado_at"]
+        await asyncio.sleep(0.01)
+        segunda = await staff_account.confirmar_turno(7, payload)
+        return antes, primera, guardada, segunda, await staff_account.mi_perfil(payload)
+
+    antes, primera, guardada, segunda, despues = correr(caso, monkeypatch)
+    assert antes["turnos"][0]["confirmado"] is False
+    assert primera["turno"]["confirmado"] is True
+    # Volver a pulsar no mueve la fecha de la confirmacion.
+    assert segunda["turno"]["confirmado_at"] == guardada
+    assert despues["turnos"][0]["confirmado"] is True
+    assert despues["turnos"][0]["confirmado_at"] == guardada
+
+
+def test_no_se_confirma_el_turno_de_otro(monkeypatch, correos):
+    async def caso(db):
+        await _voluntaria(db)
+        await db.volunteer_assignments.insert_one({"id": 8, "puesto": "Meta", "email_asignado": "otra@correo.com"})
+        payload = await _sesion_de_la_voluntaria(db)
+        with pytest.raises(HTTPException) as error:
+            await staff_account.confirmar_turno(8, payload)
+        return error.value, await db.volunteer_assignments.find_one({"id": 8})
+
+    error, turno = correr(caso, monkeypatch)
+    assert error.status_code == 403
+    assert "confirmado_por" not in turno
+
+
+def test_la_confirmacion_no_pasa_a_quien_hereda_el_turno(monkeypatch, correos):
+    """El panel reasigna turnos por muchos caminos: la confirmacion es de quien la hizo."""
+    async def caso(db):
+        await _voluntaria(db)
+        payload = await _sesion_de_la_voluntaria(db)
+        await staff_account.confirmar_turno(7, payload)
+        await db.volunteer_assignments.update_one({"id": 7}, {"$set": {"email_asignado": "otra@correo.com"}})
+        reasignado = await db.volunteer_assignments.find_one({"id": 7})
+
+        # Y si lo suelta ella misma, tampoco queda rastro.
+        await db.volunteer_assignments.update_one({"id": 7}, {"$set": {"email_asignado": CORREO}})
+        await staff_account.soltar_turno(7, payload)
+        return reasignado, await db.volunteer_assignments.find_one({"id": 7})
+
+    reasignado, suelto = correr(caso, monkeypatch)
+    assert staff_account.turno_confirmado(reasignado) is False
+    assert suelto["email_asignado"] is None and "confirmado_por" not in suelto
 
 
 # ==================== El camino de vuelta ====================

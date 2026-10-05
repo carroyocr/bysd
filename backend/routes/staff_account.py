@@ -16,10 +16,10 @@ import asyncio
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from services import cuentas, rate_limit
 from services.auth import require_admin, require_permission
@@ -269,8 +269,20 @@ async def equipo_con_correo_demostrado(payload: dict = Depends(require_admin)) -
     return payload
 
 
+def turno_confirmado(slot: dict) -> bool:
+    """Si quien tiene el turno ha reconfirmado que va.
+
+    La confirmacion guarda quien la hizo, y vale solo mientras el turno siga
+    siendo suyo. Asi no hay que acordarse de borrarla en cada sitio que
+    reasigna un turno: si pasa a otra persona, deja de contar sola.
+    """
+    asignado = (slot.get("email_asignado") or "").lower()
+    return bool(asignado) and (slot.get("confirmado_por") or "").lower() == asignado
+
+
 def _turno_legible(slot: dict) -> dict:
     """Los turnos se guardan con las claves en espanol de volunteer_assignments."""
+    confirmado = turno_confirmado(slot)
     return {
         "slot_id": slot.get("id"),
         "puesto": slot.get("puesto"),
@@ -278,6 +290,32 @@ def _turno_legible(slot: dict) -> dict:
         "dia": slot.get("dia"),
         "hora_inicio": slot.get("hora_inicio"),
         "hora_fin": slot.get("hora_fin"),
+        "confirmado": confirmado,
+        "confirmado_at": slot.get("confirmado_at") if confirmado else None,
+    }
+
+
+def _perfil_legible(voluntario: dict) -> dict:
+    """La ficha del voluntario tal como la ve el mismo."""
+    return {
+        "nombre": voluntario.get("nombre"),
+        "apellidos": voluntario.get("apellidos"),
+        "email": voluntario.get("email"),
+        "telefono": voluntario.get("telefono"),
+        "fecha_nacimiento": voluntario.get("fecha_nacimiento"),
+        "sexo": voluntario.get("sexo"),
+        "nacionalidad": voluntario.get("nacionalidad"),
+        "ciudad_residencia": voluntario.get("ciudad_residencia"),
+        "talla_camiseta": voluntario.get("talla_camiseta"),
+        "tipo_sangre": voluntario.get("tipo_sangre"),
+        "condicion_medica": voluntario.get("condicion_medica"),
+        "condicion_medica_detalle": voluntario.get("condicion_medica_detalle"),
+        "alergias": voluntario.get("alergias"),
+        "alergias_detalle": voluntario.get("alergias_detalle"),
+        "contacto_emergencia_nombre": voluntario.get("contacto_emergencia_nombre"),
+        "contacto_emergencia_relacion": voluntario.get("contacto_emergencia_relacion"),
+        "contacto_emergencia_telefono": voluntario.get("contacto_emergencia_telefono"),
+        "race_code": voluntario.get("race_code"),
     }
 
 
@@ -319,28 +357,7 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
     ).to_list(200)
     asignaciones.sort(key=lambda s: (s.get("dia") or "", s.get("hora_inicio") or ""))
 
-    perfil = None
-    if voluntario:
-        perfil = {
-            "nombre": voluntario.get("nombre"),
-            "apellidos": voluntario.get("apellidos"),
-            "email": voluntario.get("email"),
-            "telefono": voluntario.get("telefono"),
-            "fecha_nacimiento": voluntario.get("fecha_nacimiento"),
-            "sexo": voluntario.get("sexo"),
-            "nacionalidad": voluntario.get("nacionalidad"),
-            "ciudad_residencia": voluntario.get("ciudad_residencia"),
-            "talla_camiseta": voluntario.get("talla_camiseta"),
-            "tipo_sangre": voluntario.get("tipo_sangre"),
-            "condicion_medica": voluntario.get("condicion_medica"),
-            "condicion_medica_detalle": voluntario.get("condicion_medica_detalle"),
-            "alergias": voluntario.get("alergias"),
-            "alergias_detalle": voluntario.get("alergias_detalle"),
-            "contacto_emergencia_nombre": voluntario.get("contacto_emergencia_nombre"),
-            "contacto_emergencia_relacion": voluntario.get("contacto_emergencia_relacion"),
-            "contacto_emergencia_telefono": voluntario.get("contacto_emergencia_telefono"),
-            "race_code": voluntario.get("race_code"),
-        }
+    perfil = _perfil_legible(voluntario) if voluntario else None
 
     return {
         "username": email,
@@ -421,7 +438,8 @@ async def soltar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_d
     await db.volunteer_assignments.update_one(
         {"id": slot_id},
         {"$set": {"email_asignado": None, "nombre_asignado": None,
-                  "updated_at": datetime.now(timezone.utc)}},
+                  "updated_at": datetime.now(timezone.utc)},
+         "$unset": {"confirmado_por": "", "confirmado_at": ""}},
     )
     await db.volunteer_registrations.update_many(
         {"email": email},
@@ -429,6 +447,128 @@ async def soltar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_d
     )
 
     return {"success": True}
+
+
+@router.post("/mi-perfil/turnos/{slot_id}/confirmar")
+async def confirmar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario reconfirma que va a cubrir un turno que le asignaron.
+
+    Entre que se asigna un turno y llega el evento pasan semanas, y la
+    organizacion no tenia forma de saber quien sigue contando con ir salvo
+    llamando uno por uno. Confirmar no cambia la asignacion: solo deja dicho
+    quien lo confirmo y cuando, y el panel lo ensena junto al turno.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Ese turno no existe")
+    if (slot.get("email_asignado") or "").lower() != email:
+        raise HTTPException(status_code=403, detail="Ese turno no es tuyo")
+
+    # Volver a pulsar no mueve la fecha: interesa cuando lo confirmo.
+    if not turno_confirmado(slot):
+        ahora = datetime.now(timezone.utc)
+        await db.volunteer_assignments.update_one(
+            {"id": slot_id},
+            {"$set": {"confirmado_por": email, "confirmado_at": ahora, "updated_at": ahora}},
+        )
+        slot = {**slot, "confirmado_por": email, "confirmado_at": ahora}
+
+    return {"success": True, "turno": _turno_legible(slot)}
+
+
+# ==================== EDITAR LO PROPIO ====================
+
+SI_NO = Literal["Sí", "No"]
+
+# Lo que el registro exige: se puede corregir, no dejar vacio.
+OBLIGATORIOS = {
+    "nombre": "el nombre",
+    "apellidos": "los apellidos",
+    "telefono": "el telefono",
+    "contacto_emergencia_nombre": "el nombre del contacto de emergencia",
+    "contacto_emergencia_telefono": "el telefono del contacto de emergencia",
+}
+
+
+class MisDatos(BaseModel):
+    """Lo que el voluntario puede corregir de su ficha. Todo opcional: cada
+    tarjeta de la pantalla manda solo lo suyo. El correo no esta: es la
+    identidad con la que entra."""
+    nombre: Optional[str] = Field(default=None, max_length=80)
+    apellidos: Optional[str] = Field(default=None, max_length=80)
+    telefono: Optional[str] = Field(default=None, max_length=40)
+    fecha_nacimiento: Optional[str] = Field(default=None, max_length=10)
+    sexo: Optional[Literal["Masculino", "Femenino", "Otro", ""]] = None
+    nacionalidad: Optional[str] = Field(default=None, max_length=80)
+    ciudad_residencia: Optional[str] = Field(default=None, max_length=80)
+    talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL", ""]] = None
+
+    tipo_sangre: Optional[str] = Field(default=None, max_length=10)
+    condicion_medica: Optional[SI_NO] = None
+    condicion_medica_detalle: Optional[str] = Field(default=None, max_length=500)
+    alergias: Optional[SI_NO] = None
+    alergias_detalle: Optional[str] = Field(default=None, max_length=500)
+    contacto_emergencia_nombre: Optional[str] = Field(default=None, max_length=120)
+    contacto_emergencia_relacion: Optional[str] = Field(default=None, max_length=60)
+    contacto_emergencia_telefono: Optional[str] = Field(default=None, max_length=40)
+
+
+@router.put("/mi-perfil/datos")
+async def editar_mis_datos(datos: MisDatos, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario corrige sus datos personales o los de salud y emergencia.
+
+    Antes, cambiar el telefono era abrir el formulario entero de la
+    postulacion. Los datos son de la persona, no de un evento: quien se apunto
+    a la carrera y al campeonato tiene dos registros, y se corrigen los dos.
+    Los turnos no pasan por aqui.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+
+    cambios = {}
+    for campo, valor in datos.model_dump(exclude_unset=True).items():
+        if isinstance(valor, str):
+            valor = valor.strip()
+        cambios[campo] = valor or None
+
+    for campo, nombre in OBLIGATORIOS.items():
+        if campo in cambios and not cambios[campo]:
+            raise HTTPException(status_code=400, detail=f"Falta {nombre}")
+
+    # Sin condicion o sin alergias, el detalle de antes no pinta nada.
+    if cambios.get("condicion_medica") == "No":
+        cambios["condicion_medica_detalle"] = None
+    if cambios.get("alergias") == "No":
+        cambios["alergias_detalle"] = None
+
+    registros = await db.volunteer_registrations.find(
+        {"email": email, "status": {"$ne": "cancelled"}}
+    ).sort("created_at", -1).to_list(20)
+    if not registros:
+        raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
+
+    if cambios:
+        edicion = registros[0].get("race_code")
+        ids = [r["_id"] for r in registros if r.get("race_code") == edicion]
+        await db.volunteer_registrations.update_many(
+            {"_id": {"$in": ids}},
+            {"$set": {**cambios, "updated_at": datetime.now(timezone.utc)}},
+        )
+
+        # El nombre tambien viaja copiado en cada turno asignado.
+        if "nombre" in cambios or "apellidos" in cambios:
+            actual = {**registros[0], **cambios}
+            completo = f"{actual.get('nombre') or ''} {actual.get('apellidos') or ''}".strip()
+            await db.volunteer_assignments.update_many(
+                {"email_asignado": email}, {"$set": {"nombre_asignado": completo}}
+            )
+
+    return {"success": True, "perfil": _perfil_legible({**registros[0], **cambios})}
 
 
 @router.get("/equipo/emergency-info", dependencies=[Depends(require_permission("scanner"))])

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LogIn, LogOut, Loader2, KeyRound, MailCheck, User, HeartPulse, CalendarClock,
-  MapPin, IdCard, Edit2, UserPlus, ArrowLeft,
+  MapPin, IdCard, Edit2, UserPlus, ArrowLeft, Save, CheckCircle2, X, ListChecks,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,9 +10,12 @@ import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { guardarSesion, haySesion, sesionFetch } from '../lib/sesion';
 import { cerrarSesionCuenta, entrar, reenviarCodigo, verificar } from '../lib/cuentaApi';
+import { COUNTRIES } from '../data/countries';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const MIN_PASSWORD = 8;
+const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const TIPOS_DE_SANGRE = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'No sé'];
 
 async function pedir(metodo, ruta, cuerpo) {
   try {
@@ -369,9 +372,451 @@ function Dato({ etiqueta, valor }) {
   );
 }
 
-function FichaVoluntario({ datos, postulaciones }) {
+const CAMPO_SELECT = 'w-full h-10 px-3 rounded-md border border-input bg-background text-sm';
+
+function Campo({ id, etiqueta, children }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium" htmlFor={id}>{etiqueta}</label>
+      {children}
+    </div>
+  );
+}
+
+/** Cabecera de una tarjeta de datos: el título y, a la derecha, «Editar». */
+function CabeceraTarjeta({ titulo, editando, onEditar, testId }) {
+  return (
+    <div className="flex items-center justify-between gap-3 mb-3">
+      <h2 className="text-base font-semibold">{titulo}</h2>
+      {!editando && (
+        <Button variant="outline" size="sm" onClick={onEditar} data-testid={testId}>
+          <Edit2 className="w-4 h-4 mr-2" />
+          Editar
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function BotonesDeEdicion({ guardando, onCancelar }) {
+  return (
+    <div className="flex gap-2 pt-1">
+      <Button type="submit" disabled={guardando}>
+        {guardando
+          ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          : <Save className="w-4 h-4 mr-2" />}
+        Guardar
+      </Button>
+      <Button type="button" variant="outline" disabled={guardando} onClick={onCancelar}>
+        Cancelar
+      </Button>
+    </div>
+  );
+}
+
+/** Manda a guardar solo los campos de una tarjeta y devuelve la ficha como queda. */
+async function guardarMisDatos(cambios) {
+  let r;
+  try {
+    r = await sesionFetch(`${API}/api/staff/mi-perfil/datos`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cambios),
+    });
+  } catch {
+    throw new Error('No se pudo conectar. Inténtalo de nuevo.');
+  }
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    // Los errores de validación llegan como lista; el resto, como texto.
+    throw new Error(typeof datos.detail === 'string' ? datos.detail : 'Revisa los datos e inténtalo de nuevo.');
+  }
+  return datos.perfil;
+}
+
+function TarjetaDatos({ p, onGuardado }) {
+  const [editando, setEditando] = useState(false);
+  const [f, setF] = useState({});
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  const editar = () => {
+    setF({
+      nombre: p.nombre || '',
+      apellidos: p.apellidos || '',
+      telefono: p.telefono || '',
+      fecha_nacimiento: p.fecha_nacimiento || '',
+      sexo: p.sexo || '',
+      nacionalidad: p.nacionalidad || '',
+      ciudad_residencia: p.ciudad_residencia || '',
+      talla_camiseta: p.talla_camiseta || '',
+    });
+    setError('');
+    setEditando(true);
+  };
+
+  const cambiar = (campo) => (e) => setF((prev) => ({ ...prev, [campo]: e.target.value }));
+
+  const guardar = async (e) => {
+    e.preventDefault();
+    if (!f.nombre.trim() || !f.apellidos.trim() || !f.telefono.trim()) {
+      setError('El nombre, los apellidos y el teléfono no pueden quedar vacíos.');
+      return;
+    }
+    setGuardando(true);
+    setError('');
+    try {
+      onGuardado(await guardarMisDatos(f));
+      setEditando(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Hay fichas con la nacionalidad escrita de otra forma (un código, otro
+  // nombre): se conserva como opción para no borrarla al guardar.
+  const nacionalidadFueraDeLista = f.nacionalidad
+    && !COUNTRIES.some((c) => c.name === f.nacionalidad);
+
+  return (
+    <Card data-testid="voluntario-datos">
+      <CardContent className="pt-6">
+        <CabeceraTarjeta
+          titulo="Mis datos"
+          editando={editando}
+          onEditar={editar}
+          testId="voluntario-editar-datos"
+        />
+
+        {!editando ? (
+          <>
+            <Dato etiqueta="Nombre" valor={`${p.nombre || ''} ${p.apellidos || ''}`.trim()} />
+            <Dato etiqueta="Correo" valor={p.email} />
+            <Dato etiqueta="Teléfono" valor={p.telefono} />
+            <Dato etiqueta="Fecha de nacimiento" valor={p.fecha_nacimiento} />
+            <Dato etiqueta="Sexo" valor={p.sexo} />
+            <Dato etiqueta="Nacionalidad" valor={p.nacionalidad} />
+            <Dato etiqueta="Ciudad" valor={p.ciudad_residencia} />
+            <Dato etiqueta="Talla de camiseta" valor={p.talla_camiseta} />
+          </>
+        ) : (
+          <form onSubmit={guardar} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Campo id="datos-nombre" etiqueta="Nombre *">
+                <Input id="datos-nombre" value={f.nombre} onChange={cambiar('nombre')} maxLength={80} />
+              </Campo>
+              <Campo id="datos-apellidos" etiqueta="Apellidos *">
+                <Input id="datos-apellidos" value={f.apellidos} onChange={cambiar('apellidos')} maxLength={80} />
+              </Campo>
+              <Campo id="datos-telefono" etiqueta="Teléfono *">
+                <Input id="datos-telefono" value={f.telefono} onChange={cambiar('telefono')} placeholder="Ej: 809-555-1234" maxLength={40} />
+              </Campo>
+              <Campo id="datos-nacimiento" etiqueta="Fecha de nacimiento">
+                <Input id="datos-nacimiento" type="date" value={f.fecha_nacimiento} onChange={cambiar('fecha_nacimiento')} />
+              </Campo>
+              <Campo id="datos-sexo" etiqueta="Sexo">
+                <select id="datos-sexo" className={CAMPO_SELECT} value={f.sexo} onChange={cambiar('sexo')}>
+                  <option value="">Seleccionar</option>
+                  <option value="Masculino">Masculino</option>
+                  <option value="Femenino">Femenino</option>
+                  {f.sexo === 'Otro' && <option value="Otro">Otro</option>}
+                </select>
+              </Campo>
+              <Campo id="datos-nacionalidad" etiqueta="Nacionalidad">
+                <select id="datos-nacionalidad" className={CAMPO_SELECT} value={f.nacionalidad} onChange={cambiar('nacionalidad')}>
+                  <option value="">Seleccionar país</option>
+                  {nacionalidadFueraDeLista && <option value={f.nacionalidad}>{f.nacionalidad}</option>}
+                  {COUNTRIES.map((c) => <option key={c.code} value={c.name}>{c.name}</option>)}
+                </select>
+              </Campo>
+              <Campo id="datos-ciudad" etiqueta="Ciudad">
+                <Input id="datos-ciudad" value={f.ciudad_residencia} onChange={cambiar('ciudad_residencia')} maxLength={80} />
+              </Campo>
+              <Campo id="datos-talla" etiqueta="Talla de camiseta">
+                <select id="datos-talla" className={CAMPO_SELECT} value={f.talla_camiseta} onChange={cambiar('talla_camiseta')}>
+                  <option value="">Seleccionar</option>
+                  {TALLAS.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Campo>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              El correo no se cambia desde aquí: es con el que entras.
+            </p>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <BotonesDeEdicion guardando={guardando} onCancelar={() => setEditando(false)} />
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TarjetaSalud({ p, onGuardado }) {
+  const [editando, setEditando] = useState(false);
+  const [f, setF] = useState({});
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  const editar = () => {
+    setF({
+      tipo_sangre: p.tipo_sangre || '',
+      condicion_medica: esSi(p.condicion_medica) ? 'Sí' : 'No',
+      condicion_medica_detalle: p.condicion_medica_detalle || '',
+      alergias: esSi(p.alergias) ? 'Sí' : 'No',
+      alergias_detalle: p.alergias_detalle || '',
+      contacto_emergencia_nombre: p.contacto_emergencia_nombre || '',
+      contacto_emergencia_relacion: p.contacto_emergencia_relacion || '',
+      contacto_emergencia_telefono: p.contacto_emergencia_telefono || '',
+    });
+    setError('');
+    setEditando(true);
+  };
+
+  const cambiar = (campo) => (e) => setF((prev) => ({ ...prev, [campo]: e.target.value }));
+
+  const guardar = async (e) => {
+    e.preventDefault();
+    if (!f.contacto_emergencia_nombre.trim() || !f.contacto_emergencia_telefono.trim()) {
+      setError('El contacto de emergencia necesita nombre y teléfono.');
+      return;
+    }
+    setGuardando(true);
+    setError('');
+    try {
+      onGuardado(await guardarMisDatos(f));
+      setEditando(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const sangreFueraDeLista = f.tipo_sangre && !TIPOS_DE_SANGRE.includes(f.tipo_sangre);
+
+  return (
+    <Card data-testid="voluntario-salud">
+      <CardContent className="pt-6">
+        <CabeceraTarjeta
+          titulo="Salud y emergencia"
+          editando={editando}
+          onEditar={editar}
+          testId="voluntario-editar-salud"
+        />
+
+        {!editando ? (
+          <>
+            <Dato etiqueta="Tipo de sangre" valor={p.tipo_sangre} />
+            <Dato
+              etiqueta="Condición médica"
+              valor={esSi(p.condicion_medica) ? (p.condicion_medica_detalle || 'Sí') : 'No'}
+            />
+            <Dato
+              etiqueta="Alergias"
+              valor={esSi(p.alergias) ? (p.alergias_detalle || 'Sí') : 'No'}
+            />
+            <Dato
+              etiqueta="Contacto de emergencia"
+              valor={[p.contacto_emergencia_nombre, p.contacto_emergencia_relacion].filter(Boolean).join(' · ')}
+            />
+            <Dato etiqueta="Teléfono de emergencia" valor={p.contacto_emergencia_telefono} />
+          </>
+        ) : (
+          <form onSubmit={guardar} className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Campo id="salud-sangre" etiqueta="Tipo de sangre">
+                <select id="salud-sangre" className={CAMPO_SELECT} value={f.tipo_sangre} onChange={cambiar('tipo_sangre')}>
+                  <option value="">Seleccionar</option>
+                  {sangreFueraDeLista && <option value={f.tipo_sangre}>{f.tipo_sangre}</option>}
+                  {TIPOS_DE_SANGRE.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </Campo>
+              <div className="hidden sm:block" />
+
+              <Campo id="salud-condicion" etiqueta="¿Tienes alguna condición médica?">
+                <select id="salud-condicion" className={CAMPO_SELECT} value={f.condicion_medica} onChange={cambiar('condicion_medica')}>
+                  <option value="No">No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </Campo>
+              {f.condicion_medica === 'Sí' ? (
+                <Campo id="salud-condicion-detalle" etiqueta="¿Cuál?">
+                  <Input id="salud-condicion-detalle" value={f.condicion_medica_detalle} onChange={cambiar('condicion_medica_detalle')} maxLength={500} />
+                </Campo>
+              ) : <div className="hidden sm:block" />}
+
+              <Campo id="salud-alergias" etiqueta="¿Tienes alergias?">
+                <select id="salud-alergias" className={CAMPO_SELECT} value={f.alergias} onChange={cambiar('alergias')}>
+                  <option value="No">No</option>
+                  <option value="Sí">Sí</option>
+                </select>
+              </Campo>
+              {f.alergias === 'Sí' ? (
+                <Campo id="salud-alergias-detalle" etiqueta="¿A qué?">
+                  <Input id="salud-alergias-detalle" value={f.alergias_detalle} onChange={cambiar('alergias_detalle')} maxLength={500} />
+                </Campo>
+              ) : <div className="hidden sm:block" />}
+
+              <Campo id="salud-contacto" etiqueta="Contacto de emergencia *">
+                <Input id="salud-contacto" value={f.contacto_emergencia_nombre} onChange={cambiar('contacto_emergencia_nombre')} placeholder="Nombre completo" maxLength={120} />
+              </Campo>
+              <Campo id="salud-relacion" etiqueta="Relación">
+                <Input id="salud-relacion" value={f.contacto_emergencia_relacion} onChange={cambiar('contacto_emergencia_relacion')} placeholder="Ej: Familiar, Amigo" maxLength={60} />
+              </Campo>
+              <Campo id="salud-telefono" etiqueta="Teléfono de emergencia *">
+                <Input id="salud-telefono" value={f.contacto_emergencia_telefono} onChange={cambiar('contacto_emergencia_telefono')} placeholder="Ej: 809-555-1234" maxLength={40} />
+              </Campo>
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <BotonesDeEdicion guardando={guardando} onCancelar={() => setEditando(false)} />
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Los turnos que le asignaron, cada uno con sus dos botones.
+ *
+ * «Confirmar» es para que el voluntario reconfirme que va: entre que se asigna
+ * un turno y llega el evento pasan semanas, y así la organización sabe con
+ * quién sigue contando sin llamar uno por uno. «Cancelar» lo deja libre para
+ * otra persona.
+ */
+function TarjetaTurnos({ turnos, onConfirmado, onCancelado }) {
+  // { id, accion } del turno que se está confirmando o cancelando
+  const [enCurso, setEnCurso] = useState(null);
+  const [aviso, setAviso] = useState(null);
+
+  const llamar = async (turno, accion) => {
+    setEnCurso({ id: turno.slot_id, accion });
+    setAviso(null);
+    let r;
+    try {
+      r = await sesionFetch(
+        accion === 'confirmar'
+          ? `${API}/api/staff/mi-perfil/turnos/${turno.slot_id}/confirmar`
+          : `${API}/api/staff/mi-perfil/turnos/${turno.slot_id}`,
+        { method: accion === 'confirmar' ? 'POST' : 'DELETE' },
+      );
+    } catch {
+      setEnCurso(null);
+      setAviso({ tipo: 'error', texto: 'No se pudo conectar. Inténtalo de nuevo.' });
+      return;
+    }
+    const datos = await r.json().catch(() => ({}));
+    setEnCurso(null);
+    if (!r.ok) {
+      setAviso({ tipo: 'error', texto: datos.detail || 'No se pudo completar. Inténtalo de nuevo.' });
+      return;
+    }
+    if (accion === 'confirmar') {
+      onConfirmado(datos.turno);
+      setAviso({ tipo: 'ok', texto: 'Turno confirmado. Gracias: contamos contigo.' });
+    } else {
+      onCancelado(turno.slot_id);
+      setAviso({ tipo: 'ok', texto: 'Turno cancelado. Quedó libre para otro voluntario.' });
+    }
+  };
+
+  const cancelar = (turno) => {
+    if (!window.confirm(`¿Cancelar tu turno de ${turno.puesto}? Quedará libre para otro voluntario.`)) return;
+    llamar(turno, 'cancelar');
+  };
+
+  return (
+    <Card data-testid="voluntario-turnos">
+      <CardContent className="pt-6">
+        <h2 className="text-base font-semibold mb-3">Turnos asignados</h2>
+
+        {turnos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No tienes turnos asignados por ahora. La organización te avisará por
+            correo cuando los confirme.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-3">
+              Confirma cada turno para que sepamos que contamos contigo. Si no
+              puedes cubrir alguno, cancélalo y quedará libre para otra persona.
+            </p>
+            <div className="divide-y divide-border">
+              {turnos.map((t) => {
+                const ocupado = enCurso?.id === t.slot_id;
+                return (
+                  <div
+                    key={t.slot_id}
+                    className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    data-testid={`voluntario-turno-${t.slot_id}`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold capitalize">{diaDelTurno(t.dia)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
+                        {t.turno ? ` · Turno ${t.turno}` : ''}
+                      </p>
+                      <p className="text-sm mt-1 flex items-start gap-1.5">
+                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{t.puesto}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {t.confirmado ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 px-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Confirmado
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled={ocupado}
+                          onClick={() => llamar(t, 'confirmar')}
+                          data-testid={`voluntario-confirmar-${t.slot_id}`}
+                        >
+                          {ocupado && enCurso.accion === 'confirmar'
+                            ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                          Confirmar
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                        disabled={ocupado}
+                        onClick={() => cancelar(t)}
+                        data-testid={`voluntario-cancelar-${t.slot_id}`}
+                      >
+                        {ocupado && enCurso.accion === 'cancelar'
+                          ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          : <X className="w-4 h-4 mr-2" />}
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {aviso && (
+          <p className={`text-sm mt-3 ${aviso.tipo === 'ok' ? 'text-green-700' : 'text-red-600'}`}>
+            {aviso.texto}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FichaVoluntario({ datos, postulaciones, onPerfil, onTurnos }) {
   const p = datos.perfil;
   const turnos = datos.turnos || [];
+  const sinConfirmar = turnos.filter((t) => !t.confirmado).length;
   const [bajando, setBajando] = useState(false);
   const [errorCarnet, setErrorCarnet] = useState('');
 
@@ -396,33 +841,24 @@ function FichaVoluntario({ datos, postulaciones }) {
     }
   };
 
+  const pestana = 'flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal '
+    + 'data-[state=active]:bg-card data-[state=active]:text-foreground';
+
   return (
     <>
       {/* Tres pestañas en vez de tarjetas una debajo de otra: en el teléfono
           había que bajar tres pantallas para llegar a los turnos. */}
       <Tabs defaultValue="datos" className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-auto bg-muted/50 p-1">
-          <TabsTrigger
-            value="datos"
-            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
-            data-testid="voluntario-tab-datos"
-          >
+          <TabsTrigger value="datos" className={pestana} data-testid="voluntario-tab-datos">
             <User className="w-4 h-4 shrink-0" />
             Mis datos
           </TabsTrigger>
-          <TabsTrigger
-            value="salud"
-            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
-            data-testid="voluntario-tab-salud"
-          >
+          <TabsTrigger value="salud" className={pestana} data-testid="voluntario-tab-salud">
             <HeartPulse className="w-4 h-4 shrink-0" />
             Salud y emergencia
           </TabsTrigger>
-          <TabsTrigger
-            value="turnos"
-            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
-            data-testid="voluntario-tab-turnos"
-          >
+          <TabsTrigger value="turnos" className={pestana} data-testid="voluntario-tab-turnos">
             <CalendarClock className="w-4 h-4 shrink-0" />
             <span>
               Turnos asignados
@@ -432,72 +868,30 @@ function FichaVoluntario({ datos, postulaciones }) {
         </TabsList>
 
         <TabsContent value="datos" className="mt-4">
-          <Card data-testid="voluntario-datos">
-            <CardContent className="pt-6">
-              <Dato etiqueta="Nombre" valor={`${p.nombre || ''} ${p.apellidos || ''}`.trim()} />
-              <Dato etiqueta="Correo" valor={p.email} />
-              <Dato etiqueta="Teléfono" valor={p.telefono} />
-              <Dato etiqueta="Fecha de nacimiento" valor={p.fecha_nacimiento} />
-              <Dato etiqueta="Sexo" valor={p.sexo} />
-              <Dato etiqueta="Nacionalidad" valor={p.nacionalidad} />
-              <Dato etiqueta="Ciudad" valor={p.ciudad_residencia} />
-              <Dato etiqueta="Talla de camiseta" valor={p.talla_camiseta} />
-            </CardContent>
-          </Card>
+          <TarjetaDatos p={p} onGuardado={onPerfil} />
         </TabsContent>
 
         <TabsContent value="salud" className="mt-4">
-          <Card data-testid="voluntario-salud">
-            <CardContent className="pt-6">
-              <Dato etiqueta="Tipo de sangre" valor={p.tipo_sangre} />
-              <Dato
-                etiqueta="Condición médica"
-                valor={esSi(p.condicion_medica) ? (p.condicion_medica_detalle || 'Sí') : 'No'}
-              />
-              <Dato
-                etiqueta="Alergias"
-                valor={esSi(p.alergias) ? (p.alergias_detalle || 'Sí') : 'No'}
-              />
-              <Dato
-                etiqueta="Contacto de emergencia"
-                valor={[p.contacto_emergencia_nombre, p.contacto_emergencia_relacion].filter(Boolean).join(' · ')}
-              />
-              <Dato etiqueta="Teléfono de emergencia" valor={p.contacto_emergencia_telefono} />
-            </CardContent>
-          </Card>
+          <TarjetaSalud p={p} onGuardado={onPerfil} />
         </TabsContent>
 
         <TabsContent value="turnos" className="mt-4">
-          <Card data-testid="voluntario-turnos">
-            <CardContent className="pt-6">
-              {turnos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Todavía no tienes turnos asignados. La organización te avisará por
-                  correo cuando los confirme.
-                </p>
-              ) : (
-                <div className="divide-y divide-border">
-                  {turnos.map((t) => (
-                    <div key={t.slot_id} className="py-3 first:pt-0 last:pb-0">
-                      <p className="text-sm font-semibold capitalize">{diaDelTurno(t.dia)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
-                        {t.turno ? ` · Turno ${t.turno}` : ''}
-                      </p>
-                      <p className="text-sm mt-1 flex items-start gap-1.5">
-                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                        <span>{t.puesto}</span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <TarjetaTurnos
+            turnos={turnos}
+            onConfirmado={(turno) => onTurnos((lista) => lista.map((t) => (t.slot_id === turno.slot_id ? turno : t)))}
+            onCancelado={(slotId) => onTurnos((lista) => lista.filter((t) => t.slot_id !== slotId))}
+          />
         </TabsContent>
       </Tabs>
 
-      {/* Fuera de las pestañas: el carnet y la edición valen para las tres. */}
+      {sinConfirmar > 0 && (
+        <p className="text-sm text-amber-700" data-testid="voluntario-turnos-por-confirmar">
+          Tienes {sinConfirmar} turno{sinConfirmar === 1 ? '' : 's'} por confirmar en la
+          pestaña «Turnos asignados».
+        </p>
+      )}
+
+      {/* Fuera de las pestañas: el carnet y la postulación valen para las tres. */}
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={descargarCarnet} disabled={bajando}>
@@ -509,19 +903,15 @@ function FichaVoluntario({ datos, postulaciones }) {
           {postulaciones.map((post) => (
             <Link key={post.evento} to={`/voluntarios/registro?token=${post.edit_token}`}>
               <Button variant="outline" data-testid={`voluntario-editar-${post.evento}`}>
-                <Edit2 className="w-4 h-4 mr-2" />
+                <ListChecks className="w-4 h-4 mr-2" />
                 {postulaciones.length > 1
-                  ? `Editar mi postulación de ${post.evento_nombre}`
-                  : 'Editar mi postulación'}
+                  ? `Cambiar los turnos que pedí · ${post.evento_nombre}`
+                  : 'Cambiar los turnos que pedí'}
               </Button>
             </Link>
           ))}
         </div>
         {errorCarnet && <p className="text-sm text-red-600">{errorCarnet}</p>}
-        <p className="text-xs text-muted-foreground">
-          Desde «Editar mi postulación» puedes corregir tus datos y cambiar los
-          turnos que pediste.
-        </p>
       </div>
     </>
   );
@@ -670,7 +1060,14 @@ export default function VoluntarioPerfilPage() {
           </Card>
         )}
 
-        {p && <FichaVoluntario datos={datos} postulaciones={postulaciones} />}
+        {p && (
+          <FichaVoluntario
+            datos={datos}
+            postulaciones={postulaciones}
+            onPerfil={(perfil) => setDatos((d) => ({ ...d, perfil }))}
+            onTurnos={(cambiar) => setDatos((d) => ({ ...d, turnos: cambiar(d.turnos || []) }))}
+          />
+        )}
       </div>
     </div>
   );

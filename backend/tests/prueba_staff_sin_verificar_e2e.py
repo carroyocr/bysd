@@ -146,6 +146,15 @@ async def main():
             r = await c.get("/api/staff/mi-perfil/postulaciones", headers=cab(intruso))
             revisar("ni llevarse el enlace para editar su postulacion",
                     r.status_code == 403 and "edit_token" not in r.text, r.text[:160])
+            r = await c.put("/api/staff/mi-perfil/datos", headers=cab(intruso),
+                            json={"telefono": "000", "contacto_emergencia_telefono": "000"})
+            registro = await db.volunteer_registrations.find_one({"email": VOLUNTARIA})
+            revisar("ni cambiarle el telefono o el contacto de emergencia",
+                    r.status_code == 403 and registro["telefono"] == "809-555-0100", r.text[:160])
+            r = await c.post(f"/api/staff/mi-perfil/turnos/{TURNO}/confirmar", headers=cab(intruso))
+            turno = await db.volunteer_assignments.find_one({"id": TURNO})
+            revisar("ni confirmar el turno en su nombre",
+                    r.status_code == 403 and "confirmado_por" not in turno, r.text[:160])
 
             print("\nSin el buzon no puede confirmar la cuenta")
             codigo = await codigo_de(db, VOLUNTARIA)
@@ -190,6 +199,26 @@ async def main():
             revisar("y su turno", [t["slot_id"] for t in perfil.get("turnos", [])] == [TURNO], r.text[:200])
             r = await c.get("/api/staff/mi-perfil/carnet", headers=cab(duena))
             revisar("y puede bajar su carnet", r.status_code == 200, r.text[:160])
+
+            r = await c.post(f"/api/staff/mi-perfil/turnos/{TURNO}/confirmar", headers=cab(duena))
+            revisar("reconfirma su turno",
+                    r.status_code == 200 and r.json()["turno"]["confirmado"] is True, r.text[:200])
+            r = await c.get("/api/staff/mi-perfil", headers=cab(duena))
+            revisar("y su perfil lo ensena confirmado", r.json()["turnos"][0].get("confirmado") is True,
+                    r.text[:200])
+            r = await c.get("/api/volunteers/slots", headers=ADMIN)
+            del_panel = next((t for t in r.json() if t.get("id") == TURNO), {})
+            revisar("y el panel ve quien lo confirmo", del_panel.get("confirmado_por") == VOLUNTARIA,
+                    str(del_panel)[:200])
+            r = await c.put("/api/staff/mi-perfil/datos", headers=cab(duena),
+                            json={"telefono": "829-555-0200", "ciudad_residencia": "Santiago"})
+            registro = await db.volunteer_registrations.find_one({"email": VOLUNTARIA})
+            revisar("corrige sus datos desde su perfil",
+                    r.status_code == 200 and r.json()["perfil"]["telefono"] == "829-555-0200"
+                    and registro["ciudad_residencia"] == "Santiago" and registro["tipo_sangre"] == "O+",
+                    r.text[:200])
+            r = await c.put("/api/staff/mi-perfil/datos", headers=cab(duena), json={"nombre": " "})
+            revisar("pero no puede dejar el nombre vacio", r.status_code == 400, r.text[:160])
 
             r = await c.post("/api/cuentas/login", json={"email": VOLUNTARIA, "password": CLAVE_INTRUSO})
             revisar("la contrasena del intruso ya no entra", r.status_code == 401, r.text[:160])
