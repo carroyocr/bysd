@@ -72,7 +72,7 @@
     "start": "craco start",
     "build": "GENERATE_SOURCEMAP=false craco build",
     "test": "craco test",
-    "build:mobile": "node scripts/verificar-version.js && GENERATE_SOURCEMAP=false REACT_APP_BACKEND_URL=https://bysd-backend.onrender.com craco build && cap sync",
+    "build:mobile": "node scripts/verificar-version.js && GENERATE_SOURCEMAP=false REACT_APP_BACKEND_URL=https://bysd-backend.onrender.com craco build && node scripts/podar-build-movil.js && cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios"
   },
