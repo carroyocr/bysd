@@ -64,6 +64,8 @@ export default function EmailComposer() {
   const [activityId, setActivityId] = useState('');
   const [volunteerRaceCode, setVolunteerRaceCode] = useState('');
   const [volunteerEvento, setVolunteerEvento] = useState('');
+  // Solo quien ya tiene algún turno asignado: a quien va el correo de turnos.
+  const [volunteerSoloAsignados, setVolunteerSoloAsignados] = useState(false);
   const [recipientOptions, setRecipientOptions] = useState({
     media_types: [], sponsor_statuses: [], sponsor_categories: [], activities: [],
     volunteer_races: [], volunteer_eventos: [], volunteer_legacy_total: 0, volunteer_legacy_code: '',
@@ -197,9 +199,10 @@ export default function EmailComposer() {
     activity_id: filterType === 'activity' ? activityId || null : null,
     volunteer_race_code: filterType === 'volunteers' ? volunteerRaceCode || null : null,
     volunteer_evento: filterType === 'volunteers' ? volunteerEvento || null : null,
+    volunteer_solo_asignados: filterType === 'volunteers' ? volunteerSoloAsignados : false,
     manual_emails: filterType === 'manual' ? manualEmails.split(/[,;\n]+/).filter(Boolean) : null,
   }), [filterType, raceCode, regStatus, payment, mediaType, sponsorStatus, sponsorCategory, activityId,
-      volunteerRaceCode, volunteerEvento, manualEmails]);
+      volunteerRaceCode, volunteerEvento, volunteerSoloAsignados, manualEmails]);
 
   const loadRecipients = useCallback(async () => {
     setLoadingRecipients(true);
@@ -389,6 +392,22 @@ export default function EmailComposer() {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                  <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={volunteerSoloAsignados}
+                      onChange={(e) => setVolunteerSoloAsignados(e.target.checked)}
+                      disabled={volunteerRaceCode === recipientOptions.volunteer_legacy_code && !!recipientOptions.volunteer_legacy_code}
+                      className="mt-1"
+                      data-testid="volunteer-solo-asignados"
+                    />
+                    <span>
+                      Solo con turnos asignados
+                      <span className="block text-xs text-gray-400">
+                        Para la plantilla «Tus turnos y la app»: cada quien recibe los suyos.
+                      </span>
+                    </span>
+                  </label>
                   {recipientOptions.volunteer_races.length === 0 && (
                     <p className="text-xs text-gray-400">
                       Aún no hay postulaciones de voluntarios en el formulario público.

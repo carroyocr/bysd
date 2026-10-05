@@ -11,7 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const SOLO_DEL_SITIO = ['propuesta'];
+// `correo/`: las imagenes que enlazan los correos (botones de las tiendas).
+const SOLO_DEL_SITIO = ['propuesta', 'correo'];
 
 const build = path.join(__dirname, '..', 'build');
 SOLO_DEL_SITIO.forEach((nombre) => {

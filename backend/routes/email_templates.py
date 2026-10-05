@@ -66,6 +66,7 @@ MERGE_FIELDS = {
             {"key": "{{volunteer_edit_link}}", "label": "Link de edición", "example": "https://.../voluntarios/editar/abc123"},
             {"key": "{{volunteer_turnos}}", "label": "Lista de turnos (solo en 'Asignación de Varios Turnos')", "example": "Puesto, turno, fecha y horario de cada turno"},
             {"key": "{{volunteer_turnos_total}}", "label": "Cantidad de turnos asignados", "example": "3"},
+            {"key": "{{volunteer_turnos_asignados}}", "label": "Turnos asignados con fecha, hora de inicio y de término (al enviar desde Enviar Correos)", "example": "Sábado 17 de octubre de 2026 · Hidratación · 7:00 AM a 11:00 AM"},
             {"key": "{{rechazo_motivo}}", "label": "Motivo del rechazo (solo en las plantillas de rechazo)", "example": "Ese puesto ya quedó cubierto"},
         ]
     },
@@ -108,6 +109,7 @@ MERGE_FIELDS = {
 # Quien edite una plantilla desde el panel escribe HTML suelto y eso sigue
 # valiendo: esto es solo el punto de partida.
 from services import correo_estilo as e
+from services import correo_turnos
 
 
 def _correo(*bloques: str) -> str:
@@ -202,6 +204,39 @@ DEFAULT_TEMPLATES = [
             "{{volunteer_turnos}}",
             e.p("Llega 15 minutos antes de cada uno."),
             e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "volunteer_turnos_y_app",
+        "name": "Tus turnos y la app - Voluntario",
+        "description": (
+            "Para enviarla desde Enviar Correos a los voluntarios con turnos asignados: "
+            "sus turnos con fecha y horario, la descarga de la app y cómo gestionar o "
+            "cancelar su participación"
+        ),
+        "subject": "Tus turnos como voluntario - Backyard Ultra Santo Domingo",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": _correo(
+            e.h1("Tus turnos como voluntario"),
+            e.p("Hola <strong>{{volunteer_nombre}}</strong>,"),
+            e.p("Gracias por ser parte del equipo. Estos son los turnos que tienes asignados:"),
+            "{{volunteer_turnos_asignados}}",
+            e.p("Llega 15 minutos antes del inicio de cada turno."),
+            e.h2("Descarga la app"),
+            e.p("Con <strong>BYSD Live</strong> llevas tus turnos en el teléfono: entra en "
+                "«Staff» con tu correo para verlos, confirmarlos y recibir un aviso antes "
+                "de cada uno."),
+            correo_turnos.botones_de_tiendas(),
+            e.h2("Gestiona tu participación"),
+            e.p("Desde la app o desde el portal web de voluntarios puedes consultar tus datos "
+                "y tus turnos, confirmar que asistirás y pedir otros turnos disponibles."),
+            e.boton("Ir al portal de voluntarios", correo_turnos.PORTAL_VOLUNTARIOS),
+            e.h2("Si no puedes participar"),
+            e.p("Si por algún motivo no vas a poder acompañarnos, te agradecemos que entres a "
+                "la app o al portal web y canceles tu participación. Así otra persona puede "
+                "cubrir tu turno a tiempo."),
+            e.nota("Recibes este correo porque estás registrado como voluntario."),
         ),
     },
     {

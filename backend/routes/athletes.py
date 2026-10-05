@@ -12,7 +12,7 @@ import html
 import logging
 import re
 
-from services import rate_limit
+from services import correo_turnos, rate_limit
 from services.auth import (
     ALGORITHM,
     ATHLETE_SECRET_KEY,
@@ -2607,6 +2607,7 @@ class EmailRecipientFilter(BaseModel):
     sponsor_category: Optional[str] = None  # categoría de la propuesta (solo filtro 'sponsors')
     volunteer_race_code: Optional[str] = None  # carrera del voluntariado (solo filtro 'volunteers'; vacío = todas)
     volunteer_evento: Optional[str] = None  # 'carrera' o 'campeonato' (solo filtro 'volunteers'; vacío = ambos)
+    volunteer_solo_asignados: Optional[bool] = False  # solo quien ya tiene algún turno asignado (filtro 'volunteers')
 
 
 REG_STATUSES = {"pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"}
@@ -2690,10 +2691,58 @@ def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
         "athlete_nombre_completo": recipient.get("nombre_completo", "") or "",
         "athlete_email": recipient.get("email", "") or "",
         "athlete_bib": recipient.get("bib", "") or "",
+        # Las mismas, con el nombre que usan las plantillas de voluntarios.
+        "volunteer_nombre": nombre,
+        "volunteer_apellidos": apellidos,
+        "volunteer_nombre_completo": recipient.get("nombre_completo", "") or "",
+        "volunteer_email": recipient.get("email", "") or "",
+        # Quien no tiene turnos —o no es voluntario— lo lee dicho, no en blanco.
+        "volunteer_turnos_asignados": correo_turnos.SIN_TURNOS,
+        "volunteer_turnos_total": "0",
         # Los enlaces personales de cada uno. Sin inscripcion no hay token y
         # se quedan vacios: la plantilla que los use es para inscritos.
         **_enlaces_del_destinatario(recipient.get("edit_token")),
+        # Lo que se haya buscado aparte para este destinatario (sus turnos).
+        **(recipient.get("merge_extra") or {}),
     }
+
+
+async def _con_turnos_de_voluntario(database, recipients: list, contenido: str, evento=None) -> list:
+    """Anade a cada destinatario sus turnos asignados, si el correo los usa.
+
+    Solo se buscan cuando el contenido lleva `{{volunteer_turnos_asignados}}`
+    o `{{volunteer_turnos_total}}`: el resto de los correos del redactor no
+    tienen por que pagar esa consulta. A quien llega sin nombre —los correos
+    escritos a mano— se le pone el de su registro de voluntario, para que una
+    prueba enviada a uno mismo no salude a nadie.
+    """
+    if "{{volunteer_turnos_asignados}}" not in contenido and "{{volunteer_turnos_total}}" not in contenido:
+        return recipients
+
+    correos = [r["email"] for r in recipients]
+    por_correo = await correo_turnos.datos_por_destinatario(database, correos, evento)
+
+    sin_nombre = [r["email"] for r in recipients if not r.get("nombre")]
+    registros = {}
+    if sin_nombre:
+        async for reg in database.volunteer_registrations.find(
+            {"email": {"$in": sin_nombre}}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+        ).sort("created_at", -1):
+            registros.setdefault(reg["email"], reg)
+
+    completos = []
+    for r in recipients:
+        reg = registros.get(r["email"]) or {}
+        nombre = r.get("nombre") or reg.get("nombre") or ""
+        apellidos = r.get("apellidos") or reg.get("apellidos") or ""
+        completos.append({
+            **r,
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "nombre_completo": r.get("nombre_completo") or f"{nombre} {apellidos}".strip(),
+            "merge_extra": {**(r.get("merge_extra") or {}), **por_correo.get(r["email"], {})},
+        })
+    return completos
 
 
 def _contact_recipient(email, nombre_contacto, fallback_nombre, source):
@@ -2761,8 +2810,12 @@ def _volunteer_evento_query(evento):
     return {"evento": evento}
 
 
-async def _volunteer_recipients(database, race_code, evento):
+async def _volunteer_recipients(database, race_code, evento, solo_asignados=False):
     """Voluntarios postulados, sacados de `volunteer_registrations`.
+
+    `solo_asignados` deja solo a quien ya tiene algun turno asignado (en el
+    evento elegido, si se eligio uno): es a quien tiene sentido mandarle el
+    correo de sus turnos.
 
     Es la colección donde vive el voluntariado desde que existe el formulario
     público: una ficha por persona y evento, con su `race_code`. La colección
@@ -2797,6 +2850,12 @@ async def _volunteer_recipients(database, race_code, evento):
             "nombre_completo": f"{nombre} {apellidos}".strip(),
             "source": "voluntario",
         })
+
+    if solo_asignados:
+        con_turno = await correo_turnos.turnos_asignados(
+            database, [r["email"] for r in recipients], evento
+        )
+        recipients = [r for r in recipients if r["email"] in con_turno]
     return _dedupe_recipients(recipients)
 
 
@@ -2937,7 +2996,10 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
         return {"recipients": recipients, "total": len(recipients)}
 
     if data.filter_type == "volunteers":
-        return await _volunteer_recipients(database, data.volunteer_race_code, data.volunteer_evento)
+        return await _volunteer_recipients(
+            database, data.volunteer_race_code, data.volunteer_evento,
+            solo_asignados=bool(data.volunteer_solo_asignados),
+        )
 
     if data.filter_type == "press":
         from routes.prensa import TIPOS_MEDIO
@@ -3169,6 +3231,10 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
         "email": "juan.perez@ejemplo.com",
         "bib": "001",
         "edit_token": "TOKEN-DE-EJEMPLO",
+        "merge_extra": {
+            "volunteer_turnos_asignados": correo_turnos.bloque_de_turnos(correo_turnos.TURNOS_DE_EJEMPLO),
+            "volunteer_turnos_total": str(len(correo_turnos.TURNOS_DE_EJEMPLO)),
+        },
     }
 
     if data.template_mode:
@@ -3213,6 +3279,11 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     if data.template_mode:
         from services.template_email_service import render_template
         template_global = await _template_global_data(database)
+        solo_voluntarios = data.recipients.filter_type == "volunteers"
+        recipients = await _con_turnos_de_voluntario(
+            database, recipients, f"{data.subject} {data.content}",
+            evento=data.recipients.volunteer_evento if solo_voluntarios else None,
+        )
 
     messages = []
     recipient_by_email = {}

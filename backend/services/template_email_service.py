@@ -105,7 +105,7 @@ def send_bulk_emails_sync(messages: List[Dict[str, str]], is_plain: bool = False
 # Campos cuyo valor es un bloque de HTML que arma el propio backend (nunca
 # texto escrito por un usuario). Se insertan tal cual: escaparlos haria que el
 # correo mostrara las etiquetas <p style="..."> en pantalla.
-HTML_MERGE_FIELDS = {"proximos_pasos", "volunteer_turnos"}
+HTML_MERGE_FIELDS = {"proximos_pasos", "volunteer_turnos", "volunteer_turnos_asignados"}
 
 
 def render_template(template_str: str, data: Dict[str, Any], escape: bool = True) -> str:
