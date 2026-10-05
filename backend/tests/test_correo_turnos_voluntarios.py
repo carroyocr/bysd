@@ -105,7 +105,7 @@ def test_la_plantilla_lleva_las_dos_tiendas_como_imagen_el_portal_y_la_cancelaci
 
     # Las dos fichas, cada una enlazada desde su imagen.
     assert 'href="https://apps.apple.com/ar/app/bysd-live/id6802661105"' in html
-    assert 'href="https://play.google.com/store/apps/details?id=com.backyardultrasd.app&amp;hl=es_DO"' in html
+    assert 'href="https://play.google.com/store/apps/details?id=com.backyardultrasd.app&amp;pcampaignid=web_share"' in html
     assert 'src="https://backyardultrasantodomingo.com/correo/app-store.png"' in html
     assert 'src="https://backyardultrasantodomingo.com/correo/google-play.png"' in html
     # Media bandeja bloquea las imagenes: el texto alternativo dice a donde va.

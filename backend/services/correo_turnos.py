@@ -32,7 +32,7 @@ TIENDAS = [
         "alt": "Descargar BYSD Live en el App Store (iPhone)",
     },
     {
-        "url": "https://play.google.com/store/apps/details?id=com.backyardultrasd.app&hl=es_DO",
+        "url": "https://play.google.com/store/apps/details?id=com.backyardultrasd.app&pcampaignid=web_share",
         "imagen": f"{SITIO}/correo/google-play.png",
         "alt": "Descargar BYSD Live en Google Play (Android)",
     },
