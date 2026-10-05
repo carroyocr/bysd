@@ -115,7 +115,7 @@ def bloque_de_turnos(slots: Iterable[dict], nombres_de_evento: Optional[Dict[str
         borde = f"border-top: 1px solid {e.LINEA}; padding-top: 18px; " if i else ""
         bloques.append(
             f'<div style="{borde}margin: 0 0 18px 0;">'
-            f'<p style="margin: 0 0 8px 0; font-size: 18px; line-height: 1.4; font-weight: 700; color: {e.TINTA};">'
+            f'<p style="margin: 0 0 8px 0; font-size: 18px; line-height: 1.4; font-weight: 400; color: {e.TINTA};">'
             f'{html.escape(fecha_larga(s.get("dia") or ""))}</p>'
             + "".join(lineas)
             + "</div>"

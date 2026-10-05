@@ -71,11 +71,12 @@ def test_el_dorsal_tambien_viaja():
     assert datos["athlete_bib"] == "007"
 
 
-def test_los_botones_del_correo_van_en_negro():
-    """Se cambiaron del naranja de la marca a negro con letra blanca."""
+def test_los_botones_del_correo_van_en_azul_con_la_letra_en_blanco():
+    """Pasaron del naranja de la marca a negro, y de negro a azul y mas bajos."""
     from services import correo_estilo as e
 
     html = e.boton("Pulsa aquí", "https://ejemplo.com")
-    assert 'bgcolor="#000000"' in html
+    assert 'bgcolor="#0071e3"' in html
     assert "color: #ffffff" in html
-    assert "E8772E" not in html
+    assert "padding: 9px 22px" in html and "font-weight: 400" in html
+    assert "E8772E" not in html and "#000000" not in html

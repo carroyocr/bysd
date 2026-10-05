@@ -145,6 +145,14 @@ def render_template(template_str: str, data: Dict[str, Any], escape: bool = True
 
     result = re.sub(pattern, replacer, result)
 
+    # Las plantillas se guardan con el HTML ya montado, asi que una sembrada
+    # con el diseno anterior saldria con el. Aqui se pone al dia, sin tocar la
+    # base. El asunto no es HTML y no pasa por aqui.
+    if escape:
+        from services import correo_estilo
+
+        result = correo_estilo.al_dia(result)
+
     return result
 
 
