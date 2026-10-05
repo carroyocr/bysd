@@ -37,6 +37,7 @@ LO_PROPIO = {
     ("POST", "/api/cuenta/cambiar-password"),
     ("GET", "/api/staff/mi-perfil"),
     ("GET", "/api/staff/mi-perfil/carnet"),
+    ("GET", "/api/staff/mi-perfil/postulaciones"),
     ("GET", "/api/staff/mi-perfil/turnos-disponibles"),
     ("PUT", "/api/staff/mi-perfil/turnos"),
     ("DELETE", "/api/staff/mi-perfil/turnos/{slot_id}"),

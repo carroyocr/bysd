@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Heart, UserPlus, Edit2, Mail, Loader2, Clock } from 'lucide-react';
+import { ClipboardCheck, AlertCircle, Phone, Shirt, Download, Heart, UserPlus, LogIn, Loader2, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { toast } from 'sonner';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,10 +12,6 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 export default function VolunteersSection() {
   const { config } = useRaceConfig();
   
-  // State for edit link modal
-  const [showEditLinkModal, setShowEditLinkModal] = useState(false);
-  const [editLinkEmail, setEditLinkEmail] = useState('');
-  const [sendingEditLink, setSendingEditLink] = useState(false);
   const [manualUrl, setManualUrl] = useState(null);
   const [loadingManual, setLoadingManual] = useState(true);
 
@@ -44,39 +38,6 @@ export default function VolunteersSection() {
     
     loadManual();
   }, [config?.code]);
-
-  // Handle request edit link
-  const handleRequestEditLink = async () => {
-    if (!editLinkEmail.trim() || !editLinkEmail.includes('@')) {
-      toast.error('Por favor ingresa un email válido');
-      return;
-    }
-    
-    setSendingEditLink(true);
-    
-    try {
-      const response = await fetch(`${API_URL}/api/volunteer-registration/request-edit-link`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: editLinkEmail.trim().toLowerCase() })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success('¡Link de edición enviado a tu correo!');
-        setShowEditLinkModal(false);
-        setEditLinkEmail('');
-      } else {
-        toast.error(data.detail || 'Error al enviar el link');
-      }
-    } catch (error) {
-      console.error('Error requesting edit link:', error);
-      toast.error('Error de conexión. Intenta de nuevo.');
-    } finally {
-      setSendingEditLink(false);
-    }
-  };
 
   const volunteerRoles = [
     {
@@ -189,16 +150,20 @@ export default function VolunteersSection() {
                     Postular como Voluntario
                   </Button>
                 </Link>
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  onClick={() => setShowEditLinkModal(true)}
-                  className="border-primary/30 text-primary hover:bg-primary/10 w-full sm:w-auto"
-                  data-testid="edit-volunteer-btn"
-                >
-                  <Edit2 className="w-5 h-5 mr-2" />
-                  Editar mi Postulación
-                </Button>
+                {/* Antes mandaba un enlace al correo para editar la postulación.
+                    Ahora se entra con la cuenta: ahí están los datos, los
+                    turnos asignados y, desde dentro, la edición. */}
+                <Link to="/voluntarios/mi-perfil">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-primary/30 text-primary hover:bg-primary/10 w-full sm:w-auto"
+                    data-testid="volunteer-login-btn"
+                  >
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Ingresar
+                  </Button>
+                </Link>
               </div>
             </div>
           </CardContent>
@@ -388,69 +353,6 @@ export default function VolunteersSection() {
         </Tabs>
       </div>
 
-      {/* Edit Link Modal */}
-      {showEditLinkModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-primary" />
-                Editar mi Postulación
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Ingresa el correo electrónico con el que te registraste como voluntario. 
-                Te enviaremos un link para editar tu postulación.
-              </p>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Correo Electrónico</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    value={editLinkEmail}
-                    onChange={(e) => setEditLinkEmail(e.target.value)}
-                    placeholder="tu@email.com"
-                    className="pl-10"
-                    data-testid="edit-link-email-input"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setShowEditLinkModal(false);
-                    setEditLinkEmail('');
-                  }}
-                  disabled={sendingEditLink}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  className="flex-1 bg-primary hover:bg-accent text-primary-foreground"
-                  onClick={handleRequestEditLink}
-                  disabled={!editLinkEmail.trim() || sendingEditLink}
-                  data-testid="send-edit-link-btn"
-                >
-                  {sendingEditLink ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    'Enviar Link de Edición'
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
       </div>
     </section>
   );

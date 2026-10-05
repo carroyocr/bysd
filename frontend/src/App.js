@@ -41,6 +41,7 @@ import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import VerificarCarnetPage from './pages/VerificarCarnetPage';
 import VerificarCuentaPage from './pages/VerificarCuentaPage';
+import VoluntarioPerfilPage from './pages/VoluntarioPerfilPage';
 import ObsPage from './obs/ObsPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
@@ -122,6 +123,9 @@ export default function App() {
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
+                    {/* «Ingresar» de la sección de Voluntarios: acceso, datos
+                        y turnos asignados */}
+                    <Route path="/voluntarios/mi-perfil" element={<VoluntarioPerfilPage />} />
                     {/* Inscripción a una charla o actividad sin cuenta: el
                         enlace se copia desde el panel y se reparte */}
                     <Route path="/actividad/:id" element={<ActividadRegistroPage />} />
