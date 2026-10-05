@@ -111,6 +111,26 @@ def test_un_boton_de_cualquier_color_antiguo_tambien_se_pone_al_dia():
     assert "#E8772E" not in nueva and f'bgcolor="{AZUL_BOTON}"' in nueva
 
 
+def test_una_imagen_redibujada_estrena_direccion_tambien_en_lo_guardado():
+    """Los botones de las tiendas pasaron de negro a azul con el mismo nombre de
+    archivo, y el correo seguia llegando con los negros: el cliente de correo
+    guarda la imagen por su direccion."""
+    vieja = DE_ANTES["volunteer_turnos_y_app"]
+    assert '/correo/app-store.png"' in vieja and '/correo/google-play.png"' in vieja
+
+    nueva = e.al_dia(vieja)
+    assert '/correo/app-store.png"' not in nueva and '/correo/google-play.png"' not in nueva
+    assert '/correo/app-store-v2.png"' in nueva and '/correo/google-play-v2.png"' in nueva
+
+
+def test_los_archivos_viejos_siguen_ahi_para_los_correos_ya_enviados():
+    publico = Path(__file__).resolve().parents[2] / "frontend" / "public"
+    for vieja, nueva in e.IMAGENES_RENOMBRADAS.items():
+        for direccion in (vieja, nueva):
+            ruta = publico / direccion.replace("https://backyardultrasantodomingo.com/", "")
+            assert ruta.is_file(), f"Falta {ruta}"
+
+
 def test_al_rendir_una_plantilla_guardada_sale_con_el_diseno_de_hoy():
     """Es lo que hace que el cambio llegue sin tocar la base."""
     html = render_template(DE_ANTES["recordatorio_pago"], {

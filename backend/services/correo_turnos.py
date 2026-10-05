@@ -26,15 +26,23 @@ PORTAL_VOLUNTARIOS = f"{SITIO}/voluntarios"
 # los demas botones del correo (`correo_estilo.BOTON`), con el icono de
 # cada tienda (`frontend/public/correo/`), al doble de tamano para pantallas
 # densas: se pintan a 180 x 52.
+#
+# El nombre del archivo lleva version a proposito. Los clientes de correo
+# guardan cada imagen por su direccion: cuando los botones pasaron de negro a
+# azul con el mismo nombre, el correo seguia llegando con los negros. Si se
+# vuelven a redibujar, van con nombre nuevo (-v3) y el anterior se apunta en
+# `correo_estilo.IMAGENES_RENOMBRADAS`, que es lo que corrige las plantillas
+# ya guardadas. Los archivos viejos no se borran: los correos ya enviados
+# siguen pidiendolos.
 TIENDAS = [
     {
         "url": "https://apps.apple.com/ar/app/bysd-live/id6802661105",
-        "imagen": f"{SITIO}/correo/app-store.png",
+        "imagen": f"{SITIO}/correo/app-store-v2.png",
         "alt": "Descargar BYSD Live en el App Store (iPhone)",
     },
     {
         "url": "https://play.google.com/store/apps/details?id=com.backyardultrasd.app&pcampaignid=web_share",
-        "imagen": f"{SITIO}/correo/google-play.png",
+        "imagen": f"{SITIO}/correo/google-play-v2.png",
         "alt": "Descargar BYSD Live en Google Play (Android)",
     },
 ]
