@@ -22,7 +22,8 @@ from services import correo_estilo as e
 SITIO = "https://backyardultrasantodomingo.com"
 PORTAL_VOLUNTARIOS = f"{SITIO}/voluntarios"
 
-# Las fichas de BYSD Live. Las imagenes son botones propios con el icono de
+# Las fichas de BYSD Live. Las imagenes son botones propios, del mismo azul que
+# los demas botones del correo (`correo_estilo.BOTON`), con el icono de
 # cada tienda (`frontend/public/correo/`), al doble de tamano para pantallas
 # densas: se pintan a 180 x 52.
 TIENDAS = [
