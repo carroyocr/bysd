@@ -356,6 +356,50 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
     }
 
 
+@router.get("/mi-perfil/postulaciones")
+async def mis_postulaciones(payload: dict = Depends(equipo_con_correo_demostrado)):
+    """Las postulaciones del voluntario, con la llave para editar cada una.
+
+    En la web, editar la postulacion era pedir un enlace al correo y esperar a
+    que llegara. Quien ya entro con su cuenta demostro lo mismo que demuestra
+    abrir ese correo, asi que se le da el enlace directamente. Solo las de su
+    edicion mas reciente, una por evento, como el carnet.
+    """
+    from server import db
+    from routes.volunteer_registration import generate_edit_token, nombre_evento
+
+    email = (payload.get("username") or "").lower()
+    registros = await db.volunteer_registrations.find(
+        {"email": email, "status": {"$ne": "cancelled"}}
+    ).sort("created_at", -1).to_list(20)
+    if not registros:
+        return {"postulaciones": []}
+
+    edicion = registros[0].get("race_code")
+    carrera = await db.race_configurations.find_one({"code": edicion}) if edicion else None
+
+    postulaciones, vistos = [], set()
+    for r in registros:
+        evento = r.get("evento") or "carrera"
+        if r.get("race_code") != edicion or evento in vistos:
+            continue
+        vistos.add(evento)
+
+        llave = r.get("edit_token")
+        if not llave:
+            llave = generate_edit_token()
+            await db.volunteer_registrations.update_one(
+                {"_id": r["_id"]}, {"$set": {"edit_token": llave}}
+            )
+        postulaciones.append({
+            "evento": evento,
+            "evento_nombre": nombre_evento(carrera, evento),
+            "edit_token": llave,
+        })
+
+    return {"postulaciones": postulaciones}
+
+
 @router.delete("/mi-perfil/turnos/{slot_id}")
 async def soltar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
     """El voluntario suelta un turno que le habian asignado.

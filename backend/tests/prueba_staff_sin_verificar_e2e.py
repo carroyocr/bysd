@@ -45,6 +45,7 @@ MARCA = uuid.uuid4().hex[:8]
 VOLUNTARIA = f"voluntaria-{MARCA}@prueba.example"
 SIN_FICHA = f"nadie-{MARCA}@prueba.example"
 VETERANA = f"veterana-{MARCA}@prueba.example"
+NUEVA = f"nueva-{MARCA}@prueba.example"
 TURNO = 900000 + int(MARCA[:4], 16)
 CLAVE_INTRUSO = "la-del-intruso-123"
 CLAVE_DUENA = "la-de-la-duena-456"
@@ -63,7 +64,7 @@ def cab(token):
 
 
 async def sembrar(db):
-    for correo in (VOLUNTARIA, VETERANA):
+    for correo in (VOLUNTARIA, VETERANA, NUEVA):
         await db.volunteer_registrations.insert_one({
             "email": correo, "nombre": "Ana", "apellidos": "Prueba", "status": "confirmed",
             "telefono": "809-555-0100", "tipo_sangre": "O+", "condicion_medica": "si",
@@ -142,6 +143,9 @@ async def main():
             revisar("ni ver los turnos como si fuera ella", r.status_code == 403, r.text[:160])
             r = await c.get("/api/staff/mi-perfil/carnet", headers=cab(intruso))
             revisar("ni bajarse su carnet", r.status_code == 403, r.text[:160])
+            r = await c.get("/api/staff/mi-perfil/postulaciones", headers=cab(intruso))
+            revisar("ni llevarse el enlace para editar su postulacion",
+                    r.status_code == 403 and "edit_token" not in r.text, r.text[:160])
 
             print("\nSin el buzon no puede confirmar la cuenta")
             codigo = await codigo_de(db, VOLUNTARIA)
@@ -209,6 +213,46 @@ async def main():
             r = await c.post("/api/cuentas/verificar", json={"email": SIN_FICHA, "code": codigo})
             revisar("la ruta de confirmar no da sesion a una cuenta ya confirmada",
                     r.status_code == 409, r.text[:160])
+
+            print("\n«Ingresar» en la web: la voluntaria que nunca se puso contrasena")
+            r = await c.get("/api/staff/account-status", params={"email": NUEVA})
+            revisar("el estado dice que es voluntaria y que no tiene contrasena",
+                    r.json().get("es_voluntario") is True and r.json().get("tiene_password") is False,
+                    r.text[:160])
+            r = await c.post("/api/cuentas/login", json={"email": NUEVA, "password": CLAVE_DUENA})
+            revisar("sin contrasena no entra", r.status_code == 401, r.text[:160])
+            await c.post("/api/staff/password/request-code", json={"email": NUEVA})
+            ficha = await db.volunteer_verification_tokens.find_one({"email": NUEVA})
+            r = await c.post("/api/staff/password/set", json={
+                "email": NUEVA, "code": "000000" if ficha["code"] != "000000" else "111111",
+                "password": CLAVE_DUENA})
+            revisar("con un codigo que no es el suyo no se crea la contrasena",
+                    r.status_code == 400, r.text[:160])
+            r = await c.post("/api/staff/password/set", json={
+                "email": NUEVA, "code": ficha["code"], "password": CLAVE_DUENA})
+            revisar("con su codigo elige la contrasena y entra",
+                    r.status_code == 200 and r.json().get("token"), r.text[:160])
+
+            r = await c.post("/api/cuentas/login", json={"email": NUEVA, "password": CLAVE_DUENA})
+            revisar("y desde entonces entra con correo y contrasena",
+                    r.status_code == 200 and r.json()["cuenta"]["email_verified"], r.text[:160])
+            nueva = r.json()["token"]
+            r = await c.get("/api/staff/mi-perfil", headers=cab(nueva))
+            revisar("ve sus datos", (r.json().get("perfil") or {}).get("telefono") == "809-555-0100",
+                    r.text[:200])
+            r = await c.get("/api/staff/mi-perfil/postulaciones", headers=cab(nueva))
+            postulaciones = r.json().get("postulaciones") or []
+            revisar("y recibe el enlace para editar su postulacion",
+                    r.status_code == 200 and len(postulaciones) == 1 and postulaciones[0]["edit_token"],
+                    r.text[:200])
+            if postulaciones:
+                r = await c.get(f"/api/volunteer-registration/by-token/{postulaciones[0]['edit_token']}")
+                revisar("que abre la suya", r.status_code == 200 and r.json().get("email") == NUEVA,
+                        r.text[:160])
+            r = await c.get("/api/staff/account-status", params={"email": f"nadie-mas-{MARCA}@prueba.example"})
+            revisar("un correo que no es de nadie no pasa del primer paso",
+                    r.json().get("es_voluntario") is False and r.json().get("tiene_cuenta") is False,
+                    r.text[:160])
 
             print("\nQuien ya era del equipo no pierde nada")
             # Cuenta como las que dejo la migracion de admin_users: sin verificar,

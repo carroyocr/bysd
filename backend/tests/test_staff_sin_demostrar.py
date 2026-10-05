@@ -202,6 +202,7 @@ def test_las_rutas_del_voluntario_cuelgan_de_la_comprobacion():
         ("GET", "/api/staff/mi-perfil/turnos-disponibles"),
         ("PUT", "/api/staff/mi-perfil/turnos"),
         ("GET", "/api/staff/mi-perfil/carnet"),
+        ("GET", "/api/staff/mi-perfil/postulaciones"),
     }
     vistas = set()
     for ruta in server.app.routes:
@@ -256,6 +257,38 @@ def test_quien_se_puso_contrasena_con_su_codigo_ve_su_ficha(monkeypatch, correos
         return await staff_account.mi_perfil(auth.decodificar(cuentas.emitir_token(cuenta)))
 
     assert correr(caso, monkeypatch)["perfil"]["tipo_sangre"] == "O+"
+
+
+def test_el_voluntario_recibe_la_llave_para_editar_su_postulacion(monkeypatch, correos):
+    """Una por evento y solo de su edicion mas reciente; la del ano pasado no."""
+    async def caso(db):
+        ahora = datetime.now(timezone.utc)
+        await db.race_configurations.insert_one({"code": "MUNDIAL-2026", "name": "Backyard Ultra SD"})
+        await db.volunteer_registrations.insert_many([
+            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "BYSD-2025",
+             "evento": "carrera", "edit_token": "la-del-ano-pasado", "created_at": ahora - timedelta(days=300)},
+            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "MUNDIAL-2026",
+             "evento": "carrera", "edit_token": "llave-carrera", "created_at": ahora - timedelta(days=2)},
+            # Postulacion de antes de que existieran las llaves: se le genera.
+            {"email": CORREO, "nombre": "Ana", "status": "confirmed", "race_code": "MUNDIAL-2026",
+             "evento": "campeonato", "created_at": ahora - timedelta(days=1)},
+            {"email": CORREO, "nombre": "Ana", "status": "cancelled", "race_code": "MUNDIAL-2026",
+             "evento": "campeonato", "edit_token": "cancelada", "created_at": ahora},
+        ])
+        cuenta = await cuentas.cuenta_de_equipo(db, CORREO, password=CLAVE, nombre="Ana")
+        payload = auth.decodificar(cuentas.emitir_token(cuenta))
+        respuesta = await staff_account.mis_postulaciones(payload)
+        guardada = await db.volunteer_registrations.find_one(
+            {"email": CORREO, "evento": "campeonato", "status": "confirmed"})
+        return respuesta["postulaciones"], guardada
+
+    postulaciones, guardada = correr(caso, monkeypatch)
+    por_evento = {p["evento"]: p for p in postulaciones}
+    assert set(por_evento) == {"carrera", "campeonato"}
+    assert por_evento["carrera"]["edit_token"] == "llave-carrera"
+    assert por_evento["carrera"]["evento_nombre"] == "Backyard Ultra SD"
+    assert len(por_evento["campeonato"]["edit_token"]) == 32
+    assert guardada["edit_token"] == por_evento["campeonato"]["edit_token"]
 
 
 # ==================== El camino de vuelta ====================
