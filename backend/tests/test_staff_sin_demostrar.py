@@ -475,6 +475,19 @@ def test_no_se_pide_lo_reservado_por_otro_ni_lo_que_se_pisa_con_lo_suyo(monkeypa
     assert carrera["slots_interes"] == [11]
 
 
+def test_que_dos_turnos_suyos_se_pisen_no_le_impide_pedir_un_tercero(monkeypatch, correos):
+    """La organizacion asigna a mano y puede dejarle dos a la misma hora."""
+    async def caso(db):
+        await _carrera_y_campeonato(db)
+        # El 14 (06:00) se le asigna a mano, pisando el 11 que ya habia pedido.
+        await db.volunteer_assignments.update_one({"id": 14}, {"$set": {"email_asignado": CORREO}})
+        payload = await _sesion_de_la_voluntaria(db)
+        await staff_account.solicitar_turno(12, payload)       # 10:00, no choca con ninguno
+        return await db.volunteer_registrations.find_one({"email": CORREO, "evento": "carrera"})
+
+    assert correr(caso, monkeypatch)["slots_interes"] == [11, 12]
+
+
 def test_sin_postulacion_en_un_evento_no_se_piden_sus_turnos(monkeypatch, correos):
     async def caso(db):
         await _carrera_y_campeonato(db)

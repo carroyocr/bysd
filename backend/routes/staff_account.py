@@ -496,7 +496,9 @@ async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_corre
     que cuando se elige en el formulario de la postulacion.
     """
     from server import db
-    from routes.volunteer_registration import validar_slots_libres, validar_sin_solapes
+    from routes.volunteer_registration import (
+        _momentos_turno, fecha_base_evento, fecha_de_slot, validar_slots_libres,
+    )
 
     email = (payload.get("username") or "").lower()
 
@@ -516,14 +518,30 @@ async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_corre
     if slot_id in pedidos:
         return {"success": True}
 
-    # Que siga libre —otro pudo pedirlo mientras la pantalla estaba abierta— y
-    # que no se pise con lo que ya pidio ni con lo que ya le asignaron.
+    # Que siga libre: otro pudo pedirlo mientras la pantalla estaba abierta.
     await validar_slots_libres(db, [slot_id], email)
+
+    # Y que no se pise con lo que ya pidio ni con lo que ya le asignaron. Se
+    # mira solo el turno nuevo contra los suyos: si dos de los que ya tenia se
+    # pisan entre si —la organizacion asigna a mano—, eso no es motivo para no
+    # dejarle pedir un tercero que no choca con ninguno.
+    base = await fecha_base_evento(db, evento)
+    nuevo = _momentos_turno(fecha_de_slot(slot, base), slot.get("hora_inicio"), slot.get("hora_fin"))
     suyos = await db.volunteer_assignments.find(
-        {"email_asignado": email}, {"_id": 0, "id": 1, "evento": 1}
-    ).to_list(200)
-    ids_suyos = [s["id"] for s in suyos if (s.get("evento") or "carrera") == evento]
-    await validar_sin_solapes(db, [*pedidos, *ids_suyos, slot_id], evento)
+        {"$or": [{"id": {"$in": pedidos}}, {"email_asignado": email}]}, {"_id": 0}
+    ).to_list(300)
+    for otro in suyos:
+        if (otro.get("evento") or "carrera") != evento or otro.get("id") == slot_id:
+            continue
+        tramo = _momentos_turno(fecha_de_slot(otro, base), otro.get("hora_inicio"), otro.get("hora_fin"))
+        if nuevo and tramo and nuevo[0] < tramo[1] and tramo[0] < nuevo[1]:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Ese turno coincide en horario con el turno {otro.get('turno')} de "
+                    f"\"{otro.get('puesto')}\", que ya tienes. No puedes cubrir los dos a la vez."
+                ),
+            )
 
     await db.volunteer_registrations.update_one(
         {"_id": registro["_id"]},
