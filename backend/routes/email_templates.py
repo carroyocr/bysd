@@ -155,6 +155,29 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "athlete_registration_pending_payment",
+        "name": "Inscripción recibida, falta el pago - Atleta",
+        "description": (
+            "Se envía al inscribirse en una carrera: la inscripción queda recibida y solo se "
+            "confirma al verificar la transferencia. Lleva los datos de la cuenta"
+        ),
+        "subject": "Recibimos tu inscripción a {{race_name}}: falta confirmar el pago",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Recibimos tu inscripción"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu inscripción a <strong>{{race_name}}</strong> quedó registrada, pero "
+                "<strong>solo queda confirmada cuando verifiquemos tu transferencia</strong>."),
+            e.p("Los cupos se aseguran por orden de pago: mientras no pagues, tu cupo no está "
+                "garantizado y otra persona que pague antes puede quedárselo."),
+            "{{proximos_pasos}}",
+            e.separador(),
+            e.boton("Editar mi registro", "{{athlete_edit_link}}"),
+            e.nota(_PIE_CARRERA),
+        ),
+    },
+    {
         "id": "volunteer_registration_confirmation",
         "name": "Confirmación de Registro - Voluntario",
         "description": "Se envía cuando un voluntario completa su registro",

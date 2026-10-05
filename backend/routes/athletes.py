@@ -1366,39 +1366,17 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
                 data=merge_data
             )
         else:
-            # Dynamic content based on date: before Oct 2026 vs Oct 2026+
-            now = datetime.now(timezone.utc)
-            payment_cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
-            if now < payment_cutoff:
-                merge_data["proximos_pasos"] = """
-                    <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
-                        <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
-                    </p>
-                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
-                        <p style="margin: 0; color: #374151; line-height: 1.6;">
-                            4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
-                        </p>
-                    </div>
-                """
-            else:
-                merge_data["proximos_pasos"] = f"""
-                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0 0 10px 0; color: #1f2937; line-height: 1.6;">
-                            <strong>Asegura tu cupo con el pago.</strong> {cupos.MENSAJE_POR_CONFIRMAR}
-                        </p>
-                        <p style="margin: 0 0 14px 0; color: #4b5563; line-height: 1.6;">{cupos.MENSAJE_ABONO}</p>
-                        <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
-                        <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
-                            <li>Completa el pago de inscripción desde tu perfil</li>
-                            <li>Espera la confirmación de tu BIB</li>
-                            <li>Revisa la guía del corredor</li>
-                        </ol>
-                    </div>
-                """
+            # Inscribirse ya no confirma nada: el cupo se asegura al verificar
+            # la transferencia. El correo lleva la cuenta y el enlace para
+            # subir el comprobante, que quien paga primero se queda el cupo.
+            from services import correo_inscripcion
 
+            merge_data["proximos_pasos"] = correo_inscripcion.bloque_de_pago(
+                race_config, registration_doc["edit_token"]
+            )
             await send_email_with_template(
                 db=database,
-                template_id="athlete_registration_confirmation",
+                template_id="athlete_registration_pending_payment",
                 to_email=athlete["email"],
                 data=merge_data
             )
@@ -1412,10 +1390,10 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
     _asyncio.create_task(avisar_atleta(
         database,
         athlete["email"],
-        "Ya estás en lista de espera" if is_waitlist else "Inscripción confirmada",
+        "Ya estás en lista de espera" if is_waitlist else "Inscripción recibida",
         (f"Te apuntamos a {(race or {}).get('name') or data.race_code}. Te avisamos en cuanto se libere un cupo."
          if is_waitlist else
-         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Asegura tu cupo con el pago: se confirman por orden de pago."),
+         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Queda confirmada cuando verifiquemos tu pago: los cupos se aseguran por orden de pago."),
         {"tipo": "inscripcion"},
     ))
 
