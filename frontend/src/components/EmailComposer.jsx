@@ -49,6 +49,7 @@ export const PAYMENT_OPTIONS = [
   { value: 'paid', label: 'Pagado' },
   { value: 'pending', label: 'Pendiente (sin comprobante)' },
   { value: 'in_review', label: 'Comprobante en revisión' },
+  { value: 'por_confirmar', label: 'Cupo por confirmar (sin pago ni abono)' },
 ];
 
 export default function EmailComposer() {

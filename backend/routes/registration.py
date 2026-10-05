@@ -8,7 +8,7 @@ import os
 import secrets
 import hashlib
 
-from services import plazos, rate_limit
+from services import cupos, plazos, rate_limit
 from services.auth import require_permission
 
 router = APIRouter(prefix="/api/registration", tags=["registration"])
@@ -706,12 +706,16 @@ async def get_registration_stats(race_code: str):
             "masculino": 0,
             "femenino": 0,
             "with_photo": 0,
-            "paid": 0
+            "paid": 0,
+            "cupos": await cupos.resumen(db, race_code),
         }
     
     stats = result[0]
     stats.pop("_id", None)
     stats["race_code"] = race_code
+    # Cuantos cupos estan asegurados de verdad, que no es lo mismo que cuantos
+    # se inscribieron.
+    stats["cupos"] = await cupos.resumen(db, race_code)
     
     # Get t-shirt sizes distribution (total)
     sizes_pipeline = [
@@ -751,19 +755,29 @@ async def get_registration_stats(race_code: str):
 
 @router.get("/public/participants/{race_code}")
 async def public_participants(race_code: str):
-    """Public: list of registered participants for a race (bib, nombre, apellidos, sexo) + stats."""
-    # Read max capacity from race config (fallback 120)
-    race_config = await db["race_configurations"].find_one({"code": race_code})
-    max_capacity = (race_config or {}).get("max_participants", 120)
+    """Public: list of registered participants for a race (bib, nombre, apellidos, sexo) + stats.
 
-    query = {
-        "race_code": race_code,
-        "status": {"$nin": ["cancelled", "waitlist"]},
-    }
-    regs = await registrations_collection.find(
-        query,
-        {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1}
-    ).to_list(1000)
+    Los cupos se aseguran pagando (`services/cupos.py`), asi que las plazas
+    disponibles son las que nadie ha asegurado, no las que nadie ha pedido.
+    Mientras quedan, la lista ensena a todos los inscritos sin distinguir quien
+    pago: eso no es asunto del publico. Cuando se completan, participan los
+    que aseguraron su cupo y el resto pasa a la lista de espera.
+    """
+    race_config = await db["race_configurations"].find_one({"code": race_code})
+    estado_cupos = await cupos.resumen(db, race_code, race_config)
+    max_capacity = estado_cupos["limite"]
+
+    todos = await registrations_collection.find(
+        {"race_code": race_code, "status": {"$ne": "cancelled"}},
+        {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1, "created_at": 1, **cupos.CAMPOS}
+    ).to_list(2000)
+
+    if estado_cupos["completo"]:
+        regs = [r for r in todos if cupos.asegurado(r)]
+        en_espera = [r for r in todos if not cupos.asegurado(r)]
+    else:
+        regs = [r for r in todos if r.get("status") != "waitlist"]
+        en_espera = [r for r in todos if r.get("status") == "waitlist"]
 
     def bib_key(r):
         try:
@@ -784,12 +798,8 @@ async def public_participants(race_code: str):
         "sexo": r.get("sexo", ""),
     } for r in regs]
 
-    # Waitlist participants (status == "waitlist"), ordered by bib
-    waitlist_regs = await registrations_collection.find(
-        {"race_code": race_code, "status": "waitlist"},
-        {"_id": 0, "bib": 1, "nombre": 1, "apellidos": 1, "sexo": 1}
-    ).to_list(1000)
-    waitlist_regs.sort(key=bib_key)
+    # La lista de espera, en el orden en que se inscribieron.
+    waitlist_regs = sorted(en_espera, key=lambda r: (str(r.get("created_at") or ""), bib_key(r)))
     waitlist = [{
         "bib": r.get("bib"),
         "nombre": r.get("nombre", ""),
@@ -803,7 +813,9 @@ async def public_participants(race_code: str):
         "masculino": masculino,
         "femenino": femenino,
         "max_capacity": max_capacity,
-        "plazas_disponibles": max(max_capacity - total, 0),
+        "plazas_disponibles": estado_cupos["disponibles"],
+        "cupos_asegurados": estado_cupos["asegurados"],
+        "cupos_completos": estado_cupos["completo"],
         "participants": participants,
         "waitlist": waitlist,
         "waitlist_total": len(waitlist),
@@ -1372,7 +1384,8 @@ async def get_payment_info_for_athlete(token: str):
     registration = await registrations_collection.find_one(
         {"edit_token": token},
         {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "race_code": 1, 
-         "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1}
+         "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1,
+         "status": 1, "inscripcion_cortesia": 1}
     )
     
     if not registration:
@@ -1398,10 +1411,14 @@ async def get_payment_info_for_athlete(token: str):
         if hasattr(recibo.get(campo), "isoformat"):
             recibo[campo] = recibo[campo].isoformat()
 
+    estado_cupos = await cupos.resumen(db, registration.get("race_code"))
     return {
         "registration": registration,
         "race_config": race_config or {},
         "monto_esperado": plazos.monto_esperado(registration, costo),
+        # Como esta su cupo y si todavia puede mandar el pago.
+        "cupo": cupos.para_el_corredor(registration, estado_cupos),
+        "impedimento": cupos.impedimento_para_pagar(registration, estado_cupos),
     }
 
 
@@ -1423,7 +1440,8 @@ async def ver_plazo(token: str):
     registration = await registrations_collection.find_one(
         {"edit_token": token},
         {"_id": 0, "nombre": 1, "apellidos": 1, "email": 1, "race_code": 1, "bib": 1,
-         "status": 1, "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1},
+         "status": 1, "payment_status": 1, "payment_receipt": 1, "plazo_pago": 1,
+         "inscripcion_cortesia": 1},
     )
     if not registration:
         raise HTTPException(status_code=404, detail="No encontramos tu inscripción")
@@ -1436,6 +1454,7 @@ async def ver_plazo(token: str):
     ) or {}
 
     costo = float(carrera.get("registration_cost") or 0)
+    estado_cupos = await cupos.resumen(db, registration.get("race_code"))
     return {
         "nombre": f"{registration.get('nombre', '')} {registration.get('apellidos', '')}".strip(),
         "email": registration.get("email"),
@@ -1445,7 +1464,11 @@ async def ver_plazo(token: str):
         "fecha_tope": plazos.FECHA_TOPE.isoformat(),
         "hoy": plazos.hoy().isoformat(),
         "plazo": registration.get("plazo_pago"),
-        "impedimento": plazos.puede_solicitar(registration),
+        "impedimento": (
+            plazos.puede_solicitar(registration)
+            or cupos.impedimento_para_pagar(registration, estado_cupos)
+        ),
+        "cupo": cupos.para_el_corredor(registration, estado_cupos),
     }
 
 
@@ -1467,6 +1490,13 @@ async def pedir_plazo(
     impedimento = plazos.puede_solicitar(registration)
     if impedimento:
         raise HTTPException(status_code=400, detail=impedimento)
+    # Un abono tambien guarda el sitio: sin cupos que pagar no se acepta, que
+    # luego hay que devolverlo.
+    sin_cupo = cupos.impedimento_para_pagar(
+        registration, await cupos.resumen(db, registration.get("race_code"))
+    )
+    if sin_cupo:
+        raise HTTPException(status_code=409, detail=sin_cupo)
 
     carrera = await db["race_configurations"].find_one(
         {"code": registration.get("race_code")}, {"registration_cost": 1}
@@ -1552,13 +1582,15 @@ async def submit_payment_receipt(
     if not registration:
         raise HTTPException(status_code=404, detail="Registro no encontrado")
 
-    # Sin cupo confirmado no se paga: quien esta en lista de espera todavia no
-    # tiene plaza y cobrarle antes obliga a devolver el dinero.
-    if registration.get("status") == "waitlist":
-        raise HTTPException(
-            status_code=400,
-            detail="Estas en lista de espera. Podras subir el comprobante cuando se libere un cupo y te confirmemos.",
-        )
+    # Se paga mientras queden cupos que nadie haya asegurado ni tenga en
+    # revision. Cobrarle a alguien un cupo que ya no hay obliga a devolver el
+    # dinero. Ya no depende de estar o no en la lista de espera de antes: los
+    # cupos son de quien paga primero (`services/cupos.py`).
+    sin_cupo = cupos.impedimento_para_pagar(
+        registration, await cupos.resumen(db, registration.get("race_code"))
+    )
+    if sin_cupo:
+        raise HTTPException(status_code=409, detail=sin_cupo)
 
     # Un segundo comprobante sobre uno que aun se esta revisando solo genera
     # trabajo duplicado a la organizacion.
@@ -1741,6 +1773,12 @@ async def listar_plazos(race_code: str, estado: Optional[str] = None):
     }
 
 
+def _fuera_de_la_lista_de_espera(registro: dict) -> dict:
+    """Lo que hay que escribir cuando se le asegura el cupo a quien estaba en
+    la lista de espera de antes: deja de estar en ella."""
+    return {"status": "registered"} if registro.get("status") == "waitlist" else {}
+
+
 @admin_router.put("/plazo/{email}")
 async def revisar_plazo(
     email: str, race_code: str, aprobado: bool, motivo: Optional[str] = None
@@ -1764,10 +1802,19 @@ async def revisar_plazo(
     if not plazo:
         raise HTTPException(status_code=400, detail="Ese atleta no pidió plazo")
 
+    cambios = {}
+    if aprobado:
+        # Aprobar el abono asegura el cupo: no se aprueba uno de mas.
+        sin_cupo = cupos.impedimento_para_asegurar(registro, await cupos.resumen(db, race_code))
+        if sin_cupo:
+            raise HTTPException(status_code=409, detail=sin_cupo)
+        cambios = _fuera_de_la_lista_de_espera(registro)
+
     estado = plazos.APROBADO if aprobado else plazos.RECHAZADO
     await registrations_collection.update_one(
         {"email": email.lower(), "race_code": race_code},
         {"$set": {
+            **cambios,
             "plazo_pago.estado": estado,
             "plazo_pago.revisado_at": datetime.now(timezone.utc),
             "plazo_pago.motivo_rechazo": (motivo or "") if not aprobado else "",
@@ -1898,6 +1945,14 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
     new_status = "approved" if approved else "rejected"
     payment_status = "paid" if approved else "pending"
 
+    cambios_de_cupo = {}
+    if approved:
+        # Aprobar el pago asegura el cupo: no se aprueba uno de mas.
+        sin_cupo = cupos.impedimento_para_asegurar(registration, await cupos.resumen(db, race_code))
+        if sin_cupo:
+            raise HTTPException(status_code=409, detail=sin_cupo)
+        cambios_de_cupo = _fuera_de_la_lista_de_espera(registration)
+
     if approved:
         import asyncio as _asyncio
         from routes.push import avisar_atleta
@@ -1912,6 +1967,7 @@ async def review_payment_receipt(email: str, race_code: str, approved: bool):
         {"email": email.lower(), "race_code": race_code},
         {
             "$set": {
+                **cambios_de_cupo,
                 "payment_receipt.status": new_status,
                 "payment_receipt.reviewed_at": datetime.now(timezone.utc),
                 "payment_status": payment_status,
@@ -2053,10 +2109,16 @@ async def marcar_inscripcion_cortesia(
             detail="Este atleta tiene un comprobante de pago aprobado. Revierte el pago antes de marcarlo como cortesía."
         )
 
+    # Una cortesia ocupa cupo como cualquier otro inscrito.
+    sin_cupo = cupos.impedimento_para_asegurar(registration, await cupos.resumen(db, race_code))
+    if sin_cupo:
+        raise HTTPException(status_code=409, detail=sin_cupo)
+
     ahora = datetime.now(timezone.utc)
     await registrations_collection.update_one(
         {"email": email.lower(), "race_code": race_code},
         {"$set": {
+            **_fuera_de_la_lista_de_espera(registration),
             "inscripcion_cortesia": True,
             "cortesia_motivo": motivo,
             "cortesia_por": usuario.get("username", ""),

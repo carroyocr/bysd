@@ -557,6 +557,44 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "cupo_no_garantizado",
+        "name": "Cupo no garantizado - inscritos sin pago",
+        "description": (
+            "Para enviarla desde Enviar Correos a los inscritos con el cupo por confirmar: "
+            "la inscripción sigue activa pero el cupo se asegura por orden de pago, con "
+            "los enlaces para pagar, abonar una parte o cancelar"
+        ),
+        "subject": "Tu cupo en {{race_name}} aún no está garantizado",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Tu inscripción sigue activa, pero tu cupo no está garantizado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("El plazo para pagar la inscripción a <strong>{{race_name}}</strong> venció el "
+                "30 de septiembre. Tu inscripción sigue activa, pero desde ahora los cupos se "
+                "aseguran <strong>por orden de pago</strong>."),
+            e.p("Eso quiere decir que si alguien más completa su registro y paga antes, "
+                "podrías perder tu derecho a participar."),
+            e.h2("Asegura tu cupo"),
+            e.p("Haz la transferencia y sube el comprobante desde tu perfil. En cuanto lo "
+                "revisemos, tu cupo queda asegurado."),
+            e.boton("Pagar y asegurar mi cupo", "{{frontend_url}}/mi-perfil"),
+            e.h2("¿Necesitas más tiempo?"),
+            e.p("Sigue en pie la opción de pagar por partes: abona ahora desde RD$ 1,000 y "
+                "salda el resto hasta el <strong>15 de noviembre</strong>. Con el abono "
+                "aprobado, tu cupo queda asegurado igual."),
+            e.boton("Abonar una parte", "{{athlete_plazo_link}}"),
+            e.separador(),
+            e.h2("¿Ya no vas a participar?"),
+            e.p("Dínoslo y liberas el cupo para otra persona. Se agradece más de lo que parece."),
+            e.boton("Cancelar mi inscripción", "{{athlete_cancel_link}}"),
+            e.separador(),
+            e.p("Si ya pagaste y no nos has enviado el comprobante, súbelo desde tu perfil "
+                "y no hace falta que hagas nada más.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
         "id": "plazo_solicitado",
         "name": "Plazo de pago - solicitud recibida",
         "description": "Se envía cuando el atleta pide plazo y envía su abono",
