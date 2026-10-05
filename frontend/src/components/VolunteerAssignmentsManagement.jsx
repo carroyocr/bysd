@@ -830,6 +830,25 @@ export default function VolunteerAssignmentsManagement() {
                             {assignedSlots.length} asignado{assignedSlots.length !== 1 ? 's' : ''}
                           </Badge>
                         )}
+                        {/* Lo que el voluntario reconfirmó desde su perfil. La
+                            confirmación es de quien la hizo: si el turno pasó a
+                            otra persona, ya no cuenta. */}
+                        {assignedSlots.length > 0 && (() => {
+                          const confirmados = assignedSlots.filter(
+                            s => s.confirmado_por && s.confirmado_por === s.email_asignado
+                          ).length;
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={confirmados === assignedSlots.length
+                                ? 'border-green-600 text-green-700'
+                                : 'border-amber-500 text-amber-700'}
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {confirmados}/{assignedSlots.length} confirmado{assignedSlots.length !== 1 ? 's' : ''}
+                            </Badge>
+                          );
+                        })()}
                         {interestSlots.length > 0 && (
                           <Badge variant="outline">
                             {interestSlots.length} de interés
