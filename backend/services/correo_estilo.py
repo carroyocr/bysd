@@ -214,6 +214,16 @@ def _traduccion() -> Dict[str, str]:
 
 _TRADUCCION = _traduccion()
 
+# Imagenes de los correos que cambiaron de archivo. Los clientes de correo
+# guardan cada imagen por su direccion, asi que una que se redibuja tiene que
+# estrenar nombre; y como las plantillas guardadas llevan escrito el anterior,
+# aqui se apunta el cambio para que `al_dia()` lo corrija.
+_SITIO = "https://backyardultrasantodomingo.com"
+IMAGENES_RENOMBRADAS = {
+    f"{_SITIO}/correo/app-store.png": f"{_SITIO}/correo/app-store-v2.png",
+    f"{_SITIO}/correo/google-play.png": f"{_SITIO}/correo/google-play-v2.png",
+}
+
 
 def al_dia(html: str) -> str:
     """Pasa al diseno de hoy un HTML armado con el anterior.
@@ -227,6 +237,10 @@ def al_dia(html: str) -> str:
     for viejo, nuevo in _TRADUCCION.items():
         if viejo in html:
             html = html.replace(viejo, nuevo)
+    for vieja, nueva in IMAGENES_RENOMBRADAS.items():
+        # Con la comilla de cierre: sin ella, "app-store.png" tambien casaria
+        # dentro de un nombre mas largo.
+        html = html.replace(f'"{vieja}"', f'"{nueva}"')
     return html
 
 
