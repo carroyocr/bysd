@@ -12,7 +12,7 @@ import html
 import logging
 import re
 
-from services import correo_turnos, rate_limit
+from services import correo_turnos, cupos, rate_limit
 from services.auth import (
     ALGORITHM,
     ATHLETE_SECRET_KEY,
@@ -1192,9 +1192,12 @@ async def get_my_races(authorization: str = Header(None)):
     
     # Get race details for each registration
     result = []
+    cupos_por_carrera = {}
     for reg in registrations:
         race_code = reg.get("race_code")
         race_config = await database.race_configurations.find_one({"code": race_code})
+        if race_code not in cupos_por_carrera:
+            cupos_por_carrera[race_code] = await cupos.resumen(database, race_code, race_config)
         
         # Generate edit_token if missing
         edit_token = reg.get("edit_token")
@@ -1205,6 +1208,19 @@ async def get_my_races(authorization: str = Header(None)):
                 {"$set": {"edit_token": edit_token}}
             )
         
+        # El cupo solo tiene algo que decir en una carrera que aun no se ha
+        # corrido; en una ya cerrada no hay nada que asegurar.
+        en_juego = bool(race_config) and not race_config.get("finished_at")
+        cupo = cupos.para_el_corredor(reg, cupos_por_carrera[race_code]) if en_juego else None
+
+        # Las apps ya instaladas no conocen `cupo`: deciden si se puede pagar
+        # mirando si el estado es "waitlist". Se les da el estado que les hace
+        # acertar: en espera si ya no queda cupo que pagar, inscrito si queda
+        # —tambien para quien venia de la lista de espera de antes—.
+        estado = reg.get("status", "registered")
+        if cupo and estado in ("registered", "waitlist") and cupo["situacion"] != cupos.ASEGURADO:
+            estado = "waitlist" if cupo["situacion"] == cupos.EN_ESPERA else "registered"
+
         result.append({
             "registration_id": str(reg["_id"]),
             "race_code": race_code,
@@ -1212,7 +1228,7 @@ async def get_my_races(authorization: str = Header(None)):
             "race_date": race_config.get("race_date") if race_config else None,
             "bib": reg.get("bib"),
             "categoria": reg.get("categoria"),
-            "status": reg.get("status", "registered"),
+            "status": estado,
             "payment_status": reg.get("payment_status", "pending"),
             "payment_receipt_status": reg.get("payment_receipt", {}).get("status") if reg.get("payment_receipt") else None,
             # Solo lo que el perfil necesita pintar: el estado y la fecha
@@ -1225,6 +1241,8 @@ async def get_my_races(authorization: str = Header(None)):
                 }
                 if reg.get("plazo_pago") else None
             ),
+            # Si su cupo esta asegurado o por confirmar, con el aviso que toca.
+            "cupo": cupo,
             "edit_token": edit_token,
             "laps_completed": reg.get("laps_completed", 0),
             "is_active": race_config.get("is_active", False) if race_config else False
@@ -1278,13 +1296,12 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         except:
             next_bib = 1
     
-    # Determine if this registration exceeds capacity -> waitlist
-    max_participants = race.get("max_participants", 120)
-    current_count = await database.registrations.count_documents({
-        "race_code": data.race_code,
-        "status": {"$nin": ["cancelled", "waitlist"]}
-    })
-    is_waitlist = current_count >= max_participants
+    # Los cupos se aseguran pagando, no inscribiendose (`services/cupos.py`):
+    # mientras quede alguno que nadie haya asegurado ni tenga en revision, la
+    # inscripcion nueva entra directa y puede pagar. Solo va a lista de espera
+    # cuando ya no queda ninguno.
+    estado_cupos = await cupos.resumen(database, data.race_code, race)
+    is_waitlist = estado_cupos["para_pagar"] <= 0
     reg_status = "waitlist" if is_waitlist else "registered"
 
     # Create registration with profile data + event-specific fields
@@ -1364,11 +1381,15 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
                     </div>
                 """
             else:
-                merge_data["proximos_pasos"] = """
+                merge_data["proximos_pasos"] = f"""
                     <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0; color: #1f2937; line-height: 1.6;">
+                            <strong>Asegura tu cupo con el pago.</strong> {cupos.MENSAJE_POR_CONFIRMAR}
+                        </p>
+                        <p style="margin: 0 0 14px 0; color: #4b5563; line-height: 1.6;">{cupos.MENSAJE_ABONO}</p>
                         <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
                         <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
-                            <li>Completa el pago de inscripción</li>
+                            <li>Completa el pago de inscripción desde tu perfil</li>
                             <li>Espera la confirmación de tu BIB</li>
                             <li>Revisa la guía del corredor</li>
                         </ol>
@@ -1394,7 +1415,7 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         "Ya estás en lista de espera" if is_waitlist else "Inscripción confirmada",
         (f"Te apuntamos a {(race or {}).get('name') or data.race_code}. Te avisamos en cuanto se libere un cupo."
          if is_waitlist else
-         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Tu dorsal es el #{registration_doc['bib']}."),
+         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Asegura tu cupo con el pago: se confirman por orden de pago."),
         {"tipo": "inscripcion"},
     ))
 
@@ -2630,6 +2651,18 @@ def _inscribed_registration_query(race_code, reg_status, payment):
     elif payment == "in_review":
         query["payment_status"] = {"$ne": "paid"}
         query["payment_receipt.status"] = "pending_review"
+    elif payment == "por_confirmar":
+        # Con el cupo por confirmar: ni pagado, ni cortesia, ni con un abono
+        # aprobado o enviado, ni con un comprobante en revision. Es a quien va
+        # el aviso de «tu cupo no esta garantizado»: los demas ya movieron
+        # ficha y decirles lo mismo seria injusto. Tambien entran los de la
+        # lista de espera de antes, que ahora pueden pagar como cualquiera.
+        if not reg_status:
+            query["status"] = {"$ne": "cancelled"}
+        query["payment_status"] = {"$ne": "paid"}
+        query["inscripcion_cortesia"] = {"$ne": True}
+        query["plazo_pago.estado"] = {"$nin": ["aprobado", "pendiente"]}
+        query["payment_receipt.status"] = {"$ne": "pending_review"}
     elif payment:
         raise HTTPException(status_code=400, detail="Filtro de pago inválido")
     return query

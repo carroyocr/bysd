@@ -247,6 +247,29 @@ export default function PaymentReceiptPage() {
 
   const { registration, race_config } = data || {};
 
+  // Ya no queda cupo que pagar: mejor decirlo aquí que dejarle llenar el
+  // formulario para rechazárselo al enviar.
+  if (data?.impedimento) {
+    return (
+      <div className="min-h-screen bg-stone-100">
+        <Navigation />
+        <div className="max-w-lg mx-auto px-4 pt-24 py-12">
+          <Card data-testid="sin-cupo-para-pagar">
+            <CardContent className="pt-6 text-center">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-amber-500" />
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Por ahora no quedan cupos</h2>
+              <p className="text-gray-600">{data.impedimento}</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver al inicio
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-stone-100">
       <Navigation />

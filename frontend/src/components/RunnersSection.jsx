@@ -171,7 +171,8 @@ export default function RunnersSection() {
                       </div>
                       <div>
                         <p className="text-3xl font-bold text-foreground leading-none">{participantsData?.plazas_disponibles ?? 0}</p>
-                        <p className="text-sm text-muted-foreground mt-1">Plazas disponibles</p>
+                        <p className="text-sm text-muted-foreground mt-1">Cupos disponibles</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Se aseguran por orden de pago</p>
                       </div>
                     </CardContent>
                   </Card>

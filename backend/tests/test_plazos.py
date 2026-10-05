@@ -112,9 +112,9 @@ def test_un_inscrito_pendiente_puede_pedirlo():
     assert plazos.puede_solicitar(registro()) is None
 
 
-def test_desde_la_lista_de_espera_no_hay_cupo_que_reservar():
-    motivo = plazos.puede_solicitar(registro(status="waitlist"))
-    assert motivo and "lista de espera" in motivo
+def test_la_lista_de_espera_de_antes_ya_no_impide_abonar():
+    """Si quedan cupos o no lo decide `services/cupos.py`, no el estado guardado."""
+    assert plazos.puede_solicitar(registro(status="waitlist")) is None
 
 
 def test_quien_ya_pago_no_lo_necesita():

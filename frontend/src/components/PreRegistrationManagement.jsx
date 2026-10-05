@@ -838,6 +838,24 @@ export default function PreRegistrationManagement() {
               </div>
             </CardContent>
           </Card>
+          {/* Los cupos se aseguran pagando: asegurado es pagado, cortesía o
+              abono aprobado. El resto está inscrito pero no ocupa cupo. */}
+          {stats.cupos && (
+            <Card data-testid="stat-cupos">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{stats.cupos.asegurados}<span className="text-sm font-normal text-muted-foreground"> / {stats.cupos.limite}</span></p>
+                    <p className="text-xs text-muted-foreground">Cupos asegurados</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {stats.cupos.en_revision} en revisión · {stats.cupos.por_confirmar} por confirmar
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-2">

@@ -1621,7 +1621,11 @@ export default function PerfilScreen() {
                   ? { cls: 'bg-green-500/15 text-green-500', label: 'Pagado' }
                   : receiptPending
                     ? { cls: 'bg-sky-500/15 text-sky-500', label: 'Comprobante en revisión' }
-                    : { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Pendiente de pago' };
+                    : race.cupo?.situacion === 'asegurado'
+                      ? { cls: 'bg-green-500/15 text-green-500', label: 'Cupo asegurado' }
+                      : race.cupo?.situacion === 'por_confirmar'
+                        ? { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Cupo por confirmar' }
+                        : { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Pendiente de pago' };
               return (
                 <div key={race.registration_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -1633,9 +1637,24 @@ export default function PerfilScreen() {
                   {race.bib && !enEspera && <p className={`text-xs mt-1 ${T.muted}`}>BIB #{race.bib}</p>}
                   {enEspera && (
                     <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
-                      La carrera alcanzó su cupo. Estás en lista de espera: si se libera un
-                      lugar te avisaremos por correo y podrás completar el pago.
+                      {race.cupo?.mensaje
+                        || 'La carrera alcanzó su cupo. Estás en lista de espera: si se libera un lugar te avisaremos por correo y podrás completar el pago.'}
                     </p>
+                  )}
+                  {/* El cupo se asegura pagando, no inscribiéndose: quien aún
+                      no paga lo lee aquí con las mismas palabras del correo. */}
+                  {!enEspera && race.cupo?.situacion === 'por_confirmar' && (
+                    <div className="mt-2 rounded-xl px-3 py-2.5 bg-yellow-500/10 border border-yellow-500/30">
+                      <p className="text-xs leading-relaxed">{race.cupo.mensaje}</p>
+                      {race.cupo.mensaje_abono && (
+                        <p className={`text-xs leading-relaxed mt-1.5 ${T.muted}`}>{race.cupo.mensaje_abono}</p>
+                      )}
+                      {race.cupo.disponibles > 0 && (
+                        <p className="text-xs font-bold mt-1.5">
+                          Quedan {race.cupo.disponibles} de {race.cupo.limite} cupos por asegurar.
+                        </p>
+                      )}
+                    </div>
                   )}
                   {receiptPending && (
                     <p className={`text-xs mt-1.5 ${T.muted}`}>

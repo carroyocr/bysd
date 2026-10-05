@@ -226,9 +226,9 @@ def puede_solicitar(registro: dict) -> Optional[str]:
     Devolver el motivo y no un booleano es lo que deja que la pagina se lo
     explique al atleta en vez de esconderle el boton sin decir nada.
     """
-    if registro.get("status") == "waitlist":
-        return ("Estás en lista de espera: todavía no tienes cupo que reservar. "
-                "Te avisamos en cuanto se libere uno.")
+    # Si quedan cupos o no ya no se mira aqui: lo decide `services/cupos.py`,
+    # que es quien sabe cuantos hay asegurados. Quien estaba en la lista de
+    # espera de antes puede abonar igual que los demas mientras queden.
     if registro.get("status") == "cancelled":
         return "Esta inscripción está cancelada."
     if registro.get("payment_status") == "paid":
