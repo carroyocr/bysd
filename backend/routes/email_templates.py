@@ -417,6 +417,27 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "staff_verification",
+        "name": "Verificación de Email - Equipo",
+        "description": "Se envía a una cuenta de staff creada en la app, para que confirme su correo",
+        "subject": "Confirma tu correo - {{race_name}}",
+        "category": "sistema",
+        "merge_sources": ["race", "general"],
+        "content": _correo(
+            e.h1("Confirma tu correo"),
+            e.p("Hay una cuenta del equipo de <strong>{{race_name}}</strong> con este correo. "
+                "Para ver tu ficha de voluntario, tus turnos y tu carnet, confirma que es tuyo "
+                "con este código:"),
+            e.codigo("{{verification_code}}"),
+            e.boton("Escribir el código", "{{frontend_url}}/verificar-cuenta"),
+            e.p("Te pedirá también la contraseña con la que creaste la cuenta. El código caduca "
+                "en 30 minutos; si se te pasa, en esa misma página puedes pedir otro."),
+            e.nota("Si no creaste esta cuenta, no le des el código a nadie: sin él, esa cuenta no "
+                   "puede ver ningún dato tuyo. Y si eres voluntario y quieres entrar, en la app "
+                   "elige «Soy voluntario y no tengo contraseña»."),
+        ),
+    },
+    {
         "id": "admin_credentials",
         "name": "Credenciales de Administrador",
         "description": "Se envía cuando se crea un nuevo usuario admin",

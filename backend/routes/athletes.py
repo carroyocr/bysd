@@ -833,6 +833,7 @@ async def reset_password(data: ResetPasswordRequest, request: Request = None):
     await servicio_cuentas.sincronizar_credenciales(
         database, athlete["email"],
         password_hash=hash_password(data.new_password), email_verified=True,
+        cerrar_sesiones=True,
     )
 
     return {"success": True, "message": "Contraseña actualizada"}
@@ -2543,7 +2544,8 @@ async def admin_set_password(athlete_id: str, data: AdminSetPasswordRequest, aut
 
     from services import cuentas as servicio_cuentas
     await servicio_cuentas.sincronizar_credenciales(
-        database, athlete.get("email"), password_hash=nuevo_hash, email_verified=True
+        database, athlete.get("email"), password_hash=nuevo_hash, email_verified=True,
+        cerrar_sesiones=True,
     )
     return {"success": True, "message": "Contraseña actualizada"}
 

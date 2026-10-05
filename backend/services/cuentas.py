@@ -16,6 +16,7 @@ las colecciones viejas sigan enteras, esto es aditivo.
 Ver PLAN_CUENTA_UNICA.md.
 """
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -23,6 +24,8 @@ from typing import Optional
 import bcrypt
 
 from services.auth import ATLETA, FAN, STAFF, encode_admin_token
+
+logger = logging.getLogger(__name__)
 
 COLECCION = "accounts"
 
@@ -96,6 +99,10 @@ def duracion(roles) -> timedelta:
     return timedelta(hours=HORAS_STAFF if STAFF in (roles or []) else HORAS_PERSONA)
 
 
+def version_de_sesion(cuenta: Optional[dict]) -> int:
+    return int((cuenta or {}).get("sesion_ver") or 0)
+
+
 def emitir_token(cuenta: dict) -> str:
     """Token de una cuenta ya cargada de la base.
 
@@ -124,6 +131,9 @@ def emitir_token(cuenta: dict) -> str:
         "permissions": cuenta.get("permissions") or [],
         "is_admin": bool(cuenta.get("is_admin")),
         "ver": VERSION_TOKEN,
+        # Ver `sesion_vigente`: sube cuando alguien cambia la contrasena con un
+        # codigo al correo, y deja atras las sesiones que hubiera abiertas.
+        "sv": version_de_sesion(cuenta),
         "exp": datetime.now(timezone.utc) + duracion(roles),
     }
     return encode_admin_token(payload)
@@ -223,6 +233,7 @@ async def sincronizar_credenciales(
     email: str,
     password_hash: Optional[str] = None,
     email_verified: Optional[bool] = None,
+    cerrar_sesiones: bool = False,
 ) -> bool:
     """Copia a la cuenta un cambio de contrasena o de verificacion.
 
@@ -233,6 +244,11 @@ async def sincronizar_credenciales(
     bien y la contrasena nueva no sirve para entrar, mientras la vieja sigue
     valiendo. No falla nada a la vista, que es lo malo.
 
+    `cerrar_sesiones` es para cuando la contrasena no la cambia quien conocia
+    la anterior, sino quien demuestra el correo con un codigo o la organizacion
+    desde el panel: las sesiones abiertas hasta entonces dejan de valer para lo
+    que cuelga del correo (`sesion_vigente`).
+
     Devuelve si habia cuenta que actualizar. Antes de la migracion no la hay y
     esto no hace nada, que es justo lo que tiene que pasar.
     """
@@ -242,9 +258,11 @@ async def sincronizar_credenciales(
     if email_verified is not None:
         cambios["email_verified"] = email_verified
 
-    resultado = await db[COLECCION].update_one(
-        {"email": normalizar_email(email)}, {"$set": cambios}
-    )
+    operacion = {"$set": cambios}
+    if cerrar_sesiones:
+        operacion["$inc"] = {"sesion_ver": 1}
+
+    resultado = await db[COLECCION].update_one({"email": normalizar_email(email)}, operacion)
     return resultado.matched_count > 0
 
 
@@ -277,6 +295,154 @@ async def anadir_rol(db, cuenta_id, rol: str, permissions=None) -> None:
 # sin verificar, asi que cualquiera puede crear una con el correo de otro; si
 # bastara con que el correo coincidiera, esa cuenta heredaria la ficha medica
 # del voluntario o del corredor de verdad.
+
+
+# El otro lado de la misma regla: el rol de equipo tambien se puede *pedir*, sin
+# que nadie lo sume. Darse de alta como staff en la app crea la cuenta con el rol
+# puesto y sin verificar, que es el camino natural del voluntario y no se puede
+# cerrar. Lo que si se puede es que el rol, por si solo, no ensene nada: lo que
+# cuelga del correo —la ficha del voluntario, sus turnos, su carnet— y los
+# permisos del panel esperan a que el correo este demostrado.
+
+
+def demostrada(cuenta: Optional[dict]) -> bool:
+    """True si el correo de la cuenta es de quien la usa.
+
+    Dos formas de haberlo demostrado: escribir un codigo que llego a ese correo
+    (`email_verified`), o venir de `admin_users` (`staff_username`), donde las
+    cuentas las creo la organizacion a mano o salieron de un codigo al correo
+    antes de que existiera esta marca.
+    """
+    return bool(cuenta) and bool(cuenta.get("email_verified") or cuenta.get("staff_username"))
+
+
+async def de_la_sesion(db, payload: dict) -> Optional[dict]:
+    """La cuenta de quien trae este token. Los heredados del panel no la llevan."""
+    return await por_id(db, payload["sub"]) if payload.get("sub") else None
+
+
+def sesion_vigente(payload: dict, cuenta: Optional[dict]) -> bool:
+    """False si la sesion es anterior a un cambio de contrasena hecho con un codigo.
+
+    Quien abre una cuenta con el correo de otro se queda con una sesion que dura
+    horas. Cuando el dueno del correo hace lo correcto —ponerse su contrasena con
+    el codigo que le llega—, la cuenta pasa a estar demostrada... y esa sesion
+    ajena seguiria abierta sobre una cuenta que ya ensena la ficha. Por eso cada
+    cambio de contrasena por codigo sube `sesion_ver`, y la sesion que traiga una
+    version anterior deja de valer para lo que cuelga del correo.
+
+    Los tokens emitidos antes de que existiera el campo viajan sin el y cuentan
+    como version 0, que es la de toda cuenta a la que nadie le ha cambiado nada.
+    """
+    return int(payload.get("sv") or 0) == version_de_sesion(cuenta)
+
+
+def sesiones_nuevas(cuenta: Optional[dict]) -> dict:
+    """Lo que hay que escribir en la cuenta para dejar atras las sesiones abiertas."""
+    return {"sesion_ver": version_de_sesion(cuenta) + 1}
+
+
+def sesion_demostrada(payload: dict, cuenta: Optional[dict]) -> bool:
+    """Si esta sesion puede ver y tocar lo que cuelga de su correo.
+
+    El token heredado del panel (sin `ver`) pasa: solo sale del acceso contra
+    `admin_users`, donde no hay alta libre. El token nuevo depende de su cuenta,
+    y si la cuenta ya no existe no hay nada que ensenar.
+    """
+    if not payload.get("ver"):
+        return True
+    return demostrada(cuenta) and sesion_vigente(payload, cuenta)
+
+
+# ==================== CODIGOS AL CORREO ====================
+
+CODIGO_VALIDO_MINUTOS = 30
+
+# Cada cuanto se le puede volver a escribir sola a una cuenta sin verificar.
+# Quien quiera otro codigo antes lo pide el mismo, que para eso hay un boton.
+HORAS_ENTRE_AVISOS = 12
+
+
+def generar_codigo() -> str:
+    """Seis digitos con `secrets`, no con `random`.
+
+    El generador de `random` es un Mersenne Twister, predecible a partir de sus
+    salidas anteriores, y estos codigos restablecen contrasenas.
+    """
+    return "".join(str(secrets.randbelow(10)) for _ in range(6))
+
+
+async def mandar_codigo(db, cuenta: dict, proposito: str, plantilla: str = "email_verification") -> None:
+    """Genera el codigo, lo guarda en la cuenta y lo manda por correo.
+
+    Se traga sus errores: que el correo no salga no puede tumbar un registro que
+    por lo demas fue bien. Quien no lo reciba puede pedir otro.
+    """
+    codigo = generar_codigo()
+    campo = "verification_code" if proposito == "verificar" else "reset_code"
+    ahora = datetime.now(timezone.utc)
+
+    await db[COLECCION].update_one(
+        {"_id": cuenta["_id"]},
+        {"$set": {
+            campo: codigo,
+            f"{campo}_expires": ahora + timedelta(minutes=CODIGO_VALIDO_MINUTOS),
+            f"{campo}_attempts": 0,
+            f"{campo}_sent_at": ahora,
+        }},
+    )
+
+    try:
+        from services.template_email_service import (
+            BASE_URL, build_race_data, send_email_with_template,
+        )
+
+        carrera = await db.race_configurations.find_one({"is_active": True})
+        await send_email_with_template(
+            db,
+            plantilla,
+            cuenta["email"],
+            {
+                "frontend_url": BASE_URL,
+                **(build_race_data(carrera) if carrera else {"race_name": "Backyard Ultra Santo Domingo"}),
+                "nombre": cuenta.get("nombre") or "",
+                "verification_code": codigo,
+                "expires_minutes": str(CODIGO_VALIDO_MINUTOS),
+            },
+        )
+    except Exception as e:
+        logger.error("No se pudo enviar el codigo a %s: %s", cuenta["email"], e)
+
+
+async def avisar_de_verificacion(db, cuenta: Optional[dict]) -> bool:
+    """Le escribe a una cuenta de equipo sin demostrar para que confirme su correo.
+
+    Es para quien ya tenia la cuenta cuando se empezo a pedir la verificacion: la
+    app que lleva instalada no sabe ensenarle el aviso, asi que se le manda el
+    codigo al correo con la pagina donde escribirlo. Como mucho una vez cada
+    `HORAS_ENTRE_AVISOS`: abrir el perfil diez veces no son diez correos, ni un
+    codigo nuevo que invalide el que la persona esta escribiendo.
+
+    Devuelve si se mando.
+    """
+    if not cuenta or demostrada(cuenta):
+        return False
+
+    # El turno se pide en la base, no mirando el documento que ya se tiene: la
+    # app abre el perfil con varias llamadas a la vez y serian varios correos.
+    ahora = datetime.now(timezone.utc)
+    turno = await db[COLECCION].update_one(
+        {"_id": cuenta["_id"], "$or": [
+            {"verification_code_sent_at": None},
+            {"verification_code_sent_at": {"$lt": ahora - timedelta(hours=HORAS_ENTRE_AVISOS)}},
+        ]},
+        {"$set": {"verification_code_sent_at": ahora}},
+    )
+    if not turno.modified_count:
+        return False
+
+    await mandar_codigo(db, cuenta, "verificar", plantilla="staff_verification")
+    return True
 
 
 async def poner_al_dia(db, cuenta: Optional[dict]) -> Optional[dict]:
@@ -343,6 +509,8 @@ async def enlazar_corredor(db, perfil: dict) -> Optional[dict]:
         cambios["athlete_profile_id"] = perfil["_id"]
         if perfil.get("password_hash"):
             cambios["password_hash"] = perfil["password_hash"]
+            # Y las sesiones de quien la hubiera abierto antes dejan de valer.
+            cambios.update(sesiones_nuevas(cuenta))
 
     await db[COLECCION].update_one(
         {"_id": cuenta["_id"]}, {"$addToSet": {"roles": ATLETA}, "$set": cambios}
@@ -362,11 +530,14 @@ async def fijar_password(db, cuenta: dict, password: str) -> dict:
     """
     ahora = datetime.now(timezone.utc)
     cambios = {"password_hash": hash_password(password), "email_verified": True, "updated_at": ahora}
+    # Solo en la cuenta: las sesiones abiertas con la contrasena de antes —que
+    # pudo poner otra persona— dejan de valer. Ver `sesion_vigente`.
+    de_la_cuenta = {**cambios, **sesiones_nuevas(cuenta)}
 
-    await db[COLECCION].update_one({"_id": cuenta["_id"]}, {"$set": cambios})
+    await db[COLECCION].update_one({"_id": cuenta["_id"]}, {"$set": de_la_cuenta})
     if cuenta.get("athlete_profile_id"):
         await db.athletes.update_one({"_id": cuenta["athlete_profile_id"]}, {"$set": cambios})
-    return {**cuenta, **cambios}
+    return {**cuenta, **de_la_cuenta}
 
 
 async def cuenta_de_equipo(

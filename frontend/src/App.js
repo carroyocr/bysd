@@ -40,6 +40,7 @@ import MiCuentaPage from './pages/MiCuentaPage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import VerificarCarnetPage from './pages/VerificarCarnetPage';
+import VerificarCuentaPage from './pages/VerificarCuentaPage';
 import ObsPage from './obs/ObsPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
@@ -130,6 +131,9 @@ export default function App() {
                     {/* Perfil del espectador. Aparte de /mi-perfil, que es el
                         del corredor, hasta que la fase 3 los una. */}
                     <Route path="/mi-cuenta" element={<MiCuentaPage />} />
+                    {/* A donde lleva el correo del código de una cuenta del
+                        equipo: la app instalada no tiene dónde escribirlo */}
+                    <Route path="/verificar-cuenta" element={<VerificarCuentaPage />} />
                     {/* A donde lleva el QR del carnet de staff */}
                     <Route path="/staff/verificar/:codigo" element={<VerificarCarnetPage />} />
                     <Route path="/pre-registro" element={<MyProfilePage />} />

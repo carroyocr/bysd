@@ -138,6 +138,9 @@ class UserResponse(BaseModel):
     permissions: List[str] = []
     is_admin: bool = False
     created_at: Optional[datetime] = None
+    # Cuenta de staff creada en la app que aun no ha confirmado su correo: no se
+    # sabe si quien la abrio es la persona cuyo correo lleva. No admite permisos.
+    correo_sin_verificar: bool = False
 
 
 @router.get("")
@@ -157,7 +160,7 @@ async def get_users():
     del_equipo = await db[cuentas.COLECCION].find(
         {"roles": cuentas.STAFF},
         {"email": 1, "staff_username": 1, "nombre": 1, "apellidos": 1,
-         "permissions": 1, "is_admin": 1, "created_at": 1},
+         "permissions": 1, "is_admin": 1, "created_at": 1, "email_verified": 1},
     ).to_list(2000)
     por_usuario = {}
     for c in del_equipo:
@@ -171,6 +174,10 @@ async def get_users():
         cuenta = por_usuario.get(user.get("username")) or por_usuario.get((user.get("email") or "").lower())
         if cuenta:
             vistas.add(cuenta["_id"])
+        # La cuenta sin demostrar que coincide por correo no es todavia la de
+        # esta fila: los permisos que valen son los de la fila.
+        if not cuentas.demostrada(cuenta):
+            cuenta = None
         result.append(UserResponse(
             username=user.get("username"),
             nombre=user.get("nombre"),
@@ -190,6 +197,7 @@ async def get_users():
             permissions=c.get("permissions") or [],
             is_admin=bool(c.get("is_admin")),
             created_at=c.get("created_at"),
+            correo_sin_verificar=not cuentas.demostrada(c),
         ))
 
     return result
@@ -269,12 +277,34 @@ async def update_permissions(username: str, update: PermissionsUpdate):
     if username.lower() == "admin":
         raise HTTPException(status_code=400, detail="No se pueden modificar los permisos del administrador principal")
     
+    # Una cuenta de staff la crea cualquiera desde la app con el correo que
+    # quiera, y sale en esta lista con ese correo. Si se le pudieran dar permisos
+    # antes de que lo confirme, abrir una con el correo de un voluntario y
+    # esperar a que la organizacion le marque el escaner seria la forma de leer
+    # todas las fichas medicas. Hasta entonces solo se le pueden quitar.
+    cuenta = await _cuenta_del_equipo(db, username)
+    if cuenta and not cuentas.demostrada(cuenta):
+        tiene_fila = await db.admin_users.find_one({"username": username.lower()}, {"_id": 1})
+        if not tiene_fila and update.permissions:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Esta cuenta aun no ha confirmado su correo. Pidele que lo confirme "
+                    "(le llego un codigo, o puede usar \"Soy voluntario y no tengo "
+                    "contraseña\" en la app) y vuelve a intentarlo."
+                ),
+            )
+        if tiene_fila:
+            # Hay un usuario del panel con ese nombre: los permisos son suyos y
+            # van a su fila. La cuenta sin confirmar que coincide por correo no
+            # los hereda.
+            cuenta = None
+
     cambios = {"permissions": update.permissions, "updated_at": datetime.now(timezone.utc)}
     result = await db.admin_users.update_one({"username": username.lower()}, {"$set": cambios})
 
     # Y en la cuenta, que es de donde los lee el acceso. Sin esto el panel dice
     # "permisos actualizados" y la persona sigue entrando con los de antes.
-    cuenta = await _cuenta_del_equipo(db, username)
     if cuenta:
         await db[cuentas.COLECCION].update_one({"_id": cuenta["_id"]}, {"$set": cambios})
 

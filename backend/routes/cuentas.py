@@ -24,14 +24,14 @@ Ver PLAN_CUENTA_UNICA.md, fase 2.
 """
 import logging
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 
 from services import cuentas, rate_limit
-from services.auth import require_cuenta, require_permission
+from services.auth import require_cuenta, require_permission, verify_cuenta_token
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 # routes/users.py. Este va en plural para no pisarlo.
 router = APIRouter(prefix="/api/cuentas", tags=["cuentas"])
 
-CODIGO_VALIDO_MINUTOS = 30
 MAX_INTENTOS_CODIGO = 5
 
 # Tope de dorsales que se pueden subir del telefono de una vez. El mismo que usa
@@ -69,6 +68,9 @@ class Acceso(BaseModel):
 class Codigo(BaseModel):
     email: EmailStr
     code: str
+    # La contrasena de la cuenta, para quien confirma sin sesion abierta. Ver
+    # `verificar`.
+    password: Optional[str] = None
 
 
 class SoloCorreo(BaseModel):
@@ -96,52 +98,6 @@ class EstadoLocal(BaseModel):
 
 
 # ==================== Ayudas ====================
-
-
-def _codigo() -> str:
-    """Seis digitos con `secrets`, no con `random`.
-
-    El generador de `random` es un Mersenne Twister, predecible a partir de sus
-    salidas anteriores, y estos codigos restablecen contrasenas.
-    """
-    return "".join(str(secrets.randbelow(10)) for _ in range(6))
-
-
-async def _mandar_codigo(db, cuenta: dict, proposito: str) -> None:
-    """Genera el codigo, lo guarda en la cuenta y lo manda por correo.
-
-    Se traga sus errores: que el correo no salga no puede tumbar un registro que
-    por lo demas fue bien. Quien no lo reciba puede pedir otro.
-    """
-    codigo = _codigo()
-    campo = "verification_code" if proposito == "verificar" else "reset_code"
-
-    await db[cuentas.COLECCION].update_one(
-        {"_id": cuenta["_id"]},
-        {"$set": {
-            campo: codigo,
-            f"{campo}_expires": datetime.now(timezone.utc) + timedelta(minutes=CODIGO_VALIDO_MINUTOS),
-            f"{campo}_attempts": 0,
-        }},
-    )
-
-    try:
-        from services.template_email_service import build_race_data, send_email_with_template
-
-        carrera = await db.race_configurations.find_one({"is_active": True})
-        await send_email_with_template(
-            db,
-            "email_verification",
-            cuenta["email"],
-            {
-                **(build_race_data(carrera) if carrera else {"race_name": "Backyard Ultra Santo Domingo"}),
-                "nombre": cuenta.get("nombre") or "",
-                "verification_code": codigo,
-                "expires_minutes": str(CODIGO_VALIDO_MINUTOS),
-            },
-        )
-    except Exception as e:
-        logger.error("No se pudo enviar el codigo a %s: %s", cuenta["email"], e)
 
 
 async def _comprobar_codigo(db, cuenta: dict, code: str, proposito: str) -> None:
@@ -177,6 +133,17 @@ async def _comprobar_codigo(db, cuenta: dict, code: str, proposito: str) -> None
 
 def _sesion(cuenta: dict) -> dict:
     return {"token": cuentas.emitir_token(cuenta), "cuenta": cuentas.publica(cuenta)}
+
+
+def _es_quien_la_abrio(cuenta: dict, password: Optional[str], authorization) -> bool:
+    """Si quien llama demuestra que la cuenta es suya: con su sesion o su contrasena."""
+    if isinstance(authorization, str) and authorization:
+        try:
+            if verify_cuenta_token(authorization).get("sub") == str(cuenta["_id"]):
+                return True
+        except HTTPException:
+            pass   # sesion caducada o de otro sitio: que valga la contrasena
+    return cuentas.verificar_password(password or "", cuenta.get("password_hash"))
 
 
 # ==================== Alta y acceso ====================
@@ -223,6 +190,13 @@ async def registro(datos: Registro, request: Request = None):
     medicas y turnos— y no antes. Para eso siguen vivos `/verificar` y
     `/reenviar-codigo`.
 
+    **La cuenta de staff si recibe el codigo.** Nace con el rol puesto, y ese rol
+    abre la ficha del voluntario que tenga su mismo correo: sin demostrar el
+    correo, bastaba con conocer el de un voluntario para leer su ficha medica.
+    La sesion se devuelve igual, porque la app instalada no tiene paso de codigo
+    tras el alta; lo que espera a la verificacion es lo que cuelga del correo
+    (`cuentas.sesion_demostrada`).
+
     Que un correo sea falso no rompe nada: esa cuenta simplemente nunca recibira
     lo que se le mande. Lo que decide a quien se escribe es el consentimiento.
     """
@@ -241,6 +215,18 @@ async def registro(datos: Registro, request: Request = None):
         mensaje="Demasiadas cuentas creadas desde aqui. Espera unos minutos.",
     )
 
+    es_staff = datos.tipo == "staff"
+    if es_staff:
+        # Este alta si manda un correo, y a la direccion que escriba quien la
+        # pide: sin un tope propio serviria para llenarle el buzon a un tercero.
+        rate_limit.comprobar(
+            "registro-staff",
+            rate_limit.ip_cliente(request),
+            limite=8,
+            ventana_segundos=900,
+            mensaje="Demasiadas cuentas de equipo creadas desde aqui. Espera unos minutos.",
+        )
+
     if await cuentas.por_email(db, datos.email):
         raise HTTPException(
             status_code=409,
@@ -252,8 +238,9 @@ async def registro(datos: Registro, request: Request = None):
     # mundo. Lo que NO se decide aqui son los permisos, que salen siempre vacios
     # y los da despues el panel. Sin ellos, el rol de staff abre su propio perfil
     # y los turnos libres, nada mas: las fichas medicas exigen el permiso
-    # `scanner`, y el resto del panel, el suyo.
-    roles = [cuentas.STAFF] if datos.tipo == "staff" else []
+    # `scanner`, y el resto del panel, el suyo. Y su propio perfil tampoco lo
+    # abre hasta que confirme el correo.
+    roles = [cuentas.STAFF] if es_staff else []
 
     cuenta = await cuentas.crear(
         db,
@@ -264,6 +251,9 @@ async def registro(datos: Registro, request: Request = None):
         roles=roles,
         acepta_comunicaciones=datos.acepta_comunicaciones,
     )
+
+    if es_staff:
+        await cuentas.mandar_codigo(db, cuenta, "verificar", plantilla="staff_verification")
 
     return _sesion(cuenta)
 
@@ -306,7 +296,24 @@ async def login(datos: Acceso, request: Request = None):
 
 
 @router.post("/verificar")
-async def verificar(datos: Codigo, request: Request = None):
+async def verificar(
+    datos: Codigo,
+    request: Request = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Confirma el correo de una cuenta.
+
+    Pide dos cosas porque demuestran dos cosas distintas. El codigo, que quien
+    lo escribe lee ese buzon. La sesion o la contrasena, que es quien abrio la
+    cuenta. Con el codigo solo, el dueno del correo estaria confirmando la
+    cuenta que otro abrio con su direccion —le llega un correo que dice
+    "confirma" y confirma—, y esa cuenta, con la contrasena del otro, pasaria a
+    ver su ficha.
+
+    Quien tiene el buzon pero no la contrasena no se queda fuera: la cambia con
+    `/recuperar` y `/nueva-password`, que deja el correo confirmado y fuera a
+    quien hubiera abierto la cuenta.
+    """
     from server import db
 
     rate_limit.limitar_verificacion(request)
@@ -325,7 +332,18 @@ async def verificar(datos: Codigo, request: Request = None):
             detail="Ese correo ya esta confirmado. Entra con tu contrasena.",
         )
 
+    # Primero el codigo: sin el, esta ruta no dice nada sobre la contrasena.
     await _comprobar_codigo(db, cuenta, datos.code, "verificar")
+
+    if not _es_quien_la_abrio(cuenta, datos.password, authorization):
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "El codigo es correcto, pero falta la contrasena de esta cuenta. "
+                "Si no la recuerdas, cambiala con \"Olvide mi contrasena\": "
+                "eso tambien confirma tu correo."
+            ),
+        )
 
     await db[cuentas.COLECCION].update_one(
         {"_id": cuenta["_id"]},
@@ -344,7 +362,11 @@ async def reenviar(datos: SoloCorreo, request: Request = None):
 
     cuenta = await cuentas.por_email(db, datos.email)
     if cuenta and not cuenta.get("email_verified"):
-        await _mandar_codigo(db, cuenta, "verificar")
+        del_equipo = cuentas.STAFF in (cuenta.get("roles") or [])
+        await cuentas.mandar_codigo(
+            db, cuenta, "verificar",
+            plantilla="staff_verification" if del_equipo else "email_verification",
+        )
 
     # Misma respuesta exista o no: si no, esto diria quien tiene cuenta.
     return {"message": "Si ese correo tiene cuenta sin verificar, te enviamos un codigo."}
@@ -358,7 +380,7 @@ async def recuperar(datos: SoloCorreo, request: Request = None):
 
     cuenta = await cuentas.por_email(db, datos.email)
     if cuenta:
-        await _mandar_codigo(db, cuenta, "reset")
+        await cuentas.mandar_codigo(db, cuenta, "reset")
 
     return {"message": "Si ese correo tiene cuenta, te enviamos un codigo."}
 
@@ -376,9 +398,13 @@ async def nueva_password(datos: NuevaPassword, request: Request = None):
     await _comprobar_codigo(db, cuenta, datos.code, "reset")
 
     nuevo_hash = cuentas.hash_password(datos.password)
+    # Las sesiones abiertas con la contrasena de antes dejan de valer para lo
+    # que cuelga del correo: pudo abrirlas otra persona. Ver `sesion_vigente`.
+    sesiones = cuentas.sesiones_nuevas(cuenta)
     await db[cuentas.COLECCION].update_one(
         {"_id": cuenta["_id"]},
         {"$set": {
+            **sesiones,
             "password_hash": nuevo_hash,
             "reset_code": None,
             # Quien prueba el correo con un codigo lo ha demostrado igual que
@@ -403,7 +429,7 @@ async def nueva_password(datos: NuevaPassword, request: Request = None):
             }},
         )
 
-    cuenta["email_verified"] = True
+    cuenta.update({"email_verified": True, **sesiones})
     return _sesion(cuenta)
 
 

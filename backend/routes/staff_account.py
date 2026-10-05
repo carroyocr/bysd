@@ -12,6 +12,7 @@ ya usaba el registro de voluntarios. Asi no hay que mandar credenciales por
 correo a nadie, y sirve igual para los que ya estaban registrados y para los
 que se registren manana.
 """
+import asyncio
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -237,6 +238,37 @@ async def definir_password(datos: DefinirPassword, request: Request = None):
 # ==================== PERFIL ====================
 
 
+# Lo que cuelga del correo de la sesion —la ficha, los turnos, el carnet— se
+# busca por ese correo y por nada mas. Y una cuenta de staff se crea desde la
+# app con el correo que uno quiera escribir: sin esta comprobacion, conocer el
+# correo de un voluntario era leer su telefono, su tipo de sangre, sus alergias
+# y su contacto de emergencia, y poder soltarle los turnos.
+
+AVISO_VERIFICAR = (
+    "Confirma tu correo para ver tu ficha y tus turnos. "
+    "Te enviamos un codigo; si no lo tienes, pide otro."
+)
+AVISO_SESION = "Tu contrasena cambio despues de abrir esta sesion. Sal y vuelve a entrar."
+
+
+async def equipo_con_correo_demostrado(payload: dict = Depends(require_admin)) -> dict:
+    """Dependencia: alguien del equipo cuyo correo es suyo de verdad.
+
+    Es la que piden las rutas que ensenan o tocan lo del voluntario. El perfil
+    (`mi_perfil`) no la usa porque no rechaza: responde vacio, que es lo que la
+    app ya instalada sabe pintar.
+    """
+    from server import db
+
+    cuenta = await cuentas.de_la_sesion(db, payload)
+    if not cuentas.sesion_demostrada(payload, cuenta):
+        raise HTTPException(
+            status_code=403,
+            detail=AVISO_SESION if cuentas.demostrada(cuenta) else AVISO_VERIFICAR,
+        )
+    return payload
+
+
 def _turno_legible(slot: dict) -> dict:
     """Los turnos se guardan con las claves en espanol de volunteer_assignments."""
     return {
@@ -255,6 +287,31 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
     from server import db
 
     email = (payload.get("username") or "").lower()
+
+    cuenta = await cuentas.de_la_sesion(db, payload)
+    if not cuentas.sesion_demostrada(payload, cuenta):
+        # Ni ficha ni turnos, tenga o no registro de voluntario ese correo: que
+        # la respuesta cambiara segun lo tuviera ya seria decir quien esta
+        # apuntado.
+        #
+        # Dos motivos, que la app distingue: el correo esta sin confirmar (se
+        # le manda el codigo, aparte para no hacer esperar a la pantalla por el
+        # correo), o la sesion es anterior a un cambio de contrasena y basta
+        # con volver a entrar.
+        caducada = cuentas.demostrada(cuenta)
+        if not caducada:
+            asyncio.create_task(cuentas.avisar_de_verificacion(db, cuenta))
+        return {
+            "username": email,
+            "es_voluntario": False,
+            "perfil": None,
+            "turnos": [],
+            "evento": "carrera",
+            "slots_interes": [],
+            "verificacion_pendiente": not caducada,
+            "sesion_caducada": caducada,
+        }
+
     voluntario = await _buscar_voluntario(db, email)
 
     asignaciones = await db.volunteer_assignments.find(
@@ -294,11 +351,13 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         # asignaron: la organizacion decide despues.
         "evento": (voluntario or {}).get("evento") or "carrera",
         "slots_interes": (voluntario or {}).get("slots_interes") or [],
+        "verificacion_pendiente": False,
+        "sesion_caducada": False,
     }
 
 
 @router.delete("/mi-perfil/turnos/{slot_id}")
-async def soltar_turno(slot_id: int, payload: dict = Depends(require_admin)):
+async def soltar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
     """El voluntario suelta un turno que le habian asignado.
 
     Antes tenia que escribir a la organizacion para que se lo quitara a mano.
@@ -368,7 +427,7 @@ class SeleccionTurnos(BaseModel):
 
 
 @router.get("/mi-perfil/turnos-disponibles")
-async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depends(require_admin)):
+async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depends(equipo_con_correo_demostrado)):
     """Puestos y turnos con plazas libres, para que el voluntario elija.
 
     Reusa el mismo listado del registro publico, pero pasandole su correo: asi
@@ -382,7 +441,7 @@ async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depen
 
 
 @router.put("/mi-perfil/turnos")
-async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_admin)):
+async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(equipo_con_correo_demostrado)):
     """Guarda el evento y los turnos que el voluntario quiere cubrir.
 
     Antes esto solo se podia hacer desde la web, con el enlace que llegaba por
