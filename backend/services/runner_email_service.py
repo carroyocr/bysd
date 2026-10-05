@@ -135,7 +135,7 @@ def format_messages_html(messages: List[Dict]) -> str:
 
         html += f"""
             <div style="margin: 0 0 22px 0; padding-left: 16px; border-left: 2px solid {estilo.LINEA};">
-                <p style="margin: 0 0 6px 0; font-size: 17px; line-height: 1.6; color: {estilo.TINTA};">{message_text}</p>
+                <p style="margin: 0 0 6px 0; font-size: 17px; line-height: 1.6; color: {estilo.TEXTO};">{message_text}</p>
                 <p style="margin: 0; font-size: 13px; color: {estilo.APAGADO};">{fan_name} · {date_str}</p>
             </div>"""
 

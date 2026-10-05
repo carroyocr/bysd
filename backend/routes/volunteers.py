@@ -328,30 +328,6 @@ async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str):
     return slot, None
 
 
-def _fila_turno_html(slot: dict) -> str:
-    """Una tarjeta de turno para el correo de varios turnos."""
-    import html as _html
-    from services.template_email_service import format_time_ampm, format_date_spanish
-
-    puesto = _html.escape(str(slot.get("puesto", "") or ""))
-    turno = _html.escape(str(slot.get("turno", "") or ""))
-    dia = _html.escape(format_date_spanish(slot.get("dia", "") or ""))
-    horario = f"{format_time_ampm(slot.get('hora_inicio', ''))} - {format_time_ampm(slot.get('hora_fin', ''))}"
-    return f"""
-            <div style="background: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin: 0 0 12px 0; border-left: 4px solid #9ca3af;">
-                <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #1f2937;">{puesto}</p>
-                <table style="width: 100%; font-size: 14px; color: #4b5563;">
-                    <tr>
-                        <td style="padding: 3px 0;">Turno {turno}</td>
-                        <td style="padding: 3px 0; text-align: right;">{dia}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 3px 0;" colspan="2"><strong style="color: #1f2937;">{horario}</strong></td>
-                    </tr>
-                </table>
-            </div>"""
-
-
 async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
     """Envía UN solo correo con todos los turnos recién asignados.
 
@@ -377,13 +353,14 @@ async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
         }
         template_id = "volunteer_shift_assignment"
     else:
-        def orden(s):
-            return (str(s.get("dia", "")), str(s.get("hora_inicio", "")))
+        # La misma lista de turnos que el correo «Tus turnos y la app»: fecha,
+        # puesto, hora de inicio y de termino, sin cajas.
+        from services import correo_turnos
 
         merge_data = {
             **build_race_data(race_config),
             **build_volunteer_data(volunteer),
-            "volunteer_turnos": "".join(_fila_turno_html(s) for s in sorted(slots_con_fecha, key=orden)),
+            "volunteer_turnos": correo_turnos.bloque_de_turnos(slots_con_fecha),
             "volunteer_turnos_total": str(len(slots_con_fecha)),
         }
         template_id = "volunteer_shifts_assignment"

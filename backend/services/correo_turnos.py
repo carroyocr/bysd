@@ -22,7 +22,8 @@ from services import correo_estilo as e
 SITIO = "https://backyardultrasantodomingo.com"
 PORTAL_VOLUNTARIOS = f"{SITIO}/voluntarios"
 
-# Las fichas de BYSD Live. Las imagenes son botones propios con el icono de
+# Las fichas de BYSD Live. Las imagenes son botones propios, del mismo azul que
+# los demas botones del correo (`correo_estilo.BOTON`), con el icono de
 # cada tienda (`frontend/public/correo/`), al doble de tamano para pantallas
 # densas: se pintan a 180 x 52.
 TIENDAS = [
@@ -115,7 +116,7 @@ def bloque_de_turnos(slots: Iterable[dict], nombres_de_evento: Optional[Dict[str
         borde = f"border-top: 1px solid {e.LINEA}; padding-top: 18px; " if i else ""
         bloques.append(
             f'<div style="{borde}margin: 0 0 18px 0;">'
-            f'<p style="margin: 0 0 8px 0; font-size: 18px; line-height: 1.4; font-weight: 700; color: {e.TINTA};">'
+            f'<p style="margin: 0 0 8px 0; font-size: 18px; line-height: 1.4; font-weight: 400; color: {e.TINTA};">'
             f'{html.escape(fecha_larga(s.get("dia") or ""))}</p>'
             + "".join(lineas)
             + "</div>"

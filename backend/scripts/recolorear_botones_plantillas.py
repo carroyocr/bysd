@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Pone en las plantillas guardadas el color de boton que dice el codigo.
+"""Escribe en las plantillas guardadas el diseno que dice el codigo.
 
 Las plantillas se guardan en `email_templates` con su HTML ya montado, y el
 sembrado de `routes/email_templates.py` solo inserta las que faltan: nunca
-reescribe una que ya existe. Por eso cambiar `BOTON` en
-`services/correo_estilo.py` no cambia ni un correo de los que ya estaban, y
-no falla nada ni avisa nadie: siguen saliendo del color viejo.
+reescribe una que ya existe.
 
-Solo toca el fondo de la celda del boton. El texto, los enlaces y cualquier
-cosa que se haya editado a mano desde el panel se quedan igual.
+**Ya no hace falta pasarlo para que los correos salgan bien**: desde octubre de
+2026 el diseno se pone al dia al rendir cada plantilla y al servirla al panel
+(`correo_estilo.al_dia`). Esto solo deja la base escrita con el diseno de hoy,
+por si se quiere que lo guardado y lo enviado sean lo mismo.
+
+Solo cambia los estilos que escribian las piezas de `correo_estilo`. El texto,
+y cualquier cosa que se haya editado a mano desde el panel, se quedan igual.
 
 Es idempotente: pasarlo dos veces no cambia nada.
 
@@ -57,7 +60,7 @@ def main() -> int:
     cliente = MongoClient(url)
     db = cliente[os.environ.get("DB_NAME", "backyard_ultra")]
 
-    print(f"Color de boton del codigo: {correo_estilo.BOTON}")
+    print(f"Diseno del codigo: boton {correo_estilo.BOTON}, texto {correo_estilo.TEXTO}")
     print()
 
     revisadas = 0
@@ -66,7 +69,7 @@ def main() -> int:
     for doc in db.email_templates.find({}, {"id": 1, "name": 1, "content": 1}):
         revisadas += 1
         viejo = doc.get("content") or ""
-        nuevo = correo_estilo.recolorear_botones(viejo)
+        nuevo = correo_estilo.al_dia(viejo)
         if nuevo == viejo:
             continue
         cambiadas += 1
@@ -75,7 +78,7 @@ def main() -> int:
             db.email_templates.update_one({"id": doc["id"]}, {"$set": {"content": nuevo}})
 
     print()
-    print(f"{revisadas} plantillas revisadas, {cambiadas} con el boton de otro color")
+    print(f"{revisadas} plantillas revisadas, {cambiadas} con el diseno anterior")
     if not args.aplicar:
         print("Ensayo: no se escribio nada. Pasa --aplicar para hacerlo.")
 

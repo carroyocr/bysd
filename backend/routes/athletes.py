@@ -3176,12 +3176,12 @@ def _wrap_email_html(subject: str, content: str) -> str:
             font-family: {estilo.FUENTE} !important;
             font-size: 17px !important;
             line-height: 1.6 !important;
-            color: {estilo.TINTA} !important;
+            color: {estilo.TEXTO} !important;
         }}
         .bysd-cuerpo p {{ margin: 0 0 16px 0 !important; }}
         .bysd-cuerpo h1, .bysd-cuerpo h2, .bysd-cuerpo h3 {{
             font-family: {estilo.FUENTE} !important;
-            font-weight: 700 !important;
+            font-weight: 400 !important;
             color: {estilo.TINTA} !important;
             margin: 32px 0 12px 0 !important;
             line-height: 1.3 !important;
@@ -3191,7 +3191,7 @@ def _wrap_email_html(subject: str, content: str) -> str:
         .bysd-cuerpo h3 {{ font-size: 17px !important; }}
         .bysd-cuerpo ul, .bysd-cuerpo ol {{ margin: 0 0 16px 0 !important; padding-left: 22px !important; }}
         .bysd-cuerpo li {{ margin: 0 0 8px 0 !important; }}
-        .bysd-cuerpo a {{ color: {estilo.TINTA} !important; text-decoration: underline !important; }}
+        .bysd-cuerpo a {{ color: {estilo.ENLACE} !important; text-decoration: none !important; }}
         .bysd-cuerpo img {{ max-width: 100% !important; height: auto !important; }}
         .bysd-cuerpo blockquote {{
             margin: 0 0 16px 0 !important;

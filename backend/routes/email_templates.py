@@ -864,6 +864,19 @@ async def get_merge_fields():
     return MERGE_FIELDS
 
 
+def _con_el_diseno_de_hoy(plantilla: dict) -> dict:
+    """La plantilla tal como la ve el panel: con el diseno de hoy.
+
+    Las guardadas llevan el HTML del dia en que se sembraron. Al enviarse se
+    ponen al dia solas (`render_template`); aqui se hace lo mismo al servirlas,
+    para que el editor ensene lo que de verdad va a salir y, si se edita y se
+    guarda, quede ya escrita con el diseno nuevo.
+    """
+    if plantilla and plantilla.get("content"):
+        plantilla = {**plantilla, "content": e.al_dia(plantilla["content"])}
+    return plantilla
+
+
 @router.get("/")
 async def get_templates(db=Depends(get_db)):
     """Get all email templates"""
@@ -890,8 +903,8 @@ async def get_templates(db=Depends(get_db)):
         # Refresh list if we added any
         if len(existing_ids) < len(DEFAULT_TEMPLATES):
             templates = await db.email_templates.find({}, {"_id": 0}).to_list(100)
-    
-    return templates
+
+    return [_con_el_diseno_de_hoy(t) for t in templates]
 
 
 @router.get("/{template_id}")
@@ -901,8 +914,8 @@ async def get_template(template_id: str, db=Depends(get_db)):
     
     if not template:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
-    
-    return template
+
+    return _con_el_diseno_de_hoy(template)
 
 
 @router.put("/{template_id}")
