@@ -2,14 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
-  ListChecks, Check, Users as UsersIcon, ChevronDown, X, IdCard,
+  ListChecks, Check, Users as UsersIcon, ChevronDown, X, IdCard, MailCheck, LogIn,
 } from 'lucide-react';
 import { API, authJson } from '../liveApi';
 import { guardarArchivo } from '../../lib/nativeExport';
 import { useLiveTheme } from '../liveTheme';
 import { Screen } from '../LiveApp';
 import { registrarStaff } from '../push';
-import { token } from '../sesion';
+import { cerrarSesion, token } from '../sesion';
 
 // El orden sigue lo que hace el voluntario: primero se ve, luego pide turnos y
 // al final consulta lo que le confirmaron. "Asignados" y no "Turnos", que se
@@ -180,7 +180,7 @@ export default function StaffPerfilScreen() {
     }
   };
 
-  useEffect(() => {
+  const cargarPerfil = useCallback(() => {
     const t = token();
     if (!t) { navigate('/live/login'); return; }
     authJson('GET', '/api/staff/mi-perfil', { token: t })
@@ -195,6 +195,50 @@ export default function StaffPerfilScreen() {
         if (ok && data.turnos?.length) registrarStaff(data.username);
       });
   }, [navigate]);
+
+  useEffect(() => { cargarPerfil(); }, [cargarPerfil]);
+
+  // Confirmar el correo. Quien se da de alta como staff entra en el acto, pero
+  // su ficha y sus turnos se buscan por el correo: hasta que no demuestra que
+  // es suyo, el servidor no los enseña. El código le llegó al darse de alta, o
+  // al abrir esta pantalla si la cuenta era de antes.
+  const [codigo, setCodigo] = useState('');
+  const [confirmando, setConfirmando] = useState(false);
+  const [avisoCodigo, setAvisoCodigo] = useState(null);
+
+  const confirmarCorreo = async (e) => {
+    e.preventDefault();
+    setConfirmando(true);
+    setAvisoCodigo(null);
+    // Con la sesión puesta: el código demuestra el buzón, y la sesión, que
+    // quien lo escribe es quien abrió la cuenta.
+    const { ok, data } = await authJson('POST', '/api/cuentas/verificar', {
+      token: token(), body: { email: datos.username, code: codigo.trim() },
+    });
+    setConfirmando(false);
+    if (ok) {
+      setCodigo('');
+      setDatos(undefined);
+      cargarPerfil();
+    } else {
+      setAvisoCodigo({ tipo: 'error', texto: data.detail || 'No se pudo confirmar el correo' });
+    }
+  };
+
+  const otroCodigo = async () => {
+    setAvisoCodigo(null);
+    const { ok, data } = await authJson('POST', '/api/cuentas/reenviar-codigo', {
+      body: { email: datos.username },
+    });
+    setAvisoCodigo(ok
+      ? { tipo: 'ok', texto: `Te enviamos otro código a ${datos.username}.` }
+      : { tipo: 'error', texto: data.detail || 'No se pudo enviar el código' });
+  };
+
+  const volverAEntrar = async () => {
+    await cerrarSesion();
+    navigate('/live/login');
+  };
 
   const p = datos?.perfil;
   const turnos = datos?.turnos || [];
@@ -223,7 +267,66 @@ export default function StaffPerfilScreen() {
           </div>
         )}
 
-        {datos && !p && (
+        {datos?.verificacion_pendiente && (
+          <form onSubmit={confirmarCorreo} className={`rounded-2xl px-4 py-5 ${T.card}`}>
+            <h3 className="text-sm font-bold flex items-center gap-2">
+              <MailCheck className="w-4 h-4 text-[#E77622]" /> Confirma tu correo
+            </h3>
+            <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
+              Te enviamos un código de seis dígitos a {datos.username}. Escríbelo
+              aquí para ver tu ficha de voluntario, tus turnos y tu carnet.
+            </p>
+            <input
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              placeholder="000000"
+              maxLength={6}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              className={`w-full rounded-xl px-3 py-2.5 text-sm mt-3 tracking-[0.3em] ${T.input}`}
+            />
+            <button
+              type="submit"
+              disabled={confirmando || codigo.trim().length < 6}
+              className={`w-full flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-2.5 rounded-xl mt-2 disabled:opacity-40 ${T.chipOn}`}
+            >
+              {confirmando
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Check className="w-3.5 h-3.5" />}
+              Confirmar
+            </button>
+            <button
+              type="button"
+              onClick={otroCodigo}
+              className={`w-full text-[11px] font-bold py-2 mt-1 ${T.muted}`}
+            >
+              Enviarme otro código
+            </button>
+            {avisoCodigo && (
+              <p className={`text-xs mt-1 ${avisoCodigo.tipo === 'ok' ? 'text-green-500' : 'text-red-500'}`}>
+                {avisoCodigo.texto}
+              </p>
+            )}
+          </form>
+        )}
+
+        {datos?.sesion_caducada && (
+          <div className={`rounded-2xl px-4 py-6 text-center ${T.card}`}>
+            <p className="text-sm font-bold">Vuelve a entrar</p>
+            <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
+              La contraseña de esta cuenta cambió después de abrir esta sesión.
+              Entra otra vez para ver tu ficha y tus turnos.
+            </p>
+            <button
+              onClick={volverAEntrar}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg mt-3 mx-auto ${T.actionChip}`}
+            >
+              <LogIn className="w-3.5 h-3.5 text-[#E77622]" /> Entrar otra vez
+            </button>
+          </div>
+        )}
+
+        {datos && !p && !datos.verificacion_pendiente && !datos.sesion_caducada && (
           <div className={`rounded-2xl px-4 py-6 text-center ${T.card}`}>
             <p className="text-sm font-bold">Sin ficha de voluntario</p>
             <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>

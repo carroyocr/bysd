@@ -383,12 +383,28 @@ export default function UserManagement() {
                         {user.is_admin && (
                           <Badge className="bg-purple-100 text-purple-700">Admin</Badge>
                         )}
+                        {user.correo_sin_verificar && (
+                          <Badge className="bg-amber-100 text-amber-800">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Correo sin verificar
+                          </Badge>
+                        )}
                       </div>
                       {user.nombre && (
                         <p className="text-sm text-muted-foreground">{user.nombre}</p>
                       )}
                       {user.email && (
                         <p className="text-sm text-muted-foreground">{user.email}</p>
+                      )}
+                      {/* La cuenta se abrió en la app con ese correo, pero nadie
+                          ha demostrado todavía que el correo sea suyo. */}
+                      {user.correo_sin_verificar && (
+                        <p className="text-xs text-amber-700 mt-1 max-w-md">
+                          Se dio de alta en la app y aún no ha confirmado su correo.
+                          Hasta que lo haga no se le pueden dar permisos: pídele que
+                          escriba el código que le llegó, o que use «Soy voluntario
+                          y no tengo contraseña» en la app.
+                        </p>
                       )}
                     </div>
                     
@@ -398,6 +414,8 @@ export default function UserManagement() {
                           variant="outline" 
                           size="sm"
                           onClick={() => startEditPermissions(user)}
+                          // Quitarle los que tuviera sí se puede; darle, no.
+                          disabled={user.correo_sin_verificar && !(user.permissions || []).length}
                         >
                           <Edit2 className="w-4 h-4 mr-1" />
                           Permisos
