@@ -7,6 +7,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { guardarSesion, haySesion, sesionFetch } from '../lib/sesion';
 import { cerrarSesionCuenta, entrar, reenviarCodigo, verificar } from '../lib/cuentaApi';
 
@@ -397,110 +398,131 @@ function FichaVoluntario({ datos, postulaciones }) {
 
   return (
     <>
-      <Card data-testid="voluntario-turnos">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CalendarClock className="w-5 h-5 text-primary" />
-            Turnos asignados
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {turnos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Todavía no tienes turnos asignados. La organización te avisará por
-              correo cuando los confirme.
-            </p>
-          ) : (
-            <div className="divide-y divide-border">
-              {turnos.map((t) => (
-                <div key={t.slot_id} className="py-3 first:pt-0 last:pb-0">
-                  <p className="text-sm font-semibold capitalize">{diaDelTurno(t.dia)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
-                    {t.turno ? ` · Turno ${t.turno}` : ''}
-                  </p>
-                  <p className="text-sm mt-1 flex items-start gap-1.5">
-                    <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <span>{t.puesto}</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card data-testid="voluntario-datos">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
+      {/* Tres pestañas en vez de tarjetas una debajo de otra: en el teléfono
+          había que bajar tres pantallas para llegar a los turnos. */}
+      <Tabs defaultValue="datos" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-auto bg-muted/50 p-1">
+          <TabsTrigger
+            value="datos"
+            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
+            data-testid="voluntario-tab-datos"
+          >
+            <User className="w-4 h-4 shrink-0" />
             Mis datos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Dato etiqueta="Nombre" valor={`${p.nombre || ''} ${p.apellidos || ''}`.trim()} />
-          <Dato etiqueta="Correo" valor={p.email} />
-          <Dato etiqueta="Teléfono" valor={p.telefono} />
-          <Dato etiqueta="Fecha de nacimiento" valor={p.fecha_nacimiento} />
-          <Dato etiqueta="Sexo" valor={p.sexo} />
-          <Dato etiqueta="Nacionalidad" valor={p.nacionalidad} />
-          <Dato etiqueta="Ciudad" valor={p.ciudad_residencia} />
-          <Dato etiqueta="Talla de camiseta" valor={p.talla_camiseta} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <HeartPulse className="w-5 h-5 text-primary" />
+          </TabsTrigger>
+          <TabsTrigger
+            value="salud"
+            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
+            data-testid="voluntario-tab-salud"
+          >
+            <HeartPulse className="w-4 h-4 shrink-0" />
             Salud y emergencia
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Dato etiqueta="Tipo de sangre" valor={p.tipo_sangre} />
-          <Dato
-            etiqueta="Condición médica"
-            valor={esSi(p.condicion_medica) ? (p.condicion_medica_detalle || 'Sí') : 'No'}
-          />
-          <Dato
-            etiqueta="Alergias"
-            valor={esSi(p.alergias) ? (p.alergias_detalle || 'Sí') : 'No'}
-          />
-          <Dato
-            etiqueta="Contacto de emergencia"
-            valor={[p.contacto_emergencia_nombre, p.contacto_emergencia_relacion].filter(Boolean).join(' · ')}
-          />
-          <Dato etiqueta="Teléfono de emergencia" valor={p.contacto_emergencia_telefono} />
-        </CardContent>
-      </Card>
+          </TabsTrigger>
+          <TabsTrigger
+            value="turnos"
+            className="flex-col sm:flex-row gap-1 sm:gap-2 py-2 text-xs sm:text-sm whitespace-normal data-[state=active]:bg-card data-[state=active]:text-foreground"
+            data-testid="voluntario-tab-turnos"
+          >
+            <CalendarClock className="w-4 h-4 shrink-0" />
+            <span>
+              Turnos asignados
+              {turnos.length > 0 && <span className="opacity-60 font-normal"> · {turnos.length}</span>}
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={descargarCarnet} disabled={bajando}>
-              {bajando
-                ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                : <IdCard className="w-4 h-4 mr-2" />}
-              Descargar mi carnet (PDF)
-            </Button>
-            {postulaciones.map((post) => (
-              <Link key={post.evento} to={`/voluntarios/registro?token=${post.edit_token}`}>
-                <Button variant="outline" data-testid={`voluntario-editar-${post.evento}`}>
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  {postulaciones.length > 1
-                    ? `Editar mi postulación de ${post.evento_nombre}`
-                    : 'Editar mi postulación'}
-                </Button>
-              </Link>
-            ))}
-          </div>
-          {errorCarnet && <p className="text-sm text-red-600">{errorCarnet}</p>}
-          <p className="text-xs text-muted-foreground">
-            Desde «Editar mi postulación» puedes corregir tus datos y cambiar los
-            turnos que pediste.
-          </p>
-        </CardContent>
-      </Card>
+        <TabsContent value="datos" className="mt-4">
+          <Card data-testid="voluntario-datos">
+            <CardContent className="pt-6">
+              <Dato etiqueta="Nombre" valor={`${p.nombre || ''} ${p.apellidos || ''}`.trim()} />
+              <Dato etiqueta="Correo" valor={p.email} />
+              <Dato etiqueta="Teléfono" valor={p.telefono} />
+              <Dato etiqueta="Fecha de nacimiento" valor={p.fecha_nacimiento} />
+              <Dato etiqueta="Sexo" valor={p.sexo} />
+              <Dato etiqueta="Nacionalidad" valor={p.nacionalidad} />
+              <Dato etiqueta="Ciudad" valor={p.ciudad_residencia} />
+              <Dato etiqueta="Talla de camiseta" valor={p.talla_camiseta} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="salud" className="mt-4">
+          <Card data-testid="voluntario-salud">
+            <CardContent className="pt-6">
+              <Dato etiqueta="Tipo de sangre" valor={p.tipo_sangre} />
+              <Dato
+                etiqueta="Condición médica"
+                valor={esSi(p.condicion_medica) ? (p.condicion_medica_detalle || 'Sí') : 'No'}
+              />
+              <Dato
+                etiqueta="Alergias"
+                valor={esSi(p.alergias) ? (p.alergias_detalle || 'Sí') : 'No'}
+              />
+              <Dato
+                etiqueta="Contacto de emergencia"
+                valor={[p.contacto_emergencia_nombre, p.contacto_emergencia_relacion].filter(Boolean).join(' · ')}
+              />
+              <Dato etiqueta="Teléfono de emergencia" valor={p.contacto_emergencia_telefono} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="turnos" className="mt-4">
+          <Card data-testid="voluntario-turnos">
+            <CardContent className="pt-6">
+              {turnos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Todavía no tienes turnos asignados. La organización te avisará por
+                  correo cuando los confirme.
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {turnos.map((t) => (
+                    <div key={t.slot_id} className="py-3 first:pt-0 last:pb-0">
+                      <p className="text-sm font-semibold capitalize">{diaDelTurno(t.dia)}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {soloHora(t.hora_inicio)} – {soloHora(t.hora_fin)}
+                        {t.turno ? ` · Turno ${t.turno}` : ''}
+                      </p>
+                      <p className="text-sm mt-1 flex items-start gap-1.5">
+                        <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span>{t.puesto}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Fuera de las pestañas: el carnet y la edición valen para las tres. */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={descargarCarnet} disabled={bajando}>
+            {bajando
+              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              : <IdCard className="w-4 h-4 mr-2" />}
+            Descargar mi carnet (PDF)
+          </Button>
+          {postulaciones.map((post) => (
+            <Link key={post.evento} to={`/voluntarios/registro?token=${post.edit_token}`}>
+              <Button variant="outline" data-testid={`voluntario-editar-${post.evento}`}>
+                <Edit2 className="w-4 h-4 mr-2" />
+                {postulaciones.length > 1
+                  ? `Editar mi postulación de ${post.evento_nombre}`
+                  : 'Editar mi postulación'}
+              </Button>
+            </Link>
+          ))}
+        </div>
+        {errorCarnet && <p className="text-sm text-red-600">{errorCarnet}</p>}
+        <p className="text-xs text-muted-foreground">
+          Desde «Editar mi postulación» puedes corregir tus datos y cambiar los
+          turnos que pediste.
+        </p>
+      </div>
     </>
   );
 }
