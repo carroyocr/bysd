@@ -39,6 +39,12 @@ export default function VolunteersSection() {
     loadManual();
   }, [config?.code]);
 
+  // Los mismos interruptores que mira el formulario de postulación: la carrera
+  // nace apagada y el campeonato encendido salvo que se apague a mano.
+  const carreraAbierta = config?.show_volunteer_carrera === true;
+  const campeonatoAbierto = config?.show_volunteer_campeonato !== false;
+  const seRecibenPostulaciones = carreraAbierta || campeonatoAbierto;
+
   const volunteerRoles = [
     {
       title: 'Staff de Registro y Check-in',
@@ -119,37 +125,42 @@ export default function VolunteersSection() {
                   <Heart className="w-7 h-7 text-primary" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-display text-2xl text-foreground">¡Únete al Equipo!</h3>
+                  <h3 className="font-display text-2xl text-foreground">
+                    {seRecibenPostulaciones ? '¡Únete al Equipo!' : 'Equipo de voluntarios'}
+                  </h3>
                   <p className="text-muted-foreground">
-                    ¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.
+                    {seRecibenPostulaciones
+                      ? '¿Quieres ser parte de esta experiencia única? Regístrate como voluntario y ayuda a hacer realidad este evento.'
+                      : 'Si ya eres voluntario, entra para ver tus datos, confirmar tus turnos y pedir otros disponibles.'}
                   </p>
-                  {config?.show_volunteer_carrera !== true
-                    && config?.show_volunteer_campeonato !== false && (
+                  {!carreraAbierta && campeonatoAbierto && (
                     <p className="text-sm font-medium text-primary">
                       Por ahora solo recibimos postulaciones para el Campeonato Mundial por Equipos.
                     </p>
                   )}
-                  {config?.show_volunteer_carrera === true
-                    && config?.show_volunteer_campeonato === false && (
+                  {carreraAbierta && !campeonatoAbierto && (
                     <p className="text-sm font-medium text-primary">
                       Por ahora solo recibimos postulaciones para la carrera.
                     </p>
                   )}
-                  {config?.show_volunteer_carrera !== true
-                    && config?.show_volunteer_campeonato === false && (
-                    <p className="text-sm font-medium text-primary">
+                  {!seRecibenPostulaciones && (
+                    <p className="text-sm font-medium text-primary" data-testid="volunteer-closed-notice">
                       Por ahora no estamos recibiendo postulaciones de voluntarios.
                     </p>
                   )}
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-                <Link to="/voluntarios/registro">
-                  <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto">
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Postular como Voluntario
-                  </Button>
-                </Link>
+                {/* Con el voluntariado cerrado no hay nada que postular: solo
+                    queda entrar, para quien ya es del equipo. */}
+                {seRecibenPostulaciones && (
+                  <Link to="/voluntarios/registro">
+                    <Button size="lg" className="bg-primary hover:bg-accent text-primary-foreground shadow-medium hover:shadow-strong transition-all duration-300 w-full sm:w-auto" data-testid="volunteer-apply-btn">
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Postular como Voluntario
+                    </Button>
+                  </Link>
+                )}
                 {/* Antes mandaba un enlace al correo para editar la postulación.
                     Ahora se entra con la cuenta: ahí están los datos, los
                     turnos asignados y, desde dentro, la edición. */}
