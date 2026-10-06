@@ -46,13 +46,19 @@ pausa: la campana no espera a nadie.
 
 ## Las pantallas
 
-El emblema a pantalla completa poco más de un segundo, y de ahí a la **línea
-de salida**: qué vuelta se va a correr (distancia y minutos) y si el GPS ya
-fijó. START da la salida sin pedir confirmación, porque con la cuenta atrás
-del director de carrera sonando un diálogo estorba; si se pulsó antes de la
-hora, la app muestra la cuenta atrás «Para la vuelta 1» y la campana suena
-sola. Después, cuatro páginas que se recorren con arriba y abajo (o
-deslizando, en los táctiles) — y añadir una página nueva es añadir un caso al
+El emblema a pantalla completa poco más de un segundo, y de ahí a la **hora de
+salida**, que se pregunta cada vez que se abre la app: la rueda de hora y
+minutos viene puesta en la siguiente hora en punto del reloj (a las 11:30, las
+12:00), START confirma, MENU deja Auto y BACK sale. Luego,
+la **línea de salida**: la hora de salida con la cuenta atrás, qué vuelta se
+va a correr (distancia y minutos), la configuración (verde lo encendido) y si
+el GPS ya fijó. START da la salida sin pedir confirmación, porque con la
+cuenta atrás del director de carrera sonando un diálogo estorba; si se pulsó
+antes de la hora, la app muestra la cuenta atrás «Para la vuelta 1» y la
+campana suena sola. Si nadie pulsa, la carrera arranca sola al llegar la hora
+(solo si la hora se vio por delante: quien abre la app con la hora fija ya
+pasada sale cuando pulse START). Después, cuatro páginas que se recorren con
+arriba y abajo (o deslizando, en los táctiles) — y añadir una página nueva es añadir un caso al
 enumerado de `MainView`:
 
 | Página | Cifra grande | Debajo |
@@ -67,6 +73,12 @@ excepciones deliberadas: «Quedan en pie» y el punto de sincronía necesitaban
 un servidor que contara la carrera, y esta app no tiene red a propósito. La
 página del reloj es nueva: en treinta horas, saber si la batería aguanta la
 noche es información de carrera.
+
+**En los relojes táctiles** la pantalla nunca da la salida, ni para, ni marca
+vuelta: en la rueda de la hora mueve los valores, en la línea de salida
+enciende y apaga los ajustes (y tocar la hora reabre la rueda), y en carrera
+solo cambia de pantalla deslizando arriba y abajo. START y LAP son solo los
+botones.
 
 **BACK durante la carrera** no sale de la app sin preguntar —debajo hay una
 actividad grabando—: abre el menú de terminar, con Reanudar, Guardar y
@@ -157,7 +169,7 @@ app/                    la app de reloj
   source/
     BackyardApp.mc      la sesión que graba, la campana y el latido de 1 s
     SplashView.mc       el emblema
-    StartView.mc        la línea de salida: la vuelta, el GPS y START
+    StartView.mc        la línea de salida: hora, vuelta, ajustes, GPS y START
     MainView.mc         las tres páginas
     MainDelegate.mc     botones, gestos y el menú de terminar
   resources/            emblema de 240 px
@@ -297,6 +309,7 @@ millas aunque tenga el reloj en español.
 | Vuelta (km) | Cuánto mide, **siempre en kilómetros** | 6.7 |
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
 | Yard auto Meta | Marcar el LAP solo al llegar al punto de salida | **sí** |
+| Fondo | Oscuro o claro. El claro es para las pantallas MIP, donde el negro se ve apagado | oscuro |
 
 Los valores por defecto son los de la backyard clásica.
 

@@ -78,6 +78,14 @@ TABLA = {
     "pressStart":       ("START to begin",          "START para salir",    "START pour partir",    "START zum Start",       "START per partire",    "START para largar"),
     "gpsReady":         ("GPS ready",               "GPS listo",           "GPS prêt",             "GPS bereit",            "GPS pronto",           "GPS pronto"),
     "gpsWait":          ("Searching GPS",           "Buscando GPS",        "Recherche GPS",        "GPS-Suche",             "Ricerca GPS",          "Procurando GPS"),
+    # La hora de salida al abrir y la configuracion en la linea de salida.
+    "startsIn":        ("in", "faltan", "dans", "in", "tra", "faltam"),
+    "underway":        ("Under way", "En curso", "En cours", "Läuft", "In corso", "Em curso"),
+    "confirmStart":    ("START to confirm", "START confirma", "START valide", "START bestätigt", "START conferma", "START confirma"),
+    "menuAuto":        ("MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto"),
+    "cfgAutoFinish":   ("Auto line", "Auto meta", "Auto ligne", "Auto Ziel", "Auto arrivo", "Auto meta"),
+    "cfgAutoKm":       ("Auto km", "Auto km", "Auto km", "Auto km", "Auto km", "Auto km"),
+    "cfgVibe":         ("Vibe", "Vibra", "Vibr.", "Vibr.", "Vibr.", "Vibra"),
     "endTitle":         ("Finish?",                 "¿Terminar?",          "Terminer ?",           "Beenden?",              "Terminare?",           "Terminar?"),
     "resume":           ("Resume",                  "Reanudar",            "Reprendre",            "Weiter",                "Riprendi",             "Retomar"),
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
@@ -135,6 +143,12 @@ TABLA = {
     # Los tonos de la actividad: campana, marca y corral. El ajuste de
     # Sonidos del sistema del reloj manda por encima.
     "settingSound":     ("Sound",                   "Sonido",              "Son",                  "Ton",                   "Suono",                "Som"),
+    # El fondo de la esfera: oscuro (de fabrica) o claro. En el telefono es
+    # una lista; en el reloj, un ajuste que al tocarlo pasa al otro y lo
+    # dice en el sub-rotulo. Lo pidio un usuario con Forerunner 255 (MIP).
+    "settingTheme":     ("Background",              "Fondo",               "Fond",                 "Hintergrund",           "Sfondo",               "Fundo"),
+    "themeDark":        ("Dark",                    "Oscuro",              "Sombre",               "Dunkel",                "Scuro",                "Escuro"),
+    "themeLight":       ("Light",                   "Claro",               "Clair",                "Hell",                  "Chiaro",               "Claro"),
     # Acerca de: version y QR al sitio del evento.
     "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 

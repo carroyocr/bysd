@@ -30,6 +30,13 @@
     <string id="pressStart">START per partire</string>
     <string id="gpsReady">GPS pronto</string>
     <string id="gpsWait">Ricerca GPS</string>
+    <string id="startsIn">tra</string>
+    <string id="underway">In corso</string>
+    <string id="confirmStart">START conferma</string>
+    <string id="menuAuto">MENU: Auto</string>
+    <string id="cfgAutoFinish">Auto arrivo</string>
+    <string id="cfgAutoKm">Auto km</string>
+    <string id="cfgVibe">Vibr.</string>
     <string id="endTitle">Terminare?</string>
     <string id="resume">Riprendi</string>
     <string id="save">Salva</string>
@@ -56,6 +63,9 @@
     <string id="settingLapOff">Pulsante LAP spento</string>
     <string id="settingVibration">Vibrazione</string>
     <string id="settingSound">Suono</string>
+    <string id="settingTheme">Sfondo</string>
+    <string id="themeDark">Scuro</string>
+    <string id="themeLight">Chiaro</string>
     <string id="settingAbout">Informazioni</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati totali</string>

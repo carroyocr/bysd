@@ -48,19 +48,37 @@ class MainDelegate extends Ui.BehaviorDelegate {
         return false;
     }
 
+    // En carrera la pantalla tactil solo cambia de pantalla. En el fenix 8
+    // un toque llega primero como onSelect -el START- y deslizar a la
+    // derecha como onBack -el LAP-: atenderlos ahi paraba la actividad o
+    // marcaba la vuelta con un roce. Por eso onSelect y onBack devuelven
+    // false y los botones se atienden aqui, como teclas: KEY_ENTER es START
+    // y KEY_ESC es LAP. El toque y los gestos laterales se tragan en onTap
+    // y onSwipe. (Tampoco hay onHold: un dedo apoyado no abre menus.)
     function onKey(evento) {
-        if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
+        var tecla = evento.getKey();
+        if (tecla == Ui.KEY_MENU) { return onMenu(); }
+        if (tecla == Ui.KEY_ENTER) { return _start(); }
+        if (tecla == Ui.KEY_ESC) { return _lap(); }
         return false;
     }
 
-    function onHold(evento) {
-        return onMenu();
+    function onSelect() {
+        return false;
+    }
+
+    function onBack() {
+        return false;
+    }
+
+    function onTap(evento) {
+        return true;
     }
 
     // START/STOP para y abre el menu de guardar, como en cualquier actividad
     // de Garmin. No sale de la app sin preguntar: debajo hay una actividad
     // grabando y una backyard no tiene segunda salida.
-    function onSelect() {
+    function _start() {
         // Sin sesion grabando no hay nada que guardar ni descartar: el menu
         // solo confundiria. No deberia pasar, pero si pasa, mejor un boton
         // muerto que un menu que no hace nada.
@@ -82,7 +100,7 @@ class MainDelegate extends Ui.BehaviorDelegate {
     // primero de cada vuelta, los demas se ignoran. La vuelta siguiente la
     // abre la hora, no este boton. Devolver true se traga el BACK: durante la
     // carrera no hay retroceso, la unica salida es el menu de START.
-    function onBack() {
+    function _lap() {
         var app = App.getApp();
         // La regla de "no hay retroceso" protege la actividad que se esta
         // grabando. Si no hay ninguna -un cierre que se torcio a medias-,
@@ -108,7 +126,7 @@ class MainDelegate extends Ui.BehaviorDelegate {
         if (direccion == Ui.SWIPE_DOWN) {
             return onPreviousPage();
         }
-        return false;
+        return true;
     }
 }
 

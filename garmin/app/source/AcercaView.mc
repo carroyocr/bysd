@@ -10,7 +10,7 @@ using Toybox.Graphics as Gfx;
 // para algo que no cambia nunca.
 class AcercaView extends Ui.View {
 
-    static const VERSION = "1.5.0";
+    static const VERSION = "1.8.0";
     // La URL va partida en dos lineas: entera no cabe en la parte baja de
     // la esfera redonda (probado en el fenix 8: se cortaba por los lados).
     static const WEB1 = "backyardultra";
@@ -36,12 +36,12 @@ class AcercaView extends Ui.View {
         var h = dc.getHeight();
         var cx = w / 2;
 
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
-        _txt(dc, cx, h * 12 / 100, Gfx.FONT_SMALL, Gfx.COLOR_WHITE,
+        _txt(dc, cx, h * 12 / 100, Gfx.FONT_SMALL, Tema.tinta(),
              "Backyard");
-        _txt(dc, cx, h * 21 / 100, Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, h * 21 / 100, Gfx.FONT_XTINY, Tema.tenue(),
              "v" + VERSION);
 
         // El QR centrado, a su tamano si cabe; en relojes chicos se encoge
@@ -62,8 +62,8 @@ class AcercaView extends Ui.View {
         // la minima estandar. El QR es el que resuelve: esto es apenas la
         // referencia legible.
         var fuente = (Gfx has :FONT_GLANCE) ? Gfx.FONT_GLANCE : Gfx.FONT_XTINY;
-        _txt(dc, cx, y + (h * 4 / 100), fuente, Gfx.COLOR_LT_GRAY, WEB1);
-        _txt(dc, cx, y + (h * 10 / 100), fuente, Gfx.COLOR_LT_GRAY, WEB2);
+        _txt(dc, cx, y + (h * 4 / 100), fuente, Tema.tenue(), WEB1);
+        _txt(dc, cx, y + (h * 10 / 100), fuente, Tema.tenue(), WEB2);
     }
 
     function _txt(dc, x, y, fuente, color, texto) {

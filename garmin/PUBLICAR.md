@@ -1,11 +1,44 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 9 de septiembre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 6 de octubre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.8.0, lista para empaquetar y subir
+
+La **1.8.0** absorbe a la 1.7.0, que se empaquetó el 19 de septiembre y no
+llegó a subirse, y le suma el **fondo claro**: un ajuste nuevo, «Fondo»
+(oscuro o claro), en Garmin Connect y en el menú del reloj. Lo pidió Denis,
+un usuario de la tienda con Forerunner 255 (pantalla MIP, donde el negro se
+ve apagado), el 6 de octubre de 2026. Al subir, las novedades de la 1.8.0
+de abajo llevan también las de la 1.7.0: nada de aquello salió a la tienda.
+
+El tema vive en `app/source/Tema.mc`: las vistas no nombran el negro ni el
+blanco, piden fondo, tinta y grises. Los colores con significado (naranja,
+semáforo del corral, rojo, azul) son iguales en los dos temas; el verde
+pasa a verde oscuro sobre blanco, y el amarillo del corral se escribe en
+tinta, porque amarillo sobre blanco no se lee. El emblema de arranque se
+queda sobre negro: el bitmap lo trae pintado.
+
+## Estado — la 1.7.0, empaquetada y sin subir (absorbida por la 1.8.0)
+
+La **1.7.0** está compilada en `build/backyard.iq`: los mismos **181 builds de
+111 relojes**, sin un solo aviso. Sustituye a la 1.6.0, que se empaquetó el 18
+de septiembre y trae todo lo de aquella (la hora de salida al abrir y el
+arranque solo) más el manejo de los relojes táctiles: la pantalla solo mueve
+la rueda, enciende ajustes o cambia de pantalla, y START y LAP son solo los
+botones. Falta subirla desde el panel del portal (abriendo la app en la lista,
+no por «Upload an App»).
+
+**Lo que se aprendió del táctil, medido en el simulador del fēnix 8:** un
+toque llega PRIMERO como `onSelect` (el START) y deslizar a la derecha como
+`onBack` (el LAP); solo si esos devuelven `false` llega el evento crudo,
+`onTap` o `onSwipe`. Los botones siguen el mismo camino y acaban en `onKey`
+(`KEY_ENTER` el START, `KEY_ESC` el LAP). Por eso los delegados atienden los
+botones en `onKey` y devuelven `false` en `onSelect` y `onBack`.
 
 ## Estado — la 1.5.0, publicada
 
@@ -119,6 +152,111 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.8.0 (para el campo "What's New")
+
+Incluye lo de la 1.7.0 y la 1.6.0, que no llegaron a publicarse.
+
+**ES**
+
+> - Nuevo ajuste «Fondo»: oscuro o claro. En relojes de pantalla MIP
+>   (Forerunner 255/955, fēnix 7, Instinct) el fondo claro se lee mejor.
+>   Se cambia desde Garmin Connect o en el reloj, en Ajustes del yard.
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Relojes táctiles: la hora de salida se cambia con el dedo y los ajustes de
+>   la pantalla de salida se encienden y apagan tocándolos.
+> - En carrera, la pantalla táctil solo cambia de pantalla: la actividad se
+>   para con el botón START y la vuelta se marca con el botón LAP, nunca con
+>   un roce.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - New «Background» setting: dark or light. On MIP displays (Forerunner
+>   255/955, fēnix 7, Instinct) the light background reads much better.
+>   Change it from Garmin Connect or on the watch, under Yard settings.
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Touchscreen watches: set the start time with your finger, and tap the
+>   settings on the start screen to turn them on or off.
+> - During the race the touchscreen only changes screens: the activity stops
+>   only with the START button and yards are marked only with the LAP button,
+>   never by an accidental touch.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
+
+---
+
+## Novedades de la versión 1.7.0 (para el campo "What's New")
+
+Si la 1.6.0 llegó a publicarse, quita las tres primeras líneas: ya salieron
+con ella.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Relojes táctiles: la hora de salida se cambia con el dedo y los ajustes de
+>   la pantalla de salida se encienden y apagan tocándolos.
+> - En carrera, la pantalla táctil solo cambia de pantalla: la actividad se
+>   para con el botón START y la vuelta se marca con el botón LAP, nunca con
+>   un roce.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Touchscreen watches: set the start time with your finger, and tap the
+>   settings on the start screen to turn them on or off.
+> - During the race the touchscreen only changes screens: the activity stops
+>   only with the START button and yards are marked only with the LAP button,
+>   never by an accidental touch.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
+
+---
+
+## Novedades de la versión 1.6.0 (para el campo "What's New")
+
+Lo primero al abrir la app es la **hora de salida**: la rueda de hora y minutos
+viene puesta en la siguiente hora en punto del reloj (a las 11:30, las 12:00),
+START confirma y MENU deja Auto. Después, la línea de salida enseña esa hora
+con la cuenta atrás, la vuelta y la configuración (en verde lo encendido), y si
+nadie pulsa START la carrera **arranca sola** al llegar la hora. De paso, en el
+calentamiento de las esferas pequeñas (fēnix 5) la línea de hora y batería ya
+no se sale por los lados.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
 
 ---
 

@@ -2,6 +2,7 @@ using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
+using Toybox.Math as Math;
 using Toybox.Activity as Activity;
 using Toybox.Time as Time;
 using Toybox.Position as Position;
@@ -86,7 +87,7 @@ class MainView extends Ui.View {
         var cy = h / 2;
         var radio = (w < h ? w : h) / 2 - 6;
 
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
         // Sin actividad grabando no hay cronometro del que colgar la carrera, y
@@ -103,7 +104,7 @@ class MainView extends Ui.View {
         // es un acceso legitimo. Sin el, dos avisos en cada compilacion.
         var p = _estado.proyeccion();
         if (p == null) {
-            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Gfx.COLOR_DK_GRAY, _s[:noActivity]);
+            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Tema.apagado(), _s[:noActivity]);
             return;
         }
         var proy = p as Lang.Array<Lang.Number>;
@@ -183,11 +184,13 @@ class MainView extends Ui.View {
     // --- pantallas ---
 
     // El corral, la pantalla que se impone en los ultimos tres minutos. A tres
-    // y dos minutos -amarillo y naranja- es un aro ancho del color sobre fondo
-    // negro: se ve el color de un vistazo con casi toda la pantalla apagada,
-    // que en AMOLED es la esquina de la que sale la bateria. Solo el ultimo
-    // minuto se llena de rojo de esquina a esquina: es el aviso mas urgente y
-    // el mas breve, y ahi el gasto se justifica.
+    // y dos minutos -amarillo y naranja- es un aro ancho del color sobre el
+    // fondo del tema: se ve el color de un vistazo con casi toda la pantalla
+    // en el fondo, que en AMOLED con el tema oscuro es la esquina de la que
+    // sale la bateria. Solo el ultimo minuto se llena de rojo de esquina a
+    // esquina: es el aviso mas urgente y el mas breve, y ahi el gasto se
+    // justifica. El rojo pleno es igual en los dos temas, y su texto va en
+    // negro, que sobre el rojo contrasta mas que el blanco.
     //
     // La cuenta grande es el tiempo a la campana, en la fuente mas gruesa;
     // arriba, "A la linea"; abajo, la vuelta que esa campana abre.
@@ -204,34 +207,35 @@ class MainView extends Ui.View {
             _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_BLACK, etiqueta);
             return;
         }
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
         _aroAncho(dc, cx, cy, radio, aviso);
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, aviso, _s[:toTheLine]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, aviso, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, etiqueta);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.legible(aviso),
+             _s[:toTheLine]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Tema.legible(aviso), Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tenue(), etiqueta);
     }
 
     // El descanso, la contraparte del corral: la vuelta esta hecha. Un aro
-    // ancho verde sobre fondo negro -misma economia de bateria que el corral
+    // ancho verde sobre el fondo -misma economia de bateria que el corral
     // de tres y dos minutos-, con el tiempo a la proxima campana en grueso y,
     // debajo, lo acumulado: vueltas cerradas y kilometros.
     function _descanso(dc, cx, cy, h, radio, vuelta, r) {
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
-        _aroAncho(dc, cx, cy, radio, Gfx.COLOR_GREEN);
+        _aroAncho(dc, cx, cy, radio, Tema.verde());
         var completadas = _completadas(vuelta);
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_GREEN, _s[:rest]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_GREEN, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.verde(), _s[:rest]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Tema.verde(), Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              completadas.format("%d") + " " + _s[:laps]);
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              Fmt.distancia(completadas * _estado.kmPorVuelta) + " " + Fmt.unidad());
     }
 
     // El aro ancho compartido por el descanso y el corral de tres y dos
-    // minutos: un anillo grueso del color pegado al borde, con el centro
-    // negro. Se dibuja algo mas adentro que los aros finos para que el grosor
+    // minutos: un anillo grueso del color pegado al borde, con el centro del
+    // fondo. Se dibuja algo mas adentro que los aros finos para que el grosor
     // no se salga de la esfera. (Empezo en 14, subio a 21 y en el reloj real
     // se veia demasiado: quedo un cuarto mas fino, en 16.)
     function _aroAncho(dc, cx, cy, radio, color) {
@@ -243,9 +247,9 @@ class MainView extends Ui.View {
     // eso la esfera lo dice. La cuenta a la salida en grueso, la hora de la
     // campana debajo, y al pie la hora del dia con la bateria.
     function _calentamiento(dc, cx, cy, h, radio, r) {
-        _arco(dc, cx, cy, radio, 1.0, Gfx.COLOR_DK_GRAY, 4);
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, _s[:warmup]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE, Fmt.reloj(r));
+        _arco(dc, cx, cy, radio, 1.0, Tema.apagado(), 4);
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(), _s[:warmup]);
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_HOT, Tema.tinta(), Fmt.reloj(r));
 
         if (_estado.campana0 != null) {
             var g = Time.Gregorian.info(new Time.Moment(_estado.campana0),
@@ -254,21 +258,50 @@ class MainView extends Ui.View {
                  _s[:start] + " " + _horaTexto(g.hour, g.min));
         }
 
+        // La hora con la bateria, del texto largo al corto segun quepa en la
+        // cuerda de la esfera a esa altura: en el fenix 5 (240 px) "12:07 PM
+        // · Battery 50%" se salia por los dos lados. Primero cae la palabra
+        // y, si ni asi, la bateria entera.
         var reloj = Sys.getClockTime();
-        var linea = _horaTexto(reloj.hour, reloj.min);
+        var hora = _horaTexto(reloj.hour, reloj.min);
         var bateria = Sys.getSystemStats().battery;
+        var yPie = _yPie(cy, h);
+        var opciones = [ hora ];
         if (bateria != null) {
-            linea = linea + " · " + _s[:battery] + " "
-                  + bateria.format("%d") + "%";
+            var pct = bateria.format("%d") + "%";
+            opciones = [ hora + " · " + _s[:battery] + " " + pct,
+                         hora + " · " + pct, hora ];
         }
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+        var cabe = _cuerda(dc, cx, cy, yPie, Gfx.FONT_XTINY);
+        var linea = opciones[opciones.size() - 1];
+        for (var i = 0; i < opciones.size(); i++) {
+            if (dc.getTextWidthInPixels(opciones[i], Gfx.FONT_XTINY) <= cabe) {
+                linea = opciones[i];
+                break;
+            }
+        }
+        _txt(dc, cx, yPie, Gfx.FONT_XTINY, Tema.apagado(), linea);
 
         // El check del GPS: verde cuando el reloj ya fijo posicion, gris
         // mientras busca. Es lo que se mira de reojo antes de la salida.
-        var colorGps = _gpsListo() ? Gfx.COLOR_GREEN : Gfx.COLOR_DK_GRAY;
+        var colorGps = _gpsListo() ? Tema.verde() : Tema.apagado();
         var yGps = _yPie2(cy, h);
         _check(dc, cx - (h * 5 / 100), yGps, h, colorGps);
         _txt(dc, cx + (h * 3 / 100), yGps, Gfx.FONT_XTINY, colorGps, "GPS");
+    }
+
+    // El ancho util de una linea de texto centrada en y: la cuerda del
+    // circulo de la esfera en el borde del texto mas alejado del centro, con
+    // un poco de aire. En pantallas no redondas, el ancho entero.
+    function _cuerda(dc, cx, cy, y, fuente) {
+        var w = dc.getWidth();
+        if (Sys.getDeviceSettings().screenShape != Sys.SCREEN_SHAPE_ROUND) {
+            return w;
+        }
+        var r = w / 2;
+        var dy = (y - cy).abs() + (dc.getFontHeight(fuente) / 2);
+        if (dy >= r) { return 0; }
+        return (2 * Math.sqrt((r * r) - (dy * dy))).toNumber() - (w * 6 / 100);
     }
 
     function _gpsListo() {
@@ -304,13 +337,13 @@ class MainView extends Ui.View {
     // los estados que se imponen.
     function _avisoInicio(dc, cx, cy, h, radio, vuelta) {
         _aroAncho(dc, cx, cy, radio, Gfx.COLOR_ORANGE);
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:lapStarts]);
         _txt(dc, cx, cy - (h * 12 / 100), Gfx.FONT_XTINY, Gfx.COLOR_ORANGE,
              _s[:lap]);
-        _txt(dc, cx, cy + (h * 6 / 100), Gfx.FONT_NUMBER_HOT, Gfx.COLOR_WHITE,
+        _txt(dc, cx, cy + (h * 6 / 100), Gfx.FONT_NUMBER_HOT, Tema.tinta(),
              vuelta.format("%d"));
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(),
              (_estado.duracionVuelta / 60).format("%d") + " min · "
              + Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad());
     }
@@ -327,10 +360,10 @@ class MainView extends Ui.View {
         _arco(dc, cx, cy, radio, r.toFloat() / _estado.duracionVuelta,
               Gfx.COLOR_ORANGE, 7);
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:nextStart]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE, Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(), Fmt.reloj(r));
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
              _s[:lap] + " " + vuelta.format("%d") + " · "
              + (descansando ? _s[:rest] : _s[:running]));
     }
@@ -347,14 +380,14 @@ class MainView extends Ui.View {
         // vuelta 0 no hay tiempo consumido ni distancia: ningun aro.
         if (vuelta >= 1) {
             _arco(dc, cx, cy, radio, 1.0 - (r.toFloat() / _estado.duracionVuelta),
-                  Gfx.COLOR_LT_GRAY, 7);
+                  Tema.tenue(), 7);
             if (km != null && objetivo > 0) {
                 _arco(dc, cx, cy, radio - 11, km / objetivo,
-                      vaSobrado ? Gfx.COLOR_GREEN : Gfx.COLOR_RED, 5);
+                      vaSobrado ? Tema.verde() : Gfx.COLOR_RED, 5);
             }
         }
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              vuelta < 1 ? _s[:warmup] : _s[:margin]);
 
         if (margen == null) {
@@ -362,10 +395,10 @@ class MainView extends Ui.View {
             // minuto de la vuelta: sin distancia no hay ritmo, y sin ritmo no
             // hay nada que proyectar. A partir de ahi la cifra ya sale, aunque
             // se asiente durante el primer kilometro (ver ritmoParaMargen).
-            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_DK_GRAY, "--:--");
+            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.apagado(), "--:--");
         } else {
             _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
-                 vaSobrado ? Gfx.COLOR_GREEN : Gfx.COLOR_RED, Fmt.margen(margen));
+                 vaSobrado ? Tema.verde() : Gfx.COLOR_RED, Fmt.margen(margen));
         }
 
         // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
@@ -376,7 +409,7 @@ class MainView extends Ui.View {
         // dos cifras de la pantalla cuenten la misma historia.
         var ritmo = _estado.ritmoSegPorKm();
         var ritmoProyectado = _estado.ritmoParaMargen();
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
              + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + " /" + Fmt.unidad());
         var faltan = null;
@@ -388,7 +421,7 @@ class MainView extends Ui.View {
         if (faltan != null && ritmoProyectado != null) {
             linea = linea + " ≈ " + Fmt.reloj((faltan * ritmoProyectado).toNumber());
         }
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, linea);
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(), linea);
     }
 
     // La pagina de datos globales: lo de toda la carrera SIN los descansos
@@ -439,12 +472,12 @@ class MainView extends Ui.View {
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radio);
 
-        // La pildora: el fondo negro corta el aro por detras del texto.
+        // La pildora: el fondo corta el aro por detras del texto.
         var dim = dc.getTextDimensions(nombre, Gfx.FONT_XTINY) as Lang.Array<Lang.Number>;
         var pw = dim[0] + 18;
         var ph = dim[1] + 2;
         var py = cy - radio + (h * 8 / 100);
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.fondo(), Gfx.COLOR_TRANSPARENT);
         dc.fillRoundedRectangle(cx - pw / 2, py - ph / 2, pw, ph, ph / 2);
         dc.setPenWidth(2);
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
@@ -455,7 +488,7 @@ class MainView extends Ui.View {
         var yArriba = cy - (h * 8 / 100);
         var yAbajo = cy + (h * 15 / 100);
         dc.setPenWidth(1);
-        dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.apagado(), Gfx.COLOR_TRANSPARENT);
         dc.drawLine(cx - (w * 36 / 100), yArriba, cx + (w * 36 / 100), yArriba);
         dc.drawLine(cx - (w * 36 / 100), yAbajo, cx + (w * 36 / 100), yAbajo);
         dc.drawLine(cx, yArriba, cx, yAbajo);
@@ -468,9 +501,9 @@ class MainView extends Ui.View {
 
     // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo.
     function _campo(dc, x, yRotulo, h, rotulo, valor) {
-        _txt(dc, x, yRotulo, Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY, rotulo);
+        _txt(dc, x, yRotulo, Gfx.FONT_XTINY, Tema.tenue(), rotulo);
         _txt(dc, x, yRotulo + (h * 11 / 100), Gfx.FONT_NUMBER_MILD,
-             Gfx.COLOR_WHITE, valor);
+             Tema.tinta(), valor);
     }
 
     // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
@@ -490,13 +523,13 @@ class MainView extends Ui.View {
         // esta pagina eso se escribe como cero, no como una cuenta atras.
         var s = _estado.segundosDeCarrera();
         if (s != null && s < 0) { s = 0; }
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:total]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
              completadas.format("%d"));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_WHITE,
+        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
              _s[:lapsDone]);
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY,
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(),
              Fmt.espera(s) + " · "
              + Fmt.distancia(completadas * _estado.kmPorVuelta) + " "
              + Fmt.unidad());
@@ -516,9 +549,9 @@ class MainView extends Ui.View {
             if (hora == 0) { hora = 12; }
         }
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_LT_GRAY,
+        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:clock]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Gfx.COLOR_WHITE,
+        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
              hora.format("%d") + ":" + reloj.min.format("%02d"));
 
         // La bateria en rojo por debajo del 20 %: a esa altura ya es un dato
@@ -526,10 +559,10 @@ class MainView extends Ui.View {
         var bateria = Sys.getSystemStats().battery;
         var poca = bateria != null && bateria <= 20;
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY,
-             poca ? Gfx.COLOR_RED : Gfx.COLOR_WHITE,
+             poca ? Gfx.COLOR_RED : Tema.tinta(),
              bateria == null ? _s[:battery]
                              : _s[:battery] + " " + bateria.format("%d") + "%");
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Gfx.COLOR_DK_GRAY, marca);
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(), marca);
     }
 
     // --- piezas de dibujo ---
@@ -580,7 +613,7 @@ class MainView extends Ui.View {
         var cx = w / 2;
         var cy = h / 2;
         var radio = (w < h ? w : h) / 2 - 6;
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
         var vuelta = 8;
         var r = (_estado.duracionVuelta * 2) / 5;
@@ -606,7 +639,7 @@ class MainView extends Ui.View {
         var paso = 9;
         var x0 = cx - (paso * (n - 1) / 2);
         for (var i = 0; i < n; i++) {
-            dc.setColor(i == _pagina ? Gfx.COLOR_WHITE : Gfx.COLOR_DK_GRAY,
+            dc.setColor(i == _pagina ? Tema.tinta() : Tema.apagado(),
                         Gfx.COLOR_TRANSPARENT);
             dc.fillCircle(x0 + (i * paso), y, 2);
         }

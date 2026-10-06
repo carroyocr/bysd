@@ -30,6 +30,13 @@
     <string id="pressStart">START zum Start</string>
     <string id="gpsReady">GPS bereit</string>
     <string id="gpsWait">GPS-Suche</string>
+    <string id="startsIn">in</string>
+    <string id="underway">Läuft</string>
+    <string id="confirmStart">START bestätigt</string>
+    <string id="menuAuto">MENU: Auto</string>
+    <string id="cfgAutoFinish">Auto Ziel</string>
+    <string id="cfgAutoKm">Auto km</string>
+    <string id="cfgVibe">Vibr.</string>
     <string id="endTitle">Beenden?</string>
     <string id="resume">Weiter</string>
     <string id="save">Speichern</string>
@@ -56,6 +63,9 @@
     <string id="settingLapOff">LAP-Taste aus</string>
     <string id="settingVibration">Vibration</string>
     <string id="settingSound">Ton</string>
+    <string id="settingTheme">Hintergrund</string>
+    <string id="themeDark">Dunkel</string>
+    <string id="themeLight">Hell</string>
     <string id="settingAbout">Info</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Gesamtdaten</string>

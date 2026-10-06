@@ -305,6 +305,21 @@ class RaceState {
     // sin ella, se deduce de la hora a la que se pulsa START. El ancla se
     // guarda en epoch: los cambios de hora de despues no la mueven.
     function darLaSalida() {
+        campana0 = campanaPrevista();
+        vueltaMarcada = 0;
+        _latSalida = _lat;
+        _lonSalida = _lon;
+        kmDeVueltas = 0.0;
+        segDeVueltas = 0;
+        sumaPulso = 0.0;
+        muestrasPulso = 0;
+    }
+
+    // La campana de la vuelta 1 que sellaria darLaSalida() si se pulsara
+    // START ahora mismo, en epoch, sin tocar nada. La linea de salida la usa
+    // para ensenar la hora y la cuenta atras, y para arrancar sola cuando
+    // llega la hora sin que nadie haya pulsado.
+    function campanaPrevista() {
         var ahora = Time.now().value();
         var reloj = Sys.getClockTime();
         var desdeMedianoche = (reloj.hour * 3600) + (reloj.min * 60) + reloj.sec;
@@ -317,10 +332,11 @@ class RaceState {
             // el que configura a las 8 de la noche la salida de las 7 no
             // quiere una carrera con trece vueltas corridas.
             var objetivo = ((horaSalida / 100) * 3600) + ((horaSalida % 100) * 60);
-            campana0 = ahora - desdeMedianoche + objetivo;
-            if (campana0 < ahora - 43200) {
-                campana0 += 86400;
+            var campana = ahora - desdeMedianoche + objetivo;
+            if (campana < ahora - 43200) {
+                campana += 86400;
             }
+            return campana;
         } else {
             // Automatica: se ancla a una marca de duracionVuelta mirando lo
             // probable. Pulsar START poco despues de la marca -dentro de la
@@ -333,18 +349,10 @@ class RaceState {
             var gracia = duracionVuelta / 6;
             if (gracia > 600) { gracia = 600; }
             if (resto < gracia) {
-                campana0 = ahora - resto;
-            } else {
-                campana0 = ahora + (duracionVuelta - resto);
+                return ahora - resto;
             }
+            return ahora + (duracionVuelta - resto);
         }
-        vueltaMarcada = 0;
-        _latSalida = _lat;
-        _lonSalida = _lon;
-        kmDeVueltas = 0.0;
-        segDeVueltas = 0;
-        sumaPulso = 0.0;
-        muestrasPulso = 0;
     }
 
     // La ultima posicion conocida, del GPS de la app. La guarda quien recibe

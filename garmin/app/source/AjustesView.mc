@@ -3,6 +3,8 @@ using Toybox.Graphics as Gfx;
 using Toybox.Application as App;
 using Toybox.Lang as Lang;
 using Toybox.System as Sys;
+using Toybox.Time as Time;
+using Toybox.Time.Gregorian as Greg;
 
 // Los ajustes de la vuelta, desde el reloj.
 //
@@ -44,6 +46,11 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             :vibracion, estado.vibracion, null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingSound, null,
             :sonido, estado.sonido, null));
+        // El fondo de la esfera: oscuro o claro. Es una lista y no un
+        // interruptor para que algun dia quepan mas temas sin cambiar el
+        // ajuste; en el reloj, tocarlo pasa al siguiente.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingTheme,
+            textoDeTema(), :tema, null));
         // Las pantallas de carrera: cuales se ven. El orden se cambia desde
         // el telefono; aqui solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
@@ -77,6 +84,19 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         return h12.format("%d") + ":" + m.format("%02d") + " " + marca;
     }
 
+    // El sub-rotulo del tema: "Oscuro" o "Claro".
+    static function textoDeTema() {
+        return Ui.loadResource(Tema.claro ? Rez.Strings.themeLight
+                                          : Rez.Strings.themeDark);
+    }
+
+    // Un instante en epoch, como HHMM de la hora local: lo que guarda el
+    // ajuste de salida y lo que entiende textoDeSalida.
+    static function hhmmDe(epoch) {
+        var i = Greg.info(new Time.Moment(epoch), Time.FORMAT_SHORT);
+        return (i.hour * 100) + i.min;
+    }
+
     function onSelect(item) {
         var id = item.getId();
         if (id == :salida) {
@@ -97,6 +117,11 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
                       : id == :vibracion ? "vibration" : "sound";
             App.Properties.setValue(clave, ti.isEnabled());
             _estado.leerAjustes();
+        } else if (id == :tema) {
+            // Cambia y se queda en el menu, con el sub-rotulo al dia: el
+            // fondo nuevo se ve al volver a la esfera.
+            Tema.alternar();
+            item.setSubLabel(AjustesMenuDelegate.textoDeTema());
         } else if (id == :pantallas) {
             var vista = new PantallasView(_estado);
             Ui.pushView(vista, new PantallasDelegate(vista), Ui.SLIDE_LEFT);
@@ -191,13 +216,14 @@ class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
 // del reloj, y en la generacion fenix 5 ese tema es BLANCO. Las letras
 // blancas de la app quedaban invisibles -se veia el hueco de las letras y
 // nada mas-. No hay opcion para cambiar ese fondo: ni :backgroundColor ni
-// nada parecido. Limpiar a negro en el onUpdate de un Picker propio tampoco
-// vale (el Picker repinta despues), y hacerlo desde el titulo solo ennegrece
+// nada parecido. Limpiar el fondo en el onUpdate de un Picker propio tampoco
+// vale (el Picker repinta despues), y hacerlo desde el titulo solo pinta
 // su banda, porque el Picker recorta cada elemento a su zona.
 //
-// Dibujandola entera aqui, el fondo es negro y las letras blancas en los 46
-// relojes, igual que el resto de la app. Y de paso la columna sin foco va en
-// LT_GRAY y no en DK_GRAY, que en los MIP monocromos no se ve.
+// Dibujandola entera aqui, el fondo y la tinta son los del tema de la app
+// (Tema) en todos los relojes, igual que el resto de las pantallas. Y de
+// paso la columna sin foco va en la tinta tenue y no en la apagada, que en
+// los MIP monocromos no se ve.
 class RuedaView extends Ui.View {
 
     // Con tipos: sin ellos el comprobador avisa en cada acceso a los arrays.
@@ -206,6 +232,11 @@ class RuedaView extends Ui.View {
     var _indices as Lang.Array<Lang.Number>;     // donde esta cada una
     var _separador;                              // ":" entre hora y minuto
     var _foco as Lang.Number;                    // la que mueven UP y DOWN
+    var _pie = null;                             // ayuda abajo, en lineas
+    // Donde quedo cada cosa en el ultimo dibujo, para saber que se toco.
+    var _centros as Lang.Array<Lang.Number> = [] as Lang.Array<Lang.Number>;
+    var _medio = 0;
+    var _salto = 0;
 
     function initialize(titulo, columnas, indices, separador) {
         View.initialize();
@@ -214,6 +245,13 @@ class RuedaView extends Ui.View {
         _indices = indices;
         _separador = separador;
         _foco = 0;
+    }
+
+    // Unas lineas de ayuda al pie -que botones hacen que-. Solo la lleva la
+    // rueda de la hora al abrir la app, que no nace de ningun menu y por eso
+    // no se sabe de entrada que MENU elige Auto.
+    function ponerPie(lineas) {
+        _pie = lineas;
     }
 
     // UP y DOWN mueven la columna con foco, dando la vuelta por los extremos.
@@ -230,6 +268,24 @@ class RuedaView extends Ui.View {
         return true;
     }
 
+    // Un toque en la pantalla tactil. Tocar una columna le da el foco; tocar
+    // su flecha de arriba o de abajo la mueve, igual que UP y DOWN. Aceptar
+    // sigue siendo cosa de START: un roce no puede confirmar una hora.
+    function tocar(x as Lang.Number, y as Lang.Number) {
+        var n = _centros.size();
+        if (n == 0) { return; }
+        var col = 0;
+        if (n == 2 && (x - _centros[1]).abs() < (x - _centros[0]).abs()) {
+            col = 1;
+        }
+        _foco = col;
+        if (y < _medio - (_salto / 2)) {
+            mover(-1);
+        } else if (y > _medio + (_salto / 2)) {
+            mover(1);
+        }
+    }
+
     function valores() as Lang.Array {
         var v = new [_columnas.size()] as Lang.Array;
         for (var i = 0; i < _columnas.size(); i++) {
@@ -241,10 +297,10 @@ class RuedaView extends Ui.View {
     function onUpdate(dc) {
         var w = dc.getWidth();
         var h = dc.getHeight();
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.tinta(), Tema.fondo());
         dc.clear();
 
-        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, (h * 0.20).toNumber(), Gfx.FONT_XTINY, _titulo,
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
 
@@ -256,6 +312,8 @@ class RuedaView extends Ui.View {
                     ? [ w / 2 ]
                     : [ (w * 0.33).toNumber(), (w * 0.67).toNumber() ];
         var hueco = n == 1 ? (w * 0.80).toNumber() : (w * 0.40).toNumber();
+        _centros = centros as Lang.Array<Lang.Number>;
+        _medio = medio;
 
         // Si alguna columna lleva marca -AM/PM, min, km-, TODAS las cifras
         // suben lo mismo: si sube solo la que la lleva, la hora queda mas
@@ -267,28 +325,28 @@ class RuedaView extends Ui.View {
         }
         var yCifra = hayMarca ? medio - (altoMarca / 2) : medio;
 
+        var yMarca = null;
         for (var i = 0; i < n; i++) {
             var texto = _columnas[i].textoDe(_indices[i]);
             var marca = _columnas[i].marcaDe(_indices[i]);
             var fuente = _fuenteQueQuepa(dc, texto, hueco);
-            dc.setColor(i == _foco ? Gfx.COLOR_WHITE : Gfx.COLOR_LT_GRAY,
+            dc.setColor(i == _foco ? Tema.tinta() : Tema.tenue(),
                         Gfx.COLOR_TRANSPARENT);
             dc.drawText(centros[i], yCifra, fuente, texto,
                         Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
             if (marca != null) {
-                // La marca va debajo, y el centro de una y otra se separan
-                // media cifra MAS media marca: contar solo la cifra dejaba el
-                // AM montado encima del numero.
-                dc.drawText(centros[i],
-                            yCifra + (dc.getFontHeight(fuente) / 2)
-                                   + (altoMarca / 2),
-                            Gfx.FONT_XTINY, marca,
+                // La marca va pegada debajo de la cifra. Se mide desde la
+                // linea base y no desde el borde de la caja de la fuente: las
+                // fuentes numericas traen mucho aire por debajo, y en el
+                // fenix 8 ese aire bajaba el PM hasta taparlo la flecha.
+                yMarca = yCifra + _bajoLaCifra(dc, fuente) + (altoMarca * 80 / 100);
+                dc.drawText(centros[i], yMarca, Gfx.FONT_XTINY, marca,
                             Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
             }
         }
 
         if (_separador != null && n == 2) {
-            dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+            dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
             dc.drawText(w / 2, yCifra, Gfx.FONT_MEDIUM, _separador,
                         Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
         }
@@ -296,8 +354,39 @@ class RuedaView extends Ui.View {
         // Las flechas dicen que esa columna es la que se mueve. Sin palabras:
         // asi no hay que traducir nada.
         var salto = (h * 0.19).toNumber();
+        _salto = salto;
         _flecha(dc, centros[_foco], medio - salto, true);
-        _flecha(dc, centros[_foco], medio + salto, false);
+        // La de abajo nunca encima de la marca: si la marca llega a su
+        // altura, la flecha baja lo justo para quedar debajo.
+        var yAbajo = medio + salto;
+        if (yMarca != null) {
+            var a = (w * 0.032).toNumber();
+            var libre = yMarca + (altoMarca / 2) + a;
+            if (libre > yAbajo) { yAbajo = libre; }
+        }
+        _flecha(dc, centros[_foco], yAbajo, false);
+
+        if (_pie != null) {
+            var lineas = _pie as Lang.Array<Lang.String>;
+            var y = (h * 0.82).toNumber();
+            dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
+            for (var i = 0; i < lineas.size(); i++) {
+                dc.drawText(w / 2, y, Gfx.FONT_XTINY, lineas[i],
+                            Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+                y += altoMarca;
+            }
+        }
+    }
+
+    // Del centro de la cifra a su linea base: donde acaba el numero que se ve.
+    // Sin la API de metricas (relojes viejos) se aproxima con el 36 % del
+    // alto de la fuente, que es lo que miden las numericas de Garmin.
+    function _bajoLaCifra(dc, fuente) {
+        var alto = dc.getFontHeight(fuente);
+        if (Gfx has :getFontAscent) {
+            return Gfx.getFontAscent(fuente) - (alto / 2);
+        }
+        return alto * 36 / 100;
     }
 
     // La fuente mas grande en la que el valor todavia cabe. Medido, no
@@ -316,7 +405,7 @@ class RuedaView extends Ui.View {
     function _flecha(dc, cx, cy, haciaArriba) {
         var b = (dc.getWidth() * 0.035).toNumber();
         var a = (dc.getWidth() * 0.032).toNumber();
-        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
         if (haciaArriba) {
             dc.fillPolygon([ [cx - b, cy + a], [cx + b, cy + a], [cx, cy] ]);
         } else {
@@ -351,7 +440,16 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // En el fenix 8 el toque llega primero como onSelect, igual que START:
+    // atenderlo aqui hacia que cada toque pasara de columna y el segundo
+    // aceptara la hora. Devolviendo false, el sistema entrega el toque a
+    // onTap y el boton a onKey como KEY_ENTER, y cada uno va por su lado.
     function onSelect() {
+        return false;
+    }
+
+    // START: pasa a la columna siguiente y, en la ultima, acepta.
+    function _start() {
         if (_vista.avanzarFoco()) {
             Ui.requestUpdate();
             return true;
@@ -360,8 +458,43 @@ class RuedaDelegate extends Ui.BehaviorDelegate {
         return true;
     }
 
+    // Lo que devuelva el destino: false deja al sistema hacer su BACK, que
+    // en la rueda de la hora al abrir es salir de la app.
     function onBack() {
-        _destino.onCancel();
+        return _destino.onCancel();
+    }
+
+    // MENU solo significa algo si el destino lo atiende: en la rueda de la
+    // hora al abrir, elegir Auto. Por los mismos tres caminos que en la
+    // linea de salida (ver StartDelegate): el fenix 8 no siempre entrega el
+    // UP largo como onMenu.
+    function onMenu() {
+        if (_destino has :onMenu) { return _destino.onMenu(); }
+        return false;
+    }
+
+    function onKey(evento) {
+        if (evento.getKey() == Ui.KEY_ENTER) { return _start(); }
+        if (evento.getKey() == Ui.KEY_MENU) { return onMenu(); }
+        return false;
+    }
+
+    // En los tactiles la rueda se mueve con el dedo: tocar las flechas o la
+    // columna, o deslizar sobre ella. El toque se consume aqui para que el
+    // sistema no lo convierta en START y acepte la hora a medio elegir. Y
+    // no hay onHold: un dedo que se queda apoyado mientras elige no puede
+    // cambiar la hora a Auto.
+    function onTap(evento) {
+        var xy = evento.getCoordinates();
+        _vista.tocar(xy[0], xy[1]);
+        Ui.requestUpdate();
+        return true;
+    }
+
+    function onSwipe(evento) {
+        var direccion = evento.getDirection();
+        if (direccion == Ui.SWIPE_UP) { return onNextPage(); }
+        if (direccion == Ui.SWIPE_DOWN) { return onPreviousPage(); }
         return true;
     }
 }
@@ -471,6 +604,63 @@ class SalidaPickerDelegate {
         Ui.popView(Ui.SLIDE_DOWN);
         Ui.popView(Ui.SLIDE_DOWN);
         return true;
+    }
+}
+
+// La hora de salida, lo primero al abrir la app.
+//
+// Cada vez que se abre, antes de la linea de salida, se pregunta la hora con
+// la rueda, ya puesta en la siguiente hora en punto del reloj: a las 11:30,
+// las 12:00. Es la salida mas probable, y nadie sale con la hora de la
+// carrera anterior sin haberla visto. MENU deja Auto; BACK sale de la app,
+// como en la linea de salida: todavia no se graba nada.
+class SalidaInicialDelegate {
+
+    static function abrir(estado) {
+        var actual = ((Sys.getClockTime().hour + 1) % 24) * 100;
+        var horas = new HoraSalidaFactory();
+        var minutos = new MinutoSalidaFactory();
+        var rueda = new RuedaView(Ui.loadResource(Rez.Strings.settingStartTime),
+                                  [ horas, minutos ],
+                                  [ horas.indiceDe(actual),
+                                    minutos.indiceDe(actual) ], ":");
+        rueda.ponerPie([ Ui.loadResource(Rez.Strings.confirmStart),
+                         Ui.loadResource(Rez.Strings.menuAuto) ]);
+        Ui.switchToView(rueda,
+                        new RuedaDelegate(rueda,
+                                          new SalidaInicialDelegate(estado)),
+                        Ui.SLIDE_IMMEDIATE);
+    }
+
+    var _estado;
+
+    function initialize(estado) {
+        _estado = estado;
+    }
+
+    function onAccept(valores as Lang.Array) {
+        var hora = valores[0] as Lang.Number;
+        var minuto = valores[1] as Lang.Number;
+        App.Properties.setValue("startTime", (hora * 100) + minuto);
+        _aLaLinea();
+        return true;
+    }
+
+    function onMenu() {
+        App.Properties.setValue("startTime", -1);
+        _aLaLinea();
+        return true;
+    }
+
+    function onCancel() {
+        return false;
+    }
+
+    function _aLaLinea() {
+        _estado.leerAjustes();
+        var vista = new StartView(_estado);
+        Ui.switchToView(vista, new StartDelegate(vista, _estado),
+                        Ui.SLIDE_LEFT);
     }
 }
 
@@ -664,19 +854,19 @@ class PantallasView extends Ui.View {
         // de las migas, que en el catalogo no significan nada.
         var alto = h * 22 / 100;
         var visible = _estaVisible();
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.fondo(), Gfx.COLOR_TRANSPARENT);
         dc.fillRectangle(0, h - alto, w, alto);
         dc.setPenWidth(1);
-        dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.apagado(), Gfx.COLOR_TRANSPARENT);
         dc.drawLine(w * 25 / 100, h - alto, w * 75 / 100, h - alto);
 
         var n = (IDS as Lang.Array<Lang.Number>).size();
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tinta(), Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, h - (alto * 70 / 100), Gfx.FONT_XTINY,
                     _nombres[_i] + " · " + (_i + 1).format("%d") + "/"
                     + n.format("%d"),
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(visible ? Gfx.COLOR_GREEN : Gfx.COLOR_LT_GRAY,
+        dc.setColor(visible ? Tema.verde() : Tema.tenue(),
                     Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, h - (alto * 30 / 100), Gfx.FONT_XTINY,
                     visible ? _visible : _oculta,
