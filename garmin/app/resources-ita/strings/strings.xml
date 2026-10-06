@@ -63,6 +63,9 @@
     <string id="settingLapOff">Pulsante LAP spento</string>
     <string id="settingVibration">Vibrazione</string>
     <string id="settingSound">Suono</string>
+    <string id="settingTheme">Sfondo</string>
+    <string id="themeDark">Scuro</string>
+    <string id="themeLight">Chiaro</string>
     <string id="settingAbout">Informazioni</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati totali</string>

@@ -1,5 +1,11 @@
 # Garmin — lo que queda
 
+**Pendiente a 6 de octubre de 2026: empaquetar y subir la 1.8.0** (rama
+`garmin-tema-claro`). Trae el **fondo claro** —ajuste «Fondo», pedido por un
+usuario con Forerunner 255— y absorbe la 1.7.0 (hora de salida al abrir,
+arranque solo, táctil), que se empaquetó el 19 de septiembre y nunca se
+subió. Las novedades ES/EN están en `garmin/PUBLICAR.md`.
+
 Estado a 27 de agosto de 2026. La **1.4.0 está publicada** en la Connect IQ
 Store —la del barrido de dispositivos: 104 relojes, ver la sección de abajo—.
 La 1.3.0 sí llegó a la tienda antes (versión inicial, 24 de agosto). La

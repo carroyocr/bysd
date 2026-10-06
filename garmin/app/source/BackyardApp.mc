@@ -41,6 +41,7 @@ class BackyardApp extends App.AppBase {
     }
 
     function onStart(state) {
+        Tema.leer();
         estado = new RaceState();
         // El GPS se enciende desde ya: lo que tarde en fijar que lo tarde en
         // la carpa, no en la linea de salida.
@@ -65,8 +66,10 @@ class BackyardApp extends App.AppBase {
         }
     }
 
-    // Cuando el corredor cambia la vuelta o el aviso desde el telefono.
+    // Cuando el corredor cambia la vuelta, el aviso o el tema desde el
+    // telefono.
     function onSettingsChanged() {
+        Tema.leer();
         estado.leerAjustes();
         Ui.requestUpdate();
     }
@@ -386,13 +389,13 @@ class SalidaView extends Ui.View {
         var cy = h / 2;
         var radio = ((w < h ? w : h) / 2) - 10;
 
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
         if (_fase == 2) { return; }
         dc.setPenWidth(14);
 
         // Rojo al descartar, verde al guardar, en las dos fases.
-        var color = _guardar ? Gfx.COLOR_GREEN : Gfx.COLOR_RED;
+        var color = _guardar ? Tema.verde() : Gfx.COLOR_RED;
 
         if (_fase == 0) {
             // El aro se llena desde las doce y hacia la derecha, como se lee un
@@ -416,7 +419,7 @@ class SalidaView extends Ui.View {
     // Una palabra va en el centro; dos palabras se parten en dos lineas, como
     // "Actividad / descartada" en la pantalla nativa.
     function _texto(dc, cx, cy, h, texto) {
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tinta(), Gfx.COLOR_TRANSPARENT);
         var i = texto.find(" ");
         if (i != null) {
             var l1 = texto.substring(0, i);

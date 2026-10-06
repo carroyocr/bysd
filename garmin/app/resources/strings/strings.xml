@@ -64,6 +64,9 @@
     <string id="settingLapOff">LAP button off</string>
     <string id="settingVibration">Vibration</string>
     <string id="settingSound">Sound</string>
+    <string id="settingTheme">Background</string>
+    <string id="themeDark">Dark</string>
+    <string id="themeLight">Light</string>
     <string id="settingAbout">About</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Total data</string>

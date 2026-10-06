@@ -63,6 +63,9 @@
     <string id="settingLapOff">Apagar botón LAP</string>
     <string id="settingVibration">Vibración</string>
     <string id="settingSound">Sonido</string>
+    <string id="settingTheme">Fondo</string>
+    <string id="themeDark">Oscuro</string>
+    <string id="themeLight">Claro</string>
     <string id="settingAbout">Acerca de</string>
     <string id="settingScreens">Pantallas de carrera</string>
     <string id="screenData">Datos totales</string>

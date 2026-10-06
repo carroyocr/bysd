@@ -43,6 +43,9 @@ class SplashView extends Ui.View {
         _emblema = null;
     }
 
+    // El emblema va siempre sobre negro, tenga el tema que tenga la app: el
+    // mapa de bits trae el negro pintado alrededor del circulo, y en una
+    // esfera clara se veria el cuadrado. Es un segundo, y es el logo.
     function onUpdate(dc) {
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
         dc.clear();

@@ -46,6 +46,11 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             :vibracion, estado.vibracion, null));
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingSound, null,
             :sonido, estado.sonido, null));
+        // El fondo de la esfera: oscuro o claro. Es una lista y no un
+        // interruptor para que algun dia quepan mas temas sin cambiar el
+        // ajuste; en el reloj, tocarlo pasa al siguiente.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingTheme,
+            textoDeTema(), :tema, null));
         // Las pantallas de carrera: cuales se ven. El orden se cambia desde
         // el telefono; aqui solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
@@ -79,6 +84,12 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         return h12.format("%d") + ":" + m.format("%02d") + " " + marca;
     }
 
+    // El sub-rotulo del tema: "Oscuro" o "Claro".
+    static function textoDeTema() {
+        return Ui.loadResource(Tema.claro ? Rez.Strings.themeLight
+                                          : Rez.Strings.themeDark);
+    }
+
     // Un instante en epoch, como HHMM de la hora local: lo que guarda el
     // ajuste de salida y lo que entiende textoDeSalida.
     static function hhmmDe(epoch) {
@@ -106,6 +117,11 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
                       : id == :vibracion ? "vibration" : "sound";
             App.Properties.setValue(clave, ti.isEnabled());
             _estado.leerAjustes();
+        } else if (id == :tema) {
+            // Cambia y se queda en el menu, con el sub-rotulo al dia: el
+            // fondo nuevo se ve al volver a la esfera.
+            Tema.alternar();
+            item.setSubLabel(AjustesMenuDelegate.textoDeTema());
         } else if (id == :pantallas) {
             var vista = new PantallasView(_estado);
             Ui.pushView(vista, new PantallasDelegate(vista), Ui.SLIDE_LEFT);
@@ -200,13 +216,14 @@ class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
 // del reloj, y en la generacion fenix 5 ese tema es BLANCO. Las letras
 // blancas de la app quedaban invisibles -se veia el hueco de las letras y
 // nada mas-. No hay opcion para cambiar ese fondo: ni :backgroundColor ni
-// nada parecido. Limpiar a negro en el onUpdate de un Picker propio tampoco
-// vale (el Picker repinta despues), y hacerlo desde el titulo solo ennegrece
+// nada parecido. Limpiar el fondo en el onUpdate de un Picker propio tampoco
+// vale (el Picker repinta despues), y hacerlo desde el titulo solo pinta
 // su banda, porque el Picker recorta cada elemento a su zona.
 //
-// Dibujandola entera aqui, el fondo es negro y las letras blancas en los 46
-// relojes, igual que el resto de la app. Y de paso la columna sin foco va en
-// LT_GRAY y no en DK_GRAY, que en los MIP monocromos no se ve.
+// Dibujandola entera aqui, el fondo y la tinta son los del tema de la app
+// (Tema) en todos los relojes, igual que el resto de las pantallas. Y de
+// paso la columna sin foco va en la tinta tenue y no en la apagada, que en
+// los MIP monocromos no se ve.
 class RuedaView extends Ui.View {
 
     // Con tipos: sin ellos el comprobador avisa en cada acceso a los arrays.
@@ -280,10 +297,10 @@ class RuedaView extends Ui.View {
     function onUpdate(dc) {
         var w = dc.getWidth();
         var h = dc.getHeight();
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.tinta(), Tema.fondo());
         dc.clear();
 
-        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, (h * 0.20).toNumber(), Gfx.FONT_XTINY, _titulo,
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
 
@@ -313,7 +330,7 @@ class RuedaView extends Ui.View {
             var texto = _columnas[i].textoDe(_indices[i]);
             var marca = _columnas[i].marcaDe(_indices[i]);
             var fuente = _fuenteQueQuepa(dc, texto, hueco);
-            dc.setColor(i == _foco ? Gfx.COLOR_WHITE : Gfx.COLOR_LT_GRAY,
+            dc.setColor(i == _foco ? Tema.tinta() : Tema.tenue(),
                         Gfx.COLOR_TRANSPARENT);
             dc.drawText(centros[i], yCifra, fuente, texto,
                         Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
@@ -329,7 +346,7 @@ class RuedaView extends Ui.View {
         }
 
         if (_separador != null && n == 2) {
-            dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+            dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
             dc.drawText(w / 2, yCifra, Gfx.FONT_MEDIUM, _separador,
                         Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
         }
@@ -352,7 +369,7 @@ class RuedaView extends Ui.View {
         if (_pie != null) {
             var lineas = _pie as Lang.Array<Lang.String>;
             var y = (h * 0.82).toNumber();
-            dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+            dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
             for (var i = 0; i < lineas.size(); i++) {
                 dc.drawText(w / 2, y, Gfx.FONT_XTINY, lineas[i],
                             Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
@@ -388,7 +405,7 @@ class RuedaView extends Ui.View {
     function _flecha(dc, cx, cy, haciaArriba) {
         var b = (dc.getWidth() * 0.035).toNumber();
         var a = (dc.getWidth() * 0.032).toNumber();
-        dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tenue(), Gfx.COLOR_TRANSPARENT);
         if (haciaArriba) {
             dc.fillPolygon([ [cx - b, cy + a], [cx + b, cy + a], [cx, cy] ]);
         } else {
@@ -837,19 +854,19 @@ class PantallasView extends Ui.View {
         // de las migas, que en el catalogo no significan nada.
         var alto = h * 22 / 100;
         var visible = _estaVisible();
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.fondo(), Gfx.COLOR_TRANSPARENT);
         dc.fillRectangle(0, h - alto, w, alto);
         dc.setPenWidth(1);
-        dc.setColor(Gfx.COLOR_DK_GRAY, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.apagado(), Gfx.COLOR_TRANSPARENT);
         dc.drawLine(w * 25 / 100, h - alto, w * 75 / 100, h - alto);
 
         var n = (IDS as Lang.Array<Lang.Number>).size();
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_TRANSPARENT);
+        dc.setColor(Tema.tinta(), Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, h - (alto * 70 / 100), Gfx.FONT_XTINY,
                     _nombres[_i] + " · " + (_i + 1).format("%d") + "/"
                     + n.format("%d"),
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
-        dc.setColor(visible ? Gfx.COLOR_GREEN : Gfx.COLOR_LT_GRAY,
+        dc.setColor(visible ? Tema.verde() : Tema.tenue(),
                     Gfx.COLOR_TRANSPARENT);
         dc.drawText(w / 2, h - (alto * 30 / 100), Gfx.FONT_XTINY,
                     visible ? _visible : _oculta,

@@ -119,7 +119,7 @@ class StartView extends Ui.View {
         var h = dc.getHeight();
         var cx = w / 2;
 
-        dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_BLACK);
+        dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
         var campana = _estado.campanaPrevista();
@@ -138,20 +138,20 @@ class StartView extends Ui.View {
         // el mismo aire, y medido no se monta ninguna linea.
         var xt = Gfx.FONT_XTINY;
         var filas = [
-            [ xt, Gfx.COLOR_LT_GRAY, [ _s[:titulo] ] ],
-            [ Gfx.FONT_LARGE, Gfx.COLOR_WHITE, [ hora ], :hora ],
+            [ xt, Tema.tenue(), [ _s[:titulo] ] ],
+            [ Gfx.FONT_LARGE, Tema.tinta(), [ hora ], :hora ],
             [ xt, Gfx.COLOR_ORANGE, [ cuenta ] ],
-            [ xt, Gfx.COLOR_LT_GRAY,
+            [ xt, Tema.tenue(),
               [ Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad() + " / "
                 + (_estado.duracionVuelta / 60).format("%d") + " min" ] ],
-            [ Gfx.FONT_SMALL, Gfx.COLOR_WHITE, [ _s[:pressStart] ] ],
+            [ Gfx.FONT_SMALL, Tema.tinta(), [ _s[:pressStart] ] ],
             // La configuracion: verde lo que esta puesto, gris lo que no.
             [ xt, null, [ _s[:meta], _estado.autoLap, :meta,
                           _s[:km], _estado.autoLapKm, :km ] ],
             [ xt, null, [ "LAP", !_estado.lapApagado, :lap,
                           _s[:vibra], _estado.vibracion, :vibra,
                           _s[:sonido], _estado.sonido, :sonido ] ],
-            [ xt, _gpsListo() ? Gfx.COLOR_GREEN : Gfx.COLOR_LT_GRAY,
+            [ xt, _gpsListo() ? Tema.verde() : Tema.tenue(),
               [ _gpsListo() ? _s[:gpsReady] : _s[:gpsWait] ] ]
         ];
 
@@ -195,7 +195,7 @@ class StartView extends Ui.View {
         var x = cx - (ancho / 2);
         for (var i = 0; i < items.size(); i += 3) {
             var largo = dc.getTextWidthInPixels(items[i], fuente);
-            dc.setColor(items[i + 1] ? Gfx.COLOR_GREEN : Gfx.COLOR_LT_GRAY,
+            dc.setColor(items[i + 1] ? Tema.verde() : Tema.tenue(),
                         Gfx.COLOR_TRANSPARENT);
             dc.drawText(x, cy, fuente, items[i],
                         Gfx.TEXT_JUSTIFY_LEFT | Gfx.TEXT_JUSTIFY_VCENTER);

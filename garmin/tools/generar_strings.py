@@ -143,6 +143,12 @@ TABLA = {
     # Los tonos de la actividad: campana, marca y corral. El ajuste de
     # Sonidos del sistema del reloj manda por encima.
     "settingSound":     ("Sound",                   "Sonido",              "Son",                  "Ton",                   "Suono",                "Som"),
+    # El fondo de la esfera: oscuro (de fabrica) o claro. En el telefono es
+    # una lista; en el reloj, un ajuste que al tocarlo pasa al otro y lo
+    # dice en el sub-rotulo. Lo pidio un usuario con Forerunner 255 (MIP).
+    "settingTheme":     ("Background",              "Fondo",               "Fond",                 "Hintergrund",           "Sfondo",               "Fundo"),
+    "themeDark":        ("Dark",                    "Oscuro",              "Sombre",               "Dunkel",                "Scuro",                "Escuro"),
+    "themeLight":       ("Light",                   "Claro",               "Clair",                "Hell",                  "Chiaro",               "Claro"),
     # Acerca de: version y QR al sitio del evento.
     "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 
