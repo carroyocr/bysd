@@ -98,7 +98,7 @@
         <tr role="row"><th role="columnheader">Ajuste</th><th role="columnheader">Qué hace</th><th role="columnheader">De fábrica</th></tr>
       </thead>
       <tbody role="rowgroup">
-        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qué hace">Fija la hora del día a la que suena la campana del yard 1. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De fábrica">Auto</td></tr>
+        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qué hace">Fija la hora del día a la que suena la campana del yard 1. La app la pregunta cada vez que se abre, con la rueda puesta en la siguiente hora en punto. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De fábrica">Auto</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (minutos)</td><td role="cell" data-l="Qué hace">Cuánto dura un yard. De 1 a 120 minutos.</td><td role="cell" class="v" data-l="De fábrica">60</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (km)</td><td role="cell" data-l="Qué hace">Cuánto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kilómetros</strong>.</td><td role="cell" class="v" data-l="De fábrica">6.7</td></tr>
         <tr role="row"><td role="cell" class="k">Aviso de corral</td><td role="cell" data-l="Qué hace">Vibración y tono a los 3, 2 y 1 minuto antes de cada campana.</td><td role="cell" class="v" data-l="De fábrica">Sí</td></tr>
@@ -113,6 +113,8 @@
       </tbody>
     </table>
   </div>
+
+  <p>Al final del menú, <strong>Acerca de</strong> enseña la versión y un QR que abre este manual.</p>
 
   <h3>Hora de salida: Auto o fija</h3>
   <p>Con una <strong>hora fija</strong> —pongamos las 7:00— la campana del yard 1 es esa hora del día, pulses START cuando pulses. Todo lo anterior es calentamiento. Es lo más seguro cuando conoces la hora de salida de tu carrera.</p>
@@ -137,7 +139,7 @@
     <li>
       <div>
         <h3>Abre la app y déjala buscando GPS</h3>
-        <p>Ábrela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos —cualquier botón lo salta— y detrás aparece la <strong>línea de salida</strong>: el yard que vas a correr, con su distancia y sus minutos, y el estado del GPS.</p>
+        <p>Ábrela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos —cualquier botón lo salta— y detrás aparece la <strong>rueda de la hora de salida</strong>, puesta ya en la siguiente hora en punto del reloj: <kbd>UP</kbd> y <kbd>DOWN</kbd> la mueven, <kbd>START</kbd> confirma, el botón de menú deja Auto y <kbd>BACK</kbd> sale de la app. Después viene la <strong>línea de salida</strong>: la hora de salida con su cuenta atrás, el yard que vas a correr, con su distancia y sus minutos, la configuración —en verde lo que está encendido— y el estado del GPS.</p>
         <p>Ábrela con tiempo, en la carpa. El GPS empieza a buscar en cuanto la abres, y lo que tarde en fijar es mejor que lo tarde ahí y no en la salida.</p>
       </div>
     </li>
@@ -145,6 +147,7 @@
       <div>
         <h3>Comprueba lo que dice la pantalla</h3>
         <p>Si arriba no pone lo que mide tu circuito y cuánto dura tu yard, es <em>ahora</em> cuando hay que corregirlo: <kbd>UP</kbd> largo abre los ajustes. Y espera a que abajo aparezca <strong>«GPS listo»</strong> en verde: mientras diga «Buscando GPS» en gris, el reloj todavía no sabe dónde estás.</p>
+        <p>En los táctiles, tocar un ajuste de la configuración lo enciende o apaga, y tocar la hora vuelve a abrir la rueda. Un toque nunca da la salida: eso es solo el botón <kbd>START</kbd>.</p>
       </div>
     </li>
     <li>
@@ -152,6 +155,7 @@
         <h3>Pulsa START</h3>
         <p><kbd>START</kbd> da la salida sin preguntar nada — con la cuenta atrás del director de carrera sonando, un diálogo de confirmación estorba. A partir de ahí el reloj graba.</p>
         <p>Si pulsaste antes de la hora, verás la pantalla de <strong>Calentamiento</strong> con la cuenta atrás hasta tu campana. No es el yard 1: en el archivo de la actividad queda como un tramo aparte y no se suma a tu primer yard.</p>
+        <p>Y si no pulsas, la carrera <strong>arranca sola</strong> al llegar la hora de salida, siempre que la hayas visto por delante en la pantalla. La campana no espera a nadie.</p>
       </div>
     </li>
     <li>
@@ -189,11 +193,11 @@
         <tr role="row"><td role="cell" class="k">LAP</td><td role="cell" data-l="Antes de salir">—</td><td role="cell" data-l="En carrera">Marca el yard terminado</td></tr>
         <tr role="row"><td role="cell" class="k">UP / DOWN</td><td role="cell" data-l="Antes de salir">—</td><td role="cell" data-l="En carrera">Cambia de pantalla</td></tr>
         <tr role="row"><td role="cell" class="k">UP largo</td><td role="cell" data-l="Antes de salir">Ajustes del yard</td><td role="cell" data-l="En carrera">Nada (solo en calentamiento)</td></tr>
-        <tr role="row"><td role="cell" class="k">BACK</td><td role="cell" data-l="Antes de salir">Sale de la app</td><td role="cell" data-l="En carrera">Nada: en carrera no hay retroceso</td></tr>
+        <tr role="row"><td role="cell" class="k">BACK</td><td role="cell" data-l="Antes de salir">Sale de la app (también desde la rueda de la hora)</td><td role="cell" data-l="En carrera">Nada: en carrera no hay retroceso</td></tr>
       </tbody>
     </table>
   </div>
-  <p>En los relojes táctiles, deslizar arriba y abajo hace lo mismo que <kbd>UP</kbd> y <kbd>DOWN</kbd>. Quien corre con guantes usa los botones; quien no, desliza.</p>
+  <p>En los relojes táctiles, deslizar arriba y abajo hace lo mismo que <kbd>UP</kbd> y <kbd>DOWN</kbd>. Quien corre con guantes usa los botones; quien no, desliza. La pantalla nunca da la salida, ni para, ni marca yard: eso es solo cosa de <kbd>START</kbd> y <kbd>LAP</kbd>, para que un roce en la carpa no arranque la carrera.</p>
 </section>
 
 <section id="pantallas">
@@ -368,7 +372,7 @@
     <span class="chip"><span class="dot" style="background:var(--bad)"></span>1 min — rojo pleno</span>
   </div>
 
-  <p>A tres y dos minutos es un aro ancho de color sobre fondo negro: se ve el color de un vistazo con casi toda la pantalla apagada, que en un reloj AMOLED es la esquina de la que sale la batería. Solo el <strong>último minuto</strong> se llena de rojo de esquina a esquina, con la cuenta en negro gigante. Es el aviso más urgente y el más breve, y ahí el gasto se justifica.</p>
+  <p>A tres y dos minutos es un aro ancho de color sobre el fondo —oscuro o claro, según el ajuste Fondo—: se ve el color de un vistazo con casi toda la pantalla en el fondo, que con el fondo oscuro en un reloj AMOLED es la esquina de la que sale la batería. Solo el <strong>último minuto</strong> se llena de rojo de esquina a esquina, con la cuenta en negro gigante. Es el aviso más urgente y el más breve, y ahí el gasto se justifica.</p>
 
   <h3>Avisos que se sienten a ciegas</h3>
   <p>Sin levantar la muñeca sabes cuánto queda, porque cada aviso vibra distinto:</p>

@@ -627,7 +627,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <tbody>
         <tr>
           <td class="k">Start time</td>
-          <td>Sets the time of day the yard 1 bell rings. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
+          <td>Sets the time of day the yard 1 bell rings. The app asks for it every time it opens, with the wheel set to the next full hour. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
           <td class="v">Auto</td>
         </tr>
         <tr>
@@ -689,6 +689,8 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     </table>
   </div>
 
+  <p>At the end of the menu, <strong>About</strong> shows the version and a QR code that opens this manual.</p>
+
   <h3>Start time: Auto or set</h3>
   <p>With a <strong>set time</strong> — say 7:00 — the yard 1 bell is that time of day, no matter when you press START. Everything before it is warm-up. It's the safest option when you know your race's start time.</p>
   <p>On <strong>Auto</strong>, the watch looks at when you press START and decides: if you've just passed an hour mark — within a grace period of one sixth of a yard, capped at 10 minutes — it takes the bell as already rung and puts you in yard 1. Otherwise it counts down to the next mark. Pressing at 8:03 leaves you running the 8:00 yard; pressing at 8:40 leaves you warming up until 9:00.</p>
@@ -712,7 +714,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Open the app and let it find GPS</h3>
-        <p>Open it from the activity list. The emblem fills the screen for five seconds — any button skips it — and behind it comes the <strong>start line</strong>: the yard you're about to run, with its distance and its minutes, and the state of the GPS.</p>
+        <p>Open it from the activity list. The emblem fills the screen for five seconds — any button skips it — and behind it comes the <strong>start time wheel</strong>, already set to the next full hour on the watch: <kbd>UP</kbd> and <kbd>DOWN</kbd> move it, <kbd>START</kbd> confirms, the menu button leaves it on Auto and <kbd>BACK</kbd> leaves the app. Then comes the <strong>start line</strong>: the start time with its countdown, the yard you're about to run, with its distance and its minutes, your settings — green for what's on — and the state of the GPS.</p>
         <p>Open it early, back at the tent. The GPS starts searching the moment you do, and whatever it takes to lock is better spent there than on the line.</p>
       </div>
     </li>
@@ -720,6 +722,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div>
         <h3>Check what the screen says</h3>
         <p>If the top of it doesn't show your loop's distance and your yard's minutes, <em>now</em> is when to fix it: long <kbd>UP</kbd> opens the settings. And wait for <strong>«GPS ready»</strong> in green at the bottom: while it says «Searching GPS» in grey, the watch still doesn't know where you are.</p>
+        <p>On touch watches, tapping a setting turns it on or off, and tapping the time reopens the wheel. A tap never starts the race: only the <kbd>START</kbd> button does.</p>
       </div>
     </li>
     <li>
@@ -727,6 +730,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <h3>Press START</h3>
         <p><kbd>START</kbd> starts the race without asking anything — with the race director counting down out loud, a confirmation dialog is in the way. From there on the watch is recording.</p>
         <p>If you pressed before the hour, you get the <strong>Warm-up</strong> screen counting down to your bell. It is not yard 1: in the activity file it stays in a lap of its own and never gets added to your first yard.</p>
+        <p>And if you don't press, the race <strong>starts on its own</strong> at the start time, as long as you saw it ahead on the screen. The bell waits for no one.</p>
       </div>
     </li>
     <li>
@@ -764,11 +768,11 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <tr><td class="k">LAP</td><td>—</td><td>Marks the yard as done</td></tr>
         <tr><td class="k">UP / DOWN</td><td>—</td><td>Changes screen</td></tr>
         <tr><td class="k">Long UP</td><td>Yard settings</td><td>Nothing (warm-up only)</td></tr>
-        <tr><td class="k">BACK</td><td>Leaves the app</td><td>Nothing: no going back mid-race</td></tr>
+        <tr><td class="k">BACK</td><td>Leaves the app (also from the start time wheel)</td><td>Nothing: no going back mid-race</td></tr>
       </tbody>
     </table>
   </div>
-  <p>On touch watches, swiping up and down does the same as <kbd>UP</kbd> and <kbd>DOWN</kbd>. Run in gloves and you use the buttons; run without and you swipe.</p>
+  <p>On touch watches, swiping up and down does the same as <kbd>UP</kbd> and <kbd>DOWN</kbd>. Run in gloves and you use the buttons; run without and you swipe. The screen never starts, stops or marks a yard: that's only <kbd>START</kbd> and <kbd>LAP</kbd>, so a brush against the tent can't start your race.</p>
 </section>
 
 <section id="pantallas">
@@ -943,7 +947,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <span class="chip"><span class="dot" style="background:var(--bad)"></span>1 min — full red</span>
   </div>
 
-  <p>At three and two minutes it's a wide coloured ring on black: you catch the colour at a glance with most of the screen switched off, which on an AMOLED is where the battery goes. Only the <strong>final minute</strong> floods red edge to edge, with the countdown in giant black. It's the most urgent warning and the shortest, and there the cost is worth it.</p>
+  <p>At three and two minutes it's a wide coloured ring on the background — dark or light, as the Background setting says: you catch the colour at a glance with most of the screen left as background, which with the dark background on an AMOLED is where the battery goes. Only the <strong>final minute</strong> floods red edge to edge, with the countdown in giant black. It's the most urgent warning and the shortest, and there the cost is worth it.</p>
 
   <h3>Warnings you can feel blind</h3>
   <p>You know how long is left without lifting your wrist, because each warning buzzes differently:</p>
