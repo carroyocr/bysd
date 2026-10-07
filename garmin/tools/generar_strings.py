@@ -126,6 +126,9 @@ TABLA = {
     # el dibujo, que si obedece a la unidad del reloj: un ajuste que cambiara
     # de unidad no podria tener un valor por defecto correcto para todos.
     "settingLapDistance":("Yard distance (km)",     "Yard (km)",           "Yard (km)",            "Yard-Länge (km)",       "Yard (km)",            "Yard (km)"),
+    # El margen de seguridad: minutos que se restan al margen antes de
+    # ensenarlo. Lo pidio el usuario del Forerunner 255 (su "margin offset").
+    "settingMarginReserve": ("Safety margin (minutes)", "Margen de seguridad (minutos)", "Marge de sécurité (minutes)", "Sicherheitspuffer (Minuten)", "Margine di sicurezza (minuti)", "Margem de segurança (minutos)"),
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
     # La vuelta automatica: marcar al llegar a la meta (el punto de salida,
     # que en una backyard es la misma linea), sin boton.

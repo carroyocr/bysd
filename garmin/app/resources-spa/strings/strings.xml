@@ -57,6 +57,7 @@
     <string id="fixedTime">Hora fija</string>
     <string id="settingLapMinutes">Yard (minutos)</string>
     <string id="settingLapDistance">Yard (km)</string>
+    <string id="settingMarginReserve">Margen de seguridad (minutos)</string>
     <string id="settingCorral">Aviso de corral</string>
     <string id="settingAutoLap">Yard auto Meta</string>
     <string id="settingAutoLapKm">Yard auto por distancia</string>

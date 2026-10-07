@@ -34,6 +34,10 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             (estado.duracionVuelta / 60).format("%d") + " min", :duracion, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingLapDistance,
             estado.kmPorVuelta.format("%.1f") + " km", :distancia, null));
+        // El margen de seguridad: minutos que se restan al margen antes de
+        // ensenarlo, para quien quiere llegar con reserva.
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingMarginReserve,
+            (estado.reservaMargen / 60).format("%d") + " min", :reserva, null));
         // Las vueltas automaticas y el LAP apagado son interruptores; el
         // check muestra el estado.
         menu.addItem(new Ui.ToggleMenuItem(Rez.Strings.settingAutoLap, null,
@@ -113,6 +117,8 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             _abrirRueda(:minutos);
         } else if (id == :distancia) {
             _abrirRueda(:km);
+        } else if (id == :reserva) {
+            _abrirRueda(:reserva);
         } else if (id == :autoLap || id == :autoLapKm || id == :lapOff
                    || id == :vibracion || id == :sonido) {
             // El ToggleMenuItem ya cambio su check al tocarlo; se guarda en la
@@ -155,6 +161,10 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             factory = new NumeroFactory(1, 120, 1, 0, "min");
             titulo = Ui.loadResource(Rez.Strings.settingLapMinutes);
             actual = _estado.duracionVuelta / 60;
+        } else if (cual == :reserva) {
+            factory = new NumeroFactory(0, 60, 1, 0, "min");
+            titulo = Ui.loadResource(Rez.Strings.settingMarginReserve);
+            actual = _estado.reservaMargen / 60;
         } else {
             factory = new NumeroFactory(1.0, 20.0, 0.1, 1, "km");
             titulo = Ui.loadResource(Rez.Strings.settingLapDistance);
@@ -750,6 +760,8 @@ class NumeroPickerDelegate {
         var v = valores[0] as Lang.Float;
         if (_cual == :minutos) {
             App.Properties.setValue("lapMinutes", v.toNumber());
+        } else if (_cual == :reserva) {
+            App.Properties.setValue("marginReserve", v.toNumber());
         } else {
             App.Properties.setValue("lapDistance", v.toFloat());
         }

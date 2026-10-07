@@ -528,7 +528,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
 <header class="hero">
   <div>
-    <p class="eyebrow">Manual del corredor &#183; versi&#243;n 1.9.2</p>
+    <p class="eyebrow">Manual del corredor &#183; versi&#243;n 1.10.0</p>
     <h1>Backyard</h1>
     <p class="sub">Tu yard, tu ritmo y cu&#225;nto vas a poder descansar.</p>
     <p class="lede">Una app de reloj Garmin para correr una backyard ultra &#8212;la que sea&#8212;. Graba tu actividad, ancla las campanas a la hora en punto y te dice, en cada yard, si al ritmo que llevas vas a llegar a tiempo para sentarte. Funciona sin servidor, sin dorsal y sin conexi&#243;n.</p>
@@ -619,13 +619,14 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qu&#233; hace">Fija la hora del d&#237;a a la que suena la campana del yard 1. La app la pregunta cada vez que se abre, con la rueda puesta en la siguiente hora en punto. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De f&#225;brica">Auto</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (minutos)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto dura un yard. De 1 a 120 minutos.</td><td role="cell" class="v" data-l="De f&#225;brica">60</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (km)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kil&#243;metros</strong>.</td><td role="cell" class="v" data-l="De f&#225;brica">6.7</td></tr>
+        <tr role="row"><td role="cell" class="k">Margen de seguridad</td><td role="cell" data-l="Qu&#233; hace">Minutos que quieres reservar. Se restan al margen antes de ense&#241;arlo y de colorearlo: con 5, un &#171;+0:00&#187; significa que llegas con cinco minutos justos. De 0 a 60.</td><td role="cell" class="v" data-l="De f&#225;brica">0</td></tr>
         <tr role="row"><td role="cell" class="k">Aviso de corral</td><td role="cell" data-l="Qu&#233; hace">Vibraci&#243;n y tono a los 3, 2 y 1 minuto antes de cada campana.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Yard auto Meta</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al volver al punto de salida, por GPS.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Yard auto por distancia</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al completar su distancia.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
         <tr role="row"><td role="cell" class="k">Apagar bot&#243;n LAP</td><td role="cell" data-l="Qu&#233; hace">Para quien va totalmente autom&#225;tico y no quiere marcar por un roce. Las marcas autom&#225;ticas siguen funcionando.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
         <tr role="row"><td role="cell" class="k">Vibraci&#243;n</td><td role="cell" data-l="Qu&#233; hace">Apaga todas las vibraciones: campanas, marcas y corral.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Sonido</td><td role="cell" data-l="Qu&#233; hace">Apaga todos los tonos. Obedece adem&#225;s a los Sonidos del sistema.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
-        <tr role="row"><td role="cell" class="k">Fondo</td><td role="cell" data-l="Qu&#233; hace">Oscuro o claro. En los relojes de pantalla MIP (Forerunner 255 y 955, f&#275;nix 7, Instinct) el claro se lee mejor a plena luz; en los AMOLED el oscuro gasta menos bater&#237;a.</td><td role="cell" class="v" data-l="De f&#225;brica">Oscuro</td></tr>
+        <tr role="row"><td role="cell" class="k">Fondo</td><td role="cell" data-l="Qu&#233; hace">Oscuro o claro. En los relojes de pantalla MIP (Forerunner 255 y 955, f&#275;nix 7, Instinct) el claro se lee mejor a plena luz, y en ellos todo el texto va en tinta pura, sin grises; en los AMOLED el oscuro gasta menos bater&#237;a.</td><td role="cell" class="v" data-l="De f&#225;brica">Oscuro</td></tr>
         <tr role="row"><td role="cell" class="k">Tama&#241;o de texto</td><td role="cell" data-l="Qu&#233; hace">Normal o grande. Con grande, r&#243;tulos y cifras suben una talla donde caben; en las esferas peque&#241;as lo que no cabe se queda en la talla normal.</td><td role="cell" class="v" data-l="De f&#225;brica">Normal</td></tr>
         <tr role="row"><td role="cell" class="k">Pantallas de carrera</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;les se ven y en qu&#233; orden. Ver abajo.</td><td role="cell" class="v" data-l="De f&#225;brica">Las seis</td></tr>
       </tbody>
@@ -738,7 +739,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <h3>Margen</h3>
       <p>La raz&#243;n de ser de la app. La cifra grande es el tiempo que te va a <strong>sobrar</strong> &#8212;o faltar&#8212; para cerrar el circuito antes de la campana, al ritmo que llevas. En <span style="color:var(--ok)"><strong>verde</strong></span> descansas; en <span style="color:var(--bad)"><strong>rojo</strong></span>, aprieta.</p>
       <p>Los dos aros cuentan lo mismo sin leer un d&#237;gito: el de fuera, gris, es el <strong>tiempo</strong> consumido del yard; el de dentro, en color, la <strong>distancia</strong> recorrida. Si el de dentro adelanta al de fuera, llegas antes de la campana.</p>
-      <p>Debajo, lo hecho contra el objetivo con tu ritmo actual, y lo que falta con lo que va a costarte.</p>
+      <p>Debajo, lo hecho contra el objetivo con tu ritmo de <strong>ahora mismo</strong> &#8212;el de los &#250;ltimos metros, no el medio del yard: quien va a tramos de correr y caminar quiere ver a cu&#225;nto va en este tramo&#8212;, y lo que falta con lo que va a costarte. Si tienes puesto un margen de seguridad, la cifra grande ya lo lleva descontado.</p>
     </div>
   </div>
 
@@ -961,6 +962,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>Positivo es descanso previsto. Negativo es que a ese ritmo no llegas.</p>
 
   <h3>El ritmo que se ense&#241;a no es el que se multiplica</h3>
+  <p>En la pantalla de Margen el ritmo que se lee es el de ahora mismo. El que se multiplica por lo que falta es otro, el del yard, asentado, porque es el que decide si llegas.</p>
   <p>Con trescientos metros hechos, tu ritmo del yard todav&#237;a da tumbos, y multiplicarlo por los seis kil&#243;metros que faltan har&#237;a saltar el margen minutos enteros de una zancada a otra. Antes la app resolv&#237;a eso call&#225;ndose: no hab&#237;a margen hasta el primer kil&#243;metro, ocho minutos de cada hora sin la cifra que m&#225;s importa.</p>
   <p>Ahora se apoya en un dato mejor. Al abrir el yard, lo que mejor predice tu ritmo no es el yard &#8212;que no tiene nada&#8212; sino <strong>lo que llevas corriendo todo el d&#237;a</strong>. As&#237; que para proyectar se mezclan los dos, pesando por la distancia recorrida:</p>
   <ul>
@@ -1048,7 +1050,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <div class="table-wrap">
     <table role="table">
       <tbody role="rowgroup">
-        <tr role="row"><td role="cell" class="k">Versi&#243;n</td><td role="cell">1.9.2 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
+        <tr role="row"><td role="cell" class="k">Versi&#243;n</td><td role="cell">1.10.0 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
         <tr role="row"><td role="cell" class="k">Relojes</td><td role="cell">111 modelos: f&#275;nix (hasta la generaci&#243;n 9), epix, Forerunner, Venu, v&#237;voactive, Instinct AMOLED, MARQ, Descent, D2 y Approach</td></tr>
         <tr role="row"><td role="cell" class="k">Permisos</td><td role="cell">Grabaci&#243;n de actividad (FIT) y posici&#243;n (GPS)</td></tr>
         <tr role="row"><td role="cell" class="k">Red</td><td role="cell">Ninguna. No sale a internet, no manda datos y no necesita el tel&#233;fono para correr</td></tr>
@@ -1071,7 +1073,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 </section>
 
 <footer>
-  <span>Backyard 1.9.2 &#183; manual en espa&#241;ol</span>
+  <span>Backyard 1.10.0 &#183; manual en espa&#241;ol</span>
   <span>Connect IQ Store &#183; apps.garmin.com</span>
   <span>backyardultrasantodomingo.com</span>
 </footer>

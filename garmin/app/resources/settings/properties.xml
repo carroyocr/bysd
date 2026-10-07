@@ -21,6 +21,9 @@
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
+    <!-- Margen de seguridad, en minutos: se resta al margen calculado antes
+         de ensenarlo y de colorearlo. Cero de fabrica. -->
+    <property id="marginReserve" type="number">0</property>
     <!-- La meta automatica viene puesta: en una backyard el circuito acaba
          donde empezo, y marcar a mano treinta veces es treinta ocasiones de
          olvidarlo. El boton LAP sigue funcionando igual para el que prefiera

@@ -1,5 +1,6 @@
 using Toybox.Application as App;
 using Toybox.Graphics as Gfx;
+using Toybox.System as Sys;
 
 // El tema de la esfera: fondo oscuro o fondo claro.
 //
@@ -33,9 +34,21 @@ module Tema {
     var claro = false;
     var grande = false;
 
+    // Si la pantalla es AMOLED. Lo dice el reloj: solo las AMOLED piden
+    // proteccion contra el quemado. En las MIP -Forerunner 255 y 955, fenix
+    // de antes del 8, Instinct- los grises se ven lavados, y el texto va
+    // siempre en tinta pura: lo pidio el usuario del 255 tras probar la
+    // 1.9.0, donde el gris medio seguia costando. En los relojes viejos que
+    // no traen el dato (fenix 5, Connect IQ 3.1) se asume MIP, que es lo
+    // que son.
+    var amoled = false;
+
     function leer() {
         claro = (_propiedad("theme") == CLARO);
         grande = (_propiedad("textSize") == GRANDE);
+        var ds = Sys.getDeviceSettings();
+        amoled = (ds has :requiresBurnInProtection)
+              && ds.requiresBurnInProtection == true;
     }
 
     function _propiedad(clave) {
@@ -92,9 +105,11 @@ module Tema {
         return claro ? Gfx.COLOR_BLACK : Gfx.COLOR_WHITE;
     }
 
-    // La tinta secundaria: rotulos y lineas de contexto. Sobre negro era el
-    // gris claro; sobre blanco es el oscuro.
+    // La tinta secundaria: rotulos y lineas de contexto. En AMOLED es un
+    // gris -claro sobre negro, oscuro sobre blanco- que da jerarquia; en
+    // MIP es la tinta misma, porque alli el gris no se lee.
     function tenue() {
+        if (!amoled) { return tinta(); }
         return claro ? Gfx.COLOR_DK_GRAY : Gfx.COLOR_LT_GRAY;
     }
 
@@ -105,6 +120,11 @@ module Tema {
     // (Forerunner 255, primera prueba de la 1.8.0). El texto secundario va
     // siempre en tenue().
     function apagado() {
+        if (!amoled) {
+            // En MIP, un punto mas fuerte: el gris oscuro sobre negro no
+            // existe en esa pantalla.
+            return claro ? Gfx.COLOR_DK_GRAY : Gfx.COLOR_LT_GRAY;
+        }
         return claro ? Gfx.COLOR_LT_GRAY : Gfx.COLOR_DK_GRAY;
     }
 

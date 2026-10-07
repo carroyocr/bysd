@@ -1,11 +1,33 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 7 de octubre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 8 de octubre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.10.0, lista para subir
+
+Segunda ronda de Denis (Forerunner 255) con la 1.9.x, 7 de octubre de 2026.
+Cinco cosas:
+
+- **En MIP, el texto va en tinta pura.** El reloj dice si su pantalla pide
+  protección contra el quemado (solo las AMOLED); en las demás `Tema.tenue()`
+  devuelve la tinta y `apagado()` sube un punto. Las AMOLED conservan sus dos
+  grises. El aro del tiempo del Margen va en tinta en MIP por lo mismo.
+- **Las páginas de una cifra suben la cifra** (Yard, Margen, Total, Reloj) y
+  bajan las dos líneas de contexto hacia la mitad de la esfera, donde la
+  cuerda es ancha: así el texto grande también les llega a ellas. Las
+  pantallas que se imponen (corral, descanso, aviso, calentamiento) siguen
+  con la cifra en el centro.
+- **El Margen enseña el ritmo actual**, no el medio del yard; el cálculo del
+  margen sigue con el medio asentado, que es el que decide si se llega.
+- **Ajuste «Margen de seguridad»** (minutos, 0 a 60, de fábrica 0): se resta
+  al margen antes de enseñarlo y colorearlo. En `RaceState.margenSegundos`,
+  compartido con el campo de datos. También en el menú del reloj.
+- Con el texto grande, la línea del Margen pierde la unidad del ritmo para
+  caber.
 
 ## Estado — la 1.9.2, para alinear el número con la tienda
 
@@ -187,6 +209,30 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.10.0 (para el campo "What's New")
+
+**ES**
+
+> - Nuevo ajuste «Margen de seguridad»: los minutos que quieras reservar se
+>   restan al margen antes de enseñarlo.
+> - La pantalla de Margen enseña el ritmo actual, no el medio del yard.
+> - En relojes de pantalla MIP (Forerunner 255/955, fēnix 7, Instinct) todo
+>   el texto va en tinta pura, sin grises.
+> - Las pantallas de una cifra suben la cifra y dan más sitio a las líneas de
+>   abajo, que con el texto grande ahora también crecen.
+
+**EN**
+
+> - New «Safety margin» setting: the minutes you want in reserve are taken
+>   off the margin before it is shown.
+> - The Margin screen shows your current pace instead of the yard average.
+> - On MIP displays (Forerunner 255/955, fēnix 7, Instinct) all text is pure
+>   ink, no greys.
+> - Single-figure screens move the figure up and make room for the lines
+>   below, which now grow with the large text setting too.
 
 ---
 

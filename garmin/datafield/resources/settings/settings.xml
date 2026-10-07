@@ -11,6 +11,9 @@
     <setting propertyKey="@Properties.lapDistance" title="@Strings.settingLapDistance">
         <settingConfig type="numeric" min="0.1" max="200"/>
     </setting>
+    <setting propertyKey="@Properties.marginReserve" title="@Strings.settingMarginReserve">
+        <settingConfig type="numeric" min="0" max="60"/>
+    </setting>
     <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
         <settingConfig type="boolean"/>
     </setting>

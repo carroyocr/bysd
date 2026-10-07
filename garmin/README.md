@@ -307,6 +307,7 @@ millas aunque tenga el reloj en español.
 |---|---|---|
 | Vuelta (minutos) | Cuánto dura una vuelta | 60 |
 | Vuelta (km) | Cuánto mide, **siempre en kilómetros** | 6.7 |
+| Margen de seguridad (min) | Se resta al margen antes de enseñarlo y colorearlo | 0 |
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
 | Yard auto Meta | Marcar el LAP solo al llegar al punto de salida | **sí** |
 | Fondo | Oscuro o claro. El claro es para las pantallas MIP, donde el negro se ve apagado | oscuro |
