@@ -1,5 +1,7 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
+using Toybox.System as Sys;
+using Toybox.Math as Math;
 
 // Acerca de: el nombre con la version, una invitacion a un cafe y el QR de
 // Buy Me a Coffee. La app es gratis y lo seguira siendo; el QR es para
@@ -10,13 +12,15 @@ using Toybox.Graphics as Gfx;
 // Connect IQ no deja leerla del manifiesto en tiempo de ejecucion. El QR va
 // como bitmap en los recursos (lo genera segno, con su zona quieta blanca)
 // porque dibujar un QR modulo a modulo en la esfera seria memoria y codigo
-// para algo que no cambia nunca.
+// para algo que no cambia nunca. Hay uno por familia de pantalla, ya a la
+// medida de su esfera (monkey.jungle): con uno solo de 222 px el Forerunner
+// 255 lo cortaba por abajo, porque el escalado en el reloj no actuo.
 class AcercaView extends Ui.View {
 
     static const VERSION = "1.9.0";
-    // La URL va partida en dos lineas: entera no cabe en la parte baja de
-    // la esfera redonda (probado en el fenix 8 con la del sitio, que se
-    // cortaba por los lados; esta es mas larga aun).
+    // La URL va debajo del QR, en la fuente mas chica: entera si cabe en
+    // la cuerda de la esfera a esa altura, en dos lineas si no, y nada si
+    // tampoco. El QR es el que resuelve; esto es la referencia legible.
     static const WEB1 = "buymeacoffee.com";
     static const WEB2 = "/carroyo";
 
@@ -47,30 +51,55 @@ class AcercaView extends Ui.View {
 
         // El nombre y la version en una linea, para dejarle la segunda a la
         // invitacion. En XTINY: en SMALL no cabia en la esfera de 218 px.
-        _txt(dc, cx, h * 12 / 100, Gfx.FONT_XTINY, Tema.tinta(),
+        _txt(dc, cx, h * 10 / 100, Gfx.FONT_XTINY, Tema.tinta(),
              "Backyard v" + VERSION);
-        _txt(dc, cx, h * 21 / 100, Gfx.FONT_XTINY, Tema.tenue(), _cafe);
+        _txt(dc, cx, h * 19 / 100, Gfx.FONT_XTINY, Tema.tenue(), _cafe);
 
-        // El QR centrado, a su tamano si cabe; en relojes chicos se encoge
-        // a poco mas de media esfera, que un telefono lee igual.
-        var y = h * 28 / 100;
+        // El QR centrado, al tamano que trae su recurso, que ya es el de
+        // esta familia de pantalla. El tope es una red por si un reloj nuevo
+        // cae en una familia que le queda grande.
+        var y = h * 25 / 100;
         if (_qr != null) {
             var lado = _qr.getWidth();
-            var maximo = (w < h ? w : h) * 55 / 100;
+            var maximo = (w < h ? w : h) * 60 / 100;
             if (lado > maximo && (dc has :drawScaledBitmap)) {
                 dc.drawScaledBitmap(cx - (maximo / 2), y, maximo, maximo, _qr);
-                y += maximo;
+                lado = maximo;
             } else {
                 dc.drawBitmap(cx - (lado / 2), y, _qr);
-                y += lado;
+            }
+            y += lado;
+        }
+
+        // La fuente de glances es la mas chica del reloj; donde no exista,
+        // la minima estandar.
+        var fuente = (Gfx has :FONT_GLANCE) ? Gfx.FONT_GLANCE : Gfx.FONT_XTINY;
+        var alto = dc.getFontHeight(fuente);
+        var y1 = y + (alto * 70 / 100);
+        if (dc.getTextWidthInPixels(WEB1 + WEB2, fuente) <= _cuerda(dc, y1, fuente)) {
+            _txt(dc, cx, y1, fuente, Tema.tenue(), WEB1 + WEB2);
+        } else {
+            var y2 = y1 + alto;
+            if (dc.getTextWidthInPixels(WEB1, fuente) <= _cuerda(dc, y1, fuente)
+                && dc.getTextWidthInPixels(WEB2, fuente) <= _cuerda(dc, y2, fuente)) {
+                _txt(dc, cx, y1, fuente, Tema.tenue(), WEB1);
+                _txt(dc, cx, y2, fuente, Tema.tenue(), WEB2);
             }
         }
-        // La fuente de glances es la mas chica del reloj; donde no exista,
-        // la minima estandar. El QR es el que resuelve: esto es apenas la
-        // referencia legible.
-        var fuente = (Gfx has :FONT_GLANCE) ? Gfx.FONT_GLANCE : Gfx.FONT_XTINY;
-        _txt(dc, cx, y + (h * 4 / 100), fuente, Tema.tenue(), WEB1);
-        _txt(dc, cx, y + (h * 10 / 100), fuente, Tema.tenue(), WEB2);
+    }
+
+    // El ancho util de una linea centrada en y: la cuerda de la esfera en el
+    // borde del texto mas alejado del centro, con algo de aire. En pantallas
+    // no redondas, el ancho entero. (Igual que en MainView.)
+    function _cuerda(dc, y, fuente) {
+        var w = dc.getWidth();
+        if (Sys.getDeviceSettings().screenShape != Sys.SCREEN_SHAPE_ROUND) {
+            return w;
+        }
+        var r = w / 2;
+        var dy = (y - (dc.getHeight() / 2)).abs() + (dc.getFontHeight(fuente) / 2);
+        if (dy >= r) { return 0; }
+        return (2 * Math.sqrt((r * r) - (dy * dy))).toNumber() - (w * 6 / 100);
     }
 
     function _txt(dc, x, y, fuente, color, texto) {

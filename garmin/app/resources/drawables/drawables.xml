@@ -8,7 +8,10 @@
     <bitmap id="Emblema" filename="emblema.png"/>
     <!-- El QR de Acerca de: lleva a buymeacoffee.com/carroyo (hasta la
          1.8.0, al sitio del evento). Lo genera segno con zona quieta blanca
-         incluida, 222 px; es igual en todas las tallas, y AcercaView lo
-         encoge si no cabe. -->
+         incluida, y hay uno por familia de pantalla, como el emblema: este,
+         de 148 px (escala 4), para las esferas de 240 a 360; resources-small
+         y resources-large traen el suyo. Un solo QR de 222 px se cortaba por
+         abajo en el Forerunner 255 (260 px): el escalado en el reloj no es
+         de fiar y la medida la decide el recurso. -->
     <bitmap id="QrWeb" filename="qr_web.png"/>
 </drawables>
