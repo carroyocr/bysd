@@ -67,6 +67,9 @@
     <string id="settingTheme">Background</string>
     <string id="themeDark">Dark</string>
     <string id="themeLight">Light</string>
+    <string id="settingTextSize">Text size</string>
+    <string id="textNormal">Normal</string>
+    <string id="textLarge">Large</string>
     <string id="settingAbout">About</string>
     <string id="settingScreens">Race screens</string>
     <string id="screenData">Total data</string>

@@ -66,6 +66,9 @@
     <string id="settingTheme">Fundo</string>
     <string id="themeDark">Escuro</string>
     <string id="themeLight">Claro</string>
+    <string id="settingTextSize">Tamanho do texto</string>
+    <string id="textNormal">Normal</string>
+    <string id="textLarge">Grande</string>
     <string id="settingAbout">Sobre</string>
     <string id="settingScreens">Ecrãs de prova</string>
     <string id="screenData">Dados totais</string>

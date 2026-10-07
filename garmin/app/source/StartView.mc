@@ -4,6 +4,8 @@ using Toybox.Position as Position;
 using Toybox.Application as App;
 using Toybox.Time as Time;
 using Toybox.Lang as Lang;
+using Toybox.System as Sys;
+using Toybox.Math as Math;
 
 // La linea de salida.
 //
@@ -136,7 +138,15 @@ class StartView extends Ui.View {
         // Todo va apilado y centrado, con el alto real de cada fuente: en una
         // esfera de 218 px y en una de 454 las mismas proporciones no dejan
         // el mismo aire, y medido no se monta ninguna linea.
-        var xt = Gfx.FONT_XTINY;
+        // Los rotulos suben de talla con el ajuste de texto grande, salvo
+        // que la pila entera deje de caber en la esfera: entonces se quedan
+        // como siempre. La hora ya va en LARGE y no sube.
+        var xt = Tema.fuente(Gfx.FONT_XTINY);
+        if (xt != Gfx.FONT_XTINY
+            && (6 * dc.getFontHeight(xt)) + dc.getFontHeight(Gfx.FONT_LARGE)
+               + dc.getFontHeight(Gfx.FONT_SMALL) > h * 90 / 100) {
+            xt = Gfx.FONT_XTINY;
+        }
         var filas = [
             [ xt, Tema.tenue(), [ _s[:titulo] ] ],
             [ Gfx.FONT_LARGE, Tema.tinta(), [ hora ], :hora ],
@@ -186,12 +196,14 @@ class StartView extends Ui.View {
     // no tenga que acertar la letra.
     function _interruptores(dc, cx, cy, alto, fuente, trios) {
         var items = trios as Lang.Array;
-        var hueco = dc.getTextWidthInPixels("  ", fuente);
-        var ancho = 0;
-        for (var i = 0; i < items.size(); i += 3) {
-            if (i > 0) { ancho += hueco; }
-            ancho += dc.getTextWidthInPixels(items[i], fuente);
+        var ancho = _anchoDe(dc, items, fuente);
+        // Con el texto grande, si la fila no cabe en la cuerda a esa
+        // altura, vuelve a la talla de siempre.
+        if (fuente != Gfx.FONT_XTINY && ancho > _cuerda(dc, cy, fuente)) {
+            fuente = Gfx.FONT_XTINY;
+            ancho = _anchoDe(dc, items, fuente);
         }
+        var hueco = dc.getTextWidthInPixels("  ", fuente);
         var x = cx - (ancho / 2);
         for (var i = 0; i < items.size(); i += 3) {
             var largo = dc.getTextWidthInPixels(items[i], fuente);
@@ -205,14 +217,45 @@ class StartView extends Ui.View {
         }
     }
 
+    // Lo que mide una fila de trios a lo ancho, con sus huecos.
+    function _anchoDe(dc, items as Lang.Array, fuente) {
+        var hueco = dc.getTextWidthInPixels("  ", fuente);
+        var ancho = 0;
+        for (var i = 0; i < items.size(); i += 3) {
+            if (i > 0) { ancho += hueco; }
+            ancho += dc.getTextWidthInPixels(items[i], fuente);
+        }
+        return ancho;
+    }
+
+    // El ancho util de una linea centrada en y: la cuerda de la esfera en el
+    // borde del texto mas alejado del centro, con algo de aire. En pantallas
+    // no redondas, el ancho entero. (Igual que en MainView.)
+    function _cuerda(dc, y, fuente) {
+        var w = dc.getWidth();
+        if (Sys.getDeviceSettings().screenShape != Sys.SCREEN_SHAPE_ROUND) {
+            return w;
+        }
+        var r = w / 2;
+        var dy = (y - (dc.getHeight() / 2)).abs() + (dc.getFontHeight(fuente) / 2);
+        if (dy >= r) { return 0; }
+        return (2 * Math.sqrt((r * r) - (dy * dy))).toNumber() - (w * 6 / 100);
+    }
+
     function _gpsListo() {
         var info = Position.getInfo();
         return info != null && info.accuracy != null
             && info.accuracy >= Position.QUALITY_USABLE;
     }
 
+    // Un rotulo que subio de talla y no cabe en la cuerda vuelve a XTINY:
+    // mejor pequeno que cortado.
     function _txt(dc, x, y, fuente, color, texto) {
         if (texto == null) { return; }
+        if (fuente == Gfx.FONT_TINY
+            && dc.getTextWidthInPixels(texto, fuente) > _cuerda(dc, y, fuente)) {
+            fuente = Gfx.FONT_XTINY;
+        }
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.drawText(x, y, fuente, texto,
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);

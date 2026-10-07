@@ -149,6 +149,11 @@ TABLA = {
     "settingTheme":     ("Background",              "Fondo",               "Fond",                 "Hintergrund",           "Sfondo",               "Fundo"),
     "themeDark":        ("Dark",                    "Oscuro",              "Sombre",               "Dunkel",                "Scuro",                "Escuro"),
     "themeLight":       ("Light",                   "Claro",               "Clair",                "Hell",                  "Chiaro",               "Claro"),
+    # El tamano de texto: normal o grande. Lo pidio el mismo usuario del
+    # Forerunner 255: a 260 px la fuente minima de los rotulos se queda corta.
+    "settingTextSize":  ("Text size",               "Tamaño de texto",     "Taille du texte",      "Textgröße",             "Dimensione testo",     "Tamanho do texto"),
+    "textNormal":       ("Normal",                  "Normal",              "Normale",              "Normal",                "Normale",              "Normal"),
+    "textLarge":        ("Large",                   "Grande",              "Grand",                "Groß",                  "Grande",               "Grande"),
     # Acerca de: version y QR al sitio del evento.
     "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 

@@ -66,6 +66,9 @@
     <string id="settingTheme">Hintergrund</string>
     <string id="themeDark">Dunkel</string>
     <string id="themeLight">Hell</string>
+    <string id="settingTextSize">Textgröße</string>
+    <string id="textNormal">Normal</string>
+    <string id="textLarge">Groß</string>
     <string id="settingAbout">Info</string>
     <string id="settingScreens">Rennseiten</string>
     <string id="screenData">Gesamtdaten</string>

@@ -49,6 +49,14 @@
             <listEntry value="1">@Strings.themeLight</listEntry>
         </settingConfig>
     </setting>
+    <!-- El tamano de texto. En las esferas chicas (260 px del Forerunner
+         255) la fuente minima de los rotulos se queda corta. -->
+    <setting propertyKey="@Properties.textSize" title="@Strings.settingTextSize">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.textNormal</listEntry>
+            <listEntry value="1">@Strings.textLarge</listEntry>
+        </settingConfig>
+    </setting>
 
     <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0
          como "oculta". La etiqueta de cada ajuste lo explica; los empates los

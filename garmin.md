@@ -1,9 +1,10 @@
 # Garmin — lo que queda
 
-**Pendiente a 6 de octubre de 2026: subir la 1.8.0 a la tienda**
-(`garmin/build/backyard.iq`, ya en `main`). Trae el **fondo claro** —ajuste
-«Fondo», pedido por un usuario con Forerunner 255—. La 1.6.0 y la 1.7.0
-(hora de salida al abrir, arranque solo, táctil) **sí se publicaron** en
+**Pendiente a 7 de octubre de 2026: subir la 1.9.0 a la tienda**
+(`garmin/build/backyard.iq`). Trae el ajuste «Tamaño de texto» y el texto
+secundario en gris medio, por la primera prueba de Denis (Forerunner 255)
+con la 1.8.0, la del **fondo claro**, publicada el 6 de octubre. La 1.6.0 y
+la 1.7.0 (hora de salida al abrir, arranque solo, táctil) salieron en
 septiembre. Las novedades ES/EN están en `garmin/PUBLICAR.md`.
 
 Estado a 27 de agosto de 2026. La **1.4.0 está publicada** en la Connect IQ
