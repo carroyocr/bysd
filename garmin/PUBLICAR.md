@@ -9,12 +9,11 @@ abajo por si algún día cambia la decisión.
 
 ## Estado — la 1.8.0, lista para empaquetar y subir
 
-La **1.8.0** absorbe a la 1.7.0, que se empaquetó el 19 de septiembre y no
-llegó a subirse, y le suma el **fondo claro**: un ajuste nuevo, «Fondo»
-(oscuro o claro), en Garmin Connect y en el menú del reloj. Lo pidió Denis,
-un usuario de la tienda con Forerunner 255 (pantalla MIP, donde el negro se
-ve apagado), el 6 de octubre de 2026. Al subir, las novedades de la 1.8.0
-de abajo llevan también las de la 1.7.0: nada de aquello salió a la tienda.
+La **1.8.0** trae el **fondo claro**: un ajuste nuevo, «Fondo» (oscuro o
+claro), en Garmin Connect y en el menú del reloj. Lo pidió Denis, un
+usuario de la tienda con Forerunner 255 (pantalla MIP, donde el negro se ve
+apagado), el 6 de octubre de 2026. Paquete en `build/backyard.iq`: 181
+builds de 111 relojes, sin un solo aviso.
 
 El tema vive en `app/source/Tema.mc`: las vistas no nombran el negro ni el
 blanco, piden fondo, tinta y grises. Los colores con significado (naranja,
@@ -23,15 +22,13 @@ pasa a verde oscuro sobre blanco, y el amarillo del corral se escribe en
 tinta, porque amarillo sobre blanco no se lee. El emblema de arranque se
 queda sobre negro: el bitmap lo trae pintado.
 
-## Estado — la 1.7.0, empaquetada y sin subir (absorbida por la 1.8.0)
+## Estado — la 1.7.0, publicada
 
-La **1.7.0** está compilada en `build/backyard.iq`: los mismos **181 builds de
-111 relojes**, sin un solo aviso. Sustituye a la 1.6.0, que se empaquetó el 18
-de septiembre y trae todo lo de aquella (la hora de salida al abrir y el
-arranque solo) más el manejo de los relojes táctiles: la pantalla solo mueve
-la rueda, enciende ajustes o cambia de pantalla, y START y LAP son solo los
-botones. Falta subirla desde el panel del portal (abriendo la app en la lista,
-no por «Upload an App»).
+La **1.7.0 salió a la Connect IQ Store** (septiembre de 2026): **181 builds de
+111 relojes**, sin un solo aviso. Siguió a la 1.6.0, que también se publicó
+(la hora de salida al abrir y el arranque solo), y le sumó el manejo de los
+relojes táctiles: la pantalla solo mueve la rueda, enciende ajustes o cambia
+de pantalla, y START y LAP son solo los botones.
 
 **Lo que se aprendió del táctil, medido en el simulador del fēnix 8:** un
 toque llega PRIMERO como `onSelect` (el START) y deslizar a la derecha como
@@ -157,48 +154,30 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ## Novedades de la versión 1.8.0 (para el campo "What's New")
 
-Incluye lo de la 1.7.0 y la 1.6.0, que no llegaron a publicarse.
-
 **ES**
 
 > - Nuevo ajuste «Fondo»: oscuro o claro. En relojes de pantalla MIP
->   (Forerunner 255/955, fēnix 7, Instinct) el fondo claro se lee mejor.
->   Se cambia desde Garmin Connect o en el reloj, en Ajustes del yard.
-> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
->   en punto.
-> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
-> - Si no pulsas START, la carrera arranca sola a la hora de salida.
-> - Relojes táctiles: la hora de salida se cambia con el dedo y los ajustes de
->   la pantalla de salida se encienden y apagan tocándolos.
-> - En carrera, la pantalla táctil solo cambia de pantalla: la actividad se
->   para con el botón START y la vuelta se marca con el botón LAP, nunca con
->   un roce.
-> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
->   se salían de la esfera.
+>   (Forerunner 255/955, fēnix 7, Instinct) el fondo claro se lee mejor a
+>   plena luz; en los AMOLED el oscuro gasta menos batería.
+> - Se cambia desde Garmin Connect o en el reloj, en Ajustes del yard.
+> - Los colores que avisan (corral, margen, batería baja) son los mismos en
+>   los dos fondos.
 
 **EN**
 
 > - New «Background» setting: dark or light. On MIP displays (Forerunner
->   255/955, fēnix 7, Instinct) the light background reads much better.
->   Change it from Garmin Connect or on the watch, under Yard settings.
-> - When the app opens you set the start time, suggested as the next full
->   hour.
-> - The start screen shows the start time, the countdown and your settings.
-> - If you don't press START, the race starts on its own at the start time.
-> - Touchscreen watches: set the start time with your finger, and tap the
->   settings on the start screen to turn them on or off.
-> - During the race the touchscreen only changes screens: the activity stops
->   only with the START button and yards are marked only with the LAP button,
->   never by an accidental touch.
-> - Fixed: on small screens the warm-up time and battery line ran off the
->   edge.
+>   255/955, fēnix 7, Instinct) the light background reads much better in
+>   daylight; on AMOLED, dark saves battery.
+> - Change it from Garmin Connect or on the watch, under Yard settings.
+> - Warning colours (corral, margin, low battery) are the same on both
+>   backgrounds.
 
 ---
 
 ## Novedades de la versión 1.7.0 (para el campo "What's New")
 
-Si la 1.6.0 llegó a publicarse, quita las tres primeras líneas: ya salieron
-con ella.
+Publicada. La 1.6.0 también salió, así que a la tienda fueron solo las
+líneas del táctil.
 
 **ES**
 
