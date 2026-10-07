@@ -23,10 +23,16 @@ se leía en la MIP, y los rótulos se le quedaban pequeños. Dos cambios:
   son las más gruesas del reloj no suben. Lo decide `Tema.fuente()` y lo
   comprueban los `_txt` de `MainView` y `StartView`.
 
-Y el **QR de «Acerca de» pasa a buymeacoffee.com/carroyo**, con la
-invitación encima («Invítame a un café»), a sugerencia del mismo Denis;
-hasta la 1.8.0 llevaba al sitio del evento. El enlace conviene ponerlo
-también en la descripción de la ficha.
+Y el **QR de «Acerca de» pasa al manual del corredor** (`/garmin`); hasta la
+1.8.0 llevaba a la raíz del sitio. Denis sugirió un enlace de Buy Me a
+Coffee y se probó en el QR, pero **la tienda de Garmin obliga a marcar
+«Payment Required» a cualquier app que pida propinas o donaciones**, aunque
+sea gratis, y marcarlo corta las actualizaciones a quien ya la tiene
+instalada (lo confirma el propio formulario del portal y un rechazo en el
+foro de desarrolladores, febrero de 2024, por el reglamento DSA). Así que la
+invitación al café vive en el manual, fuera de Garmin, y en la ficha se
+marca **No** en Monetization. **Ni la app ni la descripción de la tienda
+deben mencionar donaciones.**
 
 Pendiente de Denis: si lo que quería era un tema sin color, blanco y negro
 puro.
@@ -184,8 +190,8 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 >   cifras suben una talla donde caben.
 > - El texto secundario (distancia que falta, hora y batería) ya no va en
 >   el gris más apagado, que en pantallas MIP costaba leer.
-> - La app es y seguirá siendo gratis. En «Acerca de» el QR lleva ahora a
->   buymeacoffee.com/carroyo, por si quieres invitarnos a un café.
+> - El QR de «Acerca de» lleva ahora al manual del corredor, en
+>   backyardultrasantodomingo.com/garmin.
 
 **EN**
 
@@ -193,8 +199,8 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 >   go up one size wherever they fit.
 > - Secondary text (distance to go, time and battery) no longer uses the
 >   dimmest grey, which was hard to read on MIP displays.
-> - The app is free and will stay free. The QR code in «About» now points
->   to buymeacoffee.com/carroyo, in case you'd like to buy us a coffee.
+> - The QR code in «About» now opens the runner's manual at
+>   backyardultrasantodomingo.com/garmin.
 
 ---
 

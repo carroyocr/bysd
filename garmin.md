@@ -60,11 +60,14 @@ Vive en el sitio, no en la tienda: `backyardultrasantodomingo.com/garmin` y
 escribe a la vez la versión del sitio (`frontend/public/garmin/`) y la de
 Artifact, del mismo fuente. Publicarlo es desplegar el frontend.
 
-**El QR de «Acerca de» lleva a buymeacoffee.com/carroyo desde la 1.9.0**
-(7 de octubre de 2026, a sugerencia de un usuario de la tienda), con la
-invitación encima. Hasta la 1.8.0 apuntaba a la raíz del sitio; llevarlo a
-`/garmin` se propuso y se descartó el 27 de agosto. El PNG lo genera segno
-(222 px, zona quieta blanca) y se guarda en `app/resources/drawables/`.
+**El QR de «Acerca de» lleva al manual (`/garmin`) desde la 1.9.0** (7 de
+octubre de 2026). Hasta la 1.8.0 apuntaba a la raíz del sitio. Se probó un QR
+de Buy Me a Coffee y se retiró el mismo día: Garmin obliga a marcar «Payment
+Required» a cualquier app que pida donaciones, y eso corta las
+actualizaciones a los usuarios actuales. La invitación al café está en el
+manual, fuera de Garmin; **ni la app ni la ficha deben mencionarla**. El PNG
+lo genera segno (versión 3, corrección L) en dos tallas, 111 y 222 px, en
+`app/resources/drawables/` y `app/resources-large/drawables/`.
 
 Dónde enlazarlo en la ficha de la tienda, en `garmin/PUBLICAR.md`.
 
