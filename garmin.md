@@ -60,10 +60,11 @@ Vive en el sitio, no en la tienda: `backyardultrasantodomingo.com/garmin` y
 escribe a la vez la versión del sitio (`frontend/public/garmin/`) y la de
 Artifact, del mismo fuente. Publicarlo es desplegar el frontend.
 
-**El QR de «Acerca de» se queda apuntando a la raíz del sitio.** Se propuso
-llevarlo a `/garmin` —quien escanea desde el reloj busca ayuda de la app— y se
-descartó el 27 de agosto de 2026: no compensa un PNG nuevo, una versión y otra
-revisión de Garmin. No volver a proponerlo.
+**El QR de «Acerca de» lleva a buymeacoffee.com/carroyo desde la 1.9.0**
+(7 de octubre de 2026, a sugerencia de un usuario de la tienda), con la
+invitación encima. Hasta la 1.8.0 apuntaba a la raíz del sitio; llevarlo a
+`/garmin` se propuso y se descartó el 27 de agosto. El PNG lo genera segno
+(222 px, zona quieta blanca) y se guarda en `app/resources/drawables/`.
 
 Dónde enlazarlo en la ficha de la tienda, en `garmin/PUBLICAR.md`.
 

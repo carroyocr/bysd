@@ -1,7 +1,10 @@
 using Toybox.WatchUi as Ui;
 using Toybox.Graphics as Gfx;
 
-// Acerca de: el nombre, la version y un QR que lleva al sitio del evento.
+// Acerca de: el nombre con la version, una invitacion a un cafe y el QR de
+// Buy Me a Coffee. La app es gratis y lo seguira siendo; el QR es para
+// quien quiera agradecerla (lo sugirio un usuario de la tienda, 7-oct-2026).
+// Hasta la 1.8.0 el QR llevaba al sitio del evento.
 //
 // La version se escribe aqui y se actualiza con cada envio a la tienda:
 // Connect IQ no deja leerla del manifiesto en tiempo de ejecucion. El QR va
@@ -12,11 +15,13 @@ class AcercaView extends Ui.View {
 
     static const VERSION = "1.9.0";
     // La URL va partida en dos lineas: entera no cabe en la parte baja de
-    // la esfera redonda (probado en el fenix 8: se cortaba por los lados).
-    static const WEB1 = "backyardultra";
-    static const WEB2 = "santodomingo.com";
+    // la esfera redonda (probado en el fenix 8 con la del sitio, que se
+    // cortaba por los lados; esta es mas larga aun).
+    static const WEB1 = "buymeacoffee.com";
+    static const WEB2 = "/carroyo";
 
     var _qr;
+    var _cafe;
 
     function initialize() {
         View.initialize();
@@ -24,6 +29,7 @@ class AcercaView extends Ui.View {
 
     function onLayout(dc) {
         _qr = Ui.loadResource(Rez.Drawables.QrWeb);
+        _cafe = Ui.loadResource(Rez.Strings.aboutCoffee);
     }
 
     function onHide() {
@@ -39,10 +45,11 @@ class AcercaView extends Ui.View {
         dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
-        _txt(dc, cx, h * 12 / 100, Gfx.FONT_SMALL, Tema.tinta(),
-             "Backyard");
-        _txt(dc, cx, h * 21 / 100, Gfx.FONT_XTINY, Tema.tenue(),
-             "v" + VERSION);
+        // El nombre y la version en una linea, para dejarle la segunda a la
+        // invitacion. En XTINY: en SMALL no cabia en la esfera de 218 px.
+        _txt(dc, cx, h * 12 / 100, Gfx.FONT_XTINY, Tema.tinta(),
+             "Backyard v" + VERSION);
+        _txt(dc, cx, h * 21 / 100, Gfx.FONT_XTINY, Tema.tenue(), _cafe);
 
         // El QR centrado, a su tamano si cabe; en relojes chicos se encoge
         // a poco mas de media esfera, que un telefono lee igual.

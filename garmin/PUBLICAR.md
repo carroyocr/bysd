@@ -23,9 +23,13 @@ se leía en la MIP, y los rótulos se le quedaban pequeños. Dos cambios:
   son las más gruesas del reloj no suben. Lo decide `Tema.fuente()` y lo
   comprueban los `_txt` de `MainView` y `StartView`.
 
+Y el **QR de «Acerca de» pasa a buymeacoffee.com/carroyo**, con la
+invitación encima («Invítame a un café»), a sugerencia del mismo Denis;
+hasta la 1.8.0 llevaba al sitio del evento. El enlace conviene ponerlo
+también en la descripción de la ficha.
+
 Pendiente de Denis: si lo que quería era un tema sin color, blanco y negro
-puro. Y pidió un enlace de donación (Buy Me a Coffee); va en la descripción
-de la ficha cuando Cristian tenga la cuenta, no en la app.
+puro.
 
 ## Estado — la 1.8.0, publicada
 
@@ -180,6 +184,8 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 >   cifras suben una talla donde caben.
 > - El texto secundario (distancia que falta, hora y batería) ya no va en
 >   el gris más apagado, que en pantallas MIP costaba leer.
+> - La app es y seguirá siendo gratis. En «Acerca de» el QR lleva ahora a
+>   buymeacoffee.com/carroyo, por si quieres invitarnos a un café.
 
 **EN**
 
@@ -187,6 +193,8 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 >   go up one size wherever they fit.
 > - Secondary text (distance to go, time and battery) no longer uses the
 >   dimmest grey, which was hard to read on MIP displays.
+> - The app is free and will stay free. The QR code in «About» now points
+>   to buymeacoffee.com/carroyo, in case you'd like to buy us a coffee.
 
 ---
 
