@@ -7,7 +7,15 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.9.0, lista para subir
+## Estado — la 1.9.2, para alinear el número con la tienda
+
+La 1.9.0 se subió al portal el 7 de octubre de 2026 con el número **1.9.1**
+escrito a mano en la ficha, así que la tienda dice 1.9.1 y el reloj decía
+1.9.0. La **1.9.2** es el mismo código con el número al día en «Acerca de» y
+en el manual; se sube con las notas de abajo y de ahí en adelante el número
+de la ficha es el de `AcercaView.VERSION`.
+
+## Estado — la 1.9.0, publicada (como 1.9.1 en la tienda)
 
 La **1.9.0** responde a la primera prueba de Denis con la 1.8.0 en su
 Forerunner 255 (7 de octubre de 2026): el gris de las líneas de pie casi no
@@ -179,6 +187,18 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.9.2 (para el campo "What's New")
+
+**ES**
+
+> - El número de versión que enseña el reloj coincide con el de la tienda.
+
+**EN**
+
+> - The version number shown on the watch now matches the store.
 
 ---
 
