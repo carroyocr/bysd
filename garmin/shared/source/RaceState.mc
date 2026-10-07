@@ -73,6 +73,10 @@ class RaceState {
     // los dos; el sonido ademas obedece a los Sonidos del sistema.
     var vibracion = true;
     var sonido = true;
+    // El margen de seguridad, en segundos: lo que el corredor quiere
+    // reservar. Se resta al margen antes de ensenarlo y de colorearlo, asi
+    // que "+0:00" significa "llegas con la reserva justa". Cero de fabrica.
+    var reservaMargen = 0;
 
     // El orden de las pantallas de carrera de la app, como ids en el orden
     // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
@@ -159,6 +163,9 @@ class RaceState {
         lapApagado = _ajuste("lapOff", false);
         vibracion = _ajuste("vibration", true);
         sonido = _ajuste("sound", true);
+        var reserva = _ajuste("marginReserve", 0);
+        reservaMargen = (reserva == null || reserva.toNumber() < 0)
+                      ? 0 : reserva.toNumber() * 60;
         _leerOrdenPaginas();
     }
 
@@ -568,6 +575,19 @@ class RaceState {
         return t > 0 ? t : null;
     }
 
+    // El ritmo de ahora mismo, el que el reloj mide sobre los ultimos
+    // metros. Es el que se ensena en la pantalla del margen -quien va a
+    // tramos de correr y caminar quiere ver a cuanto va en este tramo-;
+    // el margen se sigue proyectando con el ritmo del yard, que es el que
+    // decide si se llega. Parado o sin dato, null.
+    function ritmoActual() {
+        var info = Activity.getActivityInfo();
+        if (info == null || info.currentSpeed == null) { return null; }
+        var v = info.currentSpeed;
+        if (v < 0.3) { return null; }
+        return 1000.0 / v;
+    }
+
     function ritmoSegPorKm() {
         var km = kmEnLaVuelta();
         var t = segundosEnLaVuelta();
@@ -612,7 +632,7 @@ class RaceState {
 
         var faltan = kmObjetivo() - km;
         if (faltan < 0) { faltan = 0.0; }
-        return r - (faltan * ritmo);
+        return r - (faltan * ritmo) - reservaMargen;
     }
 
     function enCorral() {

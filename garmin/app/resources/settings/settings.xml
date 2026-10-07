@@ -15,6 +15,11 @@
     <setting propertyKey="@Properties.lapDistance" title="@Strings.settingLapDistance">
         <settingConfig type="numeric" min="0.1" max="200"/>
     </setting>
+    <!-- Minutos de reserva que se restan al margen: "+0:00" pasa a ser
+         "llegas con la reserva justa". -->
+    <setting propertyKey="@Properties.marginReserve" title="@Strings.settingMarginReserve">
+        <settingConfig type="numeric" min="0" max="60"/>
+    </setting>
     <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
         <settingConfig type="boolean"/>
     </setting>

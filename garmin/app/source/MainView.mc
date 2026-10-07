@@ -360,10 +360,11 @@ class MainView extends Ui.View {
         _arco(dc, cx, cy, radio, r.toFloat() / _estado.duracionVuelta,
               Gfx.COLOR_ORANGE, 7);
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        _txt(dc, cx, _yArribaAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:nextStart]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(), Fmt.reloj(r));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
+        _txt(dc, cx, _yCifra(cy, h), Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
+             Fmt.reloj(r));
+        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
              _s[:lap] + " " + vuelta.format("%d") + " · "
              + (descansando ? _s[:rest] : _s[:running]));
     }
@@ -387,7 +388,7 @@ class MainView extends Ui.View {
             }
         }
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        _txt(dc, cx, _yArribaAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              vuelta < 1 ? _s[:warmup] : _s[:margin]);
 
         if (margen == null) {
@@ -395,23 +396,27 @@ class MainView extends Ui.View {
             // minuto de la vuelta: sin distancia no hay ritmo, y sin ritmo no
             // hay nada que proyectar. A partir de ahi la cifra ya sale, aunque
             // se asiente durante el primer kilometro (ver ritmoParaMargen).
-            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tenue(), "--:--");
+            _txt(dc, cx, _yCifra(cy, h), Gfx.FONT_NUMBER_MEDIUM, Tema.tenue(),
+                 "--:--");
         } else {
-            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
+            _txt(dc, cx, _yCifra(cy, h), Gfx.FONT_NUMBER_MEDIUM,
                  vaSobrado ? Tema.verde() : Gfx.COLOR_RED, Fmt.margen(margen));
         }
 
         // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
         // con el ritmo, y lo que falta con el tiempo que costara al ritmo que
         // se lleva. Son dos ritmos distintos a proposito: el que se ENSENA es
-        // el crudo de la vuelta -a como se va ahora-, y el que se MULTIPLICA
-        // por lo que falta es el asentado, el mismo del margen, para que las
-        // dos cifras de la pantalla cuenten la misma historia.
-        var ritmo = _estado.ritmoSegPorKm();
+        // el de ahora mismo -quien va a tramos de correr y caminar quiere
+        // ver a cuanto va en este tramo; lo pidio un usuario-, y el que se
+        // MULTIPLICA por lo que falta es el asentado del yard, el mismo del
+        // margen, porque es el que decide si se llega. Con el texto grande
+        // la unidad del ritmo se cae: va implicita y la linea tiene que caber.
+        var ritmo = _estado.ritmoActual();
         var ritmoProyectado = _estado.ritmoParaMargen();
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        var unidadRitmo = Tema.grande ? "" : " /" + Fmt.unidad();
+        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
-             + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + " /" + Fmt.unidad());
+             + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + unidadRitmo);
         var faltan = null;
         if (km != null && objetivo > 0) {
             faltan = objetivo - km;
@@ -421,7 +426,7 @@ class MainView extends Ui.View {
         if (faltan != null && ritmoProyectado != null) {
             linea = linea + " ≈ " + Fmt.reloj((faltan * ritmoProyectado).toNumber());
         }
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(), linea);
+        _txt(dc, cx, _yPieAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(), linea);
     }
 
     // La pagina de datos globales: lo de toda la carrera SIN los descansos
@@ -528,13 +533,13 @@ class MainView extends Ui.View {
         // esta pagina eso se escribe como cero, no como una cuenta atras.
         var s = _estado.segundosDeCarrera();
         if (s != null && s < 0) { s = 0; }
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        _txt(dc, cx, _yArribaAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:total]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
+        _txt(dc, cx, _yCifra(cy, h), Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
              completadas.format("%d"));
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
+        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
              _s[:lapsDone]);
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        _txt(dc, cx, _yPieAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              Fmt.espera(s) + " · "
              + Fmt.distancia(completadas * _estado.kmPorVuelta) + " "
              + Fmt.unidad());
@@ -554,28 +559,41 @@ class MainView extends Ui.View {
             if (hora == 0) { hora = 12; }
         }
 
-        _txt(dc, cx, _yArriba(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
+        _txt(dc, cx, _yArribaAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:clock]);
-        _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
+        _txt(dc, cx, _yCifra(cy, h), Gfx.FONT_NUMBER_MEDIUM, Tema.tinta(),
              hora.format("%d") + ":" + reloj.min.format("%02d"));
 
         // La bateria en rojo por debajo del 20 %: a esa altura ya es un dato
         // que decide si se cambia el modo de energia o se busca el cargador.
         var bateria = Sys.getSystemStats().battery;
         var poca = bateria != null && bateria <= 20;
-        _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY,
+        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_XTINY,
              poca ? Gfx.COLOR_RED : Tema.tinta(),
              bateria == null ? _s[:battery]
                              : _s[:battery] + " " + bateria.format("%d") + "%");
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(), marca);
+        _txt(dc, cx, _yPieAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(), marca);
     }
 
     // --- piezas de dibujo ---
 
+    // Dos geometrias. La de siempre, con la cifra en el centro exacto, para
+    // las pantallas que se imponen (corral, descanso, aviso, calentamiento):
+    // ahi la cifra va en la fuente mas gruesa y manda ella.
     function _yArriba(cy, h) { return cy - (h * 22 / 100); }
     function _ySub(cy, h)    { return cy + (h * 16 / 100); }
     function _yPie(cy, h)    { return cy + (h * 27 / 100); }
     function _yPie2(cy, h)   { return cy + (h * 35 / 100); }
+
+    // Y la alta, para las paginas de una cifra (Yard, Margen, Total, Reloj):
+    // la cifra sube un poco del centro, donde sobraba aire, y las dos lineas
+    // de contexto bajan hacia la mitad de la esfera, que es donde la cuerda
+    // es ancha y caben enteras tambien con el texto grande. Lo sugirio el
+    // usuario del Forerunner 255: en la 1.9.0 solo le crecia la cifra.
+    function _yArribaAlta(cy, h) { return cy - (h * 27 / 100); }
+    function _yCifra(cy, h)      { return cy - (h * 7 / 100); }
+    function _ySubAlta(cy, h)    { return cy + (h * 12 / 100); }
+    function _yPieAlta(cy, h)    { return cy + (h * 24 / 100); }
 
     // Un texto centrado en (x, y). La fuente que llega es la de siempre; con
     // el texto grande sube un escalon, y si asi no cabe en la cuerda de la

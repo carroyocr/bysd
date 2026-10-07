@@ -58,6 +58,7 @@
     <string id="fixedTime">Set time</string>
     <string id="settingLapMinutes">Yard duration (minutes)</string>
     <string id="settingLapDistance">Yard distance (km)</string>
+    <string id="settingMarginReserve">Safety margin (minutes)</string>
     <string id="settingCorral">Corral alert</string>
     <string id="settingAutoLap">Auto yard at finish line</string>
     <string id="settingAutoLapKm">Auto yard by distance</string>
