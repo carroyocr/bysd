@@ -104,7 +104,7 @@ class MainView extends Ui.View {
         // es un acceso legitimo. Sin el, dos avisos en cada compilacion.
         var p = _estado.proyeccion();
         if (p == null) {
-            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Tema.apagado(), _s[:noActivity]);
+            _txt(dc, cx, cy, Gfx.FONT_MEDIUM, Tema.tenue(), _s[:noActivity]);
             return;
         }
         var proy = p as Lang.Array<Lang.Number>;
@@ -280,11 +280,11 @@ class MainView extends Ui.View {
                 break;
             }
         }
-        _txt(dc, cx, yPie, Gfx.FONT_XTINY, Tema.apagado(), linea);
+        _txt(dc, cx, yPie, Gfx.FONT_XTINY, Tema.tenue(), linea);
 
         // El check del GPS: verde cuando el reloj ya fijo posicion, gris
         // mientras busca. Es lo que se mira de reojo antes de la salida.
-        var colorGps = _gpsListo() ? Tema.verde() : Tema.apagado();
+        var colorGps = _gpsListo() ? Tema.verde() : Tema.tenue();
         var yGps = _yPie2(cy, h);
         _check(dc, cx - (h * 5 / 100), yGps, h, colorGps);
         _txt(dc, cx + (h * 3 / 100), yGps, Gfx.FONT_XTINY, colorGps, "GPS");
@@ -343,7 +343,7 @@ class MainView extends Ui.View {
              _s[:lap]);
         _txt(dc, cx, cy + (h * 6 / 100), Gfx.FONT_NUMBER_HOT, Tema.tinta(),
              vuelta.format("%d"));
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(),
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              (_estado.duracionVuelta / 60).format("%d") + " min · "
              + Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad());
     }
@@ -395,7 +395,7 @@ class MainView extends Ui.View {
             // minuto de la vuelta: sin distancia no hay ritmo, y sin ritmo no
             // hay nada que proyectar. A partir de ahi la cifra ya sale, aunque
             // se asiente durante el primer kilometro (ver ritmoParaMargen).
-            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.apagado(), "--:--");
+            _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM, Tema.tenue(), "--:--");
         } else {
             _txt(dc, cx, cy, Gfx.FONT_NUMBER_MEDIUM,
                  vaSobrado ? Tema.verde() : Gfx.COLOR_RED, Fmt.margen(margen));
@@ -421,7 +421,7 @@ class MainView extends Ui.View {
         if (faltan != null && ritmoProyectado != null) {
             linea = linea + " ≈ " + Fmt.reloj((faltan * ritmoProyectado).toNumber());
         }
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(), linea);
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(), linea);
     }
 
     // La pagina de datos globales: lo de toda la carrera SIN los descansos
@@ -472,8 +472,10 @@ class MainView extends Ui.View {
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.drawCircle(cx, cy, radio);
 
-        // La pildora: el fondo corta el aro por detras del texto.
-        var dim = dc.getTextDimensions(nombre, Gfx.FONT_XTINY) as Lang.Array<Lang.Number>;
+        // La pildora: el fondo corta el aro por detras del texto. Se mide con
+        // la fuente que de verdad se dibuja, que con el texto grande es TINY.
+        var fn = Tema.fuente(Gfx.FONT_XTINY);
+        var dim = dc.getTextDimensions(nombre, fn) as Lang.Array<Lang.Number>;
         var pw = dim[0] + 18;
         var ph = dim[1] + 2;
         var py = cy - radio + (h * 8 / 100);
@@ -482,7 +484,7 @@ class MainView extends Ui.View {
         dc.setPenWidth(2);
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
         dc.drawRoundedRectangle(cx - pw / 2, py - ph / 2, pw, ph, ph / 2);
-        _txt(dc, cx, py, Gfx.FONT_XTINY, color, nombre);
+        _txt(dc, cx, py, fn, color, nombre);
 
         // Las lineas del marco, tenues: son mueble, no dato.
         var yArriba = cy - (h * 8 / 100);
@@ -493,17 +495,20 @@ class MainView extends Ui.View {
         dc.drawLine(cx - (w * 36 / 100), yAbajo, cx + (w * 36 / 100), yAbajo);
         dc.drawLine(cx, yArriba, cx, yAbajo);
 
-        _campo(dc, cx, cy - (h * 30 / 100), h, rs[0], vs[0]);
-        _campo(dc, cx - (w * 22 / 100), cy - (h * 5 / 100), h, rs[1], vs[1]);
-        _campo(dc, cx + (w * 22 / 100), cy - (h * 5 / 100), h, rs[2], vs[2]);
-        _campo(dc, cx, cy + (h * 18 / 100), h, rs[3], vs[3]);
+        // Los de arriba y abajo tienen la cuerda de la esfera; los dos del
+        // centro se reparten el ancho y no pueden pisarse.
+        _campo(dc, cx, cy - (h * 30 / 100), h, rs[0], vs[0], w * 70 / 100);
+        _campo(dc, cx - (w * 22 / 100), cy - (h * 5 / 100), h, rs[1], vs[1], w * 42 / 100);
+        _campo(dc, cx + (w * 22 / 100), cy - (h * 5 / 100), h, rs[2], vs[2], w * 42 / 100);
+        _campo(dc, cx, cy + (h * 18 / 100), h, rs[3], vs[3], w * 70 / 100);
     }
 
-    // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo.
-    function _campo(dc, x, yRotulo, h, rotulo, valor) {
-        _txt(dc, x, yRotulo, Gfx.FONT_XTINY, Tema.tenue(), rotulo);
-        _txt(dc, x, yRotulo + (h * 11 / 100), Gfx.FONT_NUMBER_MILD,
-             Tema.tinta(), valor);
+    // Un campo de la pagina de datos: el rotulo pequeno y la cifra debajo,
+    // ninguno mas ancho que su hueco.
+    function _campo(dc, x, yRotulo, h, rotulo, valor, ancho) {
+        _txtAncho(dc, x, yRotulo, Gfx.FONT_XTINY, Tema.tenue(), rotulo, ancho);
+        _txtAncho(dc, x, yRotulo + (h * 11 / 100), Gfx.FONT_NUMBER_MILD,
+                  Tema.tinta(), valor, ancho);
     }
 
     // Lo acumulado. Arriba, sin etiqueta, el tiempo que se lleva en carrera:
@@ -529,7 +534,7 @@ class MainView extends Ui.View {
              completadas.format("%d"));
         _txt(dc, cx, _ySub(cy, h), Gfx.FONT_XTINY, Tema.tinta(),
              _s[:lapsDone]);
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(),
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              Fmt.espera(s) + " · "
              + Fmt.distancia(completadas * _estado.kmPorVuelta) + " "
              + Fmt.unidad());
@@ -562,7 +567,7 @@ class MainView extends Ui.View {
              poca ? Gfx.COLOR_RED : Tema.tinta(),
              bateria == null ? _s[:battery]
                              : _s[:battery] + " " + bateria.format("%d") + "%");
-        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.apagado(), marca);
+        _txt(dc, cx, _yPie(cy, h), Gfx.FONT_XTINY, Tema.tenue(), marca);
     }
 
     // --- piezas de dibujo ---
@@ -572,10 +577,32 @@ class MainView extends Ui.View {
     function _yPie(cy, h)    { return cy + (h * 27 / 100); }
     function _yPie2(cy, h)   { return cy + (h * 35 / 100); }
 
+    // Un texto centrado en (x, y). La fuente que llega es la de siempre; con
+    // el texto grande sube un escalon, y si asi no cabe en la cuerda de la
+    // esfera a esa altura vuelve a la de siempre: mejor pequeno que cortado.
     function _txt(dc, x, y, fuente, color, texto) {
         if (texto == null) { return; }
+        var f = Tema.fuente(fuente);
+        if (f != fuente) {
+            var cabe = _cuerda(dc, dc.getWidth() / 2, dc.getHeight() / 2, y, f)
+                     - (2 * (x - (dc.getWidth() / 2)).abs());
+            if (dc.getTextWidthInPixels(texto, f) > cabe) { f = fuente; }
+        }
         dc.setColor(color, Gfx.COLOR_TRANSPARENT);
-        dc.drawText(x, y, fuente, texto,
+        dc.drawText(x, y, f, texto,
+                    Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
+    }
+
+    // Lo mismo, con un ancho maximo propio en vez de la cuerda: para los
+    // campos de la cuadricula, que se reparten la esfera entre varios.
+    function _txtAncho(dc, x, y, fuente, color, texto, ancho) {
+        if (texto == null) { return; }
+        var f = Tema.fuente(fuente);
+        if (f != fuente && dc.getTextWidthInPixels(texto, f) > ancho) {
+            f = fuente;
+        }
+        dc.setColor(color, Gfx.COLOR_TRANSPARENT);
+        dc.drawText(x, y, f, texto,
                     Gfx.TEXT_JUSTIFY_CENTER | Gfx.TEXT_JUSTIFY_VCENTER);
     }
 

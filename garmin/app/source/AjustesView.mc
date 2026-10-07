@@ -51,6 +51,8 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
         // ajuste; en el reloj, tocarlo pasa al siguiente.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingTheme,
             textoDeTema(), :tema, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.settingTextSize,
+            textoDeTexto(), :texto, null));
         // Las pantallas de carrera: cuales se ven. El orden se cambia desde
         // el telefono; aqui solo mostrar u ocultar.
         menu.addItem(new Ui.MenuItem(Rez.Strings.settingScreens, null,
@@ -90,6 +92,12 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
                                           : Rez.Strings.themeDark);
     }
 
+    // El sub-rotulo del tamano de texto: "Normal" o "Grande".
+    static function textoDeTexto() {
+        return Ui.loadResource(Tema.grande ? Rez.Strings.textLarge
+                                           : Rez.Strings.textNormal);
+    }
+
     // Un instante en epoch, como HHMM de la hora local: lo que guarda el
     // ajuste de salida y lo que entiende textoDeSalida.
     static function hhmmDe(epoch) {
@@ -122,6 +130,9 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
             // fondo nuevo se ve al volver a la esfera.
             Tema.alternar();
             item.setSubLabel(AjustesMenuDelegate.textoDeTema());
+        } else if (id == :texto) {
+            Tema.alternarTexto();
+            item.setSubLabel(AjustesMenuDelegate.textoDeTexto());
         } else if (id == :pantallas) {
             var vista = new PantallasView(_estado);
             Ui.pushView(vista, new PantallasDelegate(vista), Ui.SLIDE_LEFT);

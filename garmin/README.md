@@ -310,6 +310,7 @@ millas aunque tenga el reloj en español.
 | Aviso de corral | Vibración a los 3, 2 y 1 minuto | sí |
 | Yard auto Meta | Marcar el LAP solo al llegar al punto de salida | **sí** |
 | Fondo | Oscuro o claro. El claro es para las pantallas MIP, donde el negro se ve apagado | oscuro |
+| Tamaño de texto | Normal o grande. Con grande cada fuente sube un escalón donde cabe | normal |
 
 Los valores por defecto son los de la backyard clásica.
 

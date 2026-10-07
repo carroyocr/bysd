@@ -34,6 +34,9 @@
          y no un booleano para que algun dia quepan mas temas sin cambiar
          el ajuste. Lo lee Tema.mc, no RaceState. -->
     <property id="theme" type="number">0</property>
+    <!-- El tamano de texto: 0 normal (de fabrica), 1 grande. Cada fuente
+         sube un escalon y, donde no cabe, vuelve a la normal (Tema.mc). -->
+    <property id="textSize" type="number">0</property>
 
     <!--
       Las pantallas de carrera: la posicion de cada una en el recorrido de

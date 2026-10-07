@@ -1,13 +1,37 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 6 de octubre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 7 de octubre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.8.0, lista para empaquetar y subir
+## Estado — la 1.9.0, lista para subir
+
+La **1.9.0** responde a la primera prueba de Denis con la 1.8.0 en su
+Forerunner 255 (7 de octubre de 2026): el gris de las líneas de pie casi no
+se leía en la MIP, y los rótulos se le quedaban pequeños. Dos cambios:
+
+- **El texto nunca va en el gris apagado.** Ese gris queda solo para lo
+  dibujado (aros de fondo, líneas del marco, migas); todo el texto
+  secundario va en el gris medio, en los dos temas.
+- **Ajuste «Tamaño de texto»**, normal o grande, en Garmin Connect y en el
+  menú del reloj. Con grande cada fuente sube un escalón (rótulos de XTINY a
+  TINY, cifras de MEDIUM a HOT, cuadrícula de MILD a MEDIUM) y, donde no
+  cabe en la cuerda de la esfera, vuelve a la de siempre. Las fuentes que ya
+  son las más gruesas del reloj no suben. Lo decide `Tema.fuente()` y lo
+  comprueban los `_txt` de `MainView` y `StartView`.
+
+Y el **QR de «Acerca de» pasa a buymeacoffee.com/carroyo**, con la
+invitación encima («Invítame a un café»), a sugerencia del mismo Denis;
+hasta la 1.8.0 llevaba al sitio del evento. El enlace conviene ponerlo
+también en la descripción de la ficha.
+
+Pendiente de Denis: si lo que quería era un tema sin color, blanco y negro
+puro.
+
+## Estado — la 1.8.0, publicada
 
 La **1.8.0** trae el **fondo claro**: un ajuste nuevo, «Fondo» (oscuro o
 claro), en Garmin Connect y en el menú del reloj. Lo pidió Denis, un
@@ -149,6 +173,28 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.9.0 (para el campo "What's New")
+
+**ES**
+
+> - Nuevo ajuste «Tamaño de texto»: normal o grande. Con grande, rótulos y
+>   cifras suben una talla donde caben.
+> - El texto secundario (distancia que falta, hora y batería) ya no va en
+>   el gris más apagado, que en pantallas MIP costaba leer.
+> - La app es y seguirá siendo gratis. En «Acerca de» el QR lleva ahora a
+>   buymeacoffee.com/carroyo, por si quieres invitarnos a un café.
+
+**EN**
+
+> - New «Text size» setting: normal or large. With large, labels and figures
+>   go up one size wherever they fit.
+> - Secondary text (distance to go, time and battery) no longer uses the
+>   dimmest grey, which was hard to read on MIP displays.
+> - The app is free and will stay free. The QR code in «About» now points
+>   to buymeacoffee.com/carroyo, in case you'd like to buy us a coffee.
 
 ---
 

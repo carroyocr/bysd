@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<!-- Relojes de 208 px: mismo emblema, dibujado a 196. -->
+<!-- Relojes de 218 px (y el Instinct de 176): mismo emblema, dibujado a
+     196, y el QR de Acerca de a 111 px (escala 3). -->
 <drawables>
     <bitmap id="Emblema" filename="emblema.png"/>
+    <bitmap id="QrWeb" filename="qr_web.png"/>
 </drawables>

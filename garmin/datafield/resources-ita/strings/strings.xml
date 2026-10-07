@@ -66,6 +66,10 @@
     <string id="settingTheme">Sfondo</string>
     <string id="themeDark">Scuro</string>
     <string id="themeLight">Chiaro</string>
+    <string id="settingTextSize">Dimensione testo</string>
+    <string id="textNormal">Normale</string>
+    <string id="textLarge">Grande</string>
+    <string id="aboutCoffee">Offrimi un caffè</string>
     <string id="settingAbout">Informazioni</string>
     <string id="settingScreens">Schermate di gara</string>
     <string id="screenData">Dati totali</string>
