@@ -1,7 +1,8 @@
 # Garmin — lo que queda
 
-**Pendiente a 7 de octubre de 2026: subir la 1.9.0 a la tienda**
-(`garmin/build/backyard.iq`). Trae el ajuste «Tamaño de texto» y el texto
+**La 1.9.0 se publicó el 7 de octubre de 2026**, con el número 1.9.1 escrito a
+mano en la ficha; la **1.9.2** (`garmin/build/backyard.iq`) es la misma app
+con el número alineado, pendiente de subir. La 1.9.0 trae el ajuste «Tamaño de texto» y el texto
 secundario en gris medio, por la primera prueba de Denis (Forerunner 255)
 con la 1.8.0, la del **fondo claro**, publicada el 6 de octubre. La 1.6.0 y
 la 1.7.0 (hora de salida al abrir, arranque solo, táctil) salieron en
