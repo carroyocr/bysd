@@ -27,6 +27,7 @@ class AcercaView extends Ui.View {
     static const WEB2 = "santodomingo.com/garmin";
 
     var _qr;
+    var _manual;
 
     function initialize() {
         View.initialize();
@@ -34,6 +35,7 @@ class AcercaView extends Ui.View {
 
     function onLayout(dc) {
         _qr = Ui.loadResource(Rez.Drawables.QrWeb);
+        _manual = Ui.loadResource(Rez.Strings.aboutManual);
     }
 
     function onHide() {
@@ -49,13 +51,17 @@ class AcercaView extends Ui.View {
         dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
-        _txt(dc, cx, h * 12 / 100, Gfx.FONT_SMALL, Tema.tinta(), "Backyard");
-        _txt(dc, cx, h * 20 / 100, Gfx.FONT_XTINY, Tema.tenue(), "v" + VERSION);
+        // El nombre y la version en una linea, para que la segunda diga que
+        // es el QR: el manual de usuario. En XTINY, que en SMALL no cabia en
+        // la esfera de 218 px.
+        _txt(dc, cx, h * 10 / 100, Gfx.FONT_XTINY, Tema.tenue(),
+             "Backyard v" + VERSION);
+        _txt(dc, cx, h * 19 / 100, Gfx.FONT_XTINY, Tema.tinta(), _manual);
 
         // El QR centrado, al tamano que trae su recurso, que ya es el de
         // esta familia de pantalla. El tope es una red por si un reloj nuevo
         // cae en una familia que le queda grande.
-        var y = h * 26 / 100;
+        var y = h * 25 / 100;
         if (_qr != null) {
             var lado = _qr.getWidth();
             var maximo = (w < h ? w : h) * 60 / 100;
