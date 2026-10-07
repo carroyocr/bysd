@@ -6,12 +6,14 @@
 -->
 <drawables>
     <bitmap id="Emblema" filename="emblema.png"/>
-    <!-- El QR de Acerca de: lleva a buymeacoffee.com/carroyo (hasta la
-         1.8.0, al sitio del evento). Lo genera segno con zona quieta blanca
-         incluida, y hay uno por familia de pantalla, como el emblema: este,
-         de 148 px (escala 4), para las esferas de 240 a 360; resources-small
-         y resources-large traen el suyo. Un solo QR de 222 px se cortaba por
-         abajo en el Forerunner 255 (260 px): el escalado en el reloj no es
-         de fiar y la medida la decide el recurso. -->
+    <!-- El QR de Acerca de: lleva al manual del corredor,
+         backyardultrasantodomingo.com/garmin (hasta la 1.8.0, a la raiz del
+         sitio). Lo genera segno (version 3, correccion L para que la URL
+         larga quepa en 29 modulos) con zona quieta blanca incluida, y hay
+         uno por familia de pantalla, como el emblema: este, de 111 px
+         (escala 3), para las esferas de hasta 280; resources-large trae el
+         de 222. Un solo QR de 222 px se cortaba por abajo en el Forerunner
+         255 (260 px): el escalado en el reloj no es de fiar y la medida la
+         decide el recurso. -->
     <bitmap id="QrWeb" filename="qr_web.png"/>
 </drawables>

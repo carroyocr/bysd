@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- Pantallas AMOLED grandes (390 px en adelante): emblema de 380 y el QR
-     de Acerca de a 222 px (escala 6). -->
+     de Acerca de a 222 px (escala 6, el mismo QR del manual). -->
 <drawables>
     <bitmap id="Emblema" filename="emblema.png"/>
     <bitmap id="QrWeb" filename="qr_web.png"/>

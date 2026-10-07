@@ -3,10 +3,12 @@ using Toybox.Graphics as Gfx;
 using Toybox.System as Sys;
 using Toybox.Math as Math;
 
-// Acerca de: el nombre con la version, una invitacion a un cafe y el QR de
-// Buy Me a Coffee. La app es gratis y lo seguira siendo; el QR es para
-// quien quiera agradecerla (lo sugirio un usuario de la tienda, 7-oct-2026).
-// Hasta la 1.8.0 el QR llevaba al sitio del evento.
+// Acerca de: el nombre, la version y un QR que lleva al manual del corredor
+// en el sitio del evento (/garmin). Hasta la 1.8.0 llevaba a la raiz del
+// sitio; quien escanea desde el reloj busca ayuda de la app. Aqui no hay
+// enlace de donacion a proposito: la tienda de Garmin obliga a marcar como
+// «de pago» cualquier app que pida propinas, aunque sea gratis (7-oct-2026);
+// la invitacion al cafe vive en el manual, fuera de Garmin.
 //
 // La version se escribe aqui y se actualiza con cada envio a la tienda:
 // Connect IQ no deja leerla del manifiesto en tiempo de ejecucion. El QR va
@@ -21,11 +23,10 @@ class AcercaView extends Ui.View {
     // La URL va debajo del QR, en la fuente mas chica: entera si cabe en
     // la cuerda de la esfera a esa altura, en dos lineas si no, y nada si
     // tampoco. El QR es el que resuelve; esto es la referencia legible.
-    static const WEB1 = "buymeacoffee.com";
-    static const WEB2 = "/carroyo";
+    static const WEB1 = "backyardultra";
+    static const WEB2 = "santodomingo.com/garmin";
 
     var _qr;
-    var _cafe;
 
     function initialize() {
         View.initialize();
@@ -33,7 +34,6 @@ class AcercaView extends Ui.View {
 
     function onLayout(dc) {
         _qr = Ui.loadResource(Rez.Drawables.QrWeb);
-        _cafe = Ui.loadResource(Rez.Strings.aboutCoffee);
     }
 
     function onHide() {
@@ -49,16 +49,13 @@ class AcercaView extends Ui.View {
         dc.setColor(Tema.fondo(), Tema.fondo());
         dc.clear();
 
-        // El nombre y la version en una linea, para dejarle la segunda a la
-        // invitacion. En XTINY: en SMALL no cabia en la esfera de 218 px.
-        _txt(dc, cx, h * 10 / 100, Gfx.FONT_XTINY, Tema.tinta(),
-             "Backyard v" + VERSION);
-        _txt(dc, cx, h * 19 / 100, Gfx.FONT_XTINY, Tema.tenue(), _cafe);
+        _txt(dc, cx, h * 12 / 100, Gfx.FONT_SMALL, Tema.tinta(), "Backyard");
+        _txt(dc, cx, h * 20 / 100, Gfx.FONT_XTINY, Tema.tenue(), "v" + VERSION);
 
         // El QR centrado, al tamano que trae su recurso, que ya es el de
         // esta familia de pantalla. El tope es una red por si un reloj nuevo
         // cae en una familia que le queda grande.
-        var y = h * 25 / 100;
+        var y = h * 26 / 100;
         if (_qr != null) {
             var lado = _qr.getWidth();
             var maximo = (w < h ? w : h) * 60 / 100;

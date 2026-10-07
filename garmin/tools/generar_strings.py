@@ -154,10 +154,7 @@ TABLA = {
     "settingTextSize":  ("Text size",               "Tamaño de texto",     "Taille du texte",      "Textgröße",             "Dimensione testo",     "Tamanho do texto"),
     "textNormal":       ("Normal",                  "Normal",              "Normale",              "Normal",                "Normale",              "Normal"),
     "textLarge":        ("Large",                   "Grande",              "Grand",                "Groß",                  "Grande",               "Grande"),
-    # La invitacion de Acerca de, encima del QR de Buy Me a Coffee. Corta:
-    # va en la parte alta de la esfera, donde la cuerda es estrecha.
-    "aboutCoffee":      ("Buy me a coffee",         "Invítame a un café",  "Offrez-moi un café",   "Kaffee spendieren?",    "Offrimi un caffè",     "Pague-me um café"),
-    # Acerca de: version y QR de Buy Me a Coffee.
+    # Acerca de: version y QR al manual del corredor.
     "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono
