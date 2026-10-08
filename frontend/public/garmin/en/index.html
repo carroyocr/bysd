@@ -537,7 +537,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
 <header class="hero">
   <div>
-    <p class="eyebrow">Runner's manual · version 1.11.0</p>
+    <p class="eyebrow">Runner's manual · version 1.12.0</p>
     <h1>Backyard</h1>
     <p class="sub">Your yard, your pace, and how long you'll get to rest.</p>
     <p class="lede">A Garmin watch app for running a backyard ultra — any of them. It records your activity, anchors the bells to the top of the hour, and tells you, yard after yard, whether the pace you're holding will get you back in time to sit down. No server, no bib number, no connection needed.</p>
@@ -753,7 +753,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Get back to the line before the bell</h3>
-        <p>Three minutes out, the <strong>corral</strong> screen takes over whatever you were looking at. When the bell rings, the next yard opens by itself. No button opens a yard: the clock does.</p>
+        <p>Three minutes out, if you've already marked, the <strong>corral</strong> screen takes over whatever you were looking at; if you're still out on the loop, it pops up briefly at each alert and leaves you your screens. When the bell rings, the next yard opens by itself. No button opens a yard: the clock does.</p>
       </div>
     </li>
     <li>
@@ -944,7 +944,9 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <h2>The corral</h2>
   <p class="section-note">The last three minutes of every yard</p>
 
-  <p>The corral isn't a screen you pick: it <strong>takes over</strong>. In the last three minutes of any countdown — the start included — it jumps on top of whatever you were looking at, because at that point what's urgent is getting to the line, not your pace. It leaves on its own when the bell rings.</p>
+  <p>The corral isn't a screen you pick: it <strong>takes over</strong>. In the last three minutes of any countdown — the start included — it jumps on top of whatever you were looking at. It leaves on its own when the bell rings.</p>
+
+  <p>But it only takes over for good if <strong>you've already marked</strong> the yard: you're resting, and the only thing left to do is get to the line. If you're still out on the loop, your question is a different one — am I going to make it? — and the corral doesn't hide the answer: it pops up for five seconds at each alert, at 3, 2 and 1 minute, with the buzz, and goes back to your screens; any button dismisses it sooner. Meanwhile the time ring on Margin and the ring on Lap take the corral's colour, so the warning stays in view. If you mark within those three minutes, the corral stays from then on.</p>
 
   <div class="corral-key">
     <span class="chip"><span class="dot" style="background:var(--warn)"></span>3 min — yellow</span>
@@ -1116,7 +1118,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <div class="table-wrap">
     <table>
       <tbody>
-        <tr><td class="k">Version</td><td>1.11.0 — also on the watch, under Settings → About</td></tr>
+        <tr><td class="k">Version</td><td>1.12.0 — also on the watch, under Settings → About</td></tr>
         <tr><td class="k">Watches</td><td>111 models: fēnix (through the 9 generation), epix, Forerunner, Venu, vívoactive, Instinct AMOLED, MARQ, Descent, D2 and Approach</td></tr>
         <tr><td class="k">Permissions</td><td>Activity recording (FIT) and position (GPS)</td></tr>
         <tr><td class="k">Network</td><td>None. It doesn't reach the internet, doesn't send data, and doesn't need your phone to run</td></tr>
@@ -1139,7 +1141,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 </section>
 
 <footer>
-  <span>Backyard 1.11.0 · English manual</span>
+  <span>Backyard 1.12.0 · English manual</span>
   <span>Connect IQ Store · apps.garmin.com</span>
   <span>backyardultrasantodomingo.com</span>
   <span><a href="/garmin">Version en espanol</a></span>
