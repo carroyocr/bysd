@@ -195,7 +195,7 @@ export default function ObsPage() {
     const horaAhora = new Date(ahora).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
     const rotulo = esperandoSalida
       ? 'La carrera empieza en'
-      : r.terminada ? 'Carrera terminada' : `Próxima salida · ${horaCorta(r.fin_de_vuelta)}`;
+      : r.terminada ? 'Carrera terminada' : `Tiempo restante · salida ${horaCorta(r.fin_de_vuelta)}`;
 
     return enLienzo(
       <div className="obs-salida">
