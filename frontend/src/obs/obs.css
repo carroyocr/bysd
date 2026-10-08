@@ -34,10 +34,16 @@
 
   /* Blanco, azul y rojo: los colores de la bandera. El azul es el fondo, el
      rojo el acento (bloque del dorsal, filete y progreso) y el blanco, el
-     texto. Nada de naranja aqui: en pantalla compite con el rojo. */
+     texto. Nada de naranja aqui: en pantalla compite con el rojo. La unica
+     excepcion es el globo de aviso de los ultimos tres minutos, que es una
+     escala (amarillo, naranja, rojo) y sale solo tres minutos por hora. */
   --azul: #05306e;
   --azul-claro: #a9c6f2;
   --rojo: #ce1126;
+  --amarillo: #ffd23f;
+  --naranja: #ff7a1a;
+  --rojo-globo: #e4162b;
+  --fondo: #0b1220;
   --panel: linear-gradient(90deg, rgba(3, 26, 62, 0.96) 0%, rgba(8, 54, 118, 0.94) 100%);
   --caja: rgba(3, 26, 62, 0.97);
 }
@@ -300,4 +306,171 @@
   border-radius: 14px;
   font-size: 28px;
   text-align: center;
+}
+
+/* ---------- El globo de aviso ----------
+   Un disco lleno al que se le va comiendo un sector en sentido contrario a
+   las agujas del reloj: --ang es lo que queda, de 360deg a 0. El borde que
+   avanza arranca en las 12 y gira hacia las 11, las 10... En el centro, una
+   ficha oscura con el minuto, para que se lea aunque el sector ya haya pasado
+   por ahi. Aparece solo en los ultimos tres minutos (Globo.jsx). */
+
+.obs-globo {
+  --ang: 360deg;
+  --c: var(--amarillo);
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(var(--c) 0 var(--ang), transparent var(--ang) 360deg);
+}
+/* El contorno entero, para que se vea el circulo aunque quede casi vacio */
+.obs-globo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(169, 198, 242, 0.35);
+}
+.obs-globo-ficha {
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
+  background: var(--fondo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 134px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--c);
+  font-variant-numeric: tabular-nums;
+}
+.obs-globo-amarillo { --c: var(--amarillo); }
+.obs-globo-naranja { --c: var(--naranja); }
+.obs-globo-rojo { --c: var(--rojo-globo); }
+
+/* En pequeno, dentro del recuadro del cronometro */
+.obs-globo-chico {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+}
+.obs-globo-chico .obs-globo-ficha { font-size: 30px; }
+
+/* El recuadro del cronometro con el globo: pasa de columna a fila */
+.obs-crono-con-globo {
+  flex-direction: row;
+  gap: 22px;
+  padding: 0 30px 0 18px;
+}
+.obs-crono-texto { text-align: center; }
+
+/* ---------- Pantalla de salida ----------
+   Pantalla completa para el monitor o proyector del corral: el reloj grande
+   y, a la izquierda, el anillo que se cierra con la vuelta o el globo. */
+
+.obs-salida {
+  position: absolute;
+  inset: 0;
+  background: var(--fondo);
+}
+.obs-salida-cab {
+  position: absolute;
+  top: 61px;
+  left: 73px;
+  right: 73px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.obs-salida-marca { display: flex; align-items: center; gap: 23px; }
+.obs-salida-marca img { width: 69px; height: 69px; border-radius: 10px; }
+.obs-salida-marca span { font-size: 30px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--azul-claro); }
+.obs-salida-hora { font-size: 36px; font-variant-numeric: tabular-nums; color: var(--azul-claro); display: flex; align-items: baseline; gap: 13px; }
+.obs-salida-hora small { font-size: 19px; letter-spacing: 0.18em; text-transform: uppercase; }
+
+.obs-salida-cuerpo {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 86px;
+}
+.obs-salida-disco {
+  width: 557px;
+  height: 557px;
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.obs-salida-disco svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.obs-anillo-fondo { fill: none; stroke: rgba(169, 198, 242, 0.18); stroke-width: 4; }
+.obs-anillo { fill: none; stroke: var(--rojo); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.obs-salida-centro { text-align: center; }
+.obs-salida-centro img { width: 230px; height: 230px; border-radius: 27px; display: block; margin: 0 auto 15px; }
+.obs-salida-centro .obs-crono-rotulo { font-size: 25px; letter-spacing: 0.25em; }
+.obs-salida-num { font-size: 163px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.obs-salida-num-chico { font-size: 80px; }
+
+.obs-salida-cuenta { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.obs-salida-rotulo { font-size: 42px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--azul-claro); }
+.obs-salida-digitos {
+  font-size: 326px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.obs-salida-digitos-chico { font-size: 259px; }
+.obs-salida-alerta { color: var(--rojo-globo); animation: obs-pulso 1s ease-in-out infinite; transform-origin: left center; }
+@keyframes obs-pulso {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.obs-salida-sub { font-size: 38px; color: var(--azul-claro); margin-top: 15px; }
+.obs-salida-sub b { color: #fff; font-weight: 600; }
+
+.obs-salida-pie {
+  position: absolute;
+  left: 73px;
+  right: 73px;
+  bottom: 69px;
+  display: flex;
+  gap: 50px;
+  align-items: baseline;
+  font-size: 40px;
+  line-height: 1.2;
+}
+.obs-salida-pie .obs-palabra { font-size: 22px; color: var(--azul-claro); margin-left: 10px; text-transform: uppercase; letter-spacing: 0.12em; }
+.obs-salida-progreso-fondo { position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: rgba(169, 198, 242, 0.12); }
+.obs-salida-progreso { position: absolute; left: 0; bottom: 0; height: 14px; background: var(--rojo); transition: width 1s linear; }
+
+/* Al cruzar el cero: toda la pantalla en rojo unos segundos */
+.obs-salida-destello {
+  position: absolute;
+  inset: 0;
+  background: var(--rojo);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  animation: obs-entra 0.3s ease-out;
+}
+.obs-salida-destello .obs-salida-grande { font-size: 365px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.obs-salida-destello .obs-salida-rotulo { font-size: 50px; color: #ffd9de; }
+
+@media (prefers-reduced-motion: reduce) {
+  .obs-salida-alerta, .obs-salida-destello, .obs-entra { animation: none; }
 }
