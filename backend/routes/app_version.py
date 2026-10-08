@@ -19,9 +19,8 @@ router = APIRouter(prefix="/api/app", tags=["app"])
 
 VERSIONES = {
     "ios": {
-        # Lo que servia el App Store el 5-oct-2026 (publicada el 1-oct). La
-        # 1.3.11 se sube aqui cuando Apple la publique, no antes.
-        "version": "1.3.10",
+        # En el App Store desde el 7-oct-2026 (comprobado en la ficha).
+        "version": "1.3.11",
         "url": "https://apps.apple.com/do/app/bysd-live/id6802661105",
     },
     "android": {
