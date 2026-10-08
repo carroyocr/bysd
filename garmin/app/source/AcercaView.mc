@@ -19,7 +19,7 @@ using Toybox.Math as Math;
 // 255 lo cortaba por abajo, porque el escalado en el reloj no actuo.
 class AcercaView extends Ui.View {
 
-    static const VERSION = "1.10.0";
+    static const VERSION = "1.11.0";
     // La URL va debajo del QR, en la fuente mas chica: entera si cabe en
     // la cuerda de la esfera a esa altura, en dos lineas si no, y nada si
     // tampoco. El QR es el que resuelve; esto es la referencia legible.
