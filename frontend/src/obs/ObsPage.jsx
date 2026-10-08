@@ -177,7 +177,10 @@ export default function ObsPage() {
   );
 
   if (vista === 'crono') {
-    return enLienzo(cajaCrono(rotuloCrono, 'obs-crono-suelto'));
+    // Suelto en la esquina habla de la salida, que es lo que se espera en
+    // el corral; dentro de la barra sigue siendo la vuelta.
+    const rotuloSuelto = esperandoSalida || r.terminada ? rotuloCrono : 'Próxima salida';
+    return enLienzo(cajaCrono(rotuloSuelto, 'obs-crono-suelto'));
   }
 
   if (vista === 'salida') {

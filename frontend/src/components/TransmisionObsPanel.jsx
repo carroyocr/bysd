@@ -22,8 +22,8 @@ const VISTAS = [
   },
   {
     id: 'crono',
-    nombre: 'Cronómetro',
-    descripcion: 'Solo la cuenta regresiva de la vuelta, en la esquina inferior derecha, con el globo de aviso en los últimos tres minutos.',
+    nombre: 'Cronómetro (esquina)',
+    descripcion: 'Solo la cuenta regresiva hasta la próxima salida, en una caja en la esquina inferior derecha, con el globo de aviso en los últimos tres minutos. Para escenas sin barra; ocupa el mismo sitio que ella.',
     ancho: 1920,
     alto: 1080,
   },
