@@ -36,6 +36,11 @@ class MainView extends Ui.View {
     // sistema, en ms) y que vuelta ya se aviso, para avisar una sola vez.
     var _avisoHasta = 0;
     var _vueltaAvisada = 0;
+    // El corral pasajero, para quien sigue en el circuito: hasta cuando se
+    // muestra, el umbral (3, 2 o 1 minuto) que ya salto y en que vuelta.
+    var _corralHasta = 0;
+    var _umbralMostrado = -1;
+    var _vueltaDelCorral = 0;
     // Escrito como diccionario para que el comprobador sepa que _s[:clave] es
     // un acceso legitimo y no avise en cada compilacion.
     var _s as Lang.Dictionary = {};
@@ -74,8 +79,10 @@ class MainView extends Ui.View {
     }
 
     function avanzar(paso) {
-        // Cualquier cambio de pagina salta el aviso de inicio de vuelta.
+        // Cualquier cambio de pagina salta el aviso de inicio de vuelta y
+        // el corral pasajero.
         _avisoHasta = 0;
+        _corralHasta = 0;
         var n = (_estado.ordenPaginas as Lang.Array<Lang.Number>).size();
         _pagina = (_pagina + paso + n) % n;
     }
@@ -113,16 +120,24 @@ class MainView extends Ui.View {
 
         // El corral no es una pagina: se impone. En los ultimos tres minutos
         // de cualquier cuenta atras -la de salida incluida- salta a pantalla
-        // completa por encima de la pagina que se este mirando, porque ahi lo
-        // urgente es llegar a la linea y no el ritmo. Se tine con el semaforo
-        // (amarillo a 3, naranja a 2, rojo en el ultimo) y vuelve solo cuando
-        // suena la campana. No rompe la regla de "navegacion siempre viva":
-        // el candado que la rompia duraba hasta media hora; este, tres
-        // minutos, y es lo que el corredor tiene que ver.
+        // completa por encima de la pagina que se este mirando. Se tine con
+        // el semaforo (amarillo a 3, naranja a 2, rojo en el ultimo) y vuelve
+        // solo cuando suena la campana.
+        //
+        // Pero se impone de lleno solo a quien ya cerro la vuelta y descansa
+        // -ahi lo unico que hay que hacer es llegar a la linea- y antes de la
+        // salida, donde no hay nada que navegar. Quien sigue en el circuito
+        // tiene otra pregunta, «¿llego o no llego?», y el corral le tapaba la
+        // pantalla que la responde (lo pidio un corredor tras unos dias de
+        // uso). A el le salta cinco segundos en cada umbral, con la
+        // vibracion, y se retira; cualquier boton lo quita antes. Mientras,
+        // los aros del Margen y de la Vuelta van del color del corral.
         var aviso = Fmt.colorCorral(r);
         if (aviso != null) {
-            _corral(dc, cx, cy, h, radio, vuelta, r, aviso);
-            return;
+            if (vuelta == 0 || _estado.marcada() || _corralPasajero(vuelta, r)) {
+                _corral(dc, cx, cy, h, radio, vuelta, r, aviso);
+                return;
+            }
         }
 
         // El calentamiento es una sola pantalla: antes de la primera campana
@@ -179,6 +194,29 @@ class MainView extends Ui.View {
         }
 
         _migas(dc, cx, h, orden.size());
+    }
+
+    // Si toca ensenar el corral a quien sigue en el circuito: cinco
+    // segundos cada vez que se cruza un umbral nuevo (3, 2, 1), igual que el
+    // aviso de inicio de vuelta. El umbral se busca como en el tic de las
+    // vibraciones: el mas profundo ya cruzado, para que mirar el reloj a
+    // falta de un minuto no encadene los tres.
+    function _corralPasajero(vuelta, r) {
+        if (vuelta != _vueltaDelCorral) {
+            _vueltaDelCorral = vuelta;
+            _umbralMostrado = -1;
+        }
+        var umbral = -1;
+        for (var i = 0; i < RaceState.AVISOS_CORRAL.size(); i++) {
+            if (r <= RaceState.AVISOS_CORRAL[i]) { umbral = i; }
+        }
+        if (umbral > _umbralMostrado) {
+            _umbralMostrado = umbral;
+            _corralHasta = Sys.getTimer() + AVISO_MS;
+        }
+        if (_corralHasta > 0 && Sys.getTimer() < _corralHasta) { return true; }
+        _corralHasta = 0;
+        return false;
     }
 
     // --- pantallas ---
@@ -357,8 +395,9 @@ class MainView extends Ui.View {
 
         // El aro se vacia con la hora: lo que queda de aro es lo que queda de
         // vuelta. Es la misma cifra del centro, legible sin leer.
+        var corral = Fmt.colorCorral(r);
         _arco(dc, cx, cy, radio, r.toFloat() / _estado.duracionVuelta,
-              Gfx.COLOR_ORANGE, 7);
+              corral == null ? Gfx.COLOR_ORANGE : corral, 7);
 
         _txt(dc, cx, _yArribaAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
              _s[:nextStart]);
@@ -380,8 +419,11 @@ class MainView extends Ui.View {
         // antes de la campana, y eso se ve sin leer un solo digito. En la
         // vuelta 0 no hay tiempo consumido ni distancia: ningun aro.
         if (vuelta >= 1) {
+            // En los ultimos tres minutos el aro del tiempo toma el color del
+            // corral: el aviso sigue a la vista sin tapar la cifra.
+            var corral = Fmt.colorCorral(r);
             _arco(dc, cx, cy, radio, 1.0 - (r.toFloat() / _estado.duracionVuelta),
-                  Tema.tenue(), 7);
+                  corral == null ? Tema.tenue() : corral, 7);
             if (km != null && objetivo > 0) {
                 _arco(dc, cx, cy, radio - 11, km / objetivo,
                       vaSobrado ? Tema.verde() : Gfx.COLOR_RED, 5);

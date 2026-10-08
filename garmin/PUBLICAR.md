@@ -7,7 +7,19 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.11.0, lista para subir
+## Estado — la 1.12.0, lista para subir
+
+Un corredor, tras unos días de uso (8 de octubre de 2026): en los últimos
+tres minutos el corral tapaba todas las pantallas, también a quien seguía en
+el circuito y quería saber si llegaba. Desde la 1.12.0 el corral se impone
+de lleno solo a quien **ya marcó** la vuelta (descansa) y antes de la salida;
+a quien sigue en el circuito le salta cinco segundos en cada umbral (3, 2,
+1), con la vibración, y se retira —cualquier botón lo quita antes—, mientras
+los aros del Margen y de la Vuelta van del color del corral. Marcar dentro de
+esos tres minutos lo deja fijo desde ese momento. Vibraciones y ajustes, sin
+cambio. Está en `MainView.onUpdate` (`_corralPasajero`).
+
+## Estado — la 1.11.0, publicada
 
 Tercera ronda de Denis (Forerunner 255), ya con la 1.10.0 instalada, 8 de
 octubre de 2026. La da por buena y pide dos cosas de la pantalla Margen, las
@@ -228,6 +240,24 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.12.0 (para el campo "What's New")
+
+**ES**
+
+> - Si sigues en el circuito en los últimos tres minutos, el corral ya no te
+>   tapa las pantallas: salta un momento en cada aviso (3, 2 y 1 minuto) y
+>   vuelve a lo que mirabas, con los aros del Margen y de la Vuelta en su
+>   color. Si ya marcaste, se queda como siempre.
+
+**EN**
+
+> - If you're still out on the loop in the last three minutes, the corral
+>   no longer hides your screens: it pops up briefly at each alert (3, 2
+>   and 1 minute) and returns to what you were looking at, with the Margin
+>   and Lap rings in its colour. If you've already marked, it stays as before.
 
 ---
 

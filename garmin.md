@@ -1,9 +1,12 @@
 # Garmin — lo que queda
 
-**Pendiente a 8 de octubre de 2026: subir la 1.11.0** (`garmin/build/backyard.iq`):
-la pantalla Margen pierde la línea «hecho / objetivo» y enseña el ritmo
-actual un escalón más grande, por la tercera ronda de Denis, que probó la
-1.10.0 y la dio por buena. La **1.10.0 se publicó el 8 de octubre**: margen
+**Pendiente a 8 de octubre de 2026: subir la 1.12.0** (`garmin/build/backyard.iq`):
+el corral deja de tapar las pantallas a quien sigue en el circuito (salta
+cinco segundos por aviso y se retira; fijo solo con la vuelta marcada), por
+un corredor tras unos días de uso. La **1.11.0** (misma fecha, subida al
+portal): la pantalla Margen pierde la línea «hecho / objetivo» y enseña el
+ritmo actual un escalón más grande, por la tercera ronda de Denis, que probó
+la 1.10.0 y la dio por buena. La **1.10.0 se publicó el 8 de octubre**: margen
 de seguridad, ritmo actual en Margen, texto en tinta pura en MIP y la cifra
 de las páginas más arriba, por la segunda ronda de Denis. La 1.9.0 se
 publicó el 7 de octubre (con el número 1.9.1 en la ficha; la 1.9.2 lo alineó) y trae el ajuste «Tamaño de texto» y el texto
