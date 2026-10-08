@@ -91,6 +91,7 @@ module Tema {
     function fuente(f) {
         if (!grande) { return f; }
         if (f == Gfx.FONT_XTINY) { return Gfx.FONT_TINY; }
+        if (f == Gfx.FONT_TINY) { return Gfx.FONT_SMALL; }
         if (f == Gfx.FONT_NUMBER_MILD) { return Gfx.FONT_NUMBER_MEDIUM; }
         if (f == Gfx.FONT_NUMBER_MEDIUM) { return Gfx.FONT_NUMBER_HOT; }
         return f;

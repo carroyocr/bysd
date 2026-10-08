@@ -1,8 +1,11 @@
 # Garmin — lo que queda
 
-**Pendiente a 8 de octubre de 2026: subir la 1.10.0** (`garmin/build/backyard.iq`):
-margen de seguridad, ritmo actual en Margen, texto en tinta pura en MIP y la
-cifra de las páginas más arriba, por la segunda ronda de Denis. La 1.9.0 se
+**Pendiente a 8 de octubre de 2026: subir la 1.11.0** (`garmin/build/backyard.iq`):
+la pantalla Margen pierde la línea «hecho / objetivo» y enseña el ritmo
+actual un escalón más grande, por la tercera ronda de Denis, que probó la
+1.10.0 y la dio por buena. La **1.10.0 se publicó el 8 de octubre**: margen
+de seguridad, ritmo actual en Margen, texto en tinta pura en MIP y la cifra
+de las páginas más arriba, por la segunda ronda de Denis. La 1.9.0 se
 publicó el 7 de octubre (con el número 1.9.1 en la ficha; la 1.9.2 lo alineó) y trae el ajuste «Tamaño de texto» y el texto
 secundario en gris medio, por la primera prueba de Denis (Forerunner 255)
 con la 1.8.0, la del **fondo claro**, publicada el 6 de octubre. La 1.6.0 y

@@ -7,7 +7,26 @@ funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.10.0, lista para subir
+## Estado — la 1.11.0, lista para subir
+
+Tercera ronda de Denis (Forerunner 255), ya con la 1.10.0 instalada, 8 de
+octubre de 2026. La da por buena y pide dos cosas de la pantalla Margen, las
+dos hechas:
+
+- **Fuera la línea «hecho / objetivo»** («4.1 / 6.7 km»): estaba tres veces
+  —el aro de dentro, la línea «Faltan…» y la página Yard— y le robaba sitio
+  al ritmo. El objetivo calibrado ya no sale en cifra en ninguna pantalla;
+  sigue mandando en el aro y en «Faltan».
+- **El ritmo actual, más grande.** Pidió un 10 %; en Garmin las fuentes van
+  por escalones, así que la línea sube uno: de XTINY a TINY, y a SMALL con el
+  texto grande (`Tema.fuente()` aprende el escalón TINY → SMALL). Al ir
+  sola, cabe con su unidad también en grande, que la 1.10.0 había tenido que
+  quitar.
+
+El cálculo del margen no se toca: sigue con el ritmo medio asentado, que es
+lo que él mismo confirma que quiere.
+
+## Estado — la 1.10.0, publicada
 
 Segunda ronda de Denis (Forerunner 255) con la 1.9.x, 7 de octubre de 2026.
 Cinco cosas:
@@ -209,6 +228,24 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.11.0 (para el campo "What's New")
+
+**ES**
+
+> - La pantalla de Margen enseña el ritmo actual más grande, con su unidad
+>   también en texto grande.
+> - Fuera la línea «hecho / objetivo» de esa pantalla: lo recorrido ya lo
+>   cuenta el aro y lo da exacto la página Yard.
+
+**EN**
+
+> - The Margin screen shows your current pace larger, with its unit also in
+>   large text.
+> - The «done / target» line is gone from that screen: the ring already
+>   shows the distance covered and the Yard screen gives it exactly.
 
 ---
 

@@ -251,7 +251,18 @@ python3 tools/verificar_dispositivos.py
 ```
 
 Para el simulador: arranca `connectiq` una vez y luego `monkeydo <prg> fenix7`.
-Desde VS Code, `Ctrl+Shift+P` → *Monkey C: Run App*.
+Desde VS Code, `Ctrl+Shift+P` → *Monkey C: Run App*. O todo de una vez, sin
+abrir nada a mano:
+
+```
+garmin/tools/simular.sh              # compila y carga en el fr255
+garmin/tools/simular.sh fenix847mm   # otro reloj
+garmin/tools/simular.sh --reiniciar  # cierra el simulador y vuelve a empezar
+```
+
+Abre el simulador si hace falta y deja la app cargada en la pantalla de la
+hora de salida. Dentro: START da la salida, *Simulation → Activity Data* pone
+distancia y ritmo simulados, y UP/DOWN cambian de página.
 
 Para cargarlo en un reloj de verdad: compila **en release y optimizado**,
 añadiendo `-r -O 2` al comando de arriba (y `-d fenix847mm` para el fenix 8 de

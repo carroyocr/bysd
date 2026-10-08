@@ -403,20 +403,23 @@ class MainView extends Ui.View {
                  vaSobrado ? Tema.verde() : Gfx.COLOR_RED, Fmt.margen(margen));
         }
 
-        // Las dos lineas de contexto del boceto: lo hecho contra el objetivo
-        // con el ritmo, y lo que falta con el tiempo que costara al ritmo que
-        // se lleva. Son dos ritmos distintos a proposito: el que se ENSENA es
-        // el de ahora mismo -quien va a tramos de correr y caminar quiere
-        // ver a cuanto va en este tramo; lo pidio un usuario-, y el que se
-        // MULTIPLICA por lo que falta es el asentado del yard, el mismo del
-        // margen, porque es el que decide si se llega. Con el texto grande
-        // la unidad del ritmo se cae: va implicita y la linea tiene que caber.
+        // Las dos lineas de contexto: el ritmo, y lo que falta con el tiempo
+        // que costara. Son dos ritmos distintos a proposito: el que se
+        // ENSENA es el de ahora mismo -quien va a tramos de correr y caminar
+        // quiere ver a cuanto va en este tramo; lo pidio un usuario-, y el
+        // que se MULTIPLICA por lo que falta es el asentado del yard, el
+        // mismo del margen, porque es el que decide si se llega.
+        //
+        // Hasta la 1.10.0 la primera linea llevaba tambien lo hecho contra
+        // el objetivo («4.1 / 6.7 km»), y el mismo usuario pidio quitarlo:
+        // estaba tres veces -en el aro de dentro, en la linea de abajo y en
+        // la pagina Yard- y le robaba sitio al ritmo. Sin eso el ritmo va
+        // solo, un escalon mas grande (TINY, y SMALL con el texto grande),
+        // y cabe con su unidad tambien en grande.
         var ritmo = _estado.ritmoActual();
         var ritmoProyectado = _estado.ritmoParaMargen();
-        var unidadRitmo = Tema.grande ? "" : " /" + Fmt.unidad();
-        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_XTINY, Tema.tenue(),
-             Fmt.distancia(km) + " / " + Fmt.distancia(objetivo) + " "
-             + Fmt.unidad() + " · " + Fmt.ritmo(ritmo) + unidadRitmo);
+        _txt(dc, cx, _ySubAlta(cy, h), Gfx.FONT_TINY, Tema.tenue(),
+             Fmt.ritmo(ritmo) + " /" + Fmt.unidad());
         var faltan = null;
         if (km != null && objetivo > 0) {
             faltan = objetivo - km;
