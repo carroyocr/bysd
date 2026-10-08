@@ -716,6 +716,32 @@ def test_los_permisos_de_un_usuario_del_panel_no_los_hereda_la_cuenta_que_coinci
     assert [u.permissions for u in lista if u.username == "geizel26"] == [["scanner"]]
 
 
+def test_usuarios_ensena_el_escaner_que_llega_por_el_turno(monkeypatch, correos):
+    """Y lo distingue de los permisos marcados: ese no se guarda ni se quita aqui."""
+    async def caso(db):
+        await cuentas.crear(
+            db, email=CORREO, password=CLAVE, nombre="Ana", roles=[cuentas.STAFF], email_verified=True)
+        await db.volunteer_assignments.insert_one(
+            {"id": 1, "puesto": "Control de Vueltas", "turno": "A", "slot": 1, "email_asignado": CORREO})
+        return await users.get_users()
+
+    fila = [u for u in correr(caso, monkeypatch) if u.username == CORREO][0]
+    assert fila.permissions == []
+    assert fila.permisos_del_turno == ["scanner"]
+
+
+def test_usuarios_no_ensena_el_escaner_del_turno_a_la_cuenta_sin_demostrar(monkeypatch, correos):
+    async def caso(db):
+        await _alta_de_staff()
+        await db.volunteer_assignments.insert_one(
+            {"id": 1, "puesto": "Control de Vueltas", "turno": "A", "slot": 1, "email_asignado": CORREO})
+        return await users.get_users()
+
+    fila = [u for u in correr(caso, monkeypatch) if u.username == CORREO][0]
+    assert fila.correo_sin_verificar
+    assert fila.permisos_del_turno == []
+
+
 def test_la_cuenta_migrada_recibe_permisos_como_siempre(monkeypatch, correos):
     async def caso(db):
         await db.admin_users.insert_one({

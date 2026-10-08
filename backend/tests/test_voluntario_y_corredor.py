@@ -86,6 +86,139 @@ def roles_del_token(cuenta) -> list:
     return auth.decodificar(cuentas.emitir_token(cuenta))["roles"]
 
 
+# ==================== El turno da el escaner ====================
+
+
+async def turno(db, puesto, email=CORREO, **extra):
+    """Un turno de `volunteer_assignments` ya asignado a ese correo."""
+    await db.volunteer_assignments.insert_one(
+        {"id": 1, "puesto": puesto, "turno": "A", "slot": 1, "email_asignado": email, **extra}
+    )
+
+
+def permisos_del_token(cuenta) -> list:
+    return auth.decodificar(cuentas.emitir_token(cuenta))["permissions"]
+
+
+class TestElTurnoDaElEscaner:
+    """Control de Vueltas y Corral de salida escanean: el permiso sale del turno."""
+
+    def test_con_turno_de_control_de_vueltas_entra_con_el_escaner(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], email_verified=True,
+            )
+            await turno(db, "Control de Vueltas")
+
+            al_dia = await cuentas.poner_al_dia(db, cuenta)
+
+            assert permisos_del_token(al_dia) == ["scanner"]
+            # No se guarda: lo que hay en Usuarios sigue siendo lo que marco la organizacion.
+            assert (await cuentas.por_email(db, CORREO))["permissions"] == []
+
+        correr(caso)
+
+    def test_el_corral_tambien_aunque_el_puesto_este_escrito_distinto(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], email_verified=True,
+            )
+            await turno(db, "corral de salida y animacion.")
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == ["scanner"]
+
+        correr(caso)
+
+    def test_otro_puesto_no_lo_da(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], email_verified=True,
+            )
+            await turno(db, "Hidratación y Snacks")
+            await turno(db, "Control de Ruta.")
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == []
+
+        correr(caso)
+
+    def test_un_turno_que_le_quitaron_ya_no_lo_da(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], email_verified=True,
+            )
+            await turno(db, "Control de Vueltas", email=None)
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == []
+
+        correr(caso)
+
+    def test_sin_el_correo_demostrado_no_lo_da(self):
+        """Abrir una cuenta de staff con el correo de quien controla vueltas."""
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="X", roles=[cuentas.STAFF],
+            )
+            await turno(db, "Control de Vueltas")
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == []
+
+        correr(caso)
+
+    def test_la_cuenta_heredada_del_panel_cuenta_como_demostrada(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], staff_username=CORREO,
+            )
+            await turno(db, "Control de Vueltas")
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == ["scanner"]
+
+        correr(caso)
+
+    def test_sin_el_rol_de_equipo_no_lo_da(self):
+        """Un espectador verificado con el correo de un turno, pero sin postulacion."""
+        async def caso(db):
+            cuenta = await cuentas.crear(db, email=CORREO, password="x" * 8, nombre="Ana", email_verified=True)
+            await turno(db, "Control de Vueltas")
+
+            al_dia = await cuentas.poner_al_dia(db, cuenta)
+
+            assert al_dia["roles"] == ["fan"]
+            assert permisos_del_token(al_dia) == []
+
+        correr(caso)
+
+    def test_se_suma_a_los_del_panel_sin_repetirse(self):
+        async def caso(db):
+            cuenta = await cuentas.crear(
+                db, email=CORREO, password="x" * 8, nombre="Ana",
+                roles=[cuentas.STAFF], permissions=["laps", "scanner"], email_verified=True,
+            )
+            await turno(db, "Control de Vueltas")
+
+            assert permisos_del_token(await cuentas.poner_al_dia(db, cuenta)) == ["laps", "scanner"]
+
+        correr(caso)
+
+    def test_el_corredor_que_controla_vueltas_gana_el_rol_y_el_escaner_de_una_vez(self):
+        async def caso(db):
+            cuenta, _ = await corredor(db)
+            await voluntario(db)
+            await turno(db, "Control de Vueltas")
+
+            al_dia = await cuentas.poner_al_dia(db, cuenta)
+
+            assert "staff" in al_dia["roles"]
+            assert permisos_del_token(al_dia) == ["scanner"]
+
+        correr(caso)
+
+
 # ==================== Al entrar ====================
 
 
