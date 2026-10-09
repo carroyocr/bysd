@@ -18,6 +18,7 @@ Ver PLAN_CUENTA_UNICA.md.
 import hashlib
 import logging
 import secrets
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -445,13 +446,74 @@ async def avisar_de_verificacion(db, cuenta: Optional[dict]) -> bool:
     return True
 
 
+# ==================== PERMISOS QUE DA EL TURNO ====================
+#
+# Quien tiene asignado un turno en el control de vueltas o en el corral de
+# salida escanea dorsales: es su trabajo. Pedirle a la organizacion que ademas
+# le marque el permiso a cada uno en Usuarios era un paso que siempre se le
+# olvidaba a alguien, y se notaba el dia de la carrera. Asi que el permiso sale
+# del turno: se calcula al entrar y viaja en el token, pero **no se guarda** en
+# la cuenta. Si le quitan el turno, lo pierde en la siguiente sesion; y lo que
+# la organizacion marque en Usuarios sigue siendo exactamente lo que marco.
+
+PUESTOS_CON_ESCANER = ("Control de Vueltas", "Corral de salida y animación")
+
+
+def _clave_de_puesto(nombre) -> str:
+    """El nombre del puesto sin acentos, mayusculas ni puntuacion.
+
+    Los puestos se escriben a mano en la pestana Turnos («Control de Ruta.»,
+    con punto, existe), asi que la comparacion no puede ser letra por letra.
+    """
+    sin_acentos = unicodedata.normalize("NFKD", str(nombre or ""))
+    letras = "".join(c for c in sin_acentos if not unicodedata.combining(c))
+    return " ".join("".join(c if c.isalnum() else " " for c in letras).casefold().split())
+
+
+def da_escaner(puesto) -> bool:
+    """Si un turno en ese puesto lleva consigo el permiso de escanear."""
+    return _clave_de_puesto(puesto) in {_clave_de_puesto(p) for p in PUESTOS_CON_ESCANER}
+
+
+async def permisos_del_turno(db, cuenta: Optional[dict]) -> list:
+    """Los permisos que la persona tiene por sus turnos asignados: hoy, `scanner`.
+
+    Solo con el rol de equipo y el correo demostrado. Los turnos se buscan por
+    correo, y el escaner abre las fichas medicas: una cuenta abierta con el
+    correo de otro no se lleva lo que le toca al dueno del correo.
+    """
+    if not cuenta or STAFF not in (cuenta.get("roles") or []) or not demostrada(cuenta):
+        return []
+    puestos = await db.volunteer_assignments.distinct(
+        "puesto", {"email_asignado": cuenta.get("email")}
+    )
+    return ["scanner"] if any(da_escaner(p) for p in puestos) else []
+
+
+def _con_permisos(cuenta: dict, extra: list) -> dict:
+    """La cuenta con `extra` sumado a sus permisos, sin repetir y sin guardar."""
+    permisos = list(cuenta.get("permissions") or [])
+    nuevos = [p for p in extra if p not in permisos]
+    return {**cuenta, "permissions": permisos + nuevos} if nuevos else cuenta
+
+
 async def poner_al_dia(db, cuenta: Optional[dict]) -> Optional[dict]:
     """Suma a la cuenta los roles que la persona ya se gano por otro camino.
 
     Se llama en cada acceso, antes de mirar los roles: el voluntario que ademas
-    corre entra una vez y ve sus dos zonas. Devuelve la cuenta como queda.
+    corre entra una vez y ve sus dos zonas. Devuelve la cuenta como queda, con
+    los permisos que le dan sus turnos (`permisos_del_turno`) sumados a los
+    suyos; esos van en el token y no se escriben en la base.
     """
-    if not cuenta or not cuenta.get("email_verified"):
+    if not cuenta:
+        return cuenta
+    cuenta = await _sumar_roles(db, cuenta)
+    return _con_permisos(cuenta, await permisos_del_turno(db, cuenta))
+
+
+async def _sumar_roles(db, cuenta: dict) -> dict:
+    """Los roles que llegan por coincidencia de correo, solo si esta verificado."""
+    if not cuenta.get("email_verified"):
         return cuenta
 
     correo = cuenta.get("email")

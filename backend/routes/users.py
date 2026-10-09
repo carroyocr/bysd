@@ -141,6 +141,10 @@ class UserResponse(BaseModel):
     # Cuenta de staff creada en la app que aun no ha confirmado su correo: no se
     # sabe si quien la abrio es la persona cuyo correo lleva. No admite permisos.
     correo_sin_verificar: bool = False
+    # Los que le llegan por sus turnos asignados (hoy `scanner`, por Control de
+    # Vueltas o Corral de salida), sin que nadie se los marque. No se guardan
+    # ni se editan aqui: salen del turno. Ver `cuentas.permisos_del_turno`.
+    permisos_del_turno: List[str] = []
 
 
 @router.get("")
@@ -168,6 +172,8 @@ async def get_users():
         if c.get("staff_username"):
             por_usuario[c["staff_username"]] = c
 
+    con_escaner = await _correos_con_escaner_por_turno(db)
+
     result = []
     vistas = set()
     for user in users:
@@ -176,20 +182,26 @@ async def get_users():
             vistas.add(cuenta["_id"])
         # La cuenta sin demostrar que coincide por correo no es todavia la de
         # esta fila: los permisos que valen son los de la fila.
-        if not cuentas.demostrada(cuenta):
+        sin_demostrar = cuenta is not None and not cuentas.demostrada(cuenta)
+        if sin_demostrar:
             cuenta = None
+        # Sin cuenta, al entrar se le hace una demostrada (`adoptar_del_panel`),
+        # asi que el turno le vale igual; con una sin demostrar, no.
+        correo = (cuenta or {}).get("email") or (user.get("email") or "").lower() or user.get("username")
         result.append(UserResponse(
             username=user.get("username"),
             nombre=user.get("nombre"),
             email=user.get("email"),
             permissions=(cuenta or user).get("permissions") or [],
             is_admin=user.get("username") == "admin",
-            created_at=user.get("created_at")
+            created_at=user.get("created_at"),
+            permisos_del_turno=["scanner"] if correo in con_escaner and not sin_demostrar else [],
         ))
 
     for c in del_equipo:
         if c["_id"] in vistas:
             continue
+        demostrada = cuentas.demostrada(c)
         result.append(UserResponse(
             username=c.get("staff_username") or c.get("email"),
             nombre=f"{c.get('nombre') or ''} {c.get('apellidos') or ''}".strip() or None,
@@ -197,10 +209,22 @@ async def get_users():
             permissions=c.get("permissions") or [],
             is_admin=bool(c.get("is_admin")),
             created_at=c.get("created_at"),
-            correo_sin_verificar=not cuentas.demostrada(c),
+            correo_sin_verificar=not demostrada,
+            permisos_del_turno=["scanner"] if demostrada and c.get("email") in con_escaner else [],
         ))
 
     return result
+
+
+async def _correos_con_escaner_por_turno(db) -> set:
+    """Los correos con un turno asignado en un puesto que da el escaner."""
+    puestos = [p for p in await db.volunteer_assignments.distinct("puesto") if cuentas.da_escaner(p)]
+    if not puestos:
+        return set()
+    correos = await db.volunteer_assignments.distinct(
+        "email_asignado", {"puesto": {"$in": puestos}, "email_asignado": {"$nin": [None, ""]}}
+    )
+    return {str(c).strip().lower() for c in correos}
 
 
 @router.post("")
