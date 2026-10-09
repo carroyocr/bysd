@@ -880,6 +880,128 @@ async def get_volunteer_registrations(race_code: Optional[str] = None):
     return {"registrations": registrations, "count": len(registrations)}
 
 
+class AltaManualVoluntario(BaseModel):
+    """Lo minimo para apuntar a alguien desde el panel; el resto lo completa luego."""
+    nombre: str
+    apellidos: str
+    email: EmailStr
+    telefono: str
+    evento: Literal["carrera", "campeonato"] = "campeonato"
+    fecha_nacimiento: Optional[str] = None
+    sexo: Optional[Literal["Masculino", "Femenino", "Otro"]] = None
+    nacionalidad: Optional[str] = None
+    ciudad_residencia: Optional[str] = None
+    talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL"]] = None
+    contacto_emergencia_nombre: Optional[str] = None
+    contacto_emergencia_telefono: Optional[str] = None
+    comentarios: Optional[str] = None
+    # Mandarle el mismo correo de bienvenida que al que se apunta solo (con su
+    # enlace de edicion), y el codigo para que se ponga contrasena y pueda entrar.
+    avisar: bool = True
+    enviar_codigo: bool = False
+
+
+@admin_router.post("/registrations", status_code=201)
+async def alta_manual_de_voluntario(
+    datos: AltaManualVoluntario,
+    race_code: Optional[str] = None,
+    payload: dict = Depends(require_permission("volunteers")),
+):
+    """Apuntar a un voluntario desde el panel, sin que pase por el formulario.
+
+    Es para quien llega por otro camino —un conocido que se suma el dia antes,
+    alguien que lo pidio por WhatsApp— y para completar el equipo cuando las
+    postulaciones ya estan cerradas: aqui no se mira `eventos_abiertos`, que
+    cierra el formulario publico, no la mano de la organizacion. Tampoco hay
+    codigo al correo: quien lo apunta responde por el. El registro queda igual
+    que uno del formulario (`status` registered, `email_verified`, `edit_token`)
+    y ademas con `alta_manual` y quien lo hizo, para saber de donde salio.
+
+    La cuenta no se crea aqui: sin contrasena no hay cuenta que crear
+    (`cuentas.cuenta_de_equipo`), y la contrasena la elige la persona con el
+    codigo (`enviar_codigo`). Si ya tenia cuenta verificada, gana el rol de
+    equipo en esa misma.
+    """
+    from server import db
+
+    if not race_code:
+        active_race = await db.race_configurations.find_one({"is_active": True})
+        race_code = active_race["code"] if active_race else "BYSD-2027"
+    else:
+        active_race = await db.race_configurations.find_one({"code": race_code})
+
+    email = str(datos.email).strip().lower()
+    if await db.volunteer_registrations.find_one(
+        {"email": email, "race_code": race_code, **evento_query(datos.evento)}
+    ):
+        raise HTTPException(status_code=409, detail="Ese correo ya está apuntado como voluntario en este evento")
+
+    campos = {
+        k: (v.strip() if isinstance(v, str) else v)
+        for k, v in datos.dict(exclude={"email", "avisar", "enviar_codigo"}).items()
+        if v is not None and (not isinstance(v, str) or v.strip())
+    }
+    ahora = datetime.now(timezone.utc)
+    edit_token = generate_edit_token()
+    registro = {
+        **campos,
+        "email": email,
+        "race_code": race_code,
+        "email_verified": True,
+        "status": "registered",
+        "edit_token": edit_token,
+        "alta_manual": True,
+        "alta_por": payload.get("username") or payload.get("email"),
+        "created_at": ahora,
+        "updated_at": ahora,
+    }
+    await db.volunteer_registrations.insert_one(registro)
+
+    try:
+        from services import cuentas as servicio_cuentas
+        await servicio_cuentas.cuenta_de_equipo(
+            db, email, password=None, nombre=datos.nombre, apellidos=datos.apellidos,
+        )
+    except Exception as e:  # no tumba un alta que por lo demas fue bien
+        logging.error("No se pudo preparar la cuenta del voluntario %s: %s", email, e)
+
+    avisos = {"correo_enviado": False, "codigo_enviado": False}
+    if datos.avisar:
+        try:
+            import os
+            from services.template_email_service import (
+                send_email_with_template, build_race_data, build_volunteer_data
+            )
+            frontend_url = os.environ.get("FRONTEND_URL", "https://backyardultrasantodomingo.com")
+            evento_nombre = nombre_evento(active_race, datos.evento)
+            await send_email_with_template(
+                db=db,
+                template_id="volunteer_registration_confirmation",
+                to_email=email,
+                data={
+                    **build_race_data(active_race),
+                    **build_volunteer_data(registro, edit_token=edit_token),
+                    "volunteer_edit_link": f"{frontend_url}/voluntarios/registro?token={edit_token}",
+                    "race_name": evento_nombre,
+                    "event_name": evento_nombre,
+                },
+            )
+            avisos["correo_enviado"] = True
+        except Exception as e:
+            logging.error("No se pudo mandar la bienvenida al voluntario %s: %s", email, e)
+
+    if datos.enviar_codigo:
+        try:
+            from routes.staff_account import enviar_codigo_password
+            avisos["codigo_enviado"] = bool(await enviar_codigo_password(db, email))
+        except Exception as e:
+            logging.error("No se pudo mandar el codigo al voluntario %s: %s", email, e)
+
+    registro.pop("_id", None)
+    registro.pop("edit_token", None)
+    return {"message": "Voluntario apuntado", "registro": registro, **avisos}
+
+
 @admin_router.get("/profiles")
 async def get_volunteer_profiles(race_code: Optional[str] = None):
     """Estado de la cuenta de cada voluntario, no de su inscripcion.
