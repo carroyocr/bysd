@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt, FileSpreadsheet, Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -53,6 +53,48 @@ export default function VolunteerAssignmentsManagement() {
   const [estadoFilter, setEstadoFilter] = useState('all'); // all | asignados | pendientes
   const [raceName, setRaceName] = useState('');
   const [changingEventoEmail, setChangingEventoEmail] = useState(null);
+
+  // Alta manual: apuntar a alguien sin que pase por el formulario público
+  const NUEVO_VOLUNTARIO = {
+    nombre: '', apellidos: '', email: '', telefono: '', evento: 'campeonato',
+    talla_camiseta: '', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '',
+    comentarios: '', avisar: true, enviar_codigo: true,
+  };
+  const [showNuevoModal, setShowNuevoModal] = useState(false);
+  const [nuevoVoluntario, setNuevoVoluntario] = useState(NUEVO_VOLUNTARIO);
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false);
+  const setCampoNuevo = (campo, valor) => setNuevoVoluntario(prev => ({ ...prev, [campo]: valor }));
+
+  const handleCrearVoluntario = async (e) => {
+    e.preventDefault();
+    setGuardandoNuevo(true);
+    try {
+      const body = Object.fromEntries(
+        Object.entries(nuevoVoluntario).filter(([, v]) => v !== '')
+      );
+      const response = await adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        toast.error(data.detail || 'No se pudo apuntar al voluntario');
+        return;
+      }
+      const avisos = [];
+      if (nuevoVoluntario.avisar) avisos.push(data.correo_enviado ? 'bienvenida enviada' : 'la bienvenida no salió');
+      if (nuevoVoluntario.enviar_codigo) avisos.push(data.codigo_enviado ? 'código enviado' : 'el código no salió');
+      toast.success(`Voluntario apuntado${avisos.length ? ` (${avisos.join(', ')})` : ''}`);
+      setShowNuevoModal(false);
+      setNuevoVoluntario(NUEVO_VOLUNTARIO);
+      loadData();
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setGuardandoNuevo(false);
+    }
+  };
 
   const getEventoLabel = (value) => {
     if (value === 'carrera') return raceName || 'Carrera Activa';
@@ -713,6 +755,14 @@ export default function VolunteerAssignmentsManagement() {
               Voluntarios Registrados
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => setShowNuevoModal(true)}
+                data-testid="nuevo-voluntario-btn"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nuevo voluntario
+              </Button>
               {/* Baja lo que se está viendo: respeta el evento, el estado y la búsqueda */}
               <Button
                 variant="outline"
@@ -1178,6 +1228,105 @@ export default function VolunteerAssignmentsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Alta manual de un voluntario */}
+      {showNuevoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-green-600" />
+                  Nuevo voluntario
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowNuevoModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto">
+              <form onSubmit={handleCrearVoluntario} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Lo apuntas tú, sin formulario ni código al correo, aunque las postulaciones
+                  estén cerradas. Después le asignas turnos como a cualquier otro.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Nombre *</label>
+                    <Input required value={nuevoVoluntario.nombre} onChange={(e) => setCampoNuevo('nombre', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Apellidos *</label>
+                    <Input required value={nuevoVoluntario.apellidos} onChange={(e) => setCampoNuevo('apellidos', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Correo *</label>
+                    <Input type="email" required value={nuevoVoluntario.email} onChange={(e) => setCampoNuevo('email', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Teléfono *</label>
+                    <Input required value={nuevoVoluntario.telefono} onChange={(e) => setCampoNuevo('telefono', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Evento</label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={nuevoVoluntario.evento}
+                      onChange={(e) => setCampoNuevo('evento', e.target.value)}
+                    >
+                      {EVENTO_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{getEventoLabel(opt.value)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Talla de camiseta</label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={nuevoVoluntario.talla_camiseta}
+                      onChange={(e) => setCampoNuevo('talla_camiseta', e.target.value)}
+                    >
+                      <option value="">Sin indicar</option>
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Contacto de emergencia</label>
+                    <Input value={nuevoVoluntario.contacto_emergencia_nombre} onChange={(e) => setCampoNuevo('contacto_emergencia_nombre', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Teléfono de emergencia</label>
+                    <Input value={nuevoVoluntario.contacto_emergencia_telefono} onChange={(e) => setCampoNuevo('contacto_emergencia_telefono', e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Comentarios</label>
+                  <Input value={nuevoVoluntario.comentarios} onChange={(e) => setCampoNuevo('comentarios', e.target.value)} placeholder="Cómo llegó, qué puede hacer..." />
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={nuevoVoluntario.avisar} onChange={(e) => setCampoNuevo('avisar', e.target.checked)} />
+                    <span>Mandarle el correo de bienvenida, con su enlace para completar o corregir sus datos.</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={nuevoVoluntario.enviar_codigo} onChange={(e) => setCampoNuevo('enviar_codigo', e.target.checked)} />
+                    <span>Mandarle el código para crear su contraseña y entrar en la web y en la app.</span>
+                  </label>
+                </div>
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowNuevoModal(false)} disabled={guardandoNuevo}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={guardandoNuevo}>
+                    {guardandoNuevo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                    Apuntar voluntario
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Add Assignment Modal */}
       {showAddModal && selectedVolunteer && (
