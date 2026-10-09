@@ -139,10 +139,33 @@ export default function VolunteerAssignmentsManagement() {
     return new Set(Object.keys(cuenta).filter(f => cuenta[f] > 1));
   };
 
-  // Get available slots for adding (not assigned, matching the volunteer's event)
-  const getAvailableSlotsForVolunteer = () => {
+  // Los turnos del evento del voluntario, uno por puesto+turno+día, con sus
+  // plazas libres. Salen también los llenos: la organización puede asignar
+  // igual, y el backend abre una plaza extra. Lo que no sale es el turno que
+  // esta persona ya tiene.
+  const getTurnosParaVolunteer = () => {
     const ev = selectedVolunteer?.evento || 'carrera';
-    return availableSlots.filter(slot => !slot.email_asignado && (slot.evento || 'carrera') === ev);
+    const email = selectedVolunteer?.email;
+    const grupos = {};
+    availableSlots
+      .filter(slot => (slot.evento || 'carrera') === ev)
+      .forEach(slot => {
+        const key = `${slot.dia_tipo || 'carrera'}|${slot.puesto}|${slot.turno}`;
+        if (!grupos[key]) {
+          grupos[key] = { ...slot, id: slot.id, libres: 0, total: 0, yaLoTiene: false };
+        }
+        const g = grupos[key];
+        g.total += 1;
+        if (!slot.email_asignado) {
+          g.libres += 1;
+          g.id = slot.id; // una plaza libre, si la hay, es la que se pide
+        } else if (slot.email_asignado === email) {
+          g.yaLoTiene = true;
+        }
+      });
+    return Object.values(grupos)
+      .filter(g => !g.yaLoTiene)
+      .map(g => ({ ...g, lleno: g.libres === 0 }));
   };
 
   // Change a volunteer's event
@@ -233,11 +256,14 @@ export default function VolunteerAssignmentsManagement() {
       const response = await adminFetch(`${API_URL}/api/volunteers/assign/${selectedSlotToAdd.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: selectedVolunteer.email })
+        // Sobre un turno lleno se pide abrir una plaza más; en los demás, no.
+        body: JSON.stringify({ email: selectedVolunteer.email, abrir_plaza: !!selectedSlotToAdd.lleno })
       });
       
       if (response.ok) {
-        toast.success('Turno asignado correctamente');
+        toast.success(selectedSlotToAdd.lleno
+          ? 'Turno asignado: se abrió una plaza extra'
+          : 'Turno asignado correctamente');
         setShowAddModal(false);
         setSelectedSlotToAdd(null);
         loadData();
@@ -1170,16 +1196,17 @@ export default function VolunteerAssignmentsManagement() {
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto space-y-4">
               <p className="text-sm text-muted-foreground">
-                Selecciona un turno disponible para asignar a este voluntario:
+                Selecciona el turno para este voluntario. Los turnos llenos también
+                se pueden elegir: se le abre una plaza extra.
               </p>
               
-              {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer())).length === 0 ? (
+              {Object.entries(groupSlotsByPosition(getTurnosParaVolunteer())).length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">
-                  No hay turnos disponibles para asignar
+                  No hay turnos para asignar
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer()))
+                  {Object.entries(groupSlotsByPosition(getTurnosParaVolunteer()))
                     .sort(([a], [b]) => {
                       // Sort by day type order: previo, carrera_dia1, carrera_dia2, carrera_dia3, carrera
                       const dayOrder = { 'previo': 0, 'carrera_dia1': 1, 'carrera': 1, 'carrera_dia2': 2, 'carrera_dia3': 3 };
@@ -1212,15 +1239,33 @@ export default function VolunteerAssignmentsManagement() {
                               p-3 rounded-lg border-2 cursor-pointer transition-all text-sm
                               ${selectedSlotToAdd?.id === slot.id 
                                 ? 'border-primary bg-primary/10' 
-                                : 'border-gray-200 hover:border-primary/50'}
+                                : slot.lleno
+                                  ? 'border-amber-200 bg-amber-50/60 hover:border-primary/50'
+                                  : 'border-gray-200 hover:border-primary/50'}
                             `}
                           >
-                            <Badge variant="outline" className="text-xs mb-1">
-                              Turno {slot.turno}
-                            </Badge>
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <Badge variant="outline" className="text-xs">
+                                Turno {slot.turno}
+                              </Badge>
+                              {slot.lleno ? (
+                                <Badge className="text-xs bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                  Lleno {slot.total}/{slot.total}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  {slot.libres} de {slot.total} libres
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
                             </div>
+                            {slot.lleno && (
+                              <div className="text-xs text-amber-700 mt-1">
+                                Se abrirá una plaza extra
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1244,7 +1289,9 @@ export default function VolunteerAssignmentsManagement() {
                   onClick={handleAddAssignment}
                   disabled={!selectedSlotToAdd || actionLoading}
                 >
-                  {actionLoading ? 'Asignando...' : 'Asignar Turno'}
+                  {actionLoading
+                    ? 'Asignando...'
+                    : selectedSlotToAdd?.lleno ? 'Asignar abriendo plaza extra' : 'Asignar Turno'}
                 </Button>
               </div>
             </CardContent>
