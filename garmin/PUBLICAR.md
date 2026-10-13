@@ -1,11 +1,22 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 8 de octubre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 13 de octubre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.13.0, lista para subir
+
+13 de octubre de 2026. «Yard auto Meta» marcaba la vuelta en cuanto el
+corredor entraba en los 30 m del punto de salida con **media vuelta** hecha:
+en un circuito que pasa por la meta a mitad de recorrido —un ocho, una ida y
+vuelta— la marcaba antes de tiempo, y como esa medida corta entraba en la
+calibración (80–120 % del objetivo), el umbral bajaba con ella en las vueltas
+siguientes. Desde la 1.13.0 exige el **90 %** de la vuelta
+(`RaceState.KM_MINIMOS_META`). Sin cambio en ajustes ni en el disparador por
+distancia. Lleva también lo de la 1.12.0, que no se llegó a subir.
 
 ## Estado — la 1.12.0, lista para subir
 
@@ -240,6 +251,29 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.13.0 (para el campo "What's New")
+
+**ES**
+
+> - La meta automática ya no marca al pasar cerca de la salida a mitad de
+>   vuelta: ahora exige llevar recorrido el 90 % del circuito, no la mitad.
+>   Arregla los recorridos en ocho o de ida y vuelta.
+> - Si sigues en el circuito en los últimos tres minutos, el corral ya no te
+>   tapa las pantallas: salta un momento en cada aviso (3, 2 y 1 minuto) y
+>   vuelve a lo que mirabas. Si ya marcaste, se queda como siempre.
+
+**EN**
+
+> - The automatic finish line no longer marks when you pass near the start
+>   mid-loop: it now requires 90 % of the loop covered, not half. Fixes
+>   figure-eight and out-and-back courses.
+> - If you're still out on the loop in the last three minutes, the corral
+>   no longer hides your screens: it pops up briefly at each alert (3, 2
+>   and 1 minute) and returns to what you were looking at. If you've
+>   already marked, it stays as before.
 
 ---
 

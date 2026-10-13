@@ -1,7 +1,10 @@
 # Garmin — lo que queda
 
-**Pendiente a 8 de octubre de 2026: subir la 1.12.0** (`garmin/build/backyard.iq`):
-el corral deja de tapar las pantallas a quien sigue en el circuito (salta
+**Pendiente a 13 de octubre de 2026: subir la 1.13.0** (`garmin/build/backyard.iq`):
+la meta automática exige el 90 % de la vuelta en vez de la mitad, para que un
+circuito que pasa por la salida a mitad de recorrido no marque antes de
+tiempo (`RaceState.KM_MINIMOS_META`). Lleva dentro la 1.12.0, que no se
+subió: el corral deja de tapar las pantallas a quien sigue en el circuito (salta
 cinco segundos por aviso y se retira; fijo solo con la vuelta marcada), por
 un corredor tras unos días de uso. La **1.11.0** (misma fecha, subida al
 portal): la pantalla Margen pierde la línea «hecho / objetivo» y enseña el

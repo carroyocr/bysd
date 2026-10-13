@@ -52,6 +52,9 @@ class RaceState {
     // Radio del punto de salida para la vuelta automatica, en metros. Mas
     // ancho que un arco de meta, mas estrecho que la zona de carpas.
     static const RADIO_SALIDA_M = 30.0;
+    // Parte de la vuelta que tiene que estar recorrida para que pasar por el
+    // punto de salida cuente como meta (ver tocaMarcarSola).
+    static const KM_MINIMOS_META = 0.9;
 
     // --- ajustes, del telefono ---
     var duracionVuelta = DURACION_VUELTA;
@@ -439,11 +442,15 @@ class RaceState {
         // mismo que usa el margen.
         if (autoLapKm && km >= kmObjetivo()) { return true; }
 
-        // Por ubicacion: cerca del punto de salida y con la mayor parte de
-        // la vuelta recorrida. El requisito de distancia evita marcarla al
-        // salir, que tambien es "cerca de la salida".
+        // Por ubicacion: cerca del punto de salida y con casi toda la vuelta
+        // recorrida. El requisito de distancia evita marcarla al salir, que
+        // tambien es "cerca de la salida", y evita que un circuito que pasa
+        // por la meta a mitad de vuelta -un ocho, una ida y vuelta- la marque
+        // antes de tiempo: con la mitad bastaba para lo primero, pero no para
+        // lo segundo. El 90 % deja hueco al error del GPS, que mide corto o
+        // largo de una vuelta a otra, sin abrir la puerta a un paso previo.
         if (!autoLap || _latSalida == null || _lat == null) { return false; }
-        if (km < kmObjetivo() * 0.5) { return false; }
+        if (km < kmObjetivo() * KM_MINIMOS_META) { return false; }
         return _metrosASalida() < RADIO_SALIDA_M;
     }
 
