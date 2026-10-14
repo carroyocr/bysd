@@ -55,6 +55,13 @@ const VISTAS = [
     ancho: 1920,
     alto: 1080,
   },
+  {
+    id: 'mensajes',
+    nombre: 'Mensajes de apoyo',
+    descripcion: 'Los mensajes que la gente escribe a los corredores en la app, de uno en uno, en la esquina inferior izquierda: cada mensaje nuevo sale según se publica, y entre medias rotan los últimos diez. Cada uno dura 10 segundos (&segundos=15 lo alarga). Con &recientes=0 solo salen los nuevos y la fuente queda en blanco mientras nadie escribe; con &espera=30 cada mensaje se retiene medio minuto desde que se publica, por si alguien lo reporta antes de salir al aire. Con &sobre=barra sube para dejar sitio a la barra inferior. Lo reportado o borrado no sale. No necesita la clave.',
+    ancho: 1920,
+    alto: 1080,
+  },
 ];
 
 /**
