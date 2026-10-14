@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
 import usePatrocinadores, { urlLogo } from './usePatrocinadores';
 import useCharla from './useCharla';
+import useMensajes from './useMensajes';
+import { Heart } from 'lucide-react';
 import Globo, { globoDe } from './Globo';
 import './obs.css';
 
@@ -22,6 +24,8 @@ import './obs.css';
  *   /obs/patrocinadores?clave=...
  *   /obs/patrocinador-esquina?race=BYSD-2027                 (sin clave: no lleva datos de carrera)
  *   /obs/charla?actividad=<id>&race=BYSD-2027&expositor=1   (sin clave: no lleva datos de carrera)
+ *   /obs/mensajes?race=BYSD-2027&recientes=10&segundos=10     (sin clave: el muro de apoyo es público)
+ *   /obs/mensajes?race=BYSD-2027&recientes=0&espera=30&sobre=barra
  */
 export default function ObsPage() {
   const { vista } = useParams();
@@ -63,6 +67,20 @@ export default function ObsPage() {
     ['patrocinadores', 'patrocinador-esquina', 'charla'].includes(vista),
   );
   const charla = useCharla(params.get('actividad'), vista === 'charla', params.get('expositor'));
+  // Los mensajes de apoyo: cuántos de los últimos se rotan cuando no llega
+  // nada nuevo (0 = solo los nuevos), cuánto dura cada uno y cuánto se retiene
+  // cada mensaje desde que se publica, por si lo reportan antes de salir.
+  const numero = (nombre, porDefecto, max) => {
+    const v = params.get(nombre);
+    return v === null || v === '' ? porDefecto : Math.max(0, Math.min(Number(v) || 0, max));
+  };
+  const mensajes = useMensajes({
+    raceCode,
+    activo: vista === 'mensajes',
+    rotar: numero('recientes', 10, 30),
+    segundos: numero('segundos', 10, 120),
+    esperaSeg: numero('espera', 0, 3600),
+  });
 
   // Es una función que devuelve marcado, no un componente: un componente
   // definido aquí dentro sería uno nuevo en cada latido del reloj y React
@@ -141,6 +159,34 @@ export default function ObsPage() {
           </div>
         </div>
       )
+    );
+  }
+
+  if (vista === 'mensajes') {
+    // Un mensaje de apoyo cada vez, en la esquina inferior izquierda: lo que
+    // la gente escribe en la app según lo escribe, y entre medias los últimos.
+    // Sin clave: es el muro público de la app. Con &sobre=barra sube para
+    // dejar sitio a la barra inferior.
+    if (mensajes.error) return enLienzo(<div className="obs-aviso">{mensajes.error}</div>);
+    const msj = mensajes.mensaje;
+    if (!msj) return enLienzo(null);
+    const largo = (msj.message || '').length;
+    const tamano = largo > 160 ? ' obs-mensaje-largo' : largo > 80 ? ' obs-mensaje-medio' : '';
+    return enLienzo(
+      <div className={`obs-mensaje obs-entra${tamano}${params.get('sobre') === 'barra' ? ' obs-mensaje-sobre-barra' : ''}`} key={msj.id}>
+        <div className="obs-mensaje-cab">
+          <Heart className="obs-mensaje-icono" />
+          <span className="obs-crono-rotulo">Mensaje de apoyo</span>
+        </div>
+        <div className="obs-mensaje-texto">{msj.message}</div>
+        <div className="obs-mensaje-pie">
+          <span className="obs-mensaje-de">{msj.fan_name}</span>
+          <span className="obs-mensaje-para">
+            para <span className="obs-bib">{String(msj.athlete_bib || '').padStart(3, '0')}</span>
+            {msj.athlete_name ? ` ${msj.athlete_name}` : ''}
+          </span>
+        </div>
+      </div>
     );
   }
 
