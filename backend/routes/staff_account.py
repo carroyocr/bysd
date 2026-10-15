@@ -417,10 +417,15 @@ async def mis_turnos(payload: dict = Depends(equipo_con_correo_demostrado)):
     - **asignados**: los que ya son suyos, con si los reconfirmo o no.
     - **disponibles**: los que puede pedir, sin los que ya tiene o ya pidio.
 
+    Con la solicitud de turnos suspendida (`services/solicitudes_turnos`) el
+    evento sale sin disponibles y con `solicitudes_suspendidas` y el aviso que
+    hay que ensenar en su lugar; solicitados y asignados siguen saliendo.
+
     Es la pestana «Turnos» de la web. Va todo en una llamada para que cambiar
     de evento en la pantalla no tenga que volver al servidor.
     """
     from server import db
+    from services import solicitudes_turnos
     from routes.volunteer_registration import (
         fecha_base_evento, fecha_de_slot, get_available_slots, nombre_evento,
     )
@@ -457,7 +462,8 @@ async def mis_turnos(payload: dict = Depends(equipo_con_correo_demostrado)):
         ya_tiene = {
             (s.get("puesto"), s.get("turno")) for s in [*asignados, *solicitados]
         }
-        oferta = await get_available_slots(evento=evento, email=email)
+        suspendidas = await solicitudes_turnos.suspendidas(db, evento)
+        oferta = {} if suspendidas else await get_available_slots(evento=evento, email=email)
         disponibles = [
             {
                 "slot_id": t.get("slot_id"),
@@ -481,6 +487,8 @@ async def mis_turnos(payload: dict = Depends(equipo_con_correo_demostrado)):
             "solicitados": sorted((legible(s) for s in solicitados), key=_orden_de_turno),
             "asignados": sorted((legible(s) for s in asignados), key=_orden_de_turno),
             "disponibles": sorted(disponibles, key=_orden_de_turno),
+            "solicitudes_suspendidas": suspendidas,
+            "aviso_solicitudes": solicitudes_turnos.AVISO if suspendidas else None,
         })
 
     # El campeonato va antes: es el que llega primero en el calendario.
@@ -494,8 +502,12 @@ async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_corre
 
     Mientras tanto el turno queda reservado para el (`slots_reservados`), igual
     que cuando se elige en el formulario de la postulacion.
+
+    Con la solicitud de turnos suspendida se rechaza, sea cual sea la pantalla
+    que lo pide: la app instalada no sabe de la suspension.
     """
     from server import db
+    from services import solicitudes_turnos
     from routes.volunteer_registration import (
         _momentos_turno, fecha_base_evento, fecha_de_slot, validar_slots_libres,
     )
@@ -507,6 +519,7 @@ async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_corre
         raise HTTPException(status_code=404, detail="Ese turno no existe")
 
     evento = slot.get("evento") or "carrera"
+    await solicitudes_turnos.exigir_abiertas(db, evento)
     registro = next(
         (r for r in await _postulaciones(db, email) if (r.get("evento") or "carrera") == evento),
         None,
@@ -557,10 +570,17 @@ async def retirar_solicitud(slot_id: int, payload: dict = Depends(equipo_con_cor
 
     El turno vuelve a quedar libre para los demas. Si ya se lo asignaron no es
     esta ruta: ese se suelta con `DELETE /mi-perfil/turnos/{slot_id}`.
+
+    Con la solicitud de turnos suspendida tampoco se retira: la organizacion
+    esta repartiendo sobre lo pedido, y quitarlo de debajo la dejaria a ciegas.
     """
     from server import db
+    from services import solicitudes_turnos
 
     email = (payload.get("username") or "").lower()
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0, "evento": 1})
+    if slot:
+        await solicitudes_turnos.exigir_abiertas(db, slot.get("evento") or "carrera")
     ids = [r["_id"] for r in await _postulaciones(db, email)]
     await db.volunteer_registrations.update_many(
         {"_id": {"$in": ids}},
@@ -779,9 +799,11 @@ async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(equipo_c
     """Guarda el evento y los turnos que el voluntario quiere cubrir.
 
     Antes esto solo se podia hacer desde la web, con el enlace que llegaba por
-    correo. Aqui basta con su sesion.
+    correo. Aqui basta con su sesion. Es el mismo acto que `solicitar_turno`,
+    en bloque: con la solicitud de turnos suspendida se rechaza igual.
     """
     from server import db
+    from services import solicitudes_turnos
     from routes.volunteer_registration import (
         VALID_EVENTOS, eventos_abiertos, nombre_evento, validar_slots_libres,
         validar_sin_solapes,
@@ -793,6 +815,7 @@ async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(equipo_c
         raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
 
     evento = datos.evento if datos.evento in VALID_EVENTOS else (registro.get("evento") or "carrera")
+    await solicitudes_turnos.exigir_abiertas(db, evento)
 
     # Cambiarse a un evento cerrado no vale; quedarse en el suyo, si.
     if evento != (registro.get("evento") or "carrera"):

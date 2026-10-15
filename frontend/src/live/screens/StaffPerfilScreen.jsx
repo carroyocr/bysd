@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, CalendarClock, Loader2, Droplet, HeartPulse, TriangleAlert, Phone, MapPin, Bell,
-  Check, ChevronDown, X, IdCard, MailCheck, LogIn, Pencil, Plus, CircleCheck,
+  Check, ChevronDown, X, IdCard, MailCheck, LogIn, Pencil, Plus, CircleCheck, Lock,
 } from 'lucide-react';
 import { API, authJson } from '../liveApi';
 import { guardarArchivo } from '../../lib/nativeExport';
@@ -428,6 +428,12 @@ const ACCIONES = {
  * Cada sección sale solo si tiene algo dentro. Tras cada acción se vuelve a
  * pedir todo al servidor: pedir o soltar un turno cambia también lo que queda
  * disponible, y recalcularlo aquí sería adivinar.
+ *
+ * Si la organización suspendió la solicitud de turnos (`solicitudes_suspendidas`
+ * en el evento), en lugar de los disponibles sale su aviso y los solicitados
+ * ya no se pueden retirar; confirmar y cancelar un asignado siguen igual. La
+ * regla la impone el backend: una app anterior a esta pantalla recibe el
+ * rechazo al pedir y lo enseña como error.
  */
 function TarjetaTurnos({ T, onAsignadosCambian }) {
   // undefined = cargando · [] = sin postulaciones
@@ -512,18 +518,22 @@ function TarjetaTurnos({ T, onAsignadosCambian }) {
             <SeccionTurnos
               T={T}
               titulo="Turnos solicitados"
-              nota="Los pediste y están pendientes de que la organización los asigne."
+              nota={evento.solicitudes_suspendidas
+                ? 'Los pediste. La organización está asignando los turnos con estas solicitudes.'
+                : 'Los pediste y están pendientes de que la organización los asigne.'}
             >
               {evento.solicitados.map((t) => (
                 <FilaTurno key={t.slot_id} T={T} turno={t}>
-                  <BotonTurno
-                    T={T}
-                    Icon={X}
-                    texto="Cancelar"
-                    girando={haciendo(t, 'retirar')}
-                    disabled={!!enCurso}
-                    onClick={() => actuar(t, 'retirar')}
-                  />
+                  {!evento.solicitudes_suspendidas && (
+                    <BotonTurno
+                      T={T}
+                      Icon={X}
+                      texto="Cancelar"
+                      girando={haciendo(t, 'retirar')}
+                      disabled={!!enCurso}
+                      onClick={() => actuar(t, 'retirar')}
+                    />
+                  )}
                 </FilaTurno>
               ))}
             </SeccionTurnos>
@@ -566,6 +576,17 @@ function TarjetaTurnos({ T, onAsignadosCambian }) {
                   />
                 </FilaTurno>
               ))}
+            </SeccionTurnos>
+          )}
+
+          {evento.solicitudes_suspendidas && (
+            <SeccionTurnos T={T} titulo="Turnos disponibles">
+              <div className={`flex items-start gap-2 rounded-lg px-3 py-2.5 ${T.chip}`}>
+                <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <p className="text-[11px] leading-relaxed">
+                  {evento.aviso_solicitudes || 'La solicitud de turnos está cerrada: la organización está asignando los turnos.'}
+                </p>
+              </div>
             </SeccionTurnos>
           )}
 
@@ -616,7 +637,8 @@ function TarjetaTurnos({ T, onAsignadosCambian }) {
             </SeccionTurnos>
           )}
 
-          {evento.solicitados.length + evento.asignados.length + evento.disponibles.length === 0 && (
+          {!evento.solicitudes_suspendidas
+            && evento.solicitados.length + evento.asignados.length + evento.disponibles.length === 0 && (
             <p className={`text-xs py-2 ${T.muted}`}>No hay turnos para {evento.nombre} por ahora.</p>
           )}
         </div>
