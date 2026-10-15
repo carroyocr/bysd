@@ -324,24 +324,102 @@ async def leer_filas(spreadsheet_id: str) -> List[dict]:
     return filas
 
 
+# spreadsheet_id -> sheetId de la pestana de tiempos. No cambia nunca.
+_ids_de_pestana: Dict[str, int] = {}
+
+
+async def _id_de_pestana(spreadsheet_id: str) -> int:
+    if spreadsheet_id in _ids_de_pestana:
+        return _ids_de_pestana[spreadsheet_id]
+    token = await _token()
+    async with httpx.AsyncClient(timeout=20) as cliente:
+        respuesta = await cliente.get(
+            f"{API}/{spreadsheet_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            params={"fields": "sheets.properties(sheetId,title)"},
+        )
+    if respuesta.status_code != 200:
+        raise ErrorDeHoja(_explicar(respuesta))
+    for hoja in respuesta.json().get("sheets", []):
+        if hoja.get("properties", {}).get("title") == HOJA:
+            _ids_de_pestana[spreadsheet_id] = int(hoja["properties"]["sheetId"])
+            return _ids_de_pestana[spreadsheet_id]
+    raise ErrorDeHoja(f"La hoja no tiene la pestana «{HOJA}»")
+
+
+def _celda_a_escribir(dato: dict) -> dict:
+    """Una celda como texto, con el formato de texto puesto a la vez.
+
+    Es lo que deja identica una celda escrita por aqui a una tecleada en la
+    plantilla (que trae las columnas de tiempo como texto): «45:30» en texto,
+    sin la marca de apostrofo que deja la escritura RAW y sin que Google lo
+    convierta en una hora si la celda hubiera perdido el formato.
+    """
+    celda = {"userEnteredFormat": {"numberFormat": {"type": "TEXT"}}}
+    if dato["valor"] not in (None, ""):
+        celda["userEnteredValue"] = {"stringValue": str(dato["valor"])}
+    return celda
+
+
 async def _escribir(spreadsheet_id: str, datos: List[dict]) -> None:
     if not datos:
         return
+    sheet_id = await _id_de_pestana(spreadsheet_id)
+    peticiones = []
+    for dato in datos:
+        peticiones.append({"updateCells": {
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": dato["fila"] - 1, "endRowIndex": dato["fila"],
+                "startColumnIndex": dato["columna"] - 1, "endColumnIndex": dato["columna"],
+            },
+            "rows": [{"values": [_celda_a_escribir(dato)]}],
+            # Sin `userEnteredValue` en la celda, este campo la deja en blanco.
+            "fields": "userEnteredValue,userEnteredFormat.numberFormat",
+        }})
     token = await _token()
     async with httpx.AsyncClient(timeout=30) as cliente:
         respuesta = await cliente.post(
-            f"{API}/{spreadsheet_id}/values:batchUpdate",
+            f"{API}/{spreadsheet_id}:batchUpdate",
             headers={"Authorization": f"Bearer {token}"},
-            # RAW: «52:25» queda como texto, igual que los ejemplos de la
-            # organizacion (las celdas estan formateadas como texto). Con
-            # USER_ENTERED, Google lo tomaria por una hora y lo convertiria.
-            json={"valueInputOption": "RAW", "data": datos},
+            json={"requests": peticiones},
         )
     if respuesta.status_code != 200:
         raise ErrorDeHoja(_explicar(respuesta))
 
 
+async def _releer(spreadsheet_id: str, datos: List[dict]) -> List[str]:
+    """Que quedo en las celdas recien escritas, para avisar si Google guardo
+    algo distinto (una hora en vez del texto «52:25», por ejemplo)."""
+    if not datos:
+        return []
+    token = await _token()
+    async with httpx.AsyncClient(timeout=30) as cliente:
+        respuesta = await cliente.get(
+            f"{API}/{spreadsheet_id}/values:batchGet",
+            headers={"Authorization": f"Bearer {token}"},
+            params=[("ranges", d["range"]) for d in datos],
+        )
+    if respuesta.status_code != 200:
+        raise ErrorDeHoja(_explicar(respuesta))
+
+    avisos = []
+    for enviado, leido in zip(datos, respuesta.json().get("valueRanges", [])):
+        esperado = "" if enviado["valor"] is None else str(enviado["valor"])
+        quedo = str((leido.get("values") or [[""]])[0][0]) if leido.get("values") else ""
+        if quedo != esperado:
+            rango = enviado["range"].split("!")[-1]
+            avisos.append(f"la celda {rango} quedo como «{quedo}» y no «{esperado}»: revisa el formato de esa celda")
+    return avisos
+
+
 # ============= SINCRONIZAR =============
+
+
+def _dato(fila: int, columna: int, valor) -> dict:
+    """Una celda a escribir: donde (fila y columna, desde 1) y que."""
+    return {"fila": fila, "columna": columna, "valor": valor,
+            "range": celda(letra_columna(columna), fila)}
 
 
 def _config(carrera: dict) -> dict:
@@ -405,10 +483,9 @@ async def sincronizar(database, carrera: dict) -> dict:
 
             previo = escrito.get(str(bib)) or {}
             for vuelta, valor in cambios(previo, deseado).items():
-                datos.append({"range": celda(columna_de_vuelta(vuelta), int(fila)), "values": [[valor]]})
+                datos.append(_dato(int(fila), PRIMERA_COLUMNA_VUELTA + vuelta - 1, valor))
             if (previo.get("dns") or None) != deseado_dns:
-                datos_dns.append({"range": celda(letra_columna(COLUMNA_DNS), int(fila)),
-                                  "values": [[deseado_dns or ""]]})
+                datos_dns.append(_dato(int(fila), COLUMNA_DNS, deseado_dns or ""))
 
             registro = {str(v): valor for v, valor in deseado.items()}
             if deseado_dns:
@@ -456,6 +533,15 @@ async def sincronizar(database, carrera: dict) -> dict:
                 "hoja_mundial.avisos": avisos,
             }},
         )
+        try:
+            avisos.extend(await _releer(spreadsheet_id, datos))
+        except ErrorDeHoja as e:
+            avisos.append(f"No se pudo comprobar lo escrito: {e}")
+        if avisos:
+            await database.race_configurations.update_one(
+                {"code": code}, {"$set": {"hoja_mundial.avisos": avisos}}
+            )
+
         if datos:
             logger.info(f"Hoja del Mundial ({code}): {len(datos)} celda(s) escritas")
         return {"ok": True, "celdas": len(datos), "avisos": avisos}
