@@ -8,7 +8,8 @@ que no se mueve ni una celda: aqui solo se rellenan las de tiempo.
 
 Lo que admite cada celda, segun sus instrucciones:
 
-- el tiempo de la yarda como `mmss` (un numero: 5225 es 52:25);
+- el tiempo de la yarda como `mm:ss` (texto: la hoja formatea esas celdas
+  como texto y asi guarda la organizacion sus ejemplos, «52:25»);
 - `RTC` si el corredor no salio a esa yarda (Refuse To Continue);
 - `INC` si salio y no la completo;
 - `Over` si la completo pasada la hora.
@@ -117,8 +118,8 @@ def url_de_hoja(spreadsheet_id: str) -> str:
 # ============= DEL LIBRO A LAS CELDAS =============
 
 
-def valor_de_tiempo(segundos: float, minutos_por_vuelta: int) -> Optional[int]:
-    """El `mmss` de una vuelta completada, o None si el tiempo no cabe en ella.
+def valor_de_tiempo(segundos: float, minutos_por_vuelta: int) -> Optional[str]:
+    """El `mm:ss` de una vuelta completada, o None si el tiempo no cabe en ella.
 
     `Over` no sale de aqui a proposito: una vuelta completada pasada la hora
     es un retiro (`RETIRO_POR_TIEMPO`) y se marca como tal. Si el tiempo de
@@ -128,7 +129,7 @@ def valor_de_tiempo(segundos: float, minutos_por_vuelta: int) -> Optional[int]:
     if segundos < 0 or segundos >= minutos_por_vuelta * 60:
         return None
     enteros = int(segundos)
-    return (enteros // 60) * 100 + enteros % 60
+    return f"{enteros // 60:02d}:{enteros % 60:02d}"
 
 
 def _en_utc(momento: Optional[datetime]) -> Optional[datetime]:
@@ -331,8 +332,9 @@ async def _escribir(spreadsheet_id: str, datos: List[dict]) -> None:
         respuesta = await cliente.post(
             f"{API}/{spreadsheet_id}/values:batchUpdate",
             headers={"Authorization": f"Bearer {token}"},
-            # RAW: el numero queda numero (es lo que valida la hoja) y «Over»
-            # queda texto. Con USER_ENTERED, Google tomaria 5225 por una fecha.
+            # RAW: «52:25» queda como texto, igual que los ejemplos de la
+            # organizacion (las celdas estan formateadas como texto). Con
+            # USER_ENTERED, Google lo tomaria por una hora y lo convertiria.
             json={"valueInputOption": "RAW", "data": datos},
         )
     if respuesta.status_code != 200:

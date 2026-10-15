@@ -2,8 +2,9 @@
 
 Lo que protegen estas pruebas son las reglas de `services/hoja_mundial.py`:
 
-- cada vuelta completada se escribe como `mmss` medido desde la salida de esa
-  vuelta segun el reloj de la carrera, y no desde el `lap_start_time` anotado;
+- cada vuelta completada se escribe como `mm:ss` (texto, como los ejemplos de
+  la organizacion) medido desde la salida de esa vuelta segun el reloj de la
+  carrera, y no desde el `lap_start_time` anotado;
 - el retiro va en la yarda siguiente a la ultima completada, con la marca que
   pide la organizacion mundial: RTC si no salio, INC si volvio sin completar,
   Over si llego pasada la hora;
@@ -61,10 +62,11 @@ def test_el_id_de_la_hoja_sale_de_la_direccion_o_del_id():
 
 # ----- del libro a las celdas -----
 
-def test_el_tiempo_es_mmss_como_numero():
-    assert hoja_mundial.valor_de_tiempo(52 * 60 + 25, 60) == 5225
-    assert hoja_mundial.valor_de_tiempo(45 * 60 + 7, 60) == 4507
-    assert hoja_mundial.valor_de_tiempo(59 * 60 + 59, 60) == 5959
+def test_el_tiempo_es_mm_ss_como_texto():
+    assert hoja_mundial.valor_de_tiempo(52 * 60 + 25, 60) == "52:25"
+    assert hoja_mundial.valor_de_tiempo(45 * 60 + 7, 60) == "45:07"
+    assert hoja_mundial.valor_de_tiempo(59 * 60 + 59, 60) == "59:59"
+    assert hoja_mundial.valor_de_tiempo(9 * 60 + 5, 60) == "09:05"
 
 
 def test_un_tiempo_que_no_cabe_en_la_vuelta_no_se_escribe():
@@ -76,7 +78,7 @@ def test_cada_vuelta_completada_va_en_su_yarda():
     valores, avisos = hoja_mundial.celdas(
         CARRERA, [paso(1, 52, 25), paso(2, 50, 3), paso(3, 55, 40)], "active"
     )
-    assert valores == {1: 5225, 2: 5003, 3: 5540}
+    assert valores == {1: "52:25", 2: "50:03", 3: "55:40"}
     assert avisos == []
 
 
@@ -85,32 +87,32 @@ def test_el_tiempo_se_mide_desde_la_salida_de_esa_vuelta_no_desde_lo_anotado():
     # la salida de la 2 pero el paso fue a los 51 minutos de la 1.
     anotacion = paso(1, 51, 0, lap_start_time=SALIDA + timedelta(hours=1))
     valores, _ = hoja_mundial.celdas(CARRERA, [anotacion], "active")
-    assert valores == {1: 5100}
+    assert valores == {1: "51:00"}
 
 
 def test_rtc_cuando_se_retira_sin_salir_a_la_siguiente():
     anotaciones = [paso(1, 52), paso(2, 53), paso(3, 0, accion=laps.RETIRO_MANUAL)]
     valores, _ = hoja_mundial.celdas(CARRERA, anotaciones, "retired")
-    assert valores == {1: 5200, 2: 5300, 3: hoja_mundial.RTC}
+    assert valores == {1: "52:00", 2: "53:00", 3: hoja_mundial.RTC}
 
 
 def test_inc_cuando_vuelve_sin_completar():
     anotaciones = [paso(1, 52), paso(2, 10, accion=laps.RETIRO_TEMPRANO)]
     valores, _ = hoja_mundial.celdas(CARRERA, anotaciones, "retired")
-    assert valores == {1: 5200, 2: hoja_mundial.INC}
+    assert valores == {1: "52:00", 2: hoja_mundial.INC}
 
 
 def test_over_cuando_llega_pasada_la_hora():
     anotaciones = [paso(1, 52), paso(2, 63, accion=laps.RETIRO_POR_TIEMPO)]
     valores, _ = hoja_mundial.celdas(CARRERA, anotaciones, "retired")
-    assert valores == {1: 5200, 2: hoja_mundial.OVER}
+    assert valores == {1: "52:00", 2: hoja_mundial.OVER}
 
 
 def test_el_retiro_anulado_no_deja_marca():
     # `laps.historial` ya deja fuera las anuladas: el corredor vuelve a estar
     # activo y la hoja no debe decir RTC.
     valores, _ = hoja_mundial.celdas(CARRERA, [paso(1, 52)], "active")
-    assert valores == {1: 5200}
+    assert valores == {1: "52:00"}
 
 
 def test_un_ajuste_fija_la_cuenta_y_lo_que_no_tiene_hora_se_avisa():
@@ -118,14 +120,14 @@ def test_un_ajuste_fija_la_cuenta_y_lo_que_no_tiene_hora_se_avisa():
     # paso por el arco, asi que no se inventa un tiempo.
     anotaciones = [paso(1, 52), paso(2, 53), paso(4, 0, accion=laps.AJUSTE)]
     valores, avisos = hoja_mundial.celdas(CARRERA, anotaciones, "active")
-    assert valores == {1: 5200, 2: 5300}
+    assert valores == {1: "52:00", 2: "53:00"}
     assert len(avisos) == 2 and "vuelta 3" in avisos[0] and "vuelta 4" in avisos[1]
 
 
 def test_un_ajuste_a_la_baja_deja_fuera_las_vueltas_sobrantes():
     anotaciones = [paso(1, 52), paso(2, 53), paso(3, 50), paso(2, 0, accion=laps.AJUSTE)]
     valores, avisos = hoja_mundial.celdas(CARRERA, anotaciones, "active")
-    assert valores == {1: 5200, 2: 5300}
+    assert valores == {1: "52:00", 2: "53:00"}
     assert avisos == []
 
 
@@ -147,23 +149,23 @@ def test_sin_hora_de_salida_no_hay_tiempos_pero_si_marca_de_retiro():
 # ----- solo se borra lo propio -----
 
 def test_solo_se_mandan_las_celdas_nuevas_o_cambiadas():
-    escrito = {"1": 5200, "2": 5300}
-    assert hoja_mundial.cambios(escrito, {1: 5200, 2: 5300, 3: 5100}) == {3: 5100}
-    assert hoja_mundial.cambios(escrito, {1: 5200, 2: 5311}) == {2: 5311}
-    assert hoja_mundial.cambios(escrito, {1: 5200, 2: 5300}) == {}
+    escrito = {"1": "52:00", "2": "53:00"}
+    assert hoja_mundial.cambios(escrito, {1: "52:00", 2: "53:00", 3: "51:00"}) == {3: "51:00"}
+    assert hoja_mundial.cambios(escrito, {1: "52:00", 2: "53:11"}) == {2: "53:11"}
+    assert hoja_mundial.cambios(escrito, {1: "52:00", 2: "53:00"}) == {}
 
 
 def test_lo_que_este_modulo_escribio_y_ya_no_vale_se_borra():
     # La vuelta 3 se anulo en el panel: su celda vuelve a blanco. La marca
     # `dns` no es una yarda y no entra aqui.
-    escrito = {"1": 5200, "2": 5300, "3": 5100, "dns": "DNS"}
-    assert hoja_mundial.cambios(escrito, {1: 5200, 2: 5300}) == {3: ""}
+    escrito = {"1": "52:00", "2": "53:00", "3": "51:00", "dns": "DNS"}
+    assert hoja_mundial.cambios(escrito, {1: "52:00", 2: "53:00"}) == {3: ""}
 
 
 def test_lo_escrito_a_mano_no_se_toca():
     # La yarda 3 la escribio alguien a mano en la hoja (no esta en `escrito`):
     # aunque el libro no la tenga, no se borra.
-    assert hoja_mundial.cambios({"1": 5200}, {1: 5200}) == {}
+    assert hoja_mundial.cambios({"1": "52:00"}, {1: "52:00"}) == {}
 
 
 # ----- emparejar filas con dorsales -----
