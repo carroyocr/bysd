@@ -462,6 +462,10 @@ app.include_router(dorsales_router)
 from routes.overlay import router as overlay_router
 app.include_router(overlay_router)
 
+# Hoja de resultados del Campeonato Mundial (Google Sheets)
+from routes.hoja_mundial import router as hoja_mundial_router
+app.include_router(hoja_mundial_router)
+
 # Version publicada de la app movil (la app pregunta al abrir)
 from routes.app_version import router as app_version_router
 app.include_router(app_version_router)
