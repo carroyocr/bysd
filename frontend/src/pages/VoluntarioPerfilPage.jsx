@@ -1122,7 +1122,9 @@ export default function VoluntarioPerfilPage() {
     const perfil = await r.json();
     if (perfil.sesion_caducada) {
       cerrarSesionCuenta();
-      setAviso('Tu contraseña cambió después de abrir esta sesión. Entra otra vez.');
+      setAviso(perfil.token_caducado
+        ? 'Tu sesión caducó. Entra otra vez.'
+        : 'Tu contraseña cambió después de abrir esta sesión. Entra otra vez.');
       setDatos(null);
       return;
     }

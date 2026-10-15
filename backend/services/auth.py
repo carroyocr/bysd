@@ -134,12 +134,22 @@ def normalizar_payload(payload: dict) -> dict:
     }
 
 
-def decodificar(token: str) -> dict:
-    """Valida la firma contra las claves vigentes y normaliza el contenido."""
+def decodificar(token: str, aunque_caducado: bool = False) -> dict:
+    """Valida la firma contra las claves vigentes y normaliza el contenido.
+
+    Con `aunque_caducado`, un token con la firma buena pero ya vencido pasa
+    marcado con `caducado: True`. Es solo para que `/api/staff/mi-perfil` pueda
+    responder algo que la app instalada sepa pintar; cualquier otra ruta sigue
+    rechazandolo con 401.
+    """
+    caducado = False
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expirado")
+        if not aunque_caducado:
+            raise HTTPException(status_code=401, detail="Token expirado")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        caducado = True
     except jwt.InvalidTokenError:
         # Puede ser un token de atleta de los de antes, con la clave derivada.
         try:
@@ -149,7 +159,10 @@ def decodificar(token: str) -> dict:
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Token invalido")
 
-    return normalizar_payload(payload)
+    payload = normalizar_payload(payload)
+    if caducado:
+        payload["caducado"] = True
+    return payload
 
 
 def tiene_rol(payload: dict, rol: str) -> bool:
@@ -183,6 +196,18 @@ def verify_cuenta_token(authorization: Optional[str]) -> dict:
 def require_admin(authorization: Optional[str] = Header(None)) -> dict:
     """Dependencia FastAPI: exige un token de alguien del equipo."""
     return verify_admin_token(authorization)
+
+
+def require_admin_aunque_caducado(authorization: Optional[str] = Header(None)) -> dict:
+    """Como `require_admin`, pero un token caducado con la firma buena pasa
+    marcado con `caducado`. Solo lo usa `GET /api/staff/mi-perfil`, que con esa
+    marca responde vacio y `sesion_caducada` en vez de 401: la app instalada
+    ante el 401 no pinta nada, y ante `sesion_caducada` pide entrar otra vez.
+    """
+    payload = decodificar(_extract_bearer(authorization), aunque_caducado=True)
+    if not tiene_rol(payload, STAFF):
+        raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
+    return payload
 
 
 def require_athlete(authorization: Optional[str] = Header(None)) -> dict:

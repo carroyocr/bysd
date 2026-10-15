@@ -48,7 +48,7 @@ LO_PROPIO = {
 }
 
 # Dependencias que solo comprueban que el token sea de alguien del equipo.
-SOLO_ROL = {"require_admin", "verify_token"}
+SOLO_ROL = {"require_admin", "require_admin_aunque_caducado", "verify_token"}
 
 
 def _dependencias(dependant, vistas=None):

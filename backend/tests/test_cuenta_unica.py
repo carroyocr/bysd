@@ -279,5 +279,8 @@ class TestNormalizacion:
 
 class TestDuracion:
     def test_el_panel_caduca_antes(self):
-        assert cuentas.duracion([auth.FAN, auth.STAFF]).total_seconds() == cuentas.HORAS_STAFF * 3600
+        # El panel (permisos propios o admin) dura 12 h; el resto del equipo, una
+        # semana; corredor y espectador, 72 h. Ver test_sesion_caducada_app.py.
+        assert cuentas.duracion([auth.FAN, auth.STAFF], {"permissions": ["all"]}).total_seconds() == cuentas.HORAS_STAFF * 3600
+        assert cuentas.duracion([auth.FAN, auth.STAFF], {}).total_seconds() == cuentas.HORAS_EQUIPO * 3600
         assert cuentas.duracion([auth.FAN]).total_seconds() == cuentas.HORAS_PERSONA * 3600

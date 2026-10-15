@@ -887,13 +887,18 @@ export default function VolunteerConfigManagement() {
               <Label htmlFor="suspender-solicitudes" className="text-base font-semibold cursor-pointer">
                 Suspender la solicitud de turnos
               </Label>
+              {/* Es del evento elegido arriba: el interruptor del campeonato no
+                  cierra la carrera ni al revés. */}
+              <p className="text-sm font-medium mt-0.5">
+                {EVENTOS.find((ev) => ev.value === selectedEvento)?.label || selectedEvento}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Con el interruptor puesto, los voluntarios dejan de ver los turnos disponibles en «Ingresar» y en la app
-                y no pueden pedir ni retirar solicitudes: la organización asigna los turnos a mano.
-                Confirmar o cancelar un turno ya asignado sigue funcionando.
+                Con el interruptor puesto, los voluntarios de este evento dejan de ver los turnos disponibles en
+                «Ingresar» y en la app y no pueden pedir ni retirar solicitudes: la organización asigna los turnos
+                a mano. Confirmar o cancelar un turno ya asignado sigue funcionando.
               </p>
               {solicitudesSuspendidas && (
-                <Badge variant="secondary" className="mt-2">Solicitud de turnos suspendida</Badge>
+                <Badge variant="secondary" className="mt-2">Solicitud de turnos suspendida en este evento</Badge>
               )}
             </div>
           </div>
