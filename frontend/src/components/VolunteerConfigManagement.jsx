@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus, Trash2, Edit2, Save, X, Clock, Users, AlertCircle,
   Loader2, Download, RefreshCw, ChevronDown, ChevronUp, RotateCcw,
-  CalendarClock, CalendarX, Wand2
+  CalendarClock, CalendarX, Wand2, Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Switch } from './ui/switch';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
 
@@ -350,6 +351,11 @@ export default function VolunteerConfigManagement() {
   const [replacingProgramacion, setReplacingProgramacion] = useState(false);
   const [deletingShifts, setDeletingShifts] = useState(false);
 
+  // Suspender la solicitud de turnos: los voluntarios dejan de pedir y la
+  // organización reparte a mano. Es por evento y lo impone el backend.
+  const [solicitudesSuspendidas, setSolicitudesSuspendidas] = useState(false);
+  const [savingSolicitudes, setSavingSolicitudes] = useState(false);
+
   useEffect(() => {
     loadRaceDate();
   }, []);
@@ -357,6 +363,7 @@ export default function VolunteerConfigManagement() {
   useEffect(() => {
     loadPositions();
     loadProgramacion();
+    loadSolicitudes();
     setShowNewForm(false);
     setEditingPosition(null);
     setEditData(null);
@@ -518,6 +525,40 @@ export default function VolunteerConfigManagement() {
       }
     } catch (error) {
       console.error('Error loading event schedule:', error);
+    }
+  };
+
+  const loadSolicitudes = async () => {
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/solicitudes?evento=${selectedEvento}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSolicitudesSuspendidas(!!data.suspendidas);
+      }
+    } catch (error) {
+      console.error('Error loading solicitudes state:', error);
+    }
+  };
+
+  const toggleSolicitudes = async (suspendidas) => {
+    setSavingSolicitudes(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/volunteer-config/solicitudes?evento=${selectedEvento}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suspendidas }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setSolicitudesSuspendidas(!!data.suspendidas);
+        toast.success(data.message);
+      } else {
+        toast.error(data.detail || 'No se pudo guardar');
+      }
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setSavingSolicitudes(false);
     }
   };
 
@@ -836,6 +877,38 @@ export default function VolunteerConfigManagement() {
           </button>
         ))}
       </div>
+
+      {/* Solicitud de turnos: abierta a los voluntarios o suspendida para asignar a mano */}
+      <Card data-testid="config-solicitudes-turnos">
+        <CardContent className="py-4 flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0">
+            <Lock className={`w-5 h-5 mt-0.5 shrink-0 ${solicitudesSuspendidas ? 'text-primary' : 'text-muted-foreground'}`} />
+            <div>
+              <Label htmlFor="suspender-solicitudes" className="text-base font-semibold cursor-pointer">
+                Suspender la solicitud de turnos
+              </Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                Con el interruptor puesto, los voluntarios dejan de ver los turnos disponibles en «Ingresar» y en la app
+                y no pueden pedir ni retirar solicitudes: la organización asigna los turnos a mano.
+                Confirmar o cancelar un turno ya asignado sigue funcionando.
+              </p>
+              {solicitudesSuspendidas && (
+                <Badge variant="secondary" className="mt-2">Solicitud de turnos suspendida</Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {savingSolicitudes && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            <Switch
+              id="suspender-solicitudes"
+              checked={solicitudesSuspendidas}
+              disabled={savingSolicitudes}
+              onCheckedChange={toggleSolicitudes}
+              aria-label="Suspender la solicitud de turnos"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Programación del Evento: fechas, duración de turno y generación automática */}
       <Card>

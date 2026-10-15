@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   LogIn, LogOut, Loader2, KeyRound, MailCheck, User, HeartPulse, CalendarClock,
-  MapPin, IdCard, Edit2, UserPlus, ArrowLeft, Save, CheckCircle2, X, Plus, ChevronDown,
+  MapPin, IdCard, Edit2, UserPlus, ArrowLeft, Save, CheckCircle2, X, Plus, ChevronDown, Lock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -752,6 +752,11 @@ function SeccionTurnos({ titulo, nota, testId, children }) {
  * Cada sección sale solo si tiene algo dentro. Tras cada acción se vuelve a
  * pedir todo al servidor: pedir o soltar un turno cambia también lo que queda
  * disponible, y recalcularlo aquí sería adivinar.
+ *
+ * Si la organización suspendió la solicitud de turnos (`solicitudes_suspendidas`
+ * en el evento), en lugar de los disponibles sale su aviso y los solicitados
+ * ya no se pueden retirar; confirmar y cancelar un asignado siguen igual. La
+ * regla la impone el backend: aquí solo se deja de ofrecer lo que rechazaría.
  */
 function TarjetaTurnos({ onAsignadosCambian }) {
   // undefined = cargando · [] = sin postulaciones
@@ -845,18 +850,22 @@ function TarjetaTurnos({ onAsignadosCambian }) {
             {evento.solicitados.length > 0 && (
               <SeccionTurnos
                 titulo="Turnos solicitados"
-                nota="Los pediste y están pendientes de que la organización los asigne."
+                nota={evento.solicitudes_suspendidas
+                  ? 'Los pediste. La organización está asignando los turnos con estas solicitudes.'
+                  : 'Los pediste y están pendientes de que la organización los asigne.'}
                 testId="voluntario-turnos-solicitados"
               >
                 <div className="divide-y divide-border">
                   {evento.solicitados.map((t) => (
                     <FilaTurno key={t.slot_id} turno={t}>
-                      <BotonCancelar
-                        ocupado={!!enCurso}
-                        girando={haciendo(t, 'retirar')}
-                        onClick={() => actuar(t, 'retirar')}
-                        testId={`voluntario-retirar-${t.slot_id}`}
-                      />
+                      {!evento.solicitudes_suspendidas && (
+                        <BotonCancelar
+                          ocupado={!!enCurso}
+                          girando={haciendo(t, 'retirar')}
+                          onClick={() => actuar(t, 'retirar')}
+                          testId={`voluntario-retirar-${t.slot_id}`}
+                        />
+                      )}
                     </FilaTurno>
                   ))}
                 </div>
@@ -898,6 +907,15 @@ function TarjetaTurnos({ onAsignadosCambian }) {
                       />
                     </FilaTurno>
                   ))}
+                </div>
+              </SeccionTurnos>
+            )}
+
+            {evento.solicitudes_suspendidas && (
+              <SeccionTurnos titulo="Turnos disponibles" testId="voluntario-solicitudes-suspendidas">
+                <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
+                  <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                  <p>{evento.aviso_solicitudes || 'La solicitud de turnos está cerrada: la organización está asignando los turnos.'}</p>
                 </div>
               </SeccionTurnos>
             )}
@@ -953,7 +971,8 @@ function TarjetaTurnos({ onAsignadosCambian }) {
               </SeccionTurnos>
             )}
 
-            {evento.solicitados.length + evento.asignados.length + evento.disponibles.length === 0 && (
+            {!evento.solicitudes_suspendidas
+              && evento.solicitados.length + evento.asignados.length + evento.disponibles.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 No hay turnos para {evento.nombre} por ahora.
               </p>
