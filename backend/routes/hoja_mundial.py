@@ -74,6 +74,9 @@ async def _estado(database, carrera: dict, filas_hoja: Optional[list] = None,
         "race_code": carrera["code"],
         "cuenta_configurada": google_servicio.esta_configurado(),
         "cuenta_servicio": google_servicio.correo_de_la_cuenta(),
+        # True cuando el backend escribe como una cuenta de la organizacion
+        # (OAuth) y no hace falta compartirle nada.
+        "por_oauth": google_servicio.por_oauth(),
         "spreadsheet_id": spreadsheet_id,
         "url": hoja_mundial.url_de_hoja(spreadsheet_id) if spreadsheet_id else None,
         "hoja": hoja_mundial.HOJA,

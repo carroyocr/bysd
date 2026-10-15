@@ -160,8 +160,9 @@ export default function HojaMundialPanel() {
         <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
           <TriangleAlert className="w-5 h-5 mt-0.5 shrink-0" />
           <div>
-            El backend no tiene cuenta de servicio de Google (<code>FCM_SERVICE_ACCOUNT_JSON</code> o{' '}
-            <code>GOOGLE_SERVICE_ACCOUNT_JSON</code>). Sin ella no se puede escribir en la hoja.
+            El backend no tiene identidad de Google (<code>GOOGLE_OAUTH_JSON</code>,{' '}
+            <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> o <code>FCM_SERVICE_ACCOUNT_JSON</code>). Sin ella no se
+            puede escribir en la hoja.
           </div>
         </div>
       )}
@@ -199,7 +200,14 @@ export default function HojaMundialPanel() {
             </div>
           </div>
 
-          {estado.cuenta_servicio && (
+          {estado.cuenta_servicio && estado.por_oauth && (
+            <div className="rounded-lg bg-slate-50 border p-4 text-sm text-slate-700">
+              El sistema escribe en la hoja como <strong>{estado.cuenta_servicio}</strong>: basta con que
+              esa cuenta tenga permiso de edición en ella.
+            </div>
+          )}
+
+          {estado.cuenta_servicio && !estado.por_oauth && (
             <div className="rounded-lg bg-slate-50 border p-4 text-sm text-slate-700 space-y-2">
               <p>
                 Para que el sistema pueda escribir, la hoja tiene que estar compartida como{' '}

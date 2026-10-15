@@ -288,6 +288,9 @@ def _explicar(respuesta: httpx.Response) -> str:
         if "has not been used" in mensaje or "is disabled" in mensaje:
             return ("La API de Google Sheets no esta habilitada en el proyecto de la cuenta de servicio: "
                     f"{mensaje}")
+        if google_servicio.por_oauth():
+            return (f"La cuenta {google_servicio.correo_de_la_cuenta()} no tiene permiso de edicion "
+                    f"en la hoja: {mensaje}")
         return (f"La hoja no esta compartida con {google_servicio.correo_de_la_cuenta()} como editor: "
                 f"{mensaje}")
     if respuesta.status_code == 404:
