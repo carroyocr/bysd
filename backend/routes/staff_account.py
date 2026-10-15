@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 
 from services import cuentas, rate_limit
-from services.auth import require_admin, require_permission
+from services.auth import require_admin, require_admin_aunque_caducado, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -319,12 +319,36 @@ def _perfil_legible(voluntario: dict) -> dict:
     }
 
 
+def _perfil_vacio(email: str, **motivo) -> dict:
+    """Ni ficha ni turnos, con el motivo marcado: es lo que la app sabe pintar."""
+    return {
+        "username": email,
+        "es_voluntario": False,
+        "perfil": None,
+        "turnos": [],
+        "evento": "carrera",
+        "slots_interes": [],
+        "verificacion_pendiente": False,
+        "sesion_caducada": False,
+        "token_caducado": False,
+        **motivo,
+    }
+
+
 @router.get("/mi-perfil")
-async def mi_perfil(payload: dict = Depends(require_admin)):
-    """Datos del miembro del staff y los turnos que tiene asignados."""
+async def mi_perfil(payload: dict = Depends(require_admin_aunque_caducado)):
+    """Datos del miembro del staff y los turnos que tiene asignados.
+
+    Un token caducado no recibe 401 aqui: la app instalada (1.3.11) ante el
+    401 deja la pantalla en blanco, sin aviso ni boton, y ante
+    `sesion_caducada` pide entrar otra vez. `token_caducado` deja que las
+    pantallas nuevas digan el motivo real.
+    """
     from server import db
 
     email = (payload.get("username") or "").lower()
+    if payload.get("caducado"):
+        return _perfil_vacio(email, sesion_caducada=True, token_caducado=True)
 
     cuenta = await cuentas.de_la_sesion(db, payload)
     if not cuentas.sesion_demostrada(payload, cuenta):
@@ -339,16 +363,7 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         caducada = cuentas.demostrada(cuenta)
         if not caducada:
             asyncio.create_task(cuentas.avisar_de_verificacion(db, cuenta))
-        return {
-            "username": email,
-            "es_voluntario": False,
-            "perfil": None,
-            "turnos": [],
-            "evento": "carrera",
-            "slots_interes": [],
-            "verificacion_pendiente": not caducada,
-            "sesion_caducada": caducada,
-        }
+        return _perfil_vacio(email, verificacion_pendiente=not caducada, sesion_caducada=caducada)
 
     voluntario = await _buscar_voluntario(db, email)
 
@@ -370,6 +385,7 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         "slots_interes": (voluntario or {}).get("slots_interes") or [],
         "verificacion_pendiente": False,
         "sesion_caducada": False,
+        "token_caducado": False,
     }
 
 

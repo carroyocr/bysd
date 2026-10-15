@@ -1,7 +1,9 @@
 // La sesión dentro de la app: una sola.
 //
-// El backend firma el token para 72 horas, que es lo razonable para la web: se
-// entra desde un ordenador propio y molestar cada rato sobra. En el teléfono el
+// Cuánto vive el token lo decide el backend según la cuenta
+// (`cuentas.duracion`): 12 horas con permisos del panel, 7 días para el resto
+// del equipo —el voluntario en la app, que con 12 horas se quedaba sin sesión
+// a mitad del evento— y 72 horas para corredor y espectador. En el teléfono el
 // riesgo es otro —se presta, se pierde, se deja en la mesa— así que la app es
 // más estricta que el token:
 //
@@ -11,9 +13,11 @@
 //   - Sin biometría, a las 3 horas hay que volver a escribir la contraseña.
 //
 // Esto se decide en el teléfono, no en el servidor: el token sigue siendo
-// válido hasta sus 72 horas. Es un cerrojo contra quien coge el aparato, no
+// válido hasta que caduca. Es un cerrojo contra quien coge el aparato, no
 // contra quien se lleve el token; para eso está la biometría, que sí guarda la
-// credencial en el llavero del sistema.
+// credencial en el llavero del sistema. La biometría devuelve el mismo token
+// guardado, no uno nuevo: cuando caduca, `/api/staff/mi-perfil` responde
+// `sesion_caducada` y la pantalla pide entrar otra vez con la contraseña.
 //
 // Antes había dos tokens —`athlete_token` y `admin_token`— y la app llegó a
 // mantener las dos sesiones abiertas a la vez, con biometría por separado,

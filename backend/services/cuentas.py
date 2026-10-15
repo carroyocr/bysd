@@ -41,8 +41,10 @@ VERSION_TOKEN = 2
 
 # El panel caduca antes que el perfil del corredor, igual que hasta ahora: son
 # 12 h de sesion administrativa frente a 72 h de una cuenta personal.
-HORAS_STAFF = 12
-HORAS_PERSONA = 72
+# Cuanto vive la sesion, segun la cuenta (ver `duracion`):
+HORAS_STAFF = 12        # el panel: una cuenta con permisos propios o administradora
+HORAS_EQUIPO = 24 * 7   # el resto del equipo: el voluntario en la app
+HORAS_PERSONA = 72      # corredor y espectador
 
 MIN_PASSWORD = 8
 
@@ -95,9 +97,30 @@ def verificar_password(password: str, guardado: Optional[str]) -> bool:
 # ==================== TOKENS ====================
 
 
-def duracion(roles) -> timedelta:
-    """Cuanto vive el token. Con rol de staff, lo que dura el panel."""
-    return timedelta(hours=HORAS_STAFF if STAFF in (roles or []) else HORAS_PERSONA)
+def del_panel(cuenta: Optional[dict]) -> bool:
+    """Si la cuenta abre el panel: es administradora o tiene permisos propios.
+
+    Los permisos que llegan por el turno (`permisos_del_turno`, el escaner del
+    control de vueltas) no cuentan: son de un voluntario, no del panel.
+    """
+    cuenta = cuenta or {}
+    por_turno = set(cuenta.get("permisos_del_turno") or [])
+    propios = [p for p in (cuenta.get("permissions") or []) if p not in por_turno]
+    return bool(cuenta.get("is_admin") or propios)
+
+
+def duracion(roles, cuenta: Optional[dict] = None) -> timedelta:
+    """Cuanto vive el token.
+
+    Con el panel, 12 horas. El resto del equipo —el voluntario que entra en la
+    app a ver sus turnos— tiene una semana: con 12 horas se quedaba sin sesion
+    a mitad del evento, y la app instalada (1.3.11) ante el 401 de
+    `/api/staff/mi-perfil` no pinta nada, ni aviso ni boton. La biometria de la
+    app devuelve el mismo token guardado, no uno nuevo, asi que no lo renueva.
+    """
+    if STAFF not in (roles or []):
+        return timedelta(hours=HORAS_PERSONA)
+    return timedelta(hours=HORAS_STAFF if del_panel(cuenta) else HORAS_EQUIPO)
 
 
 def version_de_sesion(cuenta: Optional[dict]) -> int:
@@ -135,7 +158,7 @@ def emitir_token(cuenta: dict) -> str:
         # Ver `sesion_vigente`: sube cuando alguien cambia la contrasena con un
         # codigo al correo, y deja atras las sesiones que hubiera abiertas.
         "sv": version_de_sesion(cuenta),
-        "exp": datetime.now(timezone.utc) + duracion(roles),
+        "exp": datetime.now(timezone.utc) + duracion(roles, cuenta),
     }
     return encode_admin_token(payload)
 
@@ -508,7 +531,12 @@ async def poner_al_dia(db, cuenta: Optional[dict]) -> Optional[dict]:
     if not cuenta:
         return cuenta
     cuenta = await _sumar_roles(db, cuenta)
-    return _con_permisos(cuenta, await permisos_del_turno(db, cuenta))
+    # Se recuerda cuales llegan por el turno: `duracion` no los toma por
+    # permisos del panel. Va en la cuenta en memoria y no se escribe.
+    por_turno = await permisos_del_turno(db, cuenta)
+    if not por_turno:
+        return cuenta
+    return {**_con_permisos(cuenta, por_turno), "permisos_del_turno": por_turno}
 
 
 async def _sumar_roles(db, cuenta: dict) -> dict:

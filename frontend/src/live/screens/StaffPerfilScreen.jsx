@@ -831,8 +831,10 @@ export default function StaffPerfilScreen() {
           <div className={`rounded-2xl px-4 py-6 text-center ${T.card}`}>
             <p className="text-sm font-bold">Vuelve a entrar</p>
             <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
-              La contraseña de esta cuenta cambió después de abrir esta sesión.
-              Entra otra vez para ver tu ficha y tus turnos.
+              {datos.token_caducado
+                ? 'Tu sesión caducó.'
+                : 'La contraseña de esta cuenta cambió después de abrir esta sesión.'}
+              {' '}Entra otra vez para ver tu ficha y tus turnos.
             </p>
             <button
               onClick={volverAEntrar}
