@@ -303,6 +303,16 @@ async def recalcular(database, carrera: dict, bib) -> dict:
             {"$set": {"laps_completed": vueltas, "total_km": km, "updated_at": ahora}},
         )
 
+    # Todo lo que cambia el libro pasa por aqui, asi que este es el sitio para
+    # avisar a la hoja del Mundial. En segundo plano y sin dejar que un fallo
+    # suyo (Google caido, hoja sin compartir) toque la anotacion de la vuelta.
+    try:
+        from services import hoja_mundial
+        hoja_mundial.programar(database, carrera)
+    except Exception:  # pragma: no cover - nunca debe frenar una vuelta
+        import logging
+        logging.getLogger(__name__).exception("No se pudo programar la hoja del Mundial")
+
     return {"bib": str(bib), "laps_completed": vueltas, "total_km": km}
 
 

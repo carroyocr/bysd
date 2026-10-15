@@ -9,10 +9,11 @@ import {
   Building2, CalendarClock, ClipboardCheck, Wallet, Shield, Mail, Clock,
   Trophy, Send, Shirt, GraduationCap, MessageCircle, Medal, Newspaper,
   Bell, Radio, Eye, ShieldAlert, FileText, UtensilsCrossed, Ticket, HelpCircle,
-  MonitorPlay
+  MonitorPlay, Table2
 } from 'lucide-react';
 import RaceControlPanel from '../components/RaceControlPanel';
 import TransmisionObsPanel from '../components/TransmisionObsPanel';
+import HojaMundialPanel from '../components/HojaMundialPanel';
 import SurveyResultsSection from '../components/SurveyResultsSection';
 import RaceConfigPanel from '../components/RaceConfigPanel';
 import PreRegistrationManagement from '../components/PreRegistrationManagement';
@@ -59,6 +60,9 @@ const TAB_PERMISSIONS = {
   'lap-registry': ['laps', 'control'],
   // Las vistas de OBS las arma quien lleva el control de la carrera.
   'transmision': ['race-control', 'control'],
+  // La hoja del Mundial la lleva quien controla la carrera: escribe lo que
+  // dice el libro de vueltas.
+  'hoja-mundial': ['race-control', 'control'],
   // Tambien lo abre quien lleva las comunicaciones: es el mismo trabajo
   // que el envio de correos, con otro canal.
   'app-avisos': ['app-avisos', 'control', 'emails'],
@@ -106,6 +110,7 @@ const ADMIN_SECTIONS = [
     items: [
       { id: 'control', label: 'Control de Carrera', icon: Radio },
       { id: 'transmision', label: 'Transmisión (OBS)', icon: MonitorPlay },
+      { id: 'hoja-mundial', label: 'Hoja del Mundial', icon: Table2 },
       { id: 'animos', label: 'Ánimos Reportados', icon: ShieldAlert },
     ],
   },
@@ -191,6 +196,7 @@ const TAB_VIEWS = {
     />
   ),
   'transmision': () => <TransmisionObsPanel />,
+  'hoja-mundial': () => <HojaMundialPanel />,
   'app-avisos': () => <PushComposer />,
   'animos': () => <CheerModerationPanel />,
   'espectadores': () => <EspectadoresManagement />,
