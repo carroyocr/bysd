@@ -5,7 +5,7 @@ import {
   ChevronDown, Medal, Heart, Upload, Paperclip, Camera, Loader2,
   GraduationCap, Check, XCircle, Calendar, Users as UsersIcon, Coffee,
   Mountain, ExternalLink, ScanFace, RefreshCw, AtSign, Instagram, Activity,
-  MessageCircle, Send, Trash2, Contact, Share2, Settings,
+  MessageCircle, Send, Trash2, Contact, Share2, Settings, CalendarClock,
 } from 'lucide-react';
 import { API, authJson, flagOf, initialsOf, statusLabel, usuarioDeEnlace } from '../liveApi';
 import { useLiveTheme, THEMES } from '../liveTheme';
@@ -31,6 +31,17 @@ function fechaHora(iso) {
     hour: 'numeric', minute: '2-digit',
   });
 }
+
+/** "2026-11-15" -> "15 nov 2026". Sin pasar por Date: en el móvil una fecha
+ *  sin hora se interpreta en UTC y en RD se leía el día anterior. */
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function fechaDia(iso) {
+  const [y, m, d] = String(iso || '').split('-');
+  if (!y || !m || !d) return '';
+  return `${parseInt(d, 10)} ${MESES_CORTOS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+const pesos = (n) => `RD$ ${Number(n || 0).toLocaleString('es-DO')}`;
 
 const SEXOS = ['Masculino', 'Femenino'];
 const SANGRES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -260,8 +271,22 @@ export default function PerfilScreen() {
   const [receiptRace, setReceiptRace] = useState(null);
   const [receiptInfo, setReceiptInfo] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
-  const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '' });
+  const [receiptData, setReceiptData] = useState({ payment_date: '', bank_origin: '', transfer_number: '', monto_pagado: '' });
+  // Lo que tiene que cubrir el comprobante (el costo, o lo que faltaba con un
+  // plazo aprobado). Por debajo es un abono y va por el plazo, no por aquí.
+  const [montoEsperado, setMontoEsperado] = useState(0);
   const [submittingReceipt, setSubmittingReceipt] = useState(false);
+
+  // Plazo para terminar de pagar: se abona una parte, se propone cuándo se
+  // salda el resto y la organización lo revisa. Mismo endpoint que la página
+  // web `/plazo-de-pago`, que va por `edit_token` y no por sesión.
+  const [plazoRace, setPlazoRace] = useState(null);
+  const [plazoInfo, setPlazoInfo] = useState(null);
+  const [plazoFile, setPlazoFile] = useState(null);
+  const [plazoData, setPlazoData] = useState({
+    monto_abonado: '', fecha_propuesta: '', payment_date: '', bank_origin: '', transfer_number: '',
+  });
+  const [enviandoPlazo, setEnviandoPlazo] = useState(false);
 
   // Actividades (mismos endpoints que la pestaña de /mi-perfil en la web)
   const [caps, setCaps] = useState([]);
@@ -923,17 +948,22 @@ export default function PerfilScreen() {
   const openReceiptForm = async (race) => {
     setReceiptRace(race.registration_id);
     setReceiptFile(null);
-    setReceiptData({ payment_date: '', bank_origin: '', transfer_number: '' });
+    setReceiptData({ payment_date: '', bank_origin: '', transfer_number: '', monto_pagado: '' });
     setReceiptInfo(null);
+    setMontoEsperado(0);
     setMsg(null);
     try {
       const res = await fetch(`${API}/api/registration/payment-info/${race.edit_token}`);
       if (res.ok) {
         const data = await res.json();
         setReceiptInfo(data.race_config || null);
+        setMontoEsperado(Number(data.monto_esperado ?? data.race_config?.registration_cost ?? 0));
       }
     } catch { /* la info bancaria es opcional */ }
   };
+
+  const montoDeclarado = Number(receiptData.monto_pagado) || 0;
+  const reciboEsAbono = montoEsperado > 0 && montoDeclarado > 0 && montoDeclarado < montoEsperado;
 
   const pickReceiptFile = (e) => {
     const file = e.target.files[0];
@@ -964,6 +994,14 @@ export default function PerfilScreen() {
       setMsg({ type: 'error', text: 'Indica el banco desde donde pagaste' });
       return;
     }
+    if (!(montoDeclarado > 0)) {
+      setMsg({ type: 'error', text: 'Indica cuánto pagaste' });
+      return;
+    }
+    if (reciboEsAbono) {
+      setMsg({ type: 'error', text: 'Eso es un abono: pide más tiempo para pagar y súbelo por ahí' });
+      return;
+    }
     setSubmittingReceipt(true);
     setMsg(null);
     try {
@@ -971,6 +1009,7 @@ export default function PerfilScreen() {
       fd.append('receipt_image', receiptFile);
       fd.append('payment_date', receiptData.payment_date);
       fd.append('bank_origin', receiptData.bank_origin);
+      fd.append('monto_pagado', receiptData.monto_pagado);
       if (receiptData.transfer_number) fd.append('transfer_number', receiptData.transfer_number);
       const res = await fetch(`${API}/api/registration/submit-payment-receipt/${race.edit_token}`, {
         method: 'POST',
@@ -988,6 +1027,87 @@ export default function PerfilScreen() {
       setMsg({ type: 'error', text: err.message });
     } finally {
       setSubmittingReceipt(false);
+    }
+  };
+
+  const abrirFormPlazo = async (race) => {
+    setPlazoRace(race.registration_id);
+    setPlazoFile(null);
+    setPlazoData({ monto_abonado: '', fecha_propuesta: '', payment_date: '', bank_origin: '', transfer_number: '' });
+    setPlazoInfo(null);
+    setMsg(null);
+    // El GET del plazo trae de una vez el costo, el abono mínimo, la fecha
+    // tope y los datos bancarios: sin él habría que adivinar los límites, y
+    // `my-races` no devuelve el costo.
+    try {
+      const res = await fetch(`${API}/api/registration/plazo/${race.edit_token}`);
+      if (res.ok) setPlazoInfo(await res.json());
+    } catch { /* sin los límites el formulario sigue: los valida el backend */ }
+  };
+
+  const elegirArchivoPlazo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      setMsg({ type: 'error', text: 'Formato no válido. Usa JPG, PNG, WebP o PDF.' });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setMsg({ type: 'error', text: 'El archivo es demasiado grande (máximo 10MB)' });
+      return;
+    }
+    setMsg(null);
+    setPlazoFile(file);
+  };
+
+  const enviarPlazo = async (race) => {
+    if (!plazoData.monto_abonado) {
+      setMsg({ type: 'error', text: 'Escribe cuánto abonaste' });
+      return;
+    }
+    if (!plazoData.fecha_propuesta) {
+      setMsg({ type: 'error', text: 'Elige cuándo saldarás el resto' });
+      return;
+    }
+    if (!plazoFile) {
+      setMsg({ type: 'error', text: 'Adjunta el comprobante de tu abono' });
+      return;
+    }
+    if (!plazoData.payment_date) {
+      setMsg({ type: 'error', text: 'Indica la fecha del abono' });
+      return;
+    }
+    if (!plazoData.bank_origin) {
+      setMsg({ type: 'error', text: 'Indica el banco desde donde pagaste' });
+      return;
+    }
+    setEnviandoPlazo(true);
+    setMsg(null);
+    try {
+      const fd = new FormData();
+      fd.append('monto_abonado', plazoData.monto_abonado);
+      fd.append('fecha_propuesta', plazoData.fecha_propuesta);
+      fd.append('payment_date', plazoData.payment_date);
+      fd.append('bank_origin', plazoData.bank_origin);
+      if (plazoData.transfer_number) fd.append('transfer_number', plazoData.transfer_number);
+      fd.append('receipt_image', plazoFile);
+      const res = await fetch(`${API}/api/registration/plazo/${race.edit_token}`, {
+        method: 'POST',
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'No se pudo enviar la solicitud');
+      }
+      setPlazoRace(null);
+      setMsg({ type: 'ok', text: 'Solicitud enviada. Tu cupo queda reservado en cuanto la aprobemos.' });
+      authJson('GET', '/api/athletes/my-races', { token: token() })
+        .then((r) => { if (r.ok) setMyRaces(r.data.races || []); });
+    } catch (err) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setEnviandoPlazo(false);
     }
   };
 
@@ -1484,7 +1604,13 @@ export default function PerfilScreen() {
               const puedeSubirComprobante = race.edit_token && !enEspera &&
                 race.payment_status !== 'paid' && !receiptPending &&
                 !race.payment_receipt_status;
-              // Una vez hay comprobante o pago no se puede soltar el lugar:
+              // El plazo para terminar de pagar. Un plazo rechazado se puede
+              // volver a pedir; uno pendiente o aprobado, no, y el motivo lo
+              // dice el aviso de abajo en vez de esconder el botón sin más.
+              const plazo = race.plazo_pago || null;
+              const puedePedirPlazo = puedeSubirComprobante &&
+                (!plazo || plazo.estado === 'rechazado');
+                            // Una vez hay comprobante o pago no se puede soltar el lugar:
               // habría que devolver dinero y eso lo lleva la organización.
               const puedeCancelar = !race.payment_receipt_status &&
                 race.payment_status !== 'paid' &&
@@ -1495,7 +1621,11 @@ export default function PerfilScreen() {
                   ? { cls: 'bg-green-500/15 text-green-500', label: 'Pagado' }
                   : receiptPending
                     ? { cls: 'bg-sky-500/15 text-sky-500', label: 'Comprobante en revisión' }
-                    : { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Pendiente de pago' };
+                    : race.cupo?.situacion === 'asegurado'
+                      ? { cls: 'bg-green-500/15 text-green-500', label: 'Cupo asegurado' }
+                      : race.cupo?.situacion === 'por_confirmar'
+                        ? { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Cupo por confirmar' }
+                        : { cls: 'bg-yellow-500/15 text-yellow-600', label: 'Pendiente de pago' };
               return (
                 <div key={race.registration_id} className={`py-3 border-b last:border-b-0 ${T.divider}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -1507,13 +1637,47 @@ export default function PerfilScreen() {
                   {race.bib && !enEspera && <p className={`text-xs mt-1 ${T.muted}`}>BIB #{race.bib}</p>}
                   {enEspera && (
                     <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
-                      La carrera alcanzó su cupo. Estás en lista de espera: si se libera un
-                      lugar te avisaremos por correo y podrás completar el pago.
+                      {race.cupo?.mensaje
+                        || 'La carrera alcanzó su cupo. Estás en lista de espera: si se libera un lugar te avisaremos por correo y podrás completar el pago.'}
                     </p>
+                  )}
+                  {/* El cupo se asegura pagando, no inscribiéndose: quien aún
+                      no paga lo lee aquí con las mismas palabras del correo. */}
+                  {!enEspera && race.cupo?.situacion === 'por_confirmar' && (
+                    <div className="mt-2 rounded-xl px-3 py-2.5 bg-yellow-500/10 border border-yellow-500/30">
+                      <p className="text-xs leading-relaxed">{race.cupo.mensaje}</p>
+                      {race.cupo.mensaje_abono && (
+                        <p className={`text-xs leading-relaxed mt-1.5 ${T.muted}`}>{race.cupo.mensaje_abono}</p>
+                      )}
+                      {race.cupo.disponibles > 0 && (
+                        <p className="text-xs font-bold mt-1.5">
+                          Quedan {race.cupo.disponibles} de {race.cupo.limite} cupos por asegurar.
+                        </p>
+                      )}
+                    </div>
                   )}
                   {receiptPending && (
                     <p className={`text-xs mt-1.5 ${T.muted}`}>
                       Tu comprobante está siendo revisado por el equipo.
+                    </p>
+                  )}
+                  {plazo?.estado === 'pendiente' && (
+                    <p className={`text-xs mt-1.5 leading-relaxed ${T.muted}`}>
+                      Pediste plazo para terminar de pagar: abonaste {pesos(plazo.monto_abonado)} y
+                      propusiste saldar el {fechaDia(plazo.fecha_propuesta)}. Está en revisión; tu
+                      cupo queda reservado cuando la aprobemos.
+                    </p>
+                  )}
+                  {plazo?.estado === 'aprobado' && (
+                    <p className="text-xs mt-1.5 leading-relaxed text-green-600">
+                      Plazo aprobado: abonaste {pesos(plazo.monto_abonado)} y tienes hasta
+                      el {fechaDia(plazo.fecha_propuesta)} para saldar el resto.
+                    </p>
+                  )}
+                  {plazo?.estado === 'rechazado' && (
+                    <p className="text-xs mt-1.5 leading-relaxed text-red-500">
+                      Tu solicitud de plazo no fue aprobada{plazo.motivo ? `: ${plazo.motivo}` : ''}.
+                      Puedes enviar otra.
                     </p>
                   )}
 
@@ -1537,7 +1701,8 @@ export default function PerfilScreen() {
                     </div>
                   )}
 
-                  {receiptRace !== race.registration_id && (puedeSubirComprobante || puedeCancelar) && (
+                  {receiptRace !== race.registration_id && plazoRace !== race.registration_id
+                    && (puedeSubirComprobante || puedePedirPlazo || puedeCancelar) && (
                     <div className="flex flex-wrap items-center gap-2 mt-2.5">
                       {puedeSubirComprobante && (
                         <button
@@ -1545,6 +1710,14 @@ export default function PerfilScreen() {
                           className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
                         >
                           <Upload className="w-3.5 h-3.5 text-[#E77622]" /> Subir comprobante de pago
+                        </button>
+                      )}
+                      {puedePedirPlazo && (
+                        <button
+                          onClick={() => abrirFormPlazo(race)}
+                          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                        >
+                          <CalendarClock className="w-3.5 h-3.5 text-[#E77622]" /> Pedir más tiempo para pagar
                         </button>
                       )}
                       {puedeCancelar && (
@@ -1571,10 +1744,35 @@ export default function PerfilScreen() {
                             {receiptInfo.payment_account_type && <> · {receiptInfo.payment_account_type}</>}
                             {receiptInfo.payment_account_number && <> · Cuenta {receiptInfo.payment_account_number}</>}
                             {receiptInfo.payment_account_name && <> · A nombre de {receiptInfo.payment_account_name}</>}
-                            {receiptInfo.registration_cost && (
-                              <> · Monto RD${Number(receiptInfo.registration_cost).toLocaleString('es-DO')}</>
+                            {montoEsperado > 0 && (
+                              <> · {race.plazo_pago?.estado === 'aprobado' ? 'Te falta' : 'Monto'} {pesos(montoEsperado)}</>
                             )}
                           </p>
+                        </div>
+                      )}
+                      <Field T={T} label="¿Cuánto pagaste? (RD$) *">
+                        <TextInput
+                          T={T}
+                          type="number"
+                          inputMode="numeric"
+                          value={receiptData.monto_pagado}
+                          onChange={(e) => setReceiptData((p) => ({ ...p, monto_pagado: e.target.value }))}
+                          placeholder={montoEsperado > 0 ? String(montoEsperado) : ''}
+                        />
+                      </Field>
+                      {reciboEsAbono && (
+                        <div className={`rounded-xl px-3 py-3 space-y-2 ${T.itraBox}`}>
+                          <p className={`text-xs leading-relaxed ${T.muted}`}>
+                            Eso no cubre lo que falta ({pesos(montoEsperado)}), así que es un <strong>abono</strong>.
+                            Los abonos van por «más tiempo para pagar»: ahí se anota lo que abonaste y
+                            cuándo saldas el resto, y tu cupo queda reservado.
+                          </p>
+                          <button
+                            onClick={() => { setReceiptRace(null); abrirFormPlazo(race); }}
+                            className={`flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg ${T.actionChip}`}
+                          >
+                            <CalendarClock className="w-3.5 h-3.5 text-[#E77622]" /> Pedir más tiempo para pagar
+                          </button>
                         </div>
                       )}
                       <Field T={T} label="Comprobante (JPG, PNG, WebP o PDF) *">
@@ -1608,9 +1806,110 @@ export default function PerfilScreen() {
                         <button onClick={() => setReceiptRace(null)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
                           Cancelar
                         </button>
-                        <button onClick={() => submitReceipt(race)} disabled={submittingReceipt} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                        <button onClick={() => submitReceipt(race)} disabled={submittingReceipt || reciboEsAbono} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
                           {submittingReceipt ? 'Enviando…' : 'Enviar'}
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {plazoRace === race.registration_id && (
+                    <div className="space-y-3 mt-3">
+                      {/* El impedimento lo decide el backend (`plazos.puede_solicitar`):
+                          si llega, se enseña tal cual y no se pide nada. Pasa
+                          cuando algo cambió entre la lista y el formulario. */}
+                      {plazoInfo?.impedimento ? (
+                        <div className={`rounded-xl px-3 py-3 ${T.itraBox}`}>
+                          <p className="text-xs leading-relaxed">{plazoInfo.impedimento}</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={`rounded-xl px-3 py-3 ${T.itraBox}`}>
+                            <p className={`text-xs leading-relaxed ${T.muted}`}>
+                              Abona una parte ahora y dinos cuándo saldas el resto. El cupo
+                              queda reservado cuando aprobemos tu solicitud.
+                              {plazoInfo && (
+                                <> El abono mínimo es de {pesos(plazoInfo.abono_minimo)}
+                                  {plazoInfo.costo ? <> de {pesos(plazoInfo.costo)}</> : null}, y la
+                                  fecha máxima para saldar es el {fechaDia(plazoInfo.fecha_tope)}.</>
+                              )}
+                            </p>
+                            {plazoInfo?.carrera?.payment_account_number && (
+                              <p className={`text-xs leading-relaxed mt-2 ${T.muted}`}>
+                                Transfiere a: <strong>{plazoInfo.carrera.payment_bank_name}</strong>
+                                {plazoInfo.carrera.payment_account_type && <> · {plazoInfo.carrera.payment_account_type}</>}
+                                <> · Cuenta {plazoInfo.carrera.payment_account_number}</>
+                                {plazoInfo.carrera.payment_account_name && <> · A nombre de {plazoInfo.carrera.payment_account_name}</>}
+                              </p>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 items-end">
+                            <Field T={T} label="Cuánto abonaste *">
+                              <TextInput
+                                T={T}
+                                type="number"
+                                inputMode="decimal"
+                                value={plazoData.monto_abonado}
+                                onChange={(e) => setPlazoData((p) => ({ ...p, monto_abonado: e.target.value }))}
+                                placeholder={plazoInfo ? String(plazoInfo.abono_minimo) : 'Ej: 2000'}
+                              />
+                            </Field>
+                            <Field T={T} label="Fecha del abono *">
+                              <DateField
+                                T={T}
+                                title="Fecha del abono"
+                                value={plazoData.payment_date}
+                                onChange={(v) => setPlazoData((p) => ({ ...p, payment_date: v }))}
+                                fromYear={new Date().getFullYear()}
+                                toYear={new Date().getFullYear() - 1}
+                              />
+                            </Field>
+                          </div>
+                          {/* Lo que falta, a la vista: es la cifra por la que se
+                              compromete, y sale de lo que acaba de teclear. */}
+                          {plazoInfo?.costo > 0 && plazoData.monto_abonado !== '' && (
+                            <p className={`text-[11px] -mt-1 ${T.muted}`}>
+                              Quedarían {pesos(Math.max(plazoInfo.costo - Number(plazoData.monto_abonado || 0), 0))} por pagar.
+                            </p>
+                          )}
+                          <Field T={T} label="Cuándo saldas el resto *">
+                            <DateField
+                              T={T}
+                              title="Fecha para saldar"
+                              value={plazoData.fecha_propuesta}
+                              onChange={(v) => setPlazoData((p) => ({ ...p, fecha_propuesta: v }))}
+                              fromYear={plazoInfo ? Number(String(plazoInfo.fecha_tope).slice(0, 4)) : new Date().getFullYear() + 1}
+                              toYear={new Date().getFullYear()}
+                            />
+                          </Field>
+                          <Field T={T} label="Comprobante del abono (JPG, PNG, WebP o PDF) *">
+                            <label className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm cursor-pointer ${T.input}`}>
+                              <Paperclip className="w-4 h-4 text-[#E77622] shrink-0" />
+                              <span className={`truncate ${plazoFile ? '' : 'opacity-50'}`}>
+                                {plazoFile ? plazoFile.name : 'Seleccionar archivo o foto'}
+                              </span>
+                              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={elegirArchivoPlazo} className="hidden" />
+                            </label>
+                          </Field>
+                          <div className="grid grid-cols-2 gap-3 items-end">
+                            <Field T={T} label="Banco de origen *">
+                              <TextInput T={T} value={plazoData.bank_origin} onChange={(e) => setPlazoData((p) => ({ ...p, bank_origin: e.target.value }))} placeholder="Ej: Banreservas" />
+                            </Field>
+                            <Field T={T} label="Nº de transferencia">
+                              <TextInput T={T} value={plazoData.transfer_number} onChange={(e) => setPlazoData((p) => ({ ...p, transfer_number: e.target.value }))} placeholder="Opcional" />
+                            </Field>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex gap-3">
+                        <button onClick={() => setPlazoRace(null)} className={`flex-1 rounded-xl py-3 text-sm font-bold border ${T.divider}`}>
+                          {plazoInfo?.impedimento ? 'Cerrar' : 'Cancelar'}
+                        </button>
+                        {!plazoInfo?.impedimento && (
+                          <button onClick={() => enviarPlazo(race)} disabled={enviandoPlazo} className="flex-1 bg-[#E77622] text-white font-bold rounded-xl py-3 text-sm disabled:opacity-50">
+                            {enviandoPlazo ? 'Enviando…' : 'Enviar solicitud'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

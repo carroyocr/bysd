@@ -78,6 +78,14 @@ TABLA = {
     "pressStart":       ("START to begin",          "START para salir",    "START pour partir",    "START zum Start",       "START per partire",    "START para largar"),
     "gpsReady":         ("GPS ready",               "GPS listo",           "GPS prêt",             "GPS bereit",            "GPS pronto",           "GPS pronto"),
     "gpsWait":          ("Searching GPS",           "Buscando GPS",        "Recherche GPS",        "GPS-Suche",             "Ricerca GPS",          "Procurando GPS"),
+    # La hora de salida al abrir y la configuracion en la linea de salida.
+    "startsIn":        ("in", "faltan", "dans", "in", "tra", "faltam"),
+    "underway":        ("Under way", "En curso", "En cours", "Läuft", "In corso", "Em curso"),
+    "confirmStart":    ("START to confirm", "START confirma", "START valide", "START bestätigt", "START conferma", "START confirma"),
+    "menuAuto":        ("MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto"),
+    "cfgAutoFinish":   ("Auto line", "Auto meta", "Auto ligne", "Auto Ziel", "Auto arrivo", "Auto meta"),
+    "cfgAutoKm":       ("Auto km", "Auto km", "Auto km", "Auto km", "Auto km", "Auto km"),
+    "cfgVibe":         ("Vibe", "Vibra", "Vibr.", "Vibr.", "Vibr.", "Vibra"),
     "endTitle":         ("Finish?",                 "¿Terminar?",          "Terminer ?",           "Beenden?",              "Terminare?",           "Terminar?"),
     "resume":           ("Resume",                  "Reanudar",            "Reprendre",            "Weiter",                "Riprendi",             "Retomar"),
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
@@ -118,6 +126,9 @@ TABLA = {
     # el dibujo, que si obedece a la unidad del reloj: un ajuste que cambiara
     # de unidad no podria tener un valor por defecto correcto para todos.
     "settingLapDistance":("Yard distance (km)",     "Yard (km)",           "Yard (km)",            "Yard-Länge (km)",       "Yard (km)",            "Yard (km)"),
+    # El margen de seguridad: minutos que se restan al margen antes de
+    # ensenarlo. Lo pidio el usuario del Forerunner 255 (su "margin offset").
+    "settingMarginReserve": ("Safety margin (minutes)", "Margen de seguridad (minutos)", "Marge de sécurité (minutes)", "Sicherheitspuffer (Minuten)", "Margine di sicurezza (minuti)", "Margem de segurança (minutos)"),
     "settingCorral":    ("Corral alert",            "Aviso de corral",     "Alerte corral",        "Corral-Warnung",        "Avviso corral",        "Aviso de corral"),
     # La vuelta automatica: marcar al llegar a la meta (el punto de salida,
     # que en una backyard es la misma linea), sin boton.
@@ -135,7 +146,20 @@ TABLA = {
     # Los tonos de la actividad: campana, marca y corral. El ajuste de
     # Sonidos del sistema del reloj manda por encima.
     "settingSound":     ("Sound",                   "Sonido",              "Son",                  "Ton",                   "Suono",                "Som"),
-    # Acerca de: version y QR al sitio del evento.
+    # El fondo de la esfera: oscuro (de fabrica) o claro. En el telefono es
+    # una lista; en el reloj, un ajuste que al tocarlo pasa al otro y lo
+    # dice en el sub-rotulo. Lo pidio un usuario con Forerunner 255 (MIP).
+    "settingTheme":     ("Background",              "Fondo",               "Fond",                 "Hintergrund",           "Sfondo",               "Fundo"),
+    "themeDark":        ("Dark",                    "Oscuro",              "Sombre",               "Dunkel",                "Scuro",                "Escuro"),
+    "themeLight":       ("Light",                   "Claro",               "Clair",                "Hell",                  "Chiaro",               "Claro"),
+    # El tamano de texto: normal o grande. Lo pidio el mismo usuario del
+    # Forerunner 255: a 260 px la fuente minima de los rotulos se queda corta.
+    "settingTextSize":  ("Text size",               "Tamaño de texto",     "Taille du texte",      "Textgröße",             "Dimensione testo",     "Tamanho do texto"),
+    "textNormal":       ("Normal",                  "Normal",              "Normale",              "Normal",                "Normale",              "Normal"),
+    "textLarge":        ("Large",                   "Grande",              "Grand",                "Groß",                  "Grande",               "Grande"),
+    "aboutManual":      ("User manual",             "Manual de usuario",   "Manuel d'utilisation", "Benutzerhandbuch",      "Manuale utente",       "Manual do utilizador"),
+    # Acerca de: version y QR al manual del corredor. El titulo va encima del
+    # QR y dice que es; corto, que la cuerda ahi arriba es estrecha.
     "settingAbout":     ("About",                   "Acerca de",           "À propos",             "Info",                  "Informazioni",         "Sobre"),
 
     # Las pantallas de carrera: cuales se ven y en que orden. En el telefono

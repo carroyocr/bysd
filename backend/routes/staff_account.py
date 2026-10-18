@@ -12,17 +12,17 @@ ya usaba el registro de voluntarios. Asi no hay que mandar credenciales por
 correo a nadie, y sirve igual para los que ya estaban registrados y para los
 que se registren manana.
 """
+import asyncio
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Literal, Optional
 
-import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
-from services import rate_limit
-from services.auth import encode_admin_token, require_admin, require_permission
+from services import cuentas, rate_limit
+from services.auth import require_admin, require_admin_aunque_caducado, require_permission
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,31 @@ async def _buscar_voluntario(db, email: str) -> Optional[dict]:
     return docs[0] if docs else None
 
 
+async def _acceso_de_equipo(db, email: str, voluntario: Optional[dict]) -> dict:
+    """Con que entra al equipo quien tiene este correo, si entra con algo.
+
+    La cuenta vive en `accounts`. La de un corredor o un espectador cuenta aqui
+    solo si la persona es voluntaria y su correo esta verificado: es lo que hace
+    que el acceso le sume el rol (`cuentas.poner_al_dia`). `admin_users` se mira
+    todavia por quien se puso contrasena antes de que esto pasara a `accounts` y
+    aun no ha vuelto a entrar.
+    """
+    cuenta = await cuentas.por_email(db, email)
+    if cuenta and cuentas.STAFF not in (cuenta.get("roles") or []):
+        if not (voluntario and cuenta.get("email_verified")):
+            cuenta = None
+
+    heredado = await db.admin_users.find_one({"username": email})
+    return {
+        "cuenta": cuenta,
+        "heredado": heredado,
+        "tiene_cuenta": bool(cuenta or heredado),
+        "tiene_password": bool(
+            cuenta.get("password_hash") if cuenta else (heredado or {}).get("password")
+        ),
+    }
+
+
 # ==================== ESTADO DE LA CUENTA ====================
 
 
@@ -81,12 +106,12 @@ async def estado_de_la_cuenta(email: EmailStr, request: Request = None):
 
     correo = email.lower().strip()
     voluntario = await _buscar_voluntario(db, correo)
-    usuario = await db.admin_users.find_one({"username": correo}, {"password": 1})
+    acceso = await _acceso_de_equipo(db, correo, voluntario)
 
     return {
         "es_voluntario": voluntario is not None,
-        "tiene_cuenta": usuario is not None,
-        "tiene_password": bool(usuario and usuario.get("password")),
+        "tiene_cuenta": acceso["tiene_cuenta"],
+        "tiene_password": acceso["tiene_password"],
     }
 
 
@@ -134,11 +159,11 @@ async def solicitar_codigo(datos: SolicitarCodigo, request: Request = None):
     email = datos.email.lower().strip()
 
     voluntario = await _buscar_voluntario(db, email)
-    usuario = await db.admin_users.find_one({"username": email})
+    acceso = await _acceso_de_equipo(db, email, voluntario)
 
     # Se responde lo mismo exista o no la cuenta: si no, esto seria una forma
     # comoda de averiguar quien esta apuntado como voluntario.
-    if voluntario or usuario:
+    if voluntario or acceso["tiene_cuenta"]:
         await enviar_codigo_password(db, email)
 
     return {
@@ -170,47 +195,41 @@ async def definir_password(datos: DefinirPassword, request: Request = None):
         raise HTTPException(status_code=400, detail="El codigo caduco. Pide uno nuevo.")
 
     voluntario = await _buscar_voluntario(db, email)
-    usuario = await db.admin_users.find_one({"username": email})
-    if not voluntario and not usuario:
+    acceso = await _acceso_de_equipo(db, email, voluntario)
+    if not voluntario and not acceso["tiene_cuenta"]:
         raise HTTPException(status_code=404, detail="Ese correo no tiene cuenta en el equipo")
 
-    hashed = bcrypt.hashpw(datos.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    ahora = datetime.now(timezone.utc)
+    heredado = acceso["heredado"]
 
-    if usuario:
-        # Cuenta que ya existia (por ejemplo, alguien del equipo con permisos):
-        # se le cambia la contrasena y no se le tocan los permisos.
+    # La contrasena va a la cuenta unica, que es de donde lee cualquier acceso.
+    # Antes se guardaba en `admin_users`, y a quien ya tenia cuenta de corredor
+    # eso le dejaba una contrasena que no abria nada: el acceso miraba primero
+    # su cuenta, donde seguia la otra. Si la persona ya tenia cuenta gana aqui
+    # el rol de equipo en esa misma; los permisos no se tocan.
+    cuenta = await cuentas.cuenta_de_equipo(
+        db,
+        email,
+        password=datos.password,
+        nombre=(voluntario or {}).get("nombre") or (heredado or {}).get("nombre") or "",
+        apellidos=(voluntario or {}).get("apellidos") or "",
+        permissions=(heredado or {}).get("permissions"),
+    )
+    cuenta = await cuentas.poner_al_dia(db, cuenta)
+
+    if heredado:
+        # Mientras `admin_users` siga viva, que no guarde una contrasena vieja.
         await db.admin_users.update_one(
-            {"username": email}, {"$set": {"password": hashed, "updated_at": ahora}}
+            {"username": email},
+            {"$set": {"password": cuenta["password_hash"], "updated_at": datetime.now(timezone.utc)}},
         )
-        permisos = usuario.get("permissions", [])
-        nombre = usuario.get("nombre") or f"{voluntario.get('nombre','')} {voluntario.get('apellidos','')}".strip()
-    else:
-        nombre = f"{voluntario.get('nombre', '')} {voluntario.get('apellidos', '')}".strip()
-        permisos = []   # solo su perfil; los permisos los da la organizacion
-        await db.admin_users.insert_one({
-            "username": email,
-            "password": hashed,
-            "nombre": nombre,
-            "email": email,
-            "permissions": permisos,
-            "es_voluntario": True,
-            "created_at": ahora,
-            "updated_at": ahora,
-        })
 
     await db.volunteer_verification_tokens.delete_many({"email": email})
 
-    token = encode_admin_token({
-        "username": email,
-        "is_admin": False,
-        "permissions": permisos,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=12),
-    })
+    permisos = cuenta.get("permissions") or []
     return {
-        "token": token,
+        "token": cuentas.emitir_token(cuenta),
         "username": email,
-        "nombre": nombre,
+        "nombre": f"{cuenta.get('nombre') or ''} {cuenta.get('apellidos') or ''}".strip(),
         "is_admin": False,
         "permissions": permisos,
     }
@@ -219,8 +238,51 @@ async def definir_password(datos: DefinirPassword, request: Request = None):
 # ==================== PERFIL ====================
 
 
+# Lo que cuelga del correo de la sesion —la ficha, los turnos, el carnet— se
+# busca por ese correo y por nada mas. Y una cuenta de staff se crea desde la
+# app con el correo que uno quiera escribir: sin esta comprobacion, conocer el
+# correo de un voluntario era leer su telefono, su tipo de sangre, sus alergias
+# y su contacto de emergencia, y poder soltarle los turnos.
+
+AVISO_VERIFICAR = (
+    "Confirma tu correo para ver tu ficha y tus turnos. "
+    "Te enviamos un codigo; si no lo tienes, pide otro."
+)
+AVISO_SESION = "Tu contrasena cambio despues de abrir esta sesion. Sal y vuelve a entrar."
+
+
+async def equipo_con_correo_demostrado(payload: dict = Depends(require_admin)) -> dict:
+    """Dependencia: alguien del equipo cuyo correo es suyo de verdad.
+
+    Es la que piden las rutas que ensenan o tocan lo del voluntario. El perfil
+    (`mi_perfil`) no la usa porque no rechaza: responde vacio, que es lo que la
+    app ya instalada sabe pintar.
+    """
+    from server import db
+
+    cuenta = await cuentas.de_la_sesion(db, payload)
+    if not cuentas.sesion_demostrada(payload, cuenta):
+        raise HTTPException(
+            status_code=403,
+            detail=AVISO_SESION if cuentas.demostrada(cuenta) else AVISO_VERIFICAR,
+        )
+    return payload
+
+
+def turno_confirmado(slot: dict) -> bool:
+    """Si quien tiene el turno ha reconfirmado que va.
+
+    La confirmacion guarda quien la hizo, y vale solo mientras el turno siga
+    siendo suyo. Asi no hay que acordarse de borrarla en cada sitio que
+    reasigna un turno: si pasa a otra persona, deja de contar sola.
+    """
+    asignado = (slot.get("email_asignado") or "").lower()
+    return bool(asignado) and (slot.get("confirmado_por") or "").lower() == asignado
+
+
 def _turno_legible(slot: dict) -> dict:
     """Los turnos se guardan con las claves en espanol de volunteer_assignments."""
+    confirmado = turno_confirmado(slot)
     return {
         "slot_id": slot.get("id"),
         "puesto": slot.get("puesto"),
@@ -228,15 +290,81 @@ def _turno_legible(slot: dict) -> dict:
         "dia": slot.get("dia"),
         "hora_inicio": slot.get("hora_inicio"),
         "hora_fin": slot.get("hora_fin"),
+        "confirmado": confirmado,
+        "confirmado_at": slot.get("confirmado_at") if confirmado else None,
+    }
+
+
+def _perfil_legible(voluntario: dict) -> dict:
+    """La ficha del voluntario tal como la ve el mismo."""
+    return {
+        "nombre": voluntario.get("nombre"),
+        "apellidos": voluntario.get("apellidos"),
+        "email": voluntario.get("email"),
+        "telefono": voluntario.get("telefono"),
+        "fecha_nacimiento": voluntario.get("fecha_nacimiento"),
+        "sexo": voluntario.get("sexo"),
+        "nacionalidad": voluntario.get("nacionalidad"),
+        "ciudad_residencia": voluntario.get("ciudad_residencia"),
+        "talla_camiseta": voluntario.get("talla_camiseta"),
+        "tipo_sangre": voluntario.get("tipo_sangre"),
+        "condicion_medica": voluntario.get("condicion_medica"),
+        "condicion_medica_detalle": voluntario.get("condicion_medica_detalle"),
+        "alergias": voluntario.get("alergias"),
+        "alergias_detalle": voluntario.get("alergias_detalle"),
+        "contacto_emergencia_nombre": voluntario.get("contacto_emergencia_nombre"),
+        "contacto_emergencia_relacion": voluntario.get("contacto_emergencia_relacion"),
+        "contacto_emergencia_telefono": voluntario.get("contacto_emergencia_telefono"),
+        "race_code": voluntario.get("race_code"),
+    }
+
+
+def _perfil_vacio(email: str, **motivo) -> dict:
+    """Ni ficha ni turnos, con el motivo marcado: es lo que la app sabe pintar."""
+    return {
+        "username": email,
+        "es_voluntario": False,
+        "perfil": None,
+        "turnos": [],
+        "evento": "carrera",
+        "slots_interes": [],
+        "verificacion_pendiente": False,
+        "sesion_caducada": False,
+        "token_caducado": False,
+        **motivo,
     }
 
 
 @router.get("/mi-perfil")
-async def mi_perfil(payload: dict = Depends(require_admin)):
-    """Datos del miembro del staff y los turnos que tiene asignados."""
+async def mi_perfil(payload: dict = Depends(require_admin_aunque_caducado)):
+    """Datos del miembro del staff y los turnos que tiene asignados.
+
+    Un token caducado no recibe 401 aqui: la app instalada (1.3.11) ante el
+    401 deja la pantalla en blanco, sin aviso ni boton, y ante
+    `sesion_caducada` pide entrar otra vez. `token_caducado` deja que las
+    pantallas nuevas digan el motivo real.
+    """
     from server import db
 
     email = (payload.get("username") or "").lower()
+    if payload.get("caducado"):
+        return _perfil_vacio(email, sesion_caducada=True, token_caducado=True)
+
+    cuenta = await cuentas.de_la_sesion(db, payload)
+    if not cuentas.sesion_demostrada(payload, cuenta):
+        # Ni ficha ni turnos, tenga o no registro de voluntario ese correo: que
+        # la respuesta cambiara segun lo tuviera ya seria decir quien esta
+        # apuntado.
+        #
+        # Dos motivos, que la app distingue: el correo esta sin confirmar (se
+        # le manda el codigo, aparte para no hacer esperar a la pantalla por el
+        # correo), o la sesion es anterior a un cambio de contrasena y basta
+        # con volver a entrar.
+        caducada = cuentas.demostrada(cuenta)
+        if not caducada:
+            asyncio.create_task(cuentas.avisar_de_verificacion(db, cuenta))
+        return _perfil_vacio(email, verificacion_pendiente=not caducada, sesion_caducada=caducada)
+
     voluntario = await _buscar_voluntario(db, email)
 
     asignaciones = await db.volunteer_assignments.find(
@@ -244,28 +372,7 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
     ).to_list(200)
     asignaciones.sort(key=lambda s: (s.get("dia") or "", s.get("hora_inicio") or ""))
 
-    perfil = None
-    if voluntario:
-        perfil = {
-            "nombre": voluntario.get("nombre"),
-            "apellidos": voluntario.get("apellidos"),
-            "email": voluntario.get("email"),
-            "telefono": voluntario.get("telefono"),
-            "fecha_nacimiento": voluntario.get("fecha_nacimiento"),
-            "sexo": voluntario.get("sexo"),
-            "nacionalidad": voluntario.get("nacionalidad"),
-            "ciudad_residencia": voluntario.get("ciudad_residencia"),
-            "talla_camiseta": voluntario.get("talla_camiseta"),
-            "tipo_sangre": voluntario.get("tipo_sangre"),
-            "condicion_medica": voluntario.get("condicion_medica"),
-            "condicion_medica_detalle": voluntario.get("condicion_medica_detalle"),
-            "alergias": voluntario.get("alergias"),
-            "alergias_detalle": voluntario.get("alergias_detalle"),
-            "contacto_emergencia_nombre": voluntario.get("contacto_emergencia_nombre"),
-            "contacto_emergencia_relacion": voluntario.get("contacto_emergencia_relacion"),
-            "contacto_emergencia_telefono": voluntario.get("contacto_emergencia_telefono"),
-            "race_code": voluntario.get("race_code"),
-        }
+    perfil = _perfil_legible(voluntario) if voluntario else None
 
     return {
         "username": email,
@@ -276,11 +383,231 @@ async def mi_perfil(payload: dict = Depends(require_admin)):
         # asignaron: la organizacion decide despues.
         "evento": (voluntario or {}).get("evento") or "carrera",
         "slots_interes": (voluntario or {}).get("slots_interes") or [],
+        "verificacion_pendiente": False,
+        "sesion_caducada": False,
+        "token_caducado": False,
     }
 
 
+async def _postulaciones(db, email: str) -> list:
+    """Los registros del voluntario en su edicion mas reciente, uno por evento.
+
+    Quien se apunto a la carrera y al campeonato tiene dos, y cada uno guarda
+    los turnos que pidio para su evento.
+    """
+    registros = await db.volunteer_registrations.find(
+        {"email": email, "status": {"$ne": "cancelled"}}
+    ).sort("created_at", -1).to_list(20)
+    if not registros:
+        return []
+
+    edicion = registros[0].get("race_code")
+    unicos, vistos = [], set()
+    for r in registros:
+        evento = r.get("evento") or "carrera"
+        if r.get("race_code") == edicion and evento not in vistos:
+            vistos.add(evento)
+            unicos.append(r)
+    return unicos
+
+
+def _etiqueta_evento(carrera: Optional[dict], evento: str) -> str:
+    """El nombre corto con el que se elige el evento en la pantalla."""
+    from routes.volunteer_registration import nombre_evento
+
+    if evento == "campeonato":
+        return "Campeonato"
+    anio = str((carrera or {}).get("date") or "")[:4]
+    return f"Backyard {anio}" if anio.isdigit() else nombre_evento(carrera, evento)
+
+
+def _orden_de_turno(turno: dict):
+    return (turno.get("dia") or "", turno.get("hora_inicio") or "", turno.get("puesto") or "")
+
+
+@router.get("/mi-perfil/turnos")
+async def mis_turnos(payload: dict = Depends(equipo_con_correo_demostrado)):
+    """Los turnos del voluntario, evento por evento, en sus tres estados.
+
+    - **solicitados**: los que pidio y la organizacion aun no le ha asignado.
+    - **asignados**: los que ya son suyos, con si los reconfirmo o no.
+    - **disponibles**: los que puede pedir, sin los que ya tiene o ya pidio.
+
+    Con la solicitud de turnos suspendida (`services/solicitudes_turnos`) el
+    evento sale sin disponibles y con `solicitudes_suspendidas` y el aviso que
+    hay que ensenar en su lugar; solicitados y asignados siguen saliendo.
+
+    Es la pestana «Turnos» de la web. Va todo en una llamada para que cambiar
+    de evento en la pantalla no tenga que volver al servidor.
+    """
+    from server import db
+    from services import solicitudes_turnos
+    from routes.volunteer_registration import (
+        fecha_base_evento, fecha_de_slot, get_available_slots, nombre_evento,
+    )
+
+    email = (payload.get("username") or "").lower()
+    registros = await _postulaciones(db, email)
+    if not registros:
+        return {"eventos": []}
+
+    edicion = registros[0].get("race_code")
+    carrera = await db.race_configurations.find_one({"code": edicion}) if edicion else None
+    mios = await db.volunteer_assignments.find({"email_asignado": email}, {"_id": 0}).to_list(200)
+
+    eventos = []
+    for registro in registros:
+        evento = registro.get("evento") or "carrera"
+        base = await fecha_base_evento(db, evento)
+
+        def legible(slot: dict) -> dict:
+            return {**_turno_legible(slot), "dia": fecha_de_slot(slot, base)}
+
+        asignados = [s for s in mios if (s.get("evento") or "carrera") == evento]
+        ids_asignados = {s.get("id") for s in asignados}
+
+        pedidos = [i for i in (registro.get("slots_interes") or []) if i not in ids_asignados]
+        docs = await db.volunteer_assignments.find(
+            {"id": {"$in": pedidos}}, {"_id": 0}
+        ).to_list(200) if pedidos else []
+        # El que acabo en manos de otra persona ya no es una solicitud viva.
+        solicitados = [d for d in docs if not d.get("email_asignado")]
+
+        # Un mismo puesto y turno tiene varias plazas: si ya tiene una, o ya la
+        # pidio, no se le ofrece otra igual.
+        ya_tiene = {
+            (s.get("puesto"), s.get("turno")) for s in [*asignados, *solicitados]
+        }
+        suspendidas = await solicitudes_turnos.suspendidas(db, evento)
+        oferta = {} if suspendidas else await get_available_slots(evento=evento, email=email)
+        disponibles = [
+            {
+                "slot_id": t.get("slot_id"),
+                "puesto": puesto.get("puesto"),
+                "descripcion": puesto.get("descripcion") or "",
+                "turno": t.get("turno"),
+                "dia": t.get("fecha"),
+                "hora_inicio": t.get("hora_inicio"),
+                "hora_fin": t.get("hora_fin"),
+                "plazas": t.get("available_count"),
+            }
+            for puesto in oferta.get("positions") or []
+            for t in puesto.get("turnos") or []
+            if (puesto.get("puesto"), t.get("turno")) not in ya_tiene
+        ]
+
+        eventos.append({
+            "evento": evento,
+            "etiqueta": _etiqueta_evento(carrera, evento),
+            "nombre": nombre_evento(carrera, evento),
+            "solicitados": sorted((legible(s) for s in solicitados), key=_orden_de_turno),
+            "asignados": sorted((legible(s) for s in asignados), key=_orden_de_turno),
+            "disponibles": sorted(disponibles, key=_orden_de_turno),
+            "solicitudes_suspendidas": suspendidas,
+            "aviso_solicitudes": solicitudes_turnos.AVISO if suspendidas else None,
+        })
+
+    # El campeonato va antes: es el que llega primero en el calendario.
+    eventos.sort(key=lambda e: 0 if e["evento"] == "campeonato" else 1)
+    return {"eventos": eventos}
+
+
+@router.post("/mi-perfil/turnos/{slot_id}/solicitar")
+async def solicitar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario pide un turno libre. Es una solicitud: asigna la organizacion.
+
+    Mientras tanto el turno queda reservado para el (`slots_reservados`), igual
+    que cuando se elige en el formulario de la postulacion.
+
+    Con la solicitud de turnos suspendida se rechaza, sea cual sea la pantalla
+    que lo pide: la app instalada no sabe de la suspension.
+    """
+    from server import db
+    from services import solicitudes_turnos
+    from routes.volunteer_registration import (
+        _momentos_turno, fecha_base_evento, fecha_de_slot, validar_slots_libres,
+    )
+
+    email = (payload.get("username") or "").lower()
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Ese turno no existe")
+
+    evento = slot.get("evento") or "carrera"
+    await solicitudes_turnos.exigir_abiertas(db, evento)
+    registro = next(
+        (r for r in await _postulaciones(db, email) if (r.get("evento") or "carrera") == evento),
+        None,
+    )
+    if not registro:
+        raise HTTPException(status_code=404, detail="No tienes una postulacion para ese evento")
+
+    pedidos = list(registro.get("slots_interes") or [])
+    if slot_id in pedidos:
+        return {"success": True}
+
+    # Que siga libre: otro pudo pedirlo mientras la pantalla estaba abierta.
+    await validar_slots_libres(db, [slot_id], email)
+
+    # Y que no se pise con lo que ya pidio ni con lo que ya le asignaron. Se
+    # mira solo el turno nuevo contra los suyos: si dos de los que ya tenia se
+    # pisan entre si —la organizacion asigna a mano—, eso no es motivo para no
+    # dejarle pedir un tercero que no choca con ninguno.
+    base = await fecha_base_evento(db, evento)
+    nuevo = _momentos_turno(fecha_de_slot(slot, base), slot.get("hora_inicio"), slot.get("hora_fin"))
+    suyos = await db.volunteer_assignments.find(
+        {"$or": [{"id": {"$in": pedidos}}, {"email_asignado": email}]}, {"_id": 0}
+    ).to_list(300)
+    for otro in suyos:
+        if (otro.get("evento") or "carrera") != evento or otro.get("id") == slot_id:
+            continue
+        tramo = _momentos_turno(fecha_de_slot(otro, base), otro.get("hora_inicio"), otro.get("hora_fin"))
+        if nuevo and tramo and nuevo[0] < tramo[1] and tramo[0] < nuevo[1]:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Ese turno coincide en horario con el turno {otro.get('turno')} de "
+                    f"\"{otro.get('puesto')}\", que ya tienes. No puedes cubrir los dos a la vez."
+                ),
+            )
+
+    await db.volunteer_registrations.update_one(
+        {"_id": registro["_id"]},
+        {"$addToSet": {"slots_interes": slot_id},
+         "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"success": True}
+
+
+@router.delete("/mi-perfil/turnos/{slot_id}/solicitud")
+async def retirar_solicitud(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario retira un turno que habia pedido y aun no le asignaron.
+
+    El turno vuelve a quedar libre para los demas. Si ya se lo asignaron no es
+    esta ruta: ese se suelta con `DELETE /mi-perfil/turnos/{slot_id}`.
+
+    Con la solicitud de turnos suspendida tampoco se retira: la organizacion
+    esta repartiendo sobre lo pedido, y quitarlo de debajo la dejaria a ciegas.
+    """
+    from server import db
+    from services import solicitudes_turnos
+
+    email = (payload.get("username") or "").lower()
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0, "evento": 1})
+    if slot:
+        await solicitudes_turnos.exigir_abiertas(db, slot.get("evento") or "carrera")
+    ids = [r["_id"] for r in await _postulaciones(db, email)]
+    await db.volunteer_registrations.update_many(
+        {"_id": {"$in": ids}},
+        {"$pull": {"slots_interes": slot_id},
+         "$set": {"updated_at": datetime.now(timezone.utc)}},
+    )
+    return {"success": True}
+
+
 @router.delete("/mi-perfil/turnos/{slot_id}")
-async def soltar_turno(slot_id: int, payload: dict = Depends(require_admin)):
+async def soltar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
     """El voluntario suelta un turno que le habian asignado.
 
     Antes tenia que escribir a la organizacion para que se lo quitara a mano.
@@ -300,7 +627,8 @@ async def soltar_turno(slot_id: int, payload: dict = Depends(require_admin)):
     await db.volunteer_assignments.update_one(
         {"id": slot_id},
         {"$set": {"email_asignado": None, "nombre_asignado": None,
-                  "updated_at": datetime.now(timezone.utc)}},
+                  "updated_at": datetime.now(timezone.utc)},
+         "$unset": {"confirmado_por": "", "confirmado_at": ""}},
     )
     await db.volunteer_registrations.update_many(
         {"email": email},
@@ -308,6 +636,125 @@ async def soltar_turno(slot_id: int, payload: dict = Depends(require_admin)):
     )
 
     return {"success": True}
+
+
+@router.post("/mi-perfil/turnos/{slot_id}/confirmar")
+async def confirmar_turno(slot_id: int, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario reconfirma que va a cubrir un turno que le asignaron.
+
+    Entre que se asigna un turno y llega el evento pasan semanas, y la
+    organizacion no tenia forma de saber quien sigue contando con ir salvo
+    llamando uno por uno. Confirmar no cambia la asignacion: solo deja dicho
+    quien lo confirmo y cuando, y el panel lo ensena junto al turno.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+
+    slot = await db.volunteer_assignments.find_one({"id": slot_id}, {"_id": 0})
+    if not slot:
+        raise HTTPException(status_code=404, detail="Ese turno no existe")
+    if (slot.get("email_asignado") or "").lower() != email:
+        raise HTTPException(status_code=403, detail="Ese turno no es tuyo")
+
+    # Volver a pulsar no mueve la fecha: interesa cuando lo confirmo.
+    if not turno_confirmado(slot):
+        ahora = datetime.now(timezone.utc)
+        await db.volunteer_assignments.update_one(
+            {"id": slot_id},
+            {"$set": {"confirmado_por": email, "confirmado_at": ahora, "updated_at": ahora}},
+        )
+        slot = {**slot, "confirmado_por": email, "confirmado_at": ahora}
+
+    return {"success": True, "turno": _turno_legible(slot)}
+
+
+# ==================== EDITAR LO PROPIO ====================
+
+SI_NO = Literal["Sí", "No"]
+
+# Lo que el registro exige: se puede corregir, no dejar vacio.
+OBLIGATORIOS = {
+    "nombre": "el nombre",
+    "apellidos": "los apellidos",
+    "telefono": "el telefono",
+    "contacto_emergencia_nombre": "el nombre del contacto de emergencia",
+    "contacto_emergencia_telefono": "el telefono del contacto de emergencia",
+}
+
+
+class MisDatos(BaseModel):
+    """Lo que el voluntario puede corregir de su ficha. Todo opcional: cada
+    tarjeta de la pantalla manda solo lo suyo. El correo no esta: es la
+    identidad con la que entra."""
+    nombre: Optional[str] = Field(default=None, max_length=80)
+    apellidos: Optional[str] = Field(default=None, max_length=80)
+    telefono: Optional[str] = Field(default=None, max_length=40)
+    fecha_nacimiento: Optional[str] = Field(default=None, max_length=10)
+    sexo: Optional[Literal["Masculino", "Femenino", "Otro", ""]] = None
+    nacionalidad: Optional[str] = Field(default=None, max_length=80)
+    ciudad_residencia: Optional[str] = Field(default=None, max_length=80)
+    talla_camiseta: Optional[Literal["XS", "S", "M", "L", "XL", "XXL", ""]] = None
+
+    tipo_sangre: Optional[str] = Field(default=None, max_length=10)
+    condicion_medica: Optional[SI_NO] = None
+    condicion_medica_detalle: Optional[str] = Field(default=None, max_length=500)
+    alergias: Optional[SI_NO] = None
+    alergias_detalle: Optional[str] = Field(default=None, max_length=500)
+    contacto_emergencia_nombre: Optional[str] = Field(default=None, max_length=120)
+    contacto_emergencia_relacion: Optional[str] = Field(default=None, max_length=60)
+    contacto_emergencia_telefono: Optional[str] = Field(default=None, max_length=40)
+
+
+@router.put("/mi-perfil/datos")
+async def editar_mis_datos(datos: MisDatos, payload: dict = Depends(equipo_con_correo_demostrado)):
+    """El voluntario corrige sus datos personales o los de salud y emergencia.
+
+    Antes, cambiar el telefono era abrir el formulario entero de la
+    postulacion. Los datos son de la persona, no de un evento: quien se apunto
+    a la carrera y al campeonato tiene dos registros, y se corrigen los dos.
+    Los turnos no pasan por aqui.
+    """
+    from server import db
+
+    email = (payload.get("username") or "").lower()
+
+    cambios = {}
+    for campo, valor in datos.model_dump(exclude_unset=True).items():
+        if isinstance(valor, str):
+            valor = valor.strip()
+        cambios[campo] = valor or None
+
+    for campo, nombre in OBLIGATORIOS.items():
+        if campo in cambios and not cambios[campo]:
+            raise HTTPException(status_code=400, detail=f"Falta {nombre}")
+
+    # Sin condicion o sin alergias, el detalle de antes no pinta nada.
+    if cambios.get("condicion_medica") == "No":
+        cambios["condicion_medica_detalle"] = None
+    if cambios.get("alergias") == "No":
+        cambios["alergias_detalle"] = None
+
+    registros = await _postulaciones(db, email)
+    if not registros:
+        raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
+
+    if cambios:
+        ids = [r["_id"] for r in registros]
+        await db.volunteer_registrations.update_many(
+            {"_id": {"$in": ids}},
+            {"$set": {**cambios, "updated_at": datetime.now(timezone.utc)}},
+        )
+
+        # El nombre tambien viaja copiado en cada turno asignado.
+        if "nombre" in cambios or "apellidos" in cambios:
+            actual = {**registros[0], **cambios}
+            completo = f"{actual.get('nombre') or ''} {actual.get('apellidos') or ''}".strip()
+            await db.volunteer_assignments.update_many(
+                {"email_asignado": email}, {"$set": {"nombre_asignado": completo}}
+            )
+
+    return {"success": True, "perfil": _perfil_legible({**registros[0], **cambios})}
 
 
 @router.get("/equipo/emergency-info", dependencies=[Depends(require_permission("scanner"))])
@@ -350,7 +797,7 @@ class SeleccionTurnos(BaseModel):
 
 
 @router.get("/mi-perfil/turnos-disponibles")
-async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depends(require_admin)):
+async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depends(equipo_con_correo_demostrado)):
     """Puestos y turnos con plazas libres, para que el voluntario elija.
 
     Reusa el mismo listado del registro publico, pero pasandole su correo: asi
@@ -364,13 +811,15 @@ async def turnos_disponibles(evento: Optional[str] = None, payload: dict = Depen
 
 
 @router.put("/mi-perfil/turnos")
-async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_admin)):
+async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(equipo_con_correo_demostrado)):
     """Guarda el evento y los turnos que el voluntario quiere cubrir.
 
     Antes esto solo se podia hacer desde la web, con el enlace que llegaba por
-    correo. Aqui basta con su sesion.
+    correo. Aqui basta con su sesion. Es el mismo acto que `solicitar_turno`,
+    en bloque: con la solicitud de turnos suspendida se rechaza igual.
     """
     from server import db
+    from services import solicitudes_turnos
     from routes.volunteer_registration import (
         VALID_EVENTOS, eventos_abiertos, nombre_evento, validar_slots_libres,
         validar_sin_solapes,
@@ -382,6 +831,7 @@ async def elegir_turnos(datos: SeleccionTurnos, payload: dict = Depends(require_
         raise HTTPException(status_code=404, detail="No tienes un registro de voluntariado")
 
     evento = datos.evento if datos.evento in VALID_EVENTOS else (registro.get("evento") or "carrera")
+    await solicitudes_turnos.exigir_abiertas(db, evento)
 
     # Cambiarse a un evento cerrado no vale; quedarse en el suyo, si.
     if evento != (registro.get("evento") or "carrera"):

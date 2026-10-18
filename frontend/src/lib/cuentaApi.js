@@ -107,8 +107,32 @@ export async function entrar({ email, password }) {
   return cuenta;
 }
 
+/**
+ * Confirma el correo de la cuenta con la sesión abierta.
+ *
+ * El backend pide dos cosas: el código, que demuestra que quien lo escribe lee
+ * ese buzón, y la sesión, que demuestra que es quien abrió la cuenta. Por eso
+ * esta llamada lleva el token.
+ */
 export async function verificar({ email, code }) {
-  return guardarSesion(await pedir('/verificar', { email, code }));
+  const r = await cuentaFetch(`${API}/api/cuentas/verificar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(datos.detail || 'No se pudo confirmar el correo');
+  return guardarSesion(datos);
+}
+
+/**
+ * Confirma el correo sin sesión: con el código y la contraseña de la cuenta.
+ *
+ * Es para quien llega desde el correo del código. No guarda la sesión: la
+ * persona vino a confirmar, no a entrar en este navegador.
+ */
+export async function confirmarCorreo({ email, code, password }) {
+  return pedir('/verificar', { email, code, password });
 }
 
 export async function reenviarCodigo(email) {
@@ -121,4 +145,9 @@ export async function pedirCodigoRecuperacion(email) {
 
 export async function definirNuevaPassword({ email, code, password }) {
   return guardarSesion(await pedir('/nueva-password', { email, code, password }));
+}
+
+/** Lo mismo, sin dejar la sesión abierta en este navegador. */
+export async function cambiarPasswordSinEntrar({ email, code, password }) {
+  return pedir('/nueva-password', { email, code, password });
 }

@@ -1,5 +1,23 @@
 # Garmin — lo que queda
 
+**Pendiente a 13 de octubre de 2026: subir la 1.13.0** (`garmin/build/backyard.iq`):
+la meta automática exige el 90 % de la vuelta en vez de la mitad, para que un
+circuito que pasa por la salida a mitad de recorrido no marque antes de
+tiempo (`RaceState.KM_MINIMOS_META`). Lleva dentro la 1.12.0, que no se
+subió: el corral deja de tapar las pantallas a quien sigue en el circuito (salta
+cinco segundos por aviso y se retira; fijo solo con la vuelta marcada), por
+un corredor tras unos días de uso. La **1.11.0** (misma fecha, subida al
+portal): la pantalla Margen pierde la línea «hecho / objetivo» y enseña el
+ritmo actual un escalón más grande, por la tercera ronda de Denis, que probó
+la 1.10.0 y la dio por buena. La **1.10.0 se publicó el 8 de octubre**: margen
+de seguridad, ritmo actual en Margen, texto en tinta pura en MIP y la cifra
+de las páginas más arriba, por la segunda ronda de Denis. La 1.9.0 se
+publicó el 7 de octubre (con el número 1.9.1 en la ficha; la 1.9.2 lo alineó) y trae el ajuste «Tamaño de texto» y el texto
+secundario en gris medio, por la primera prueba de Denis (Forerunner 255)
+con la 1.8.0, la del **fondo claro**, publicada el 6 de octubre. La 1.6.0 y
+la 1.7.0 (hora de salida al abrir, arranque solo, táctil) salieron en
+septiembre. Las novedades ES/EN están en `garmin/PUBLICAR.md`.
+
 Estado a 27 de agosto de 2026. La **1.4.0 está publicada** en la Connect IQ
 Store —la del barrido de dispositivos: 104 relojes, ver la sección de abajo—.
 La 1.3.0 sí llegó a la tienda antes (versión inicial, 24 de agosto). La
@@ -53,10 +71,14 @@ Vive en el sitio, no en la tienda: `backyardultrasantodomingo.com/garmin` y
 escribe a la vez la versión del sitio (`frontend/public/garmin/`) y la de
 Artifact, del mismo fuente. Publicarlo es desplegar el frontend.
 
-**El QR de «Acerca de» se queda apuntando a la raíz del sitio.** Se propuso
-llevarlo a `/garmin` —quien escanea desde el reloj busca ayuda de la app— y se
-descartó el 27 de agosto de 2026: no compensa un PNG nuevo, una versión y otra
-revisión de Garmin. No volver a proponerlo.
+**El QR de «Acerca de» lleva al manual (`/garmin`) desde la 1.9.0** (7 de
+octubre de 2026). Hasta la 1.8.0 apuntaba a la raíz del sitio. Se probó un QR
+de Buy Me a Coffee y se retiró el mismo día: Garmin obliga a marcar «Payment
+Required» a cualquier app que pida donaciones, y eso corta las
+actualizaciones a los usuarios actuales. La invitación al café está en el
+manual, fuera de Garmin; **ni la app ni la ficha deben mencionarla**. El PNG
+lo genera segno (versión 3, corrección L) en dos tallas, 111 y 222 px, en
+`app/resources/drawables/` y `app/resources-large/drawables/`.
 
 Dónde enlazarlo en la ficha de la tienda, en `garmin/PUBLICAR.md`.
 

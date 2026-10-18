@@ -9,7 +9,7 @@ import {
   Hash, Shirt, Phone, Mail, Calendar, MapPin, Heart, Flag,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Download,
   Send, Loader2, CreditCard, FileImage, Award, TrendingUp, ArrowUpDown,
-  QrCode, ArrowUpCircle, Ticket
+  QrCode, ArrowUpCircle, Ticket, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminRace } from '../contexts/AdminRaceContext';
@@ -41,6 +41,7 @@ export default function PreRegistrationManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPago, setFilterPago] = useState('all');
   const [editingEmail, setEditingEmail] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -50,6 +51,7 @@ export default function PreRegistrationManagement() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [activeAthletesCount, setActiveAthletesCount] = useState(0);
   const [pendingReceipts, setPendingReceipts] = useState([]);
+  const [plazos, setPlazos] = useState([]);
   const [sortByExperience, setSortByExperience] = useState(false);
   const [removingBib, setRemovingBib] = useState(null);
   const [autoAssigningBibs, setAutoAssigningBibs] = useState(false);
@@ -62,12 +64,13 @@ export default function PreRegistrationManagement() {
     
     setLoading(true);
     try {
-      const [regsRes, statsRes, bibRes, countRes, receiptsRes] = await Promise.all([
+      const [regsRes, statsRes, bibRes, countRes, receiptsRes, plazosRes] = await Promise.all([
         adminFetch(`${API_URL}/api/registration/admin/list/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/stats/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/next-bib/${raceCode}`),
         adminFetch(`${API_URL}/api/registration/admin/active-athletes-count/${raceCode}`),
-        adminFetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`)
+        adminFetch(`${API_URL}/api/registration/admin/pending-receipts/${raceCode}`),
+        adminFetch(`${API_URL}/api/registration/admin/plazos?race_code=${raceCode}&estado=pendiente`)
       ]);
       
       if (regsRes.ok) {
@@ -90,6 +93,10 @@ export default function PreRegistrationManagement() {
         setActiveAthletesCount(data.count || 0);
       }
       
+      if (plazosRes.ok) {
+        const data = await plazosRes.json();
+        setPlazos(data.solicitudes || []);
+      }
       if (receiptsRes.ok) {
         const data = await receiptsRes.json();
         setPendingReceipts(data.registrations || []);
@@ -140,6 +147,66 @@ export default function PreRegistrationManagement() {
       toast.error(error.message);
     } finally {
       setSendingReminder(false);
+    }
+  };
+
+  // El cupo se asegura aqui, no cuando el atleta envia la solicitud: si
+  // bastara con enviarla, cualquiera reservaria un cupo escribiendo una fecha.
+  const handleRevisarPlazo = async (email, aprobado) => {
+    let motivo = '';
+    if (!aprobado) {
+      motivo = window.prompt('¿Por qué no se aprueba? (se lo decimos al atleta)') || '';
+      if (!motivo.trim()) return;
+    }
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/registration/admin/plazo/${encodeURIComponent(email)}`
+        + `?race_code=${raceCode}&aprobado=${aprobado}`
+        + (motivo ? `&motivo=${encodeURIComponent(motivo)}` : ''),
+        { method: 'PUT' }
+      );
+      if (!res.ok) throw new Error('No se pudo revisar la solicitud');
+      toast.success(aprobado ? 'Plazo aprobado: el cupo queda reservado' : 'Solicitud rechazada');
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    }
+  };
+
+  // Un abono subido por el boton del pago completo. Aprobarlo tal cual lo
+  // marcaria como pagado y lo que falta se perderia; rechazarlo le hace
+  // subirlo otra vez. Esto lo pasa al plazo, con el abono anotado y la
+  // fecha para saldar, y lo aprueba de una vez.
+  const handleReciboComoAbono = async (reg) => {
+    const monto = window.prompt(
+      `¿Cuánto abonó ${reg.nombre}? (lo que dice el comprobante, en RD$)`,
+      reg.payment_receipt?.monto_pagado ? String(reg.payment_receipt.monto_pagado) : ''
+    );
+    if (monto === null || !monto.trim()) return;
+    const fecha = window.prompt(
+      '¿Hasta cuándo tiene para saldar el resto? (AAAA-MM-DD; vacío = la fecha tope)',
+      ''
+    );
+    if (fecha === null) return;
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/registration/admin/receipt-a-plazo/${encodeURIComponent(reg.email)}`
+        + `?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            monto_abonado: Number(monto.replace(/[^\d.]/g, '')),
+            fecha_propuesta: fecha.trim() || null,
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'No se pudo pasar el comprobante a abono');
+      toast.success('Tomado como abono: plazo aprobado y cupo reservado');
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
     }
   };
 
@@ -321,8 +388,9 @@ export default function PreRegistrationManagement() {
         (reg.bib && reg.bib.toString().includes(searchTerm));
       
       const matchesFilter = filterStatus === 'all' || reg.status === filterStatus;
+      const matchesPago = filterPago === 'all' || reg.estado_pago === filterPago;
       
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesPago;
     });
     
     // Sort by experience if enabled (only for active + paid athletes)
@@ -347,7 +415,7 @@ export default function PreRegistrationManagement() {
     }
     
     return result;
-  }, [registrations, searchTerm, filterStatus, sortByExperience]);
+  }, [registrations, searchTerm, filterStatus, filterPago, sortByExperience]);
 
   const startEditing = (reg) => {
     setEditingEmail(reg.email);
@@ -610,7 +678,8 @@ export default function PreRegistrationManagement() {
     const headers = [
       'BIB', 'Nombre', 'Apellidos', 'Email', 'Teléfono', 'Nacionalidad', 
       'Ciudad', 'Fecha Nacimiento', 'Sexo', 'Talla', 'Personalización',
-      'Tipo Sangre', 'Estado', 'Pago', 'Sin Costo', 'Motivo Sin Costo', 'Fecha Registro'
+      'Tipo Sangre', 'Estado', 'Pago', 'Abonado', 'Saldo Pendiente', 'Salda el',
+      'Sin Costo', 'Motivo Sin Costo', 'Fecha Registro'
     ];
 
     const rows = filteredRegistrations.map(reg => [
@@ -627,7 +696,10 @@ export default function PreRegistrationManagement() {
       reg.personalizacion_camiseta,
       reg.tipo_sangre,
       reg.status,
-      reg.payment_status,
+      reg.estado_pago || reg.payment_status,
+      reg.estado_pago === 'abono' ? Number(reg.plazo_pago?.monto_abonado || 0) : '',
+      reg.saldo_pendiente ?? '',
+      reg.estado_pago === 'abono' ? (reg.plazo_pago?.fecha_propuesta || '') : '',
       reg.inscripcion_cortesia ? 'Sí' : '',
       // Las comas parten la fila del CSV: el motivo es texto libre
       (reg.cortesia_motivo || '').replace(/,/g, ';'),
@@ -672,7 +744,27 @@ export default function PreRegistrationManagement() {
     if (reg.payment_status === 'paid') {
       return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Pagado</Badge>;
     }
+    // Abonó una parte con plazo aprobado: el cupo está reservado y lo que
+    // falta no es el costo entero. Decir "Pendiente" lo escondía.
+    if (reg.estado_pago === 'abono') {
+      return (
+        <Badge className="bg-amber-500" title={`Salda el ${reg.plazo_pago?.fecha_propuesta || ''}`}>
+          <Wallet className="w-3 h-3 mr-1" />Abono
+        </Badge>
+      );
+    }
     return <Badge variant="outline" className="border-yellow-500 text-yellow-600"><AlertCircle className="w-3 h-3 mr-1" />Pendiente</Badge>;
+  };
+
+  // Lo que le falta por pagar, debajo del estado. Solo cuando debe algo.
+  const getSaldo = (reg) => {
+    if (!(Number(reg.saldo_pendiente) > 0)) return null;
+    const abono = reg.estado_pago === 'abono';
+    return (
+      <p className={`text-xs mt-1 ${abono ? 'text-amber-700 font-medium' : 'text-muted-foreground'}`}>
+        Saldo RD$ {Number(reg.saldo_pendiente).toLocaleString('es-DO')}
+      </p>
+    );
   };
 
   if (loading) {
@@ -746,6 +838,24 @@ export default function PreRegistrationManagement() {
               </div>
             </CardContent>
           </Card>
+          {/* Los cupos se aseguran pagando: asegurado es pagado, cortesía o
+              abono aprobado. El resto está inscrito pero no ocupa cupo. */}
+          {stats.cupos && (
+            <Card data-testid="stat-cupos">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-600" />
+                  <div>
+                    <p className="text-2xl font-bold">{stats.cupos.asegurados}<span className="text-sm font-normal text-muted-foreground"> / {stats.cupos.limite}</span></p>
+                    <p className="text-xs text-muted-foreground">Cupos asegurados</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {stats.cupos.en_revision} en revisión · {stats.cupos.por_confirmar} por confirmar
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center gap-2">
@@ -821,6 +931,85 @@ export default function PreRegistrationManagement() {
         </Card>
       </div>
 
+      {/* Solicitudes de plazo */}
+      {plazos.length > 0 && (
+        <Card className="border-amber-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-amber-500" />
+              Solicitudes de plazo ({plazos.length})
+            </CardTitle>
+            <CardDescription>
+              Abonaron una parte y proponen fecha para saldar. El cupo queda
+              reservado al aprobar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {plazos.map((reg) => (
+                <div key={reg.email} className="border rounded-lg p-4 bg-white">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold">
+                        {reg.nombre} {reg.apellidos}
+                        {reg.bib && <span className="ml-2 text-muted-foreground">#{reg.bib}</span>}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{reg.email}</p>
+                      <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                        <Badge variant="outline">
+                          Abonó RD$ {Number(reg.plazo_pago?.monto_abonado || 0).toLocaleString('es-DO')}
+                        </Badge>
+                        <Badge variant="outline">
+                          Queda RD$ {Number(reg.restante || 0).toLocaleString('es-DO')}
+                        </Badge>
+                        <Badge className="bg-amber-500">
+                          Salda el {reg.plazo_pago?.fecha_propuesta}
+                        </Badge>
+                        {reg.plazo_pago?.comprobante?.bank_origin && (
+                          <Badge variant="outline">{reg.plazo_pago.comprobante.bank_origin}</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {reg.plazo_pago?.comprobante?.image_path && (
+                        <a
+                          href={`${API_URL}${reg.plazo_pago.comprobante.image_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileImage className="w-4 h-4" />
+                          Ver comprobante del abono
+                        </a>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600"
+                          onClick={() => handleRevisarPlazo(reg.email, true)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Aprobar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-600 hover:bg-red-50"
+                          onClick={() => handleRevisarPlazo(reg.email, false)}
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Rechazar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Receipts List */}
       {pendingReceipts.length > 0 && (
         <Card>
@@ -851,6 +1040,16 @@ export default function PreRegistrationManagement() {
                             Ref: {reg.payment_receipt.transfer_number}
                           </Badge>
                         )}
+                        {reg.payment_receipt?.monto_pagado != null && (
+                          <Badge variant="outline">
+                            Declaró RD$ {Number(reg.payment_receipt.monto_pagado).toLocaleString('es-DO')}
+                          </Badge>
+                        )}
+                        {reg.plazo_pago?.estado === 'aprobado' && (
+                          <Badge className="bg-amber-500">
+                            Pago final: abonó RD$ {Number(reg.plazo_pago.monto_abonado || 0).toLocaleString('es-DO')}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -865,7 +1064,7 @@ export default function PreRegistrationManagement() {
                           Ver Comprobante
                         </a>
                       )}
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
                           className="bg-green-500 hover:bg-green-600"
@@ -874,6 +1073,18 @@ export default function PreRegistrationManagement() {
                           <CheckCircle className="w-4 h-4 mr-1" />
                           Aprobar
                         </Button>
+                        {reg.plazo_pago?.estado !== 'aprobado' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                            title="El comprobante es de una parte del pago: pasarlo al plazo para terminar de pagar"
+                            onClick={() => handleReciboComoAbono(reg)}
+                          >
+                            <Wallet className="w-4 h-4 mr-1" />
+                            Es un abono
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -1046,6 +1257,18 @@ export default function PreRegistrationManagement() {
               <option value="active">Activo</option>
               <option value="waitlist">Lista de Espera</option>
             </select>
+            <select
+              value={filterPago}
+              onChange={(e) => setFilterPago(e.target.value)}
+              className="px-3 py-2 border rounded-md bg-background"
+              data-testid="filter-pago"
+            >
+              <option value="all">Todos los pagos</option>
+              <option value="pagado">Pagado</option>
+              <option value="abono">Abono (con saldo)</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="sin_costo">Sin costo</option>
+            </select>
           </div>
 
           {/* Registrations Table */}
@@ -1211,7 +1434,10 @@ export default function PreRegistrationManagement() {
                             <option value="paid">Pagado</option>
                           </select>
                         ) : (
-                          getPaymentBadge(reg)
+                          <>
+                            {getPaymentBadge(reg)}
+                            {getSaldo(reg)}
+                          </>
                         )}
                       </td>
                       <td className="py-3 px-2 text-right">
@@ -1310,6 +1536,13 @@ export default function PreRegistrationManagement() {
                                 <p>Talla: {reg.talla_camiseta}</p>
                                 <p>Experiencia: {reg.anos_experiencia} años</p>
                                 <p>Máx. Distancia: {reg.maxima_distancia_km} km</p>
+                                {reg.estado_pago === 'abono' && (
+                                  <p className="text-amber-700">
+                                    Abonó RD$ {Number(reg.plazo_pago?.monto_abonado || 0).toLocaleString('es-DO')}
+                                    {' · '}Saldo RD$ {Number(reg.saldo_pendiente || 0).toLocaleString('es-DO')}
+                                    {reg.plazo_pago?.fecha_propuesta && <> · Salda el {reg.plazo_pago.fecha_propuesta}</>}
+                                  </p>
+                                )}
                               </div>
                             </div>
                             <div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Header
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
@@ -17,16 +17,19 @@ ROUTES_DIR.mkdir(parents=True, exist_ok=True)
 MANUALS_DIR = Path(__file__).parent.parent / "static" / "manuals"
 MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
-from services.auth import require_permission, verify_admin_token
+from services.auth import require_permission
 from services import races as carreras
+from services import transmision
 
 # Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
+#
+# Aqui hubo un `verify_token` que solo pedia ser del equipo, y de el colgaban
+# crear, editar y publicar carreras, subir logos y manuales y mandar el correo
+# masivo del manual. Ser del equipo no es un permiso: una cuenta de staff se
+# crea sola desde la app y nace sin ninguno, asi que cualquiera con una podia
+# cambiar la carrera que ensena el sitio. Nada de este router va con menos que
+# "config".
 solo_config = Depends(require_permission("config"))
-
-
-async def verify_token(authorization: Optional[str] = Header(None)):
-    """Verify JWT token from Authorization header"""
-    return verify_admin_token(authorization)
 
 
 class PaymentInfoModel(BaseModel):
@@ -93,10 +96,18 @@ class RaceConfigUpdate(BaseModel):
     # demas. Antes se deducia de si la carrera tenia patrocinadores
     # publicados, y eso dejaba enlaces muertos en el menu.
     show_sponsors_page: Optional[bool] = None
-    # Registro publico de voluntarios para la carrera (el campeonato mundial
-    # siempre esta abierto). Apagado mientras solo se reclutan voluntarios
-    # para el campeonato.
+    # Registro publico de voluntarios, uno por evento. El de la carrera nace
+    # apagado (se enciende cuando toca reclutar para enero) y el del campeonato
+    # nace encendido, que es como estuvo desde que existe: el interruptor se
+    # agrego para poder cerrarlo cuando el equipo este completo, no para
+    # cambiar el punto de partida.
     show_volunteer_carrera: Optional[bool] = None
+    show_volunteer_campeonato: Optional[bool] = None
+    # Transmision en vivo (YouTube). Es de cada carrera, no de la publicada:
+    # el Mundial se transmite mientras el sitio publica la de enero. La portada
+    # lo ensena mientras la carrera este `en_carrera` (services.transmision).
+    # Una cadena vacia lo borra.
+    live_stream_url: Optional[str] = None
 
 
 @router.get("/active")
@@ -143,6 +154,12 @@ async def get_active_race(db=Depends(lambda: None)):
     # Por defecto apagado: solo se reciben voluntarios del campeonato mundial
     if "show_volunteer_carrera" not in config:
         config["show_volunteer_carrera"] = False
+    if "show_volunteer_campeonato" not in config:
+        config["show_volunteer_campeonato"] = True
+
+    # La transmision que toca anunciar en la portada. No es necesariamente de
+    # esta carrera: sale de la que se este corriendo (services.transmision).
+    config["transmision_en_vivo"] = await transmision.en_vivo(database)
 
     return config
 
@@ -189,7 +206,8 @@ async def get_page_visibility(db=Depends(lambda: None)):
     
     config = await database.race_configurations.find_one(
         {"is_active": True},
-        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_sponsors_page": 1, "show_volunteer_carrera": 1, "name": 1, "code": 1}
+        {"_id": 0, "show_tracking_page": 1, "show_community_page": 1, "show_preregistration": 1, "show_sponsors_page": 1, "show_volunteer_carrera": 1,
+         "show_volunteer_campeonato": 1, "name": 1, "code": 1}
     )
 
     # La sala de prensa no tiene interruptor: se ensena cuando hay al menos una
@@ -204,6 +222,7 @@ async def get_page_visibility(db=Depends(lambda: None)):
             "show_preregistration": True,
             "show_sponsors_page": True,
             "show_volunteer_carrera": False,
+            "show_volunteer_campeonato": True,
             "show_press_page": hay_notas,
             "race_name": "Backyard Ultra Santo Domingo",
             "race_code": ""
@@ -216,6 +235,9 @@ async def get_page_visibility(db=Depends(lambda: None)):
         "show_preregistration": config.get("show_preregistration", True),
         "show_sponsors_page": config.get("show_sponsors_page", True) is not False,
         "show_volunteer_carrera": config.get("show_volunteer_carrera", False) is True,
+        # Encendido salvo que se apague a mano: llevaba abierto desde siempre
+        # y un documento antiguo sin el campo no puede cerrarlo de golpe.
+        "show_volunteer_campeonato": config.get("show_volunteer_campeonato", True) is not False,
         "race_name": config.get("name", "Backyard Ultra Santo Domingo"),
         "race_code": config.get("code", "")
     }
@@ -267,7 +289,7 @@ async def get_race_by_code(code: str, db=Depends(lambda: None)):
 @router.post("/create")
 async def create_race(
     config: RaceConfigCreate,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Crea una carrera. Con `copiar_de`, hereda lo que se reutiliza de otra."""
@@ -371,7 +393,7 @@ async def _copiar_turnos(database, origen_code: str, destino_code: str) -> int:
 async def update_race(
     code: str,
     config: RaceConfigUpdate,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Update a race configuration"""
@@ -386,6 +408,15 @@ async def update_race(
     for field, value in config.dict(exclude_unset=True).items():
         if value is not None:
             update_data[field] = value
+
+    if "live_stream_url" in update_data:
+        enlace = update_data["live_stream_url"].strip()
+        if enlace and not transmision.enlace_valido(enlace):
+            raise HTTPException(
+                status_code=400,
+                detail="El enlace de la transmision tiene que empezar por http:// o https://",
+            )
+        update_data["live_stream_url"] = enlace
     
     await database.race_configurations.update_one(
         {"code": code},
@@ -403,7 +434,7 @@ async def update_race(
 @router.post("/activate/{code}")
 async def activate_race(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Set a race as the active one (archives the previous active race)"""
@@ -489,7 +520,7 @@ async def reabrir_carrera(code: str):
 async def upload_logo(
     code: str,
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Upload a logo for a race (legacy endpoint - uploads to logo_url)"""
@@ -534,7 +565,7 @@ async def upload_race_image(
     code: str,
     image_type: str,
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """
@@ -803,7 +834,7 @@ async def upload_manual(
     code: str,
     manual_type: str,  # "runners" or "volunteers"
     file: UploadFile = File(...),
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Upload a manual (PDF) for a race - runners or volunteers"""
@@ -848,7 +879,7 @@ async def upload_manual(
 async def delete_manual(
     code: str,
     manual_type: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Delete a manual for a race"""
@@ -914,7 +945,7 @@ async def get_race_manuals(code: str, db=Depends(lambda: None)):
 @router.get("/notify-runners-count/{code}")
 async def get_runners_count_for_notification(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Get count of active runners who will receive the manual notification"""
@@ -932,7 +963,7 @@ async def get_runners_count_for_notification(
 @router.get("/notify-volunteers-count/{code}")
 async def get_volunteers_count_for_notification(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Get count of registered volunteers who will receive the manual notification"""
@@ -949,7 +980,7 @@ async def get_volunteers_count_for_notification(
 @router.post("/notify-runners-manual/{code}")
 async def notify_runners_manual_available(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Send email notification to all active runners that the manual is available"""
@@ -1018,7 +1049,7 @@ async def notify_runners_manual_available(
 @router.post("/notify-volunteers-manual/{code}")
 async def notify_volunteers_manual_available(
     code: str,
-    user=Depends(verify_token),
+    user=solo_config,
     db=Depends(lambda: None)
 ):
     """Send email notification to all registered volunteers that the manual is available"""

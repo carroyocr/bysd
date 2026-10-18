@@ -10,7 +10,7 @@ import {
   Tag, Image, Archive, RotateCw, Trash2, CheckCircle, AlertCircle,
   DollarSign, Hash, FileText, CreditCard, Building2, User, Loader2,
   Mail, Send, Eye, EyeOff, Users, MessageCircle, ClipboardList, Info, Bell,
-  Handshake, Route
+  Handshake, Route, Youtube
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
@@ -24,6 +24,12 @@ export default function RaceConfigPanel() {
   // suyas y hay que poder cargarlas sin publicarlo. El resto de esta pantalla
   // sigue trabajando sobre la activa; aqui se elige.
   const [rutaCarrera, setRutaCarrera] = useState('');
+  // La transmision en vivo tampoco es de la publicada: el Mundial se
+  // transmitio mientras el sitio publicaba la carrera de enero. Se elige la
+  // carrera y se guarda su enlace; la portada lo ensena mientras este en carrera.
+  const [streamCarrera, setStreamCarrera] = useState('');
+  const [streamUrl, setStreamUrl] = useState('');
+  const [streamSaving, setStreamSaving] = useState(false);
   const [allRaces, setAllRaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,7 +77,8 @@ export default function RaceConfigPanel() {
     show_community_page: true,
     show_preregistration: true,
     show_sponsors_page: true,
-    show_volunteer_carrera: false
+    show_volunteer_carrera: false,
+    show_volunteer_campeonato: true
   });
 
   const token = sesionToken();
@@ -112,7 +119,8 @@ export default function RaceConfigPanel() {
         show_preregistration: activeData.show_preregistration !== false,
         show_sponsors_page: activeData.show_sponsors_page !== false,
         // Apagado salvo que esté explícitamente encendido
-        show_volunteer_carrera: activeData.show_volunteer_carrera === true
+        show_volunteer_carrera: activeData.show_volunteer_carrera === true,
+        show_volunteer_campeonato: activeData.show_volunteer_campeonato !== false
       });
       
       // Load notification counts if race has manuals
@@ -704,6 +712,46 @@ export default function RaceConfigPanel() {
     allRaces.find((r) => r.code === activeRace?.code) ||
     activeRace;
 
+  // La carrera de la transmision: la elegida a mano o, si no, la que se esta
+  // corriendo (que es la que se transmite), y en su defecto la publicada.
+  const carreraDeStream =
+    allRaces.find((r) => r.code === streamCarrera) ||
+    allRaces.find((r) => r.estado === 'en_carrera') ||
+    allRaces.find((r) => r.code === activeRace?.code) ||
+    activeRace;
+  const streamCode = carreraDeStream?.code || '';
+  const streamGuardado = carreraDeStream?.live_stream_url || '';
+
+  useEffect(() => {
+    setStreamUrl(streamGuardado);
+  }, [streamCode, streamGuardado]);
+
+  const handleSaveStream = async () => {
+    if (!streamCode) return;
+    const enlace = streamUrl.trim();
+    if (enlace && !/^https?:\/\//i.test(enlace)) {
+      toast.error('El enlace tiene que empezar por http:// o https://');
+      return;
+    }
+    setStreamSaving(true);
+    try {
+      const response = await adminFetch(`${API_URL}/api/race-config/update/${streamCode}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ live_stream_url: enlace }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'No se pudo guardar');
+      setAllRaces((prev) => prev.map((r) => (r.code === streamCode ? { ...r, ...data.race } : r)));
+      if (activeRace?.code === streamCode) setActiveRace((prev) => ({ ...prev, ...data.race }));
+      toast.success(enlace ? 'Enlace de la transmisión guardado' : 'Enlace de la transmisión borrado');
+    } catch (error) {
+      toast.error(error.message || 'No se pudo guardar el enlace');
+    } finally {
+      setStreamSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
@@ -1088,6 +1136,66 @@ export default function RaceConfigPanel() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+
+              {/* Transmision en vivo */}
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2 text-lg">
+                  <Youtube className="w-5 h-5" />
+                  Transmisión en vivo
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  El enlace de YouTube (u otro) de la transmisión. La portada enseña el botón
+                  <strong> Ver la transmisión en vivo</strong> mientras esta carrera esté
+                  <strong> en carrera</strong>, aunque el sitio publique otra. Déjalo vacío para quitarlo.
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap">Carrera:</Label>
+                  <select
+                    value={streamCode}
+                    onChange={(e) => setStreamCarrera(e.target.value)}
+                    className="border rounded-md px-2 py-1.5 text-sm bg-background"
+                    data-testid="stream-race-select"
+                  >
+                    {allRaces.map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.code} — {r.name}{r.estado === 'en_carrera' ? ' (en carrera)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {carreraDeStream?.estado === 'en_carrera' ? (
+                    <Badge variant="default" className="bg-green-100 text-green-800 text-xs">En carrera</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      {carreraDeStream?.estado || 'sin estado'}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="url"
+                    value={streamUrl}
+                    onChange={(e) => setStreamUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/live/…"
+                    data-testid="stream-url-input"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSaveStream}
+                    disabled={streamSaving || streamUrl.trim() === streamGuardado}
+                    data-testid="stream-save-button"
+                  >
+                    {streamSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                    Guardar enlace
+                  </Button>
+                </div>
+                {carreraDeStream && carreraDeStream.estado !== 'en_carrera' && streamGuardado && (
+                  <p className="text-xs text-amber-700">
+                    Esta carrera no está en carrera: el botón no sale en la portada hasta que se dé la salida.
+                  </p>
                 )}
               </div>
 
@@ -1602,13 +1710,51 @@ export default function RaceConfigPanel() {
                     <div className="mt-3 pt-3 border-t border-dashed">
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         {editForm.show_volunteer_carrera ? (
-                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se puede postular a la carrera y al campeonato</>
+                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se reciben voluntarios para la carrera</>
                         ) : (
-                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - Solo se reciben voluntarios del Campeonato Mundial</>
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - No se reciben voluntarios para la carrera</>
                         )}
                       </p>
                     </div>
                   </div>
+                  {/* Volunteer Registration (campeonato) Toggle */}
+                  <div className={`p-4 border rounded-lg ${editForm.show_volunteer_campeonato ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${editForm.show_volunteer_campeonato ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          <Users className={`w-5 h-5 ${editForm.show_volunteer_campeonato ? 'text-green-600' : 'text-gray-500'}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Voluntarios del Campeonato Mundial</h4>
+                          <p className="text-sm text-muted-foreground">Postulaciones para el campeonato</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={editForm.show_volunteer_campeonato}
+                        onCheckedChange={(checked) => setEditForm({...editForm, show_volunteer_campeonato: checked})}
+                        data-testid="toggle-volunteer-campeonato"
+                      />
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        {editForm.show_volunteer_campeonato ? (
+                          <><Eye className="w-3 h-3 text-green-600" /> Abierto - Se reciben voluntarios para el campeonato</>
+                        ) : (
+                          <><EyeOff className="w-3 h-3 text-gray-500" /> Cerrado - No se reciben voluntarios para el campeonato</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!editForm.show_volunteer_carrera && !editForm.show_volunteer_campeonato && (
+                    <div className="p-3 border border-amber-200 bg-amber-50 rounded-lg">
+                      <p className="text-xs text-amber-800 flex items-center gap-1.5">
+                        <EyeOff className="w-3 h-3" />
+                        Con los dos apagados no se reciben voluntarios para nada: la
+                        página de postulación lo dirá en vez de pedir datos.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

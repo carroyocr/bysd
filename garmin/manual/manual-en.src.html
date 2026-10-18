@@ -10,10 +10,11 @@
 
 <header class="hero">
   <div>
-    <p class="eyebrow">Runner's manual · version 1.5.0</p>
+    <p class="eyebrow">Runner's manual · version 1.12.0</p>
     <h1>Backyard</h1>
     <p class="sub">Your yard, your pace, and how long you'll get to rest.</p>
     <p class="lede">A Garmin watch app for running a backyard ultra — any of them. It records your activity, anchors the bells to the top of the hour, and tells you, yard after yard, whether the pace you're holding will get you back in time to sit down. No server, no bib number, no connection needed.</p>
+    <p class="lede cafe">Free, and it will stay free. If it keeps you good company, buy us a coffee: <a href="https://buymeacoffee.com/carroyo">buymeacoffee.com/carroyo</a>.</p>
   </div>
   <div class="hero-face">
     <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Margin screen: plus eight minutes twenty-four seconds, in green">
@@ -22,7 +23,7 @@
       <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
       <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margin</text>
       <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
-      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km · 7:32 /km</text>
+      <text x="120" y="164" fill="var(--face-dim)" font-size="14" text-anchor="middle">7:32 /km</text>
       <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">To go 2.6 km ≈ 19:35</text>
     </svg>
     <figcaption>The Margin screen, the first one you see while running.</figcaption>
@@ -99,7 +100,7 @@
       <tbody>
         <tr>
           <td class="k">Start time</td>
-          <td>Sets the time of day the yard 1 bell rings. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
+          <td>Sets the time of day the yard 1 bell rings. The app asks for it every time it opens, with the wheel set to the next full hour. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
           <td class="v">Auto</td>
         </tr>
         <tr>
@@ -111,6 +112,11 @@
           <td class="k">Yard distance</td>
           <td>How long the loop is. From 1.0 to 20.0 km, <strong>always in kilometres</strong>.</td>
           <td class="v">6.7</td>
+        </tr>
+        <tr>
+          <td class="k">Safety margin</td>
+          <td>Minutes you want in reserve. They are taken off the margin before it is shown and coloured: with 5, a «+0:00» means you arrive with exactly five minutes to spare. 0 to 60.</td>
+          <td class="v">0</td>
         </tr>
         <tr>
           <td class="k">Corral alert</td>
@@ -143,6 +149,16 @@
           <td class="v">Yes</td>
         </tr>
         <tr>
+          <td class="k">Background</td>
+          <td>Dark or light. On MIP displays (Forerunner 255 and 955, fēnix 7, Instinct) light reads better in daylight, and on them all text is pure ink, no greys; on AMOLED, dark saves battery.</td>
+          <td class="v">Dark</td>
+        </tr>
+        <tr>
+          <td class="k">Text size</td>
+          <td>Normal or large. With large, labels and figures go up one size wherever they fit; on small faces, whatever doesn't fit stays at the normal size.</td>
+          <td class="v">Normal</td>
+        </tr>
+        <tr>
           <td class="k">Race screens</td>
           <td>Which ones you see, and in what order. See below.</td>
           <td class="v">All six</td>
@@ -150,6 +166,8 @@
       </tbody>
     </table>
   </div>
+
+  <p>At the end of the menu, <strong>About</strong> shows the version and a QR code that opens this manual.</p>
 
   <h3>Start time: Auto or set</h3>
   <p>With a <strong>set time</strong> — say 7:00 — the yard 1 bell is that time of day, no matter when you press START. Everything before it is warm-up. It's the safest option when you know your race's start time.</p>
@@ -174,7 +192,7 @@
     <li>
       <div>
         <h3>Open the app and let it find GPS</h3>
-        <p>Open it from the activity list. The emblem fills the screen for five seconds — any button skips it — and behind it comes the <strong>start line</strong>: the yard you're about to run, with its distance and its minutes, and the state of the GPS.</p>
+        <p>Open it from the activity list. The emblem fills the screen for five seconds — any button skips it — and behind it comes the <strong>start time wheel</strong>, already set to the next full hour on the watch: <kbd>UP</kbd> and <kbd>DOWN</kbd> move it, <kbd>START</kbd> confirms, the menu button leaves it on Auto and <kbd>BACK</kbd> leaves the app. Then comes the <strong>start line</strong>: the start time with its countdown, the yard you're about to run, with its distance and its minutes, your settings — green for what's on — and the state of the GPS.</p>
         <p>Open it early, back at the tent. The GPS starts searching the moment you do, and whatever it takes to lock is better spent there than on the line.</p>
       </div>
     </li>
@@ -182,6 +200,7 @@
       <div>
         <h3>Check what the screen says</h3>
         <p>If the top of it doesn't show your loop's distance and your yard's minutes, <em>now</em> is when to fix it: long <kbd>UP</kbd> opens the settings. And wait for <strong>«GPS ready»</strong> in green at the bottom: while it says «Searching GPS» in grey, the watch still doesn't know where you are.</p>
+        <p>On touch watches, tapping a setting turns it on or off, and tapping the time reopens the wheel. A tap never starts the race: only the <kbd>START</kbd> button does.</p>
       </div>
     </li>
     <li>
@@ -189,6 +208,7 @@
         <h3>Press START</h3>
         <p><kbd>START</kbd> starts the race without asking anything — with the race director counting down out loud, a confirmation dialog is in the way. From there on the watch is recording.</p>
         <p>If you pressed before the hour, you get the <strong>Warm-up</strong> screen counting down to your bell. It is not yard 1: in the activity file it stays in a lap of its own and never gets added to your first yard.</p>
+        <p>And if you don't press, the race <strong>starts on its own</strong> at the start time, as long as you saw it ahead on the screen. The bell waits for no one.</p>
       </div>
     </li>
     <li>
@@ -206,7 +226,7 @@
     <li>
       <div>
         <h3>Get back to the line before the bell</h3>
-        <p>Three minutes out, the <strong>corral</strong> screen takes over whatever you were looking at. When the bell rings, the next yard opens by itself. No button opens a yard: the clock does.</p>
+        <p>Three minutes out, if you've already marked, the <strong>corral</strong> screen takes over whatever you were looking at; if you're still out on the loop, it pops up briefly at each alert and leaves you your screens. When the bell rings, the next yard opens by itself. No button opens a yard: the clock does.</p>
       </div>
     </li>
     <li>
@@ -226,11 +246,11 @@
         <tr><td class="k">LAP</td><td>—</td><td>Marks the yard as done</td></tr>
         <tr><td class="k">UP / DOWN</td><td>—</td><td>Changes screen</td></tr>
         <tr><td class="k">Long UP</td><td>Yard settings</td><td>Nothing (warm-up only)</td></tr>
-        <tr><td class="k">BACK</td><td>Leaves the app</td><td>Nothing: no going back mid-race</td></tr>
+        <tr><td class="k">BACK</td><td>Leaves the app (also from the start time wheel)</td><td>Nothing: no going back mid-race</td></tr>
       </tbody>
     </table>
   </div>
-  <p>On touch watches, swiping up and down does the same as <kbd>UP</kbd> and <kbd>DOWN</kbd>. Run in gloves and you use the buttons; run without and you swipe.</p>
+  <p>On touch watches, swiping up and down does the same as <kbd>UP</kbd> and <kbd>DOWN</kbd>. Run in gloves and you use the buttons; run without and you swipe. The screen never starts, stops or marks a yard: that's only <kbd>START</kbd> and <kbd>LAP</kbd>, so a brush against the tent can't start your race.</p>
 </section>
 
 <section id="pantallas">
@@ -246,14 +266,14 @@
       <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
       <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margin</text>
       <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
-      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km · 7:32 /km</text>
+      <text x="120" y="164" fill="var(--face-dim)" font-size="14" text-anchor="middle">7:32 /km</text>
       <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">To go 2.6 km ≈ 19:35</text>
     </svg>
     <div class="txt">
       <h3>Margin</h3>
       <p>The reason the app exists. The big number is the time you'll have <strong>left over</strong> — or be short by — to close the loop before the bell, at the pace you're holding. <span style="color:var(--ok)"><strong>Green</strong></span> and you get to rest; <span style="color:var(--bad)"><strong>red</strong></span> and you push.</p>
       <p>The two rings say the same thing without a single digit: the outer grey one is the <strong>time</strong> used up in the yard, the inner coloured one the <strong>distance</strong> covered. When the inner ring overtakes the outer one, you're getting in before the bell.</p>
-      <p>Underneath: distance done against the target with your current pace, and what's left with what it's going to cost you.</p>
+      <p>Underneath: your pace <strong>right now</strong> — over the last few metres, not the yard average: if you run and walk in stretches, you want to see how fast this stretch is — and what's left with what it's going to cost you. The distance done isn't repeated as a figure: the inner ring already shows it, and the Yard screen gives it exactly. If you've set a safety margin, the big number already has it taken off.</p>
     </div>
   </div>
 
@@ -397,7 +417,9 @@
   <h2>The corral</h2>
   <p class="section-note">The last three minutes of every yard</p>
 
-  <p>The corral isn't a screen you pick: it <strong>takes over</strong>. In the last three minutes of any countdown — the start included — it jumps on top of whatever you were looking at, because at that point what's urgent is getting to the line, not your pace. It leaves on its own when the bell rings.</p>
+  <p>The corral isn't a screen you pick: it <strong>takes over</strong>. In the last three minutes of any countdown — the start included — it jumps on top of whatever you were looking at. It leaves on its own when the bell rings.</p>
+
+  <p>But it only takes over for good if <strong>you've already marked</strong> the yard: you're resting, and the only thing left to do is get to the line. If you're still out on the loop, your question is a different one — am I going to make it? — and the corral doesn't hide the answer: it pops up for five seconds at each alert, at 3, 2 and 1 minute, with the buzz, and goes back to your screens; any button dismisses it sooner. Meanwhile the time ring on Margin and the ring on Lap take the corral's colour, so the warning stays in view. If you mark within those three minutes, the corral stays from then on.</p>
 
   <div class="corral-key">
     <span class="chip"><span class="dot" style="background:var(--warn)"></span>3 min — yellow</span>
@@ -405,7 +427,7 @@
     <span class="chip"><span class="dot" style="background:var(--bad)"></span>1 min — full red</span>
   </div>
 
-  <p>At three and two minutes it's a wide coloured ring on black: you catch the colour at a glance with most of the screen switched off, which on an AMOLED is where the battery goes. Only the <strong>final minute</strong> floods red edge to edge, with the countdown in giant black. It's the most urgent warning and the shortest, and there the cost is worth it.</p>
+  <p>At three and two minutes it's a wide coloured ring on the background — dark or light, as the Background setting says: you catch the colour at a glance with most of the screen left as background, which with the dark background on an AMOLED is where the battery goes. Only the <strong>final minute</strong> floods red edge to edge, with the countdown in giant black. It's the most urgent warning and the shortest, and there the cost is worth it.</p>
 
   <h3>Warnings you can feel blind</h3>
   <p>You know how long is left without lifting your wrist, because each warning buzzes differently:</p>
@@ -441,7 +463,7 @@
   <p>The usual thing: you press as you cross. On most Garmins it's the bottom-right button.</p>
 
   <h4>Auto yard at finish line — on by default</h4>
-  <p>The mark falls by itself when you come back within 30 metres of the <strong>start point</strong>: wider than a finish arch, narrower than the tent area. So it doesn't mark you on the way out — which is also «near the start» — it requires at least half a loop covered first.</p>
+  <p>The mark falls by itself when you come back within 30 metres of the <strong>start point</strong>: wider than a finish arch, narrower than the tent area. So it doesn't mark you on the way out — which is also «near the start» — nor mid-loop on a course that passes the finish (a figure-eight, an out-and-back), it requires at least 90 % of the loop covered first.</p>
   <p>The watch fixes that point when you start the race, and if the GPS hadn't locked yet, it picks it up at the first bell: at the top of the hour you're standing on the line by definition.</p>
 
   <h4>Auto yard by distance</h4>
@@ -475,7 +497,13 @@
 
   <p>Positive is rest you can count on. Negative means you don't get in at that pace.</p>
 
+  <h3>The safety margin</h3>
+  <p>It's the minutes you want in reserve, and the app takes them off the margin before showing it to you. If the sum says you'll get in with 8 minutes and you've set 5 of safety, the screen shows <strong>+3:00</strong>.</p>
+  <p>The colour follows the figure after the deduction: with 5 minutes in reserve, getting in with 4 already shows <span style="color:var(--bad)"><strong>red</strong></span>, even though you beat the bell. The watch is telling you that you're not making it with the reserve you asked for; a «+0:00» means you arrive with exactly those five minutes.</p>
+  <p>Nothing else changes: not the bells, not the corral, not the automatic yards, not the pace used for the projection. It's just a way of reading the margin, for anyone who runs and walks in stretches or always wants a few minutes sitting down, and would rather have the red warn them before the real margin hits zero than do the subtraction in their head on yard twenty. The default is 0, which leaves the app as it was.</p>
+
   <h3>The pace shown isn't the pace multiplied</h3>
+  <p>On the Margin screen the pace you read is your pace right now. The one multiplied by what's left is a different one, the yard's, settled, because that's the one that decides whether you make it.</p>
   <p>Three hundred metres in, your yard pace is still all over the place, and multiplying it by the six kilometres left would make the margin jump whole minutes from one stride to the next. The app used to handle that by keeping quiet: no margin until the first kilometre, which is eight minutes out of every hour without the number that matters most.</p>
   <p>Now it leans on something better. When a yard opens, the best predictor of your pace isn't the yard — which has nothing in it — but <strong>what you've been running all day</strong>. So the projection mixes the two, weighted by the distance covered:</p>
   <ul>
@@ -538,7 +566,7 @@
   <p>Not enough distance yet. For the first long minute of every yard there's nothing to work a pace out of. If it's still like that several minutes in, the watch isn't measuring distance: check that the GPS locked.</p>
 
   <h3>The automatic finish line never marks</h3>
-  <p>Check that <strong>Auto yard at finish line</strong> is on in the settings, and that the GPS had locked. It also needs at least half a loop covered before it marks, so it doesn't catch you on the way out.</p>
+  <p>Check that <strong>Auto yard at finish line</strong> is on in the settings, and that the GPS had locked. It also needs at least 90 % of the loop covered before it marks, so it doesn't catch you on the way out or when passing the finish mid-loop.</p>
 
   <h3>I marked the yard and the next one hasn't started</h3>
   <p>That's right: marking closes the yard, it doesn't open the next one. The bell opens the next one, at the top of the hour. Until then you're resting — that's the green screen.</p>
@@ -563,7 +591,7 @@
   <div class="table-wrap">
     <table>
       <tbody>
-        <tr><td class="k">Version</td><td>1.5.0 — also on the watch, under Settings → About</td></tr>
+        <tr><td class="k">Version</td><td>1.12.0 — also on the watch, under Settings → About</td></tr>
         <tr><td class="k">Watches</td><td>111 models: fēnix (through the 9 generation), epix, Forerunner, Venu, vívoactive, Instinct AMOLED, MARQ, Descent, D2 and Approach</td></tr>
         <tr><td class="k">Permissions</td><td>Activity recording (FIT) and position (GPS)</td></tr>
         <tr><td class="k">Network</td><td>None. It doesn't reach the internet, doesn't send data, and doesn't need your phone to run</td></tr>
@@ -578,10 +606,15 @@
     <p>Try it on a training run with the yard set to 5 or 10 minutes and a short distance. In one go you see the bell, the corral, the mark and the rest, and you turn up to the real start line knowing what's about to happen. A backyard is no place to find out how an app works.</p>
   </div>
 
+  <div class="note">
+    <span class="lbl">Is the app useful to you?</span>
+    <p>Backyard is free and will stay free. If it kept you good company and you'd like to say thanks, you can buy us a coffee at <a href="https://buymeacoffee.com/carroyo">buymeacoffee.com/carroyo</a>. And if something doesn't add up, write to us from the store listing: that's how it has improved so far.</p>
+  </div>
+
 </section>
 
 <footer>
-  <span>Backyard 1.5.0 · English manual</span>
+  <span>Backyard 1.12.0 · English manual</span>
   <span>Connect IQ Store · apps.garmin.com</span>
   <span>backyardultrasantodomingo.com</span>
 </footer>

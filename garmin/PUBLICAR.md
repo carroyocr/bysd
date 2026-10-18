@@ -1,11 +1,143 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 9 de septiembre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 13 de octubre de 2026.
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.13.0, lista para subir
+
+13 de octubre de 2026. «Yard auto Meta» marcaba la vuelta en cuanto el
+corredor entraba en los 30 m del punto de salida con **media vuelta** hecha:
+en un circuito que pasa por la meta a mitad de recorrido —un ocho, una ida y
+vuelta— la marcaba antes de tiempo, y como esa medida corta entraba en la
+calibración (80–120 % del objetivo), el umbral bajaba con ella en las vueltas
+siguientes. Desde la 1.13.0 exige el **90 %** de la vuelta
+(`RaceState.KM_MINIMOS_META`). Sin cambio en ajustes ni en el disparador por
+distancia. Lleva también lo de la 1.12.0, que no se llegó a subir.
+
+## Estado — la 1.12.0, lista para subir
+
+Un corredor, tras unos días de uso (8 de octubre de 2026): en los últimos
+tres minutos el corral tapaba todas las pantallas, también a quien seguía en
+el circuito y quería saber si llegaba. Desde la 1.12.0 el corral se impone
+de lleno solo a quien **ya marcó** la vuelta (descansa) y antes de la salida;
+a quien sigue en el circuito le salta cinco segundos en cada umbral (3, 2,
+1), con la vibración, y se retira —cualquier botón lo quita antes—, mientras
+los aros del Margen y de la Vuelta van del color del corral. Marcar dentro de
+esos tres minutos lo deja fijo desde ese momento. Vibraciones y ajustes, sin
+cambio. Está en `MainView.onUpdate` (`_corralPasajero`).
+
+## Estado — la 1.11.0, publicada
+
+Tercera ronda de Denis (Forerunner 255), ya con la 1.10.0 instalada, 8 de
+octubre de 2026. La da por buena y pide dos cosas de la pantalla Margen, las
+dos hechas:
+
+- **Fuera la línea «hecho / objetivo»** («4.1 / 6.7 km»): estaba tres veces
+  —el aro de dentro, la línea «Faltan…» y la página Yard— y le robaba sitio
+  al ritmo. El objetivo calibrado ya no sale en cifra en ninguna pantalla;
+  sigue mandando en el aro y en «Faltan».
+- **El ritmo actual, más grande.** Pidió un 10 %; en Garmin las fuentes van
+  por escalones, así que la línea sube uno: de XTINY a TINY, y a SMALL con el
+  texto grande (`Tema.fuente()` aprende el escalón TINY → SMALL). Al ir
+  sola, cabe con su unidad también en grande, que la 1.10.0 había tenido que
+  quitar.
+
+El cálculo del margen no se toca: sigue con el ritmo medio asentado, que es
+lo que él mismo confirma que quiere.
+
+## Estado — la 1.10.0, publicada
+
+Segunda ronda de Denis (Forerunner 255) con la 1.9.x, 7 de octubre de 2026.
+Cinco cosas:
+
+- **En MIP, el texto va en tinta pura.** El reloj dice si su pantalla pide
+  protección contra el quemado (solo las AMOLED); en las demás `Tema.tenue()`
+  devuelve la tinta y `apagado()` sube un punto. Las AMOLED conservan sus dos
+  grises. El aro del tiempo del Margen va en tinta en MIP por lo mismo.
+- **Las páginas de una cifra suben la cifra** (Yard, Margen, Total, Reloj) y
+  bajan las dos líneas de contexto hacia la mitad de la esfera, donde la
+  cuerda es ancha: así el texto grande también les llega a ellas. Las
+  pantallas que se imponen (corral, descanso, aviso, calentamiento) siguen
+  con la cifra en el centro.
+- **El Margen enseña el ritmo actual**, no el medio del yard; el cálculo del
+  margen sigue con el medio asentado, que es el que decide si se llega.
+- **Ajuste «Margen de seguridad»** (minutos, 0 a 60, de fábrica 0): se resta
+  al margen antes de enseñarlo y colorearlo. En `RaceState.margenSegundos`,
+  compartido con el campo de datos. También en el menú del reloj.
+- Con el texto grande, la línea del Margen pierde la unidad del ritmo para
+  caber.
+
+## Estado — la 1.9.2, para alinear el número con la tienda
+
+La 1.9.0 se subió al portal el 7 de octubre de 2026 con el número **1.9.1**
+escrito a mano en la ficha, así que la tienda dice 1.9.1 y el reloj decía
+1.9.0. La **1.9.2** es el mismo código con el número al día en «Acerca de» y
+en el manual; se sube con las notas de abajo y de ahí en adelante el número
+de la ficha es el de `AcercaView.VERSION`.
+
+## Estado — la 1.9.0, publicada (como 1.9.1 en la tienda)
+
+La **1.9.0** responde a la primera prueba de Denis con la 1.8.0 en su
+Forerunner 255 (7 de octubre de 2026): el gris de las líneas de pie casi no
+se leía en la MIP, y los rótulos se le quedaban pequeños. Dos cambios:
+
+- **El texto nunca va en el gris apagado.** Ese gris queda solo para lo
+  dibujado (aros de fondo, líneas del marco, migas); todo el texto
+  secundario va en el gris medio, en los dos temas.
+- **Ajuste «Tamaño de texto»**, normal o grande, en Garmin Connect y en el
+  menú del reloj. Con grande cada fuente sube un escalón (rótulos de XTINY a
+  TINY, cifras de MEDIUM a HOT, cuadrícula de MILD a MEDIUM) y, donde no
+  cabe en la cuerda de la esfera, vuelve a la de siempre. Las fuentes que ya
+  son las más gruesas del reloj no suben. Lo decide `Tema.fuente()` y lo
+  comprueban los `_txt` de `MainView` y `StartView`.
+
+Y el **QR de «Acerca de» pasa al manual del corredor** (`/garmin`); hasta la
+1.8.0 llevaba a la raíz del sitio. Denis sugirió un enlace de Buy Me a
+Coffee y se probó en el QR, pero **la tienda de Garmin obliga a marcar
+«Payment Required» a cualquier app que pida propinas o donaciones**, aunque
+sea gratis, y marcarlo corta las actualizaciones a quien ya la tiene
+instalada (lo confirma el propio formulario del portal y un rechazo en el
+foro de desarrolladores, febrero de 2024, por el reglamento DSA). Así que la
+invitación al café vive en el manual, fuera de Garmin, y en la ficha se
+marca **No** en Monetization. **Ni la app ni la descripción de la tienda
+deben mencionar donaciones.**
+
+Pendiente de Denis: si lo que quería era un tema sin color, blanco y negro
+puro.
+
+## Estado — la 1.8.0, publicada
+
+La **1.8.0** trae el **fondo claro**: un ajuste nuevo, «Fondo» (oscuro o
+claro), en Garmin Connect y en el menú del reloj. Lo pidió Denis, un
+usuario de la tienda con Forerunner 255 (pantalla MIP, donde el negro se ve
+apagado), el 6 de octubre de 2026. Paquete en `build/backyard.iq`: 181
+builds de 111 relojes, sin un solo aviso.
+
+El tema vive en `app/source/Tema.mc`: las vistas no nombran el negro ni el
+blanco, piden fondo, tinta y grises. Los colores con significado (naranja,
+semáforo del corral, rojo, azul) son iguales en los dos temas; el verde
+pasa a verde oscuro sobre blanco, y el amarillo del corral se escribe en
+tinta, porque amarillo sobre blanco no se lee. El emblema de arranque se
+queda sobre negro: el bitmap lo trae pintado.
+
+## Estado — la 1.7.0, publicada
+
+La **1.7.0 salió a la Connect IQ Store** (septiembre de 2026): **181 builds de
+111 relojes**, sin un solo aviso. Siguió a la 1.6.0, que también se publicó
+(la hora de salida al abrir y el arranque solo), y le sumó el manejo de los
+relojes táctiles: la pantalla solo mueve la rueda, enciende ajustes o cambia
+de pantalla, y START y LAP son solo los botones.
+
+**Lo que se aprendió del táctil, medido en el simulador del fēnix 8:** un
+toque llega PRIMERO como `onSelect` (el START) y deslizar a la derecha como
+`onBack` (el LAP); solo si esos devuelven `false` llega el evento crudo,
+`onTap` o `onSwipe`. Los botones siguen el mismo camino y acaban en `onKey`
+(`KEY_ENTER` el START, `KEY_ESC` el LAP). Por eso los delegados atienden los
+botones en `onKey` y devuelven `false` en `onSelect` y `onBack`.
 
 ## Estado — la 1.5.0, publicada
 
@@ -119,6 +251,210 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.13.0 (para el campo "What's New")
+
+**ES**
+
+> - La meta automática ya no marca al pasar cerca de la salida a mitad de
+>   vuelta: ahora exige llevar recorrido el 90 % del circuito, no la mitad.
+>   Arregla los recorridos en ocho o de ida y vuelta.
+> - Si sigues en el circuito en los últimos tres minutos, el corral ya no te
+>   tapa las pantallas: salta un momento en cada aviso (3, 2 y 1 minuto) y
+>   vuelve a lo que mirabas. Si ya marcaste, se queda como siempre.
+
+**EN**
+
+> - The automatic finish line no longer marks when you pass near the start
+>   mid-loop: it now requires 90 % of the loop covered, not half. Fixes
+>   figure-eight and out-and-back courses.
+> - If you're still out on the loop in the last three minutes, the corral
+>   no longer hides your screens: it pops up briefly at each alert (3, 2
+>   and 1 minute) and returns to what you were looking at. If you've
+>   already marked, it stays as before.
+
+---
+
+## Novedades de la versión 1.12.0 (para el campo "What's New")
+
+**ES**
+
+> - Si sigues en el circuito en los últimos tres minutos, el corral ya no te
+>   tapa las pantallas: salta un momento en cada aviso (3, 2 y 1 minuto) y
+>   vuelve a lo que mirabas, con los aros del Margen y de la Vuelta en su
+>   color. Si ya marcaste, se queda como siempre.
+
+**EN**
+
+> - If you're still out on the loop in the last three minutes, the corral
+>   no longer hides your screens: it pops up briefly at each alert (3, 2
+>   and 1 minute) and returns to what you were looking at, with the Margin
+>   and Lap rings in its colour. If you've already marked, it stays as before.
+
+---
+
+## Novedades de la versión 1.11.0 (para el campo "What's New")
+
+**ES**
+
+> - La pantalla de Margen enseña el ritmo actual más grande, con su unidad
+>   también en texto grande.
+> - Fuera la línea «hecho / objetivo» de esa pantalla: lo recorrido ya lo
+>   cuenta el aro y lo da exacto la página Yard.
+
+**EN**
+
+> - The Margin screen shows your current pace larger, with its unit also in
+>   large text.
+> - The «done / target» line is gone from that screen: the ring already
+>   shows the distance covered and the Yard screen gives it exactly.
+
+---
+
+## Novedades de la versión 1.10.0 (para el campo "What's New")
+
+**ES**
+
+> - Nuevo ajuste «Margen de seguridad»: los minutos que quieras reservar se
+>   restan al margen antes de enseñarlo.
+> - La pantalla de Margen enseña el ritmo actual, no el medio del yard.
+> - En relojes de pantalla MIP (Forerunner 255/955, fēnix 7, Instinct) todo
+>   el texto va en tinta pura, sin grises.
+> - Las pantallas de una cifra suben la cifra y dan más sitio a las líneas de
+>   abajo, que con el texto grande ahora también crecen.
+
+**EN**
+
+> - New «Safety margin» setting: the minutes you want in reserve are taken
+>   off the margin before it is shown.
+> - The Margin screen shows your current pace instead of the yard average.
+> - On MIP displays (Forerunner 255/955, fēnix 7, Instinct) all text is pure
+>   ink, no greys.
+> - Single-figure screens move the figure up and make room for the lines
+>   below, which now grow with the large text setting too.
+
+---
+
+## Novedades de la versión 1.9.2 (para el campo "What's New")
+
+**ES**
+
+> - El número de versión que enseña el reloj coincide con el de la tienda.
+
+**EN**
+
+> - The version number shown on the watch now matches the store.
+
+---
+
+## Novedades de la versión 1.9.0 (para el campo "What's New")
+
+**ES**
+
+> - Nuevo ajuste «Tamaño de texto»: normal o grande. Con grande, rótulos y
+>   cifras suben una talla donde caben.
+> - El texto secundario (distancia que falta, hora y batería) ya no va en
+>   el gris más apagado, que en pantallas MIP costaba leer.
+> - El QR de «Acerca de» lleva ahora al manual del corredor, en
+>   backyardultrasantodomingo.com/garmin.
+
+**EN**
+
+> - New «Text size» setting: normal or large. With large, labels and figures
+>   go up one size wherever they fit.
+> - Secondary text (distance to go, time and battery) no longer uses the
+>   dimmest grey, which was hard to read on MIP displays.
+> - The QR code in «About» now opens the runner's manual at
+>   backyardultrasantodomingo.com/garmin.
+
+---
+
+## Novedades de la versión 1.8.0 (para el campo "What's New")
+
+**ES**
+
+> - Nuevo ajuste «Fondo»: oscuro o claro. En relojes de pantalla MIP
+>   (Forerunner 255/955, fēnix 7, Instinct) el fondo claro se lee mejor a
+>   plena luz; en los AMOLED el oscuro gasta menos batería.
+> - Se cambia desde Garmin Connect o en el reloj, en Ajustes del yard.
+> - Los colores que avisan (corral, margen, batería baja) son los mismos en
+>   los dos fondos.
+
+**EN**
+
+> - New «Background» setting: dark or light. On MIP displays (Forerunner
+>   255/955, fēnix 7, Instinct) the light background reads much better in
+>   daylight; on AMOLED, dark saves battery.
+> - Change it from Garmin Connect or on the watch, under Yard settings.
+> - Warning colours (corral, margin, low battery) are the same on both
+>   backgrounds.
+
+---
+
+## Novedades de la versión 1.7.0 (para el campo "What's New")
+
+Publicada. La 1.6.0 también salió, así que a la tienda fueron solo las
+líneas del táctil.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Relojes táctiles: la hora de salida se cambia con el dedo y los ajustes de
+>   la pantalla de salida se encienden y apagan tocándolos.
+> - En carrera, la pantalla táctil solo cambia de pantalla: la actividad se
+>   para con el botón START y la vuelta se marca con el botón LAP, nunca con
+>   un roce.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Touchscreen watches: set the start time with your finger, and tap the
+>   settings on the start screen to turn them on or off.
+> - During the race the touchscreen only changes screens: the activity stops
+>   only with the START button and yards are marked only with the LAP button,
+>   never by an accidental touch.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
+
+---
+
+## Novedades de la versión 1.6.0 (para el campo "What's New")
+
+Lo primero al abrir la app es la **hora de salida**: la rueda de hora y minutos
+viene puesta en la siguiente hora en punto del reloj (a las 11:30, las 12:00),
+START confirma y MENU deja Auto. Después, la línea de salida enseña esa hora
+con la cuenta atrás, la vuelta y la configuración (en verde lo encendido), y si
+nadie pulsa START la carrera **arranca sola** al llegar la hora. De paso, en el
+calentamiento de las esferas pequeñas (fēnix 5) la línea de hora y batería ya
+no se sale por los lados.
+
+**ES**
+
+> - Al abrir la app se elige la hora de salida, propuesta en la siguiente hora
+>   en punto.
+> - La pantalla de salida muestra la hora, la cuenta atrás y la configuración.
+> - Si no pulsas START, la carrera arranca sola a la hora de salida.
+> - Arreglado: en pantallas pequeñas la hora y la batería del calentamiento
+>   se salían de la esfera.
+
+**EN**
+
+> - When the app opens you set the start time, suggested as the next full
+>   hour.
+> - The start screen shows the start time, the countdown and your settings.
+> - If you don't press START, the race starts on its own at the start time.
+> - Fixed: on small screens the warm-up time and battery line ran off the
+>   edge.
 
 ---
 

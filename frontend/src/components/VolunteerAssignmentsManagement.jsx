@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Search, Plus, Trash2, Users, RefreshCw, Clock, MapPin, ChevronDown, ChevronRight, X, UserX, CheckCircle, MailX, AlertTriangle, Download, Shirt, FileSpreadsheet, Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -53,6 +53,48 @@ export default function VolunteerAssignmentsManagement() {
   const [estadoFilter, setEstadoFilter] = useState('all'); // all | asignados | pendientes
   const [raceName, setRaceName] = useState('');
   const [changingEventoEmail, setChangingEventoEmail] = useState(null);
+
+  // Alta manual: apuntar a alguien sin que pase por el formulario público
+  const NUEVO_VOLUNTARIO = {
+    nombre: '', apellidos: '', email: '', telefono: '', evento: 'campeonato',
+    talla_camiseta: '', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '',
+    comentarios: '', avisar: true, enviar_codigo: true,
+  };
+  const [showNuevoModal, setShowNuevoModal] = useState(false);
+  const [nuevoVoluntario, setNuevoVoluntario] = useState(NUEVO_VOLUNTARIO);
+  const [guardandoNuevo, setGuardandoNuevo] = useState(false);
+  const setCampoNuevo = (campo, valor) => setNuevoVoluntario(prev => ({ ...prev, [campo]: valor }));
+
+  const handleCrearVoluntario = async (e) => {
+    e.preventDefault();
+    setGuardandoNuevo(true);
+    try {
+      const body = Object.fromEntries(
+        Object.entries(nuevoVoluntario).filter(([, v]) => v !== '')
+      );
+      const response = await adminFetch(`${API_URL}/api/volunteer-registration/admin/registrations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        toast.error(data.detail || 'No se pudo apuntar al voluntario');
+        return;
+      }
+      const avisos = [];
+      if (nuevoVoluntario.avisar) avisos.push(data.correo_enviado ? 'bienvenida enviada' : 'la bienvenida no salió');
+      if (nuevoVoluntario.enviar_codigo) avisos.push(data.codigo_enviado ? 'código enviado' : 'el código no salió');
+      toast.success(`Voluntario apuntado${avisos.length ? ` (${avisos.join(', ')})` : ''}`);
+      setShowNuevoModal(false);
+      setNuevoVoluntario(NUEVO_VOLUNTARIO);
+      loadData();
+    } catch (error) {
+      toast.error('Error de conexión');
+    } finally {
+      setGuardandoNuevo(false);
+    }
+  };
 
   const getEventoLabel = (value) => {
     if (value === 'carrera') return raceName || 'Carrera Activa';
@@ -139,10 +181,33 @@ export default function VolunteerAssignmentsManagement() {
     return new Set(Object.keys(cuenta).filter(f => cuenta[f] > 1));
   };
 
-  // Get available slots for adding (not assigned, matching the volunteer's event)
-  const getAvailableSlotsForVolunteer = () => {
+  // Los turnos del evento del voluntario, uno por puesto+turno+día, con sus
+  // plazas libres. Salen también los llenos: la organización puede asignar
+  // igual, y el backend abre una plaza extra. Lo que no sale es el turno que
+  // esta persona ya tiene.
+  const getTurnosParaVolunteer = () => {
     const ev = selectedVolunteer?.evento || 'carrera';
-    return availableSlots.filter(slot => !slot.email_asignado && (slot.evento || 'carrera') === ev);
+    const email = selectedVolunteer?.email;
+    const grupos = {};
+    availableSlots
+      .filter(slot => (slot.evento || 'carrera') === ev)
+      .forEach(slot => {
+        const key = `${slot.dia_tipo || 'carrera'}|${slot.puesto}|${slot.turno}`;
+        if (!grupos[key]) {
+          grupos[key] = { ...slot, id: slot.id, libres: 0, total: 0, yaLoTiene: false };
+        }
+        const g = grupos[key];
+        g.total += 1;
+        if (!slot.email_asignado) {
+          g.libres += 1;
+          g.id = slot.id; // una plaza libre, si la hay, es la que se pide
+        } else if (slot.email_asignado === email) {
+          g.yaLoTiene = true;
+        }
+      });
+    return Object.values(grupos)
+      .filter(g => !g.yaLoTiene)
+      .map(g => ({ ...g, lleno: g.libres === 0 }));
   };
 
   // Change a volunteer's event
@@ -233,11 +298,14 @@ export default function VolunteerAssignmentsManagement() {
       const response = await adminFetch(`${API_URL}/api/volunteers/assign/${selectedSlotToAdd.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: selectedVolunteer.email })
+        // Sobre un turno lleno se pide abrir una plaza más; en los demás, no.
+        body: JSON.stringify({ email: selectedVolunteer.email, abrir_plaza: !!selectedSlotToAdd.lleno })
       });
       
       if (response.ok) {
-        toast.success('Turno asignado correctamente');
+        toast.success(selectedSlotToAdd.lleno
+          ? 'Turno asignado: se abrió una plaza extra'
+          : 'Turno asignado correctamente');
         setShowAddModal(false);
         setSelectedSlotToAdd(null);
         loadData();
@@ -687,6 +755,14 @@ export default function VolunteerAssignmentsManagement() {
               Voluntarios Registrados
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => setShowNuevoModal(true)}
+                data-testid="nuevo-voluntario-btn"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nuevo voluntario
+              </Button>
               {/* Baja lo que se está viendo: respeta el evento, el estado y la búsqueda */}
               <Button
                 variant="outline"
@@ -830,6 +906,25 @@ export default function VolunteerAssignmentsManagement() {
                             {assignedSlots.length} asignado{assignedSlots.length !== 1 ? 's' : ''}
                           </Badge>
                         )}
+                        {/* Lo que el voluntario reconfirmó desde su perfil. La
+                            confirmación es de quien la hizo: si el turno pasó a
+                            otra persona, ya no cuenta. */}
+                        {assignedSlots.length > 0 && (() => {
+                          const confirmados = assignedSlots.filter(
+                            s => s.confirmado_por && s.confirmado_por === s.email_asignado
+                          ).length;
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={confirmados === assignedSlots.length
+                                ? 'border-green-600 text-green-700'
+                                : 'border-amber-500 text-amber-700'}
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {confirmados}/{assignedSlots.length} confirmado{assignedSlots.length !== 1 ? 's' : ''}
+                            </Badge>
+                          );
+                        })()}
                         {interestSlots.length > 0 && (
                           <Badge variant="outline">
                             {interestSlots.length} de interés
@@ -1134,6 +1229,105 @@ export default function VolunteerAssignmentsManagement() {
         </CardContent>
       </Card>
 
+      {/* Alta manual de un voluntario */}
+      {showNuevoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-green-600" />
+                  Nuevo voluntario
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setShowNuevoModal(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto">
+              <form onSubmit={handleCrearVoluntario} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Lo apuntas tú, sin formulario ni código al correo, aunque las postulaciones
+                  estén cerradas. Después le asignas turnos como a cualquier otro.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Nombre *</label>
+                    <Input required value={nuevoVoluntario.nombre} onChange={(e) => setCampoNuevo('nombre', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Apellidos *</label>
+                    <Input required value={nuevoVoluntario.apellidos} onChange={(e) => setCampoNuevo('apellidos', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Correo *</label>
+                    <Input type="email" required value={nuevoVoluntario.email} onChange={(e) => setCampoNuevo('email', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Teléfono *</label>
+                    <Input required value={nuevoVoluntario.telefono} onChange={(e) => setCampoNuevo('telefono', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Evento</label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={nuevoVoluntario.evento}
+                      onChange={(e) => setCampoNuevo('evento', e.target.value)}
+                    >
+                      {EVENTO_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{getEventoLabel(opt.value)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Talla de camiseta</label>
+                    <select
+                      className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={nuevoVoluntario.talla_camiseta}
+                      onChange={(e) => setCampoNuevo('talla_camiseta', e.target.value)}
+                    >
+                      <option value="">Sin indicar</option>
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Contacto de emergencia</label>
+                    <Input value={nuevoVoluntario.contacto_emergencia_nombre} onChange={(e) => setCampoNuevo('contacto_emergencia_nombre', e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">Teléfono de emergencia</label>
+                    <Input value={nuevoVoluntario.contacto_emergencia_telefono} onChange={(e) => setCampoNuevo('contacto_emergencia_telefono', e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Comentarios</label>
+                  <Input value={nuevoVoluntario.comentarios} onChange={(e) => setCampoNuevo('comentarios', e.target.value)} placeholder="Cómo llegó, qué puede hacer..." />
+                </div>
+                <div className="space-y-2 pt-2 border-t">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={nuevoVoluntario.avisar} onChange={(e) => setCampoNuevo('avisar', e.target.checked)} />
+                    <span>Mandarle el correo de bienvenida, con su enlace para completar o corregir sus datos.</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" className="mt-0.5" checked={nuevoVoluntario.enviar_codigo} onChange={(e) => setCampoNuevo('enviar_codigo', e.target.checked)} />
+                    <span>Mandarle el código para crear su contraseña y entrar en la web y en la app.</span>
+                  </label>
+                </div>
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowNuevoModal(false)} disabled={guardandoNuevo}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={guardandoNuevo}>
+                    {guardandoNuevo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
+                    Apuntar voluntario
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Add Assignment Modal */}
       {showAddModal && selectedVolunteer && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1151,16 +1345,17 @@ export default function VolunteerAssignmentsManagement() {
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto space-y-4">
               <p className="text-sm text-muted-foreground">
-                Selecciona un turno disponible para asignar a este voluntario:
+                Selecciona el turno para este voluntario. Los turnos llenos también
+                se pueden elegir: se le abre una plaza extra.
               </p>
               
-              {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer())).length === 0 ? (
+              {Object.entries(groupSlotsByPosition(getTurnosParaVolunteer())).length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">
-                  No hay turnos disponibles para asignar
+                  No hay turnos para asignar
                 </p>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(groupSlotsByPosition(getAvailableSlotsForVolunteer()))
+                  {Object.entries(groupSlotsByPosition(getTurnosParaVolunteer()))
                     .sort(([a], [b]) => {
                       // Sort by day type order: previo, carrera_dia1, carrera_dia2, carrera_dia3, carrera
                       const dayOrder = { 'previo': 0, 'carrera_dia1': 1, 'carrera': 1, 'carrera_dia2': 2, 'carrera_dia3': 3 };
@@ -1193,15 +1388,33 @@ export default function VolunteerAssignmentsManagement() {
                               p-3 rounded-lg border-2 cursor-pointer transition-all text-sm
                               ${selectedSlotToAdd?.id === slot.id 
                                 ? 'border-primary bg-primary/10' 
-                                : 'border-gray-200 hover:border-primary/50'}
+                                : slot.lleno
+                                  ? 'border-amber-200 bg-amber-50/60 hover:border-primary/50'
+                                  : 'border-gray-200 hover:border-primary/50'}
                             `}
                           >
-                            <Badge variant="outline" className="text-xs mb-1">
-                              Turno {slot.turno}
-                            </Badge>
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <Badge variant="outline" className="text-xs">
+                                Turno {slot.turno}
+                              </Badge>
+                              {slot.lleno ? (
+                                <Badge className="text-xs bg-amber-100 text-amber-800 hover:bg-amber-100">
+                                  Lleno {slot.total}/{slot.total}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">
+                                  {slot.libres} de {slot.total} libres
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {formatTime(slot.hora_inicio)} - {formatTime(slot.hora_fin)}
                             </div>
+                            {slot.lleno && (
+                              <div className="text-xs text-amber-700 mt-1">
+                                Se abrirá una plaza extra
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1225,7 +1438,9 @@ export default function VolunteerAssignmentsManagement() {
                   onClick={handleAddAssignment}
                   disabled={!selectedSlotToAdd || actionLoading}
                 >
-                  {actionLoading ? 'Asignando...' : 'Asignar Turno'}
+                  {actionLoading
+                    ? 'Asignando...'
+                    : selectedSlotToAdd?.lleno ? 'Asignar abriendo plaza extra' : 'Asignar Turno'}
                 </Button>
               </div>
             </CardContent>

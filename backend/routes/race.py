@@ -16,7 +16,7 @@ from models.race import (
 )
 from pydantic import BaseModel
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
-from services.auth import encode_admin_token, require_permission, verify_admin_token
+from services.auth import encode_admin_token, require_permission
 from services import clima, laps, races, rate_limit
 
 router = APIRouter(prefix="/api/race", tags=["race"])
@@ -38,10 +38,6 @@ async def get_active_race_code(database) -> str:
         return active_race.get("code")
     return None
 
-
-# Helper function to verify JWT token
-def verify_token(authorization: Optional[str] = Header(None)):
-    return verify_admin_token(authorization)
 
 @router.post("/auth/admin-login")
 async def admin_login(credentials: AdminLogin, request: Request = None, db=Depends(lambda: None)):
@@ -66,13 +62,17 @@ async def admin_login(credentials: AdminLogin, request: Request = None, db=Depen
     # la migracion dejaria al administrador fuera de su propio panel.
     from services import cuentas as servicio_cuentas
 
-    cuenta = await database[servicio_cuentas.COLECCION].find_one(
-        {"$or": [{"email": usuario}, {"staff_username": usuario}]}
-    )
+    cuenta = await servicio_cuentas.del_equipo(database, usuario)
+    if not cuenta:
+        # El voluntario que solo existe en `admin_users`: al acertar su
+        # contrasena se le hace la cuenta, y sigue por el camino de todos.
+        cuenta = await servicio_cuentas.adoptar_del_panel(database, usuario, credentials.password)
 
     if cuenta:
         if not servicio_cuentas.verificar_password(credentials.password, cuenta.get("password_hash")):
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        # El corredor que ademas es voluntario gana aqui su rol de equipo.
+        cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
         if servicio_cuentas.STAFF not in (cuenta.get("roles") or []):
             raise HTTPException(status_code=403, detail="Esta zona es solo para el equipo")
 
@@ -518,7 +518,7 @@ async def corregir_hora_de_salida(
 async def panel_en_vivo(
     race_code: str = Depends(races.carrera_del_panel),
     movimientos: int = 40,
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
 ):
     """Todo lo que hace falta para llevar la carrera, en una sola llamada.
 
@@ -1403,7 +1403,7 @@ async def get_subscription(
 
 @router.get("/followers-count")
 async def get_followers_count(
-    user=Depends(verify_token),
+    user=Depends(require_permission("control")),
     db=Depends(lambda: None)
 ):
     """Get the count of followers for each athlete (admin only)"""

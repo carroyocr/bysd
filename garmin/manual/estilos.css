@@ -124,6 +124,7 @@ h1 {
 }
 
 .hero p.lede { margin: 0; max-width: 46ch; color: var(--ink-2); }
+.hero p.cafe { margin-top: 10px; font-size: 0.95em; }
 
 .hero-face {
   order: -1;

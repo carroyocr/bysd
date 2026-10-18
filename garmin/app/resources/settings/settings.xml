@@ -15,6 +15,11 @@
     <setting propertyKey="@Properties.lapDistance" title="@Strings.settingLapDistance">
         <settingConfig type="numeric" min="0.1" max="200"/>
     </setting>
+    <!-- Minutos de reserva que se restan al margen: "+0:00" pasa a ser
+         "llegas con la reserva justa". -->
+    <setting propertyKey="@Properties.marginReserve" title="@Strings.settingMarginReserve">
+        <settingConfig type="numeric" min="0" max="60"/>
+    </setting>
     <setting propertyKey="@Properties.corralAlert" title="@Strings.settingCorral">
         <settingConfig type="boolean"/>
     </setting>
@@ -40,6 +45,22 @@
     </setting>
     <setting propertyKey="@Properties.sound" title="@Strings.settingSound">
         <settingConfig type="boolean"/>
+    </setting>
+    <!-- El fondo de la esfera. En las MIP (Forerunner 255, fenix 7...) el
+         tema de fabrica del reloj es claro y el negro se ve apagado. -->
+    <setting propertyKey="@Properties.theme" title="@Strings.settingTheme">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.themeDark</listEntry>
+            <listEntry value="1">@Strings.themeLight</listEntry>
+        </settingConfig>
+    </setting>
+    <!-- El tamano de texto. En las esferas chicas (260 px del Forerunner
+         255) la fuente minima de los rotulos se queda corta. -->
+    <setting propertyKey="@Properties.textSize" title="@Strings.settingTextSize">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.textNormal</listEntry>
+            <listEntry value="1">@Strings.textLarge</listEntry>
+        </settingConfig>
     </setting>
 
     <!-- Las pantallas de carrera: la posicion de cada una (1 primera) y el 0

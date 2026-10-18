@@ -52,6 +52,9 @@ class RaceState {
     // Radio del punto de salida para la vuelta automatica, en metros. Mas
     // ancho que un arco de meta, mas estrecho que la zona de carpas.
     static const RADIO_SALIDA_M = 30.0;
+    // Parte de la vuelta que tiene que estar recorrida para que pasar por el
+    // punto de salida cuente como meta (ver tocaMarcarSola).
+    static const KM_MINIMOS_META = 0.9;
 
     // --- ajustes, del telefono ---
     var duracionVuelta = DURACION_VUELTA;
@@ -73,6 +76,10 @@ class RaceState {
     // los dos; el sonido ademas obedece a los Sonidos del sistema.
     var vibracion = true;
     var sonido = true;
+    // El margen de seguridad, en segundos: lo que el corredor quiere
+    // reservar. Se resta al margen antes de ensenarlo y de colorearlo, asi
+    // que "+0:00" significa "llegas con la reserva justa". Cero de fabrica.
+    var reservaMargen = 0;
 
     // El orden de las pantallas de carrera de la app, como ids en el orden
     // en que se recorren (0 vuelta, 1 margen, 2 datos globales, 3 total,
@@ -159,6 +166,9 @@ class RaceState {
         lapApagado = _ajuste("lapOff", false);
         vibracion = _ajuste("vibration", true);
         sonido = _ajuste("sound", true);
+        var reserva = _ajuste("marginReserve", 0);
+        reservaMargen = (reserva == null || reserva.toNumber() < 0)
+                      ? 0 : reserva.toNumber() * 60;
         _leerOrdenPaginas();
     }
 
@@ -305,6 +315,21 @@ class RaceState {
     // sin ella, se deduce de la hora a la que se pulsa START. El ancla se
     // guarda en epoch: los cambios de hora de despues no la mueven.
     function darLaSalida() {
+        campana0 = campanaPrevista();
+        vueltaMarcada = 0;
+        _latSalida = _lat;
+        _lonSalida = _lon;
+        kmDeVueltas = 0.0;
+        segDeVueltas = 0;
+        sumaPulso = 0.0;
+        muestrasPulso = 0;
+    }
+
+    // La campana de la vuelta 1 que sellaria darLaSalida() si se pulsara
+    // START ahora mismo, en epoch, sin tocar nada. La linea de salida la usa
+    // para ensenar la hora y la cuenta atras, y para arrancar sola cuando
+    // llega la hora sin que nadie haya pulsado.
+    function campanaPrevista() {
         var ahora = Time.now().value();
         var reloj = Sys.getClockTime();
         var desdeMedianoche = (reloj.hour * 3600) + (reloj.min * 60) + reloj.sec;
@@ -317,10 +342,11 @@ class RaceState {
             // el que configura a las 8 de la noche la salida de las 7 no
             // quiere una carrera con trece vueltas corridas.
             var objetivo = ((horaSalida / 100) * 3600) + ((horaSalida % 100) * 60);
-            campana0 = ahora - desdeMedianoche + objetivo;
-            if (campana0 < ahora - 43200) {
-                campana0 += 86400;
+            var campana = ahora - desdeMedianoche + objetivo;
+            if (campana < ahora - 43200) {
+                campana += 86400;
             }
+            return campana;
         } else {
             // Automatica: se ancla a una marca de duracionVuelta mirando lo
             // probable. Pulsar START poco despues de la marca -dentro de la
@@ -333,18 +359,10 @@ class RaceState {
             var gracia = duracionVuelta / 6;
             if (gracia > 600) { gracia = 600; }
             if (resto < gracia) {
-                campana0 = ahora - resto;
-            } else {
-                campana0 = ahora + (duracionVuelta - resto);
+                return ahora - resto;
             }
+            return ahora + (duracionVuelta - resto);
         }
-        vueltaMarcada = 0;
-        _latSalida = _lat;
-        _lonSalida = _lon;
-        kmDeVueltas = 0.0;
-        segDeVueltas = 0;
-        sumaPulso = 0.0;
-        muestrasPulso = 0;
     }
 
     // La ultima posicion conocida, del GPS de la app. La guarda quien recibe
@@ -424,11 +442,15 @@ class RaceState {
         // mismo que usa el margen.
         if (autoLapKm && km >= kmObjetivo()) { return true; }
 
-        // Por ubicacion: cerca del punto de salida y con la mayor parte de
-        // la vuelta recorrida. El requisito de distancia evita marcarla al
-        // salir, que tambien es "cerca de la salida".
+        // Por ubicacion: cerca del punto de salida y con casi toda la vuelta
+        // recorrida. El requisito de distancia evita marcarla al salir, que
+        // tambien es "cerca de la salida", y evita que un circuito que pasa
+        // por la meta a mitad de vuelta -un ocho, una ida y vuelta- la marque
+        // antes de tiempo: con la mitad bastaba para lo primero, pero no para
+        // lo segundo. El 90 % deja hueco al error del GPS, que mide corto o
+        // largo de una vuelta a otra, sin abrir la puerta a un paso previo.
         if (!autoLap || _latSalida == null || _lat == null) { return false; }
-        if (km < kmObjetivo() * 0.5) { return false; }
+        if (km < kmObjetivo() * KM_MINIMOS_META) { return false; }
         return _metrosASalida() < RADIO_SALIDA_M;
     }
 
@@ -560,6 +582,19 @@ class RaceState {
         return t > 0 ? t : null;
     }
 
+    // El ritmo de ahora mismo, el que el reloj mide sobre los ultimos
+    // metros. Es el que se ensena en la pantalla del margen -quien va a
+    // tramos de correr y caminar quiere ver a cuanto va en este tramo-;
+    // el margen se sigue proyectando con el ritmo del yard, que es el que
+    // decide si se llega. Parado o sin dato, null.
+    function ritmoActual() {
+        var info = Activity.getActivityInfo();
+        if (info == null || info.currentSpeed == null) { return null; }
+        var v = info.currentSpeed;
+        if (v < 0.3) { return null; }
+        return 1000.0 / v;
+    }
+
     function ritmoSegPorKm() {
         var km = kmEnLaVuelta();
         var t = segundosEnLaVuelta();
@@ -604,7 +639,7 @@ class RaceState {
 
         var faltan = kmObjetivo() - km;
         if (faltan < 0) { faltan = 0.0; }
-        return r - (faltan * ritmo);
+        return r - (faltan * ritmo) - reservaMargen;
     }
 
     function enCorral() {

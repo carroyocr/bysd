@@ -31,6 +31,7 @@ import PreguntasPublicPage from './pages/PreguntasPublicPage';
 import PrensaPage from './pages/PrensaPage';
 import NotaPrensaPage from './pages/NotaPrensaPage';
 import PaymentReceiptPage from './pages/PaymentReceiptPage';
+import PlazoPagoPage from './pages/PlazoPagoPage';
 import CancelRegistrationPage from './pages/CancelRegistrationPage';
 import QRScannerPage from './pages/QRScannerPage';
 import ScanConfirmPage from './pages/ScanConfirmPage';
@@ -39,6 +40,8 @@ import MiCuentaPage from './pages/MiCuentaPage';
 import TshirtVotePage from './pages/TshirtVotePage';
 import AlbumPage from './pages/AlbumPage';
 import VerificarCarnetPage from './pages/VerificarCarnetPage';
+import VerificarCuentaPage from './pages/VerificarCuentaPage';
+import VoluntarioPerfilPage from './pages/VoluntarioPerfilPage';
 import ObsPage from './obs/ObsPage';
 import LiveApp from './live/LiveApp';
 import { isNative } from './lib/platform';
@@ -115,10 +118,14 @@ export default function App() {
                     <Route path="/album" element={<AlbumPage />} />
                     {/* Payment Receipt Upload */}
                     <Route path="/subir-comprobante" element={<PaymentReceiptPage />} />
+                    <Route path="/plazo-de-pago" element={<PlazoPagoPage />} />
                     {/* Cancel Registration */}
                     <Route path="/cancelar-registro" element={<CancelRegistrationPage />} />
                     {/* Volunteer Registration routes */}
                     <Route path="/voluntarios/registro" element={<VoluntarioRegistroPage />} />
+                    {/* «Ingresar» de la sección de Voluntarios: acceso, datos
+                        y turnos asignados */}
+                    <Route path="/voluntarios/mi-perfil" element={<VoluntarioPerfilPage />} />
                     {/* Inscripción a una charla o actividad sin cuenta: el
                         enlace se copia desde el panel y se reparte */}
                     <Route path="/actividad/:id" element={<ActividadRegistroPage />} />
@@ -128,6 +135,9 @@ export default function App() {
                     {/* Perfil del espectador. Aparte de /mi-perfil, que es el
                         del corredor, hasta que la fase 3 los una. */}
                     <Route path="/mi-cuenta" element={<MiCuentaPage />} />
+                    {/* A donde lleva el correo del código de una cuenta del
+                        equipo: la app instalada no tiene dónde escribirlo */}
+                    <Route path="/verificar-cuenta" element={<VerificarCuentaPage />} />
                     {/* A donde lleva el QR del carnet de staff */}
                     <Route path="/staff/verificar/:codigo" element={<VerificarCarnetPage />} />
                     <Route path="/pre-registro" element={<MyProfilePage />} />

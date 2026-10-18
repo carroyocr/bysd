@@ -16,16 +16,26 @@ const ToolbarButton = ({ onAction, title, testid, children }) => (
 
 export const RichTextEditor = forwardRef(({ value, onChange, placeholder }, ref) => {
   const editorRef = useRef(null);
+  // Lo último que salió de este editor. Distingue "lo escribió el usuario
+  // aquí" de "se lo cambiaron desde fuera", que es lo que hay que reescribir.
+  const ultimoEmitido = useRef(value);
 
-  // Initialize content once on mount (uncontrolled to avoid caret jumps)
+  // El editor no es controlado: reescribir su HTML en cada tecla manda el
+  // cursor al final. Pero sí tiene que hacer caso cuando el valor cambia
+  // desde fuera —elegir una plantilla, limpiar el formulario—, que antes se
+  // ignoraba y dejaba el recuadro vacío con la plantilla ya elegida.
   useEffect(() => {
-    if (editorRef.current && value && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value;
-    }
-  }, []); // run only on mount
+    if (!editorRef.current) return;
+    if (value === ultimoEmitido.current) return;
+    editorRef.current.innerHTML = value || '';
+    ultimoEmitido.current = value;
+  }, [value]);
 
   const emitChange = () => {
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    ultimoEmitido.current = html;
+    onChange(html);
   };
 
   const focusEditor = () => {

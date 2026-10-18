@@ -19,12 +19,13 @@ router = APIRouter(prefix="/api/app", tags=["app"])
 
 VERSIONES = {
     "ios": {
-        "version": "1.3.1",
+        # En el App Store desde el 7-oct-2026 (comprobado en la ficha).
+        "version": "1.3.11",
         "url": "https://apps.apple.com/do/app/bysd-live/id6802661105",
     },
     "android": {
-        # En prueba cerrada de Play: la ficha solo la abre quien sea tester.
-        "version": "1.3.3",
+        # En produccion de Play desde el 5-oct-2026.
+        "version": "1.3.11",
         "url": "https://play.google.com/store/apps/details?id=com.backyardultrasd.app",
     },
 }

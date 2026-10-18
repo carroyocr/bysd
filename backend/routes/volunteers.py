@@ -197,6 +197,9 @@ class AssignmentSlot(BaseModel):
 
 class AssignmentRequest(BaseModel):
     email: str
+    # Si el turno esta lleno, abrir una plaza mas en vez de rechazar. Lo manda
+    # el panel cuando la organizacion elige a sabiendas un turno lleno.
+    abrir_plaza: bool = False
 
 class MultipleAssignmentRequest(BaseModel):
     email: str
@@ -264,11 +267,55 @@ async def _buscar_voluntario(database, email: str):
     return volunteer
 
 
-async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str):
+def _mismo_turno(slot: dict) -> dict:
+    """Filtro de las plazas hermanas: mismo puesto, turno, dia y evento."""
+    return {
+        "puesto": slot.get("puesto"),
+        "turno": slot.get("turno"),
+        "dia_tipo": slot.get("dia_tipo"),
+        "evento": slot.get("evento"),
+    }
+
+
+async def _abrir_plaza_extra(database, modelo: dict) -> dict:
+    """Una plaza mas en un turno que ya estaba lleno.
+
+    Copia el horario de una plaza hermana y se marca `extra`: al desasignarla
+    se borra en vez de quedar libre, para que el turno no crezca para siempre.
+    Los cupos de la pestana Turnos (`slots_count`) no cambian: el mapa de
+    cobertura la cuenta como una plaza mas, cubierta.
+    """
+    ultimo = await database.volunteer_assignments.find_one(sort=[("id", -1)])
+    hermanas = await database.volunteer_assignments.count_documents(_mismo_turno(modelo))
+    plaza = {
+        "id": (ultimo.get("id", 0) if ultimo else 0) + 1,
+        "puesto": modelo.get("puesto"),
+        "turno": modelo.get("turno"),
+        "slot": hermanas + 1,
+        "dia": modelo.get("dia"),
+        "dia_tipo": modelo.get("dia_tipo"),
+        "hora_inicio": modelo.get("hora_inicio"),
+        "hora_fin": modelo.get("hora_fin"),
+        "evento": modelo.get("evento"),
+        "race_code": modelo.get("race_code"),
+        "email_asignado": None,
+        "nombre_asignado": None,
+        "extra": True,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    plaza = {k: v for k, v in plaza.items() if v is not None or k in ("email_asignado", "nombre_asignado")}
+    await database.volunteer_assignments.insert_one(plaza)
+    plaza.pop("_id", None)
+    return plaza
+
+
+async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str, abrir_plaza: bool = False):
     """Asigna un cupo al voluntario y programa su recordatorio.
 
     Devuelve (slot_asignado, None) o (None, (status, mensaje)) si no se pudo.
-    Si el cupo puntual ya está tomado, busca otro libre del mismo turno.
+    Si el cupo puntual ya está tomado, busca otro libre del mismo turno; y si
+    el turno esta lleno y `abrir_plaza` viene puesto, abre una plaza extra.
     """
     slot = await database.volunteer_assignments.find_one({"id": slot_id})
     if not slot:
@@ -279,12 +326,11 @@ async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str):
         # El cupo puntual ya se ocupó, pero el turno puede tener otros libres:
         # se busca uno del mismo puesto y turno en vez de rechazar la asignación
         alternativo = await database.volunteer_assignments.find_one({
-            "puesto": slot.get("puesto"),
-            "turno": slot.get("turno"),
-            "dia_tipo": slot.get("dia_tipo"),
-            "evento": slot.get("evento"),
+            **_mismo_turno(slot),
             "email_asignado": {"$in": [None, ""]},
         })
+        if not alternativo and abrir_plaza:
+            alternativo = await _abrir_plaza_extra(database, slot)
         if not alternativo:
             return None, (400, "Este turno ya no tiene espacios disponibles")
         slot = alternativo
@@ -328,30 +374,6 @@ async def _ocupar_slot(database, slot_id: int, email: str, volunteer_name: str):
     return slot, None
 
 
-def _fila_turno_html(slot: dict) -> str:
-    """Una tarjeta de turno para el correo de varios turnos."""
-    import html as _html
-    from services.template_email_service import format_time_ampm, format_date_spanish
-
-    puesto = _html.escape(str(slot.get("puesto", "") or ""))
-    turno = _html.escape(str(slot.get("turno", "") or ""))
-    dia = _html.escape(format_date_spanish(slot.get("dia", "") or ""))
-    horario = f"{format_time_ampm(slot.get('hora_inicio', ''))} - {format_time_ampm(slot.get('hora_fin', ''))}"
-    return f"""
-            <div style="background: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin: 0 0 12px 0; border-left: 4px solid #9ca3af;">
-                <p style="margin: 0 0 6px 0; font-size: 16px; font-weight: bold; color: #1f2937;">{puesto}</p>
-                <table style="width: 100%; font-size: 14px; color: #4b5563;">
-                    <tr>
-                        <td style="padding: 3px 0;">Turno {turno}</td>
-                        <td style="padding: 3px 0; text-align: right;">{dia}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 3px 0;" colspan="2"><strong style="color: #1f2937;">{horario}</strong></td>
-                    </tr>
-                </table>
-            </div>"""
-
-
 async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
     """Envía UN solo correo con todos los turnos recién asignados.
 
@@ -377,13 +399,14 @@ async def _enviar_correo_turnos(database, volunteer: dict, slots: list):
         }
         template_id = "volunteer_shift_assignment"
     else:
-        def orden(s):
-            return (str(s.get("dia", "")), str(s.get("hora_inicio", "")))
+        # La misma lista de turnos que el correo «Tus turnos y la app»: fecha,
+        # puesto, hora de inicio y de termino, sin cajas.
+        from services import correo_turnos
 
         merge_data = {
             **build_race_data(race_config),
             **build_volunteer_data(volunteer),
-            "volunteer_turnos": "".join(_fila_turno_html(s) for s in sorted(slots_con_fecha, key=orden)),
+            "volunteer_turnos": correo_turnos.bloque_de_turnos(slots_con_fecha),
             "volunteer_turnos_total": str(len(slots_con_fecha)),
         }
         template_id = "volunteer_shifts_assignment"
@@ -439,7 +462,9 @@ async def assign_volunteer(slot_id: int, request: AssignmentRequest):
 
     volunteer_name = f"{volunteer.get('nombre', '')} {volunteer.get('apellidos', '')}".strip()
 
-    slot, error = await _ocupar_slot(database, slot_id, email, volunteer_name)
+    slot, error = await _ocupar_slot(
+        database, slot_id, email, volunteer_name, abrir_plaza=request.abrir_plaza
+    )
     if error:
         status_code, detail = error
         return JSONResponse(
@@ -537,15 +562,19 @@ async def unassign_volunteer(slot_id: int, request: AssignmentRequest):
             headers={"X-Error-Detail": "El correo electrónico no corresponde al voluntario asignado. No es posible eliminar la asignación."}
         )
     
-    # Remove assignment
-    await database.volunteer_assignments.update_one(
-        {"id": slot_id},
-        {"$set": {
-            "email_asignado": None, 
-            "nombre_asignado": None,
-            "updated_at": datetime.utcnow()
-        }}
-    )
+    # Remove assignment. La plaza extra —la que se abrio sobre un turno lleno—
+    # se borra: el turno vuelve a los cupos que tenia configurados.
+    if slot.get("extra"):
+        await database.volunteer_assignments.delete_one({"id": slot_id})
+    else:
+        await database.volunteer_assignments.update_one(
+            {"id": slot_id},
+            {"$set": {
+                "email_asignado": None,
+                "nombre_asignado": None,
+                "updated_at": datetime.utcnow()
+            }}
+        )
     
     # Check if volunteer has other assignments - if not, revert status to "registered"
     other_assignments = await database.volunteer_assignments.count_documents({

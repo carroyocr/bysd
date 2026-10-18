@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timedelta, timezone
 
+from services import solicitudes_turnos
 from services.auth import require_permission
 
 # Configurar puestos y turnos es parte de la gestion de voluntarios.
@@ -369,6 +370,42 @@ async def save_event_schedule(data: EventScheduleUpdate, evento: str = "carrera"
     )
 
     return {"message": "Programación guardada"}
+
+
+class SolicitudesUpdate(BaseModel):
+    suspendidas: bool
+
+
+@router.get("/solicitudes")
+async def estado_de_solicitudes(evento: str = "carrera"):
+    """Si los voluntarios pueden pedir turnos en este evento o esta suspendido."""
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    return {"evento": evento, "suspendidas": await solicitudes_turnos.suspendidas(db, evento)}
+
+
+@router.put("/solicitudes")
+async def suspender_solicitudes(
+    data: SolicitudesUpdate, evento: str = "carrera",
+    payload: dict = Depends(require_permission("volunteers")),
+):
+    """Suspende (o reabre) la solicitud de turnos por parte de los voluntarios.
+
+    Con la suspension puesta, «Ingresar» y la app dejan de ensenar los turnos
+    disponibles y el backend rechaza pedir o retirar solicitudes; confirmar y
+    cancelar un turno ya asignado siguen abiertos. Ver `services/solicitudes_turnos`.
+    """
+    from server import db
+
+    if evento not in VALID_EVENTOS:
+        evento = "carrera"
+    await solicitudes_turnos.suspender(db, evento, data.suspendidas, por=payload.get("username"))
+    return {
+        "message": "Solicitud de turnos suspendida" if data.suspendidas else "Solicitud de turnos abierta",
+        "suspendidas": data.suspendidas,
+    }
 
 
 # Desplazamiento en dias de cada dia_tipo, para comparar turnos de dias distintos

@@ -131,10 +131,14 @@ export default function VoluntarioRegistroPage() {
   // la carrera se enciende desde el panel (Configuración de Carrera); mientras
   // esté apagado solo se recibe gente para el campeonato mundial.
   const eventosHabilitados = React.useMemo(
-    () => EVENTO_OPTIONS
-      .map(ev => ev.value)
-      .filter(value => value !== 'carrera' || config?.show_volunteer_carrera === true),
-    [config?.show_volunteer_carrera]
+    () => EVENTO_OPTIONS.map(ev => ev.value).filter((value) => {
+      if (value === 'carrera') return config?.show_volunteer_carrera === true;
+      // El del campeonato llevaba abierto desde siempre: una carrera antigua
+      // sin el campo no puede quedarse cerrada de golpe.
+      if (value === 'campeonato') return config?.show_volunteer_campeonato !== false;
+      return true;
+    }),
+    [config?.show_volunteer_carrera, config?.show_volunteer_campeonato]
   );
 
   const togglePosition = (puesto) => {
@@ -773,6 +777,36 @@ export default function VoluntarioRegistroPage() {
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando tu postulación...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Con los dos eventos cerrados no hay nada que postular. Pedir datos para
+  // luego rechazarlos es peor que decirlo de entrada. Quien viene con un
+  // enlace de edicion si pasa: va a corregir algo que ya envio.
+  if (!editMode && eventosHabilitados.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+        <div className="container mx-auto px-4 py-16">
+          <Card className="max-w-lg mx-auto">
+            <CardContent className="pt-8 pb-8 text-center space-y-4">
+              <div className="w-14 h-14 rounded-full bg-muted mx-auto flex items-center justify-center">
+                <Users className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <h1 className="text-xl font-bold">El equipo está completo</h1>
+              <p className="text-sm text-muted-foreground">
+                Por ahora no estamos recibiendo postulaciones de voluntarios.
+                Gracias por el interés: cuando abramos de nuevo, lo anunciaremos.
+              </p>
+              <Link to="/">
+                <Button variant="outline">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver al inicio
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

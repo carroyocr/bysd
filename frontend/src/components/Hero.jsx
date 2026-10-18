@@ -1,10 +1,10 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, UserPlus } from 'lucide-react';
+import { Calendar, MapPin, Clock, UserPlus, Youtube, Activity } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import DescargarApp from './DescargarApp';
 import PresentedBy from './PresentedBy';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -12,6 +12,11 @@ export default function Hero() {
   const { getShortDate, getYear, raceLocation, getEditionLabel, getLogoUrl, config } = useRaceConfig();
   const navigate = useNavigate();
   const showInscription = config?.show_preregistration === true;
+  // La transmision no es de la carrera publicada sino de la que se corre: el
+  // backend la manda en `transmision_en_vivo` mientras alguna este en carrera
+  // con enlace (el Mundial se transmitio con el sitio publicando enero).
+  const transmision = config?.transmision_en_vivo?.url ? config.transmision_en_vivo : null;
+  const showTracking = config?.show_tracking_page !== false;
   
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -52,6 +57,39 @@ export default function Hero() {
               <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
                 Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.
               </p>
+
+              {transmision && (
+                <div className="space-y-2" data-testid="transmision-en-vivo">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center lg:justify-start">
+                    <a
+                      href={transmision.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-3 px-5 py-3 rounded-lg bg-red-600 text-white font-semibold shadow-medium hover:bg-red-700 hover:shadow-strong transition-all duration-300"
+                      data-testid="transmision-en-vivo-youtube"
+                    >
+                      <Youtube className="w-5 h-5" />
+                      Ver la transmisión en vivo
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold tracking-wider">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        EN VIVO
+                      </span>
+                    </a>
+                    {showTracking && (
+                      <Link
+                        to={transmision.race_code ? `/resultados/${transmision.race_code}` : '/en-vivo'}
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-card border border-border font-semibold text-foreground shadow-soft hover:border-primary hover:text-primary hover:shadow-medium transition-all duration-300"
+                      >
+                        <Activity className="w-5 h-5 text-primary" />
+                        Seguimiento en vivo
+                      </Link>
+                    )}
+                  </div>
+                  {transmision.race_name && (
+                    <p className="text-sm text-muted-foreground">{transmision.race_name}</p>
+                  )}
+                </div>
+              )}
               
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center lg:justify-start pt-1 sm:pt-4">
                 <div

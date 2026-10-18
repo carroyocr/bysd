@@ -162,7 +162,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 /**
- * La salida tal como la anuncia la carrera: "sábado 17 de octubre" y "9:00 a. m.".
+ * La salida tal como la anuncia la carrera: "sábado 17 de octubre" y "8:00 a. m.".
  *
  * Se lee de la cadena ISO que manda el backend, que ya viene en la hora de la
  * carrera. Pasarla por la zona del teléfono daría otra hora a quien la comparta

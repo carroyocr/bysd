@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { 
   Users, UserPlus, Shield, ShieldCheck, ShieldOff, Trash2, 
-  Save, X, Loader2, Eye, EyeOff, Edit2, CheckCircle, AlertCircle
+  Save, X, Loader2, Eye, EyeOff, Edit2, CheckCircle, AlertCircle, QrCode
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { token as sesionToken } from '../lib/sesion';
@@ -383,12 +383,28 @@ export default function UserManagement() {
                         {user.is_admin && (
                           <Badge className="bg-purple-100 text-purple-700">Admin</Badge>
                         )}
+                        {user.correo_sin_verificar && (
+                          <Badge className="bg-amber-100 text-amber-800">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Correo sin verificar
+                          </Badge>
+                        )}
                       </div>
                       {user.nombre && (
                         <p className="text-sm text-muted-foreground">{user.nombre}</p>
                       )}
                       {user.email && (
                         <p className="text-sm text-muted-foreground">{user.email}</p>
+                      )}
+                      {/* La cuenta se abrió en la app con ese correo, pero nadie
+                          ha demostrado todavía que el correo sea suyo. */}
+                      {user.correo_sin_verificar && (
+                        <p className="text-xs text-amber-700 mt-1 max-w-md">
+                          Se dio de alta en la app y aún no ha confirmado su correo.
+                          Hasta que lo haga no se le pueden dar permisos: pídele que
+                          escriba el código que le llegó, o que use «Soy voluntario
+                          y no tengo contraseña» en la app.
+                        </p>
                       )}
                     </div>
                     
@@ -398,6 +414,8 @@ export default function UserManagement() {
                           variant="outline" 
                           size="sm"
                           onClick={() => startEditPermissions(user)}
+                          // Quitarle los que tuviera sí se puede; darle, no.
+                          disabled={user.correo_sin_verificar && !(user.permissions || []).length}
                         >
                           <Edit2 className="w-4 h-4 mr-1" />
                           Permisos
@@ -418,6 +436,13 @@ export default function UserManagement() {
                   {editingUser === user.username ? (
                     <div className="mt-4 pt-4 border-t">
                       <Label className="mb-2 block">Editar Permisos</Label>
+                      {(user.permisos_del_turno || []).includes('scanner') && (
+                        <p className="text-xs text-emerald-800 mb-3 max-w-md">
+                          El escáner QR ya le llega por su turno en Control de Vueltas
+                          o Corral de salida y animación: no hace falta marcarlo, y
+                          quitarlo aquí no se lo quita.
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
                         {[...PERMISSIONS, ...LEGACY_PERMISSIONS.filter(lp => editPermissions.includes(lp.id))].map(perm => (
                           <label 
@@ -466,6 +491,18 @@ export default function UserManagement() {
                           </Badge>
                         );
                       })}
+                      {/* El escáner que le llega por su turno (Control de Vueltas o
+                          Corral de salida): no se marca ni se quita desde aquí. */}
+                      {(user.permisos_del_turno || []).includes('scanner') &&
+                        !(user.permissions || []).includes('scanner') && (
+                        <Badge
+                          className="bg-emerald-100 text-emerald-800 text-xs"
+                          title="Tiene un turno asignado en Control de Vueltas o Corral de salida y animación. El permiso sale del turno y se pierde si se lo quitan."
+                        >
+                          <QrCode className="w-3 h-3 mr-1" />
+                          Escáner QR · por turno
+                        </Badge>
+                      )}
                       {user.is_admin && (
                         <Badge className="bg-purple-100 text-purple-700 text-xs">
                           Acceso completo

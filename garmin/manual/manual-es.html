@@ -132,6 +132,7 @@ h1 {
 }
 
 .hero p.lede { margin: 0; max-width: 46ch; color: var(--ink-2); }
+.hero p.cafe { margin-top: 10px; font-size: 0.95em; }
 
 .hero-face {
   order: -1;
@@ -527,10 +528,11 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
 <header class="hero">
   <div>
-    <p class="eyebrow">Manual del corredor &#183; versi&#243;n 1.5.0</p>
+    <p class="eyebrow">Manual del corredor &#183; versi&#243;n 1.12.0</p>
     <h1>Backyard</h1>
     <p class="sub">Tu yard, tu ritmo y cu&#225;nto vas a poder descansar.</p>
     <p class="lede">Una app de reloj Garmin para correr una backyard ultra &#8212;la que sea&#8212;. Graba tu actividad, ancla las campanas a la hora en punto y te dice, en cada yard, si al ritmo que llevas vas a llegar a tiempo para sentarte. Funciona sin servidor, sin dorsal y sin conexi&#243;n.</p>
+    <p class="lede cafe">Gratis, y lo seguir&#225; siendo. Si te acompa&#241;a bien, inv&#237;tanos a un caf&#233;: <a href="https://buymeacoffee.com/carroyo">buymeacoffee.com/carroyo</a>.</p>
   </div>
   <div class="hero-face">
     <svg class="face" viewBox="0 0 240 240" role="img" aria-label="Pantalla Margen: m&#225;s ocho minutos veinticuatro segundos, en verde">
@@ -539,7 +541,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
       <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margen</text>
       <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
-      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km &#183; 7:32 /km</text>
+      <text x="120" y="164" fill="var(--face-dim)" font-size="14" text-anchor="middle">7:32 /km</text>
       <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">Faltan 2.6 km &#8776; 19:35</text>
     </svg>
     <figcaption>La pantalla de Margen, la primera que se ve al correr.</figcaption>
@@ -614,19 +616,24 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <tr role="row"><th role="columnheader">Ajuste</th><th role="columnheader">Qu&#233; hace</th><th role="columnheader">De f&#225;brica</th></tr>
       </thead>
       <tbody role="rowgroup">
-        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qu&#233; hace">Fija la hora del d&#237;a a la que suena la campana del yard 1. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De f&#225;brica">Auto</td></tr>
+        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qu&#233; hace">Fija la hora del d&#237;a a la que suena la campana del yard 1. La app la pregunta cada vez que se abre, con la rueda puesta en la siguiente hora en punto. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De f&#225;brica">Auto</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (minutos)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto dura un yard. De 1 a 120 minutos.</td><td role="cell" class="v" data-l="De f&#225;brica">60</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (km)</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;nto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kil&#243;metros</strong>.</td><td role="cell" class="v" data-l="De f&#225;brica">6.7</td></tr>
+        <tr role="row"><td role="cell" class="k">Margen de seguridad</td><td role="cell" data-l="Qu&#233; hace">Minutos que quieres reservar. Se restan al margen antes de ense&#241;arlo y de colorearlo: con 5, un &#171;+0:00&#187; significa que llegas con cinco minutos justos. De 0 a 60.</td><td role="cell" class="v" data-l="De f&#225;brica">0</td></tr>
         <tr role="row"><td role="cell" class="k">Aviso de corral</td><td role="cell" data-l="Qu&#233; hace">Vibraci&#243;n y tono a los 3, 2 y 1 minuto antes de cada campana.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Yard auto Meta</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al volver al punto de salida, por GPS.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Yard auto por distancia</td><td role="cell" data-l="Qu&#233; hace">Marca el yard solo al completar su distancia.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
         <tr role="row"><td role="cell" class="k">Apagar bot&#243;n LAP</td><td role="cell" data-l="Qu&#233; hace">Para quien va totalmente autom&#225;tico y no quiere marcar por un roce. Las marcas autom&#225;ticas siguen funcionando.</td><td role="cell" class="v" data-l="De f&#225;brica">No</td></tr>
         <tr role="row"><td role="cell" class="k">Vibraci&#243;n</td><td role="cell" data-l="Qu&#233; hace">Apaga todas las vibraciones: campanas, marcas y corral.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
         <tr role="row"><td role="cell" class="k">Sonido</td><td role="cell" data-l="Qu&#233; hace">Apaga todos los tonos. Obedece adem&#225;s a los Sonidos del sistema.</td><td role="cell" class="v" data-l="De f&#225;brica">S&#237;</td></tr>
+        <tr role="row"><td role="cell" class="k">Fondo</td><td role="cell" data-l="Qu&#233; hace">Oscuro o claro. En los relojes de pantalla MIP (Forerunner 255 y 955, f&#275;nix 7, Instinct) el claro se lee mejor a plena luz, y en ellos todo el texto va en tinta pura, sin grises; en los AMOLED el oscuro gasta menos bater&#237;a.</td><td role="cell" class="v" data-l="De f&#225;brica">Oscuro</td></tr>
+        <tr role="row"><td role="cell" class="k">Tama&#241;o de texto</td><td role="cell" data-l="Qu&#233; hace">Normal o grande. Con grande, r&#243;tulos y cifras suben una talla donde caben; en las esferas peque&#241;as lo que no cabe se queda en la talla normal.</td><td role="cell" class="v" data-l="De f&#225;brica">Normal</td></tr>
         <tr role="row"><td role="cell" class="k">Pantallas de carrera</td><td role="cell" data-l="Qu&#233; hace">Cu&#225;les se ven y en qu&#233; orden. Ver abajo.</td><td role="cell" class="v" data-l="De f&#225;brica">Las seis</td></tr>
       </tbody>
     </table>
   </div>
+
+  <p>Al final del men&#250;, <strong>Acerca de</strong> ense&#241;a la versi&#243;n y un QR que abre este manual.</p>
 
   <h3>Hora de salida: Auto o fija</h3>
   <p>Con una <strong>hora fija</strong> &#8212;pongamos las 7:00&#8212; la campana del yard 1 es esa hora del d&#237;a, pulses START cuando pulses. Todo lo anterior es calentamiento. Es lo m&#225;s seguro cuando conoces la hora de salida de tu carrera.</p>
@@ -651,7 +658,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Abre la app y d&#233;jala buscando GPS</h3>
-        <p>&#193;brela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos &#8212;cualquier bot&#243;n lo salta&#8212; y detr&#225;s aparece la <strong>l&#237;nea de salida</strong>: el yard que vas a correr, con su distancia y sus minutos, y el estado del GPS.</p>
+        <p>&#193;brela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos &#8212;cualquier bot&#243;n lo salta&#8212; y detr&#225;s aparece la <strong>rueda de la hora de salida</strong>, puesta ya en la siguiente hora en punto del reloj: <kbd>UP</kbd> y <kbd>DOWN</kbd> la mueven, <kbd>START</kbd> confirma, el bot&#243;n de men&#250; deja Auto y <kbd>BACK</kbd> sale de la app. Despu&#233;s viene la <strong>l&#237;nea de salida</strong>: la hora de salida con su cuenta atr&#225;s, el yard que vas a correr, con su distancia y sus minutos, la configuraci&#243;n &#8212;en verde lo que est&#225; encendido&#8212; y el estado del GPS.</p>
         <p>&#193;brela con tiempo, en la carpa. El GPS empieza a buscar en cuanto la abres, y lo que tarde en fijar es mejor que lo tarde ah&#237; y no en la salida.</p>
       </div>
     </li>
@@ -659,6 +666,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div>
         <h3>Comprueba lo que dice la pantalla</h3>
         <p>Si arriba no pone lo que mide tu circuito y cu&#225;nto dura tu yard, es <em>ahora</em> cuando hay que corregirlo: <kbd>UP</kbd> largo abre los ajustes. Y espera a que abajo aparezca <strong>&#171;GPS listo&#187;</strong> en verde: mientras diga &#171;Buscando GPS&#187; en gris, el reloj todav&#237;a no sabe d&#243;nde est&#225;s.</p>
+        <p>En los t&#225;ctiles, tocar un ajuste de la configuraci&#243;n lo enciende o apaga, y tocar la hora vuelve a abrir la rueda. Un toque nunca da la salida: eso es solo el bot&#243;n <kbd>START</kbd>.</p>
       </div>
     </li>
     <li>
@@ -666,6 +674,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <h3>Pulsa START</h3>
         <p><kbd>START</kbd> da la salida sin preguntar nada &#8212; con la cuenta atr&#225;s del director de carrera sonando, un di&#225;logo de confirmaci&#243;n estorba. A partir de ah&#237; el reloj graba.</p>
         <p>Si pulsaste antes de la hora, ver&#225;s la pantalla de <strong>Calentamiento</strong> con la cuenta atr&#225;s hasta tu campana. No es el yard 1: en el archivo de la actividad queda como un tramo aparte y no se suma a tu primer yard.</p>
+        <p>Y si no pulsas, la carrera <strong>arranca sola</strong> al llegar la hora de salida, siempre que la hayas visto por delante en la pantalla. La campana no espera a nadie.</p>
       </div>
     </li>
     <li>
@@ -683,7 +692,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Vuelve a la l&#237;nea antes de la campana</h3>
-        <p>A los tres minutos del final, la pantalla de <strong>corral</strong> se impone sobre lo que estuvieras mirando. Cuando suena la campana, el yard siguiente se abre solo. Ning&#250;n bot&#243;n abre yards: los abre la hora.</p>
+        <p>A los tres minutos del final, si ya marcaste, la pantalla de <strong>corral</strong> se impone sobre lo que estuvieras mirando; si sigues en el circuito, salta un momento en cada aviso y te deja tus pantallas. Cuando suena la campana, el yard siguiente se abre solo. Ning&#250;n bot&#243;n abre yards: los abre la hora.</p>
       </div>
     </li>
     <li>
@@ -703,11 +712,11 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <tr role="row"><td role="cell" class="k">LAP</td><td role="cell" data-l="Antes de salir">&#8212;</td><td role="cell" data-l="En carrera">Marca el yard terminado</td></tr>
         <tr role="row"><td role="cell" class="k">UP / DOWN</td><td role="cell" data-l="Antes de salir">&#8212;</td><td role="cell" data-l="En carrera">Cambia de pantalla</td></tr>
         <tr role="row"><td role="cell" class="k">UP largo</td><td role="cell" data-l="Antes de salir">Ajustes del yard</td><td role="cell" data-l="En carrera">Nada (solo en calentamiento)</td></tr>
-        <tr role="row"><td role="cell" class="k">BACK</td><td role="cell" data-l="Antes de salir">Sale de la app</td><td role="cell" data-l="En carrera">Nada: en carrera no hay retroceso</td></tr>
+        <tr role="row"><td role="cell" class="k">BACK</td><td role="cell" data-l="Antes de salir">Sale de la app (tambi&#233;n desde la rueda de la hora)</td><td role="cell" data-l="En carrera">Nada: en carrera no hay retroceso</td></tr>
       </tbody>
     </table>
   </div>
-  <p>En los relojes t&#225;ctiles, deslizar arriba y abajo hace lo mismo que <kbd>UP</kbd> y <kbd>DOWN</kbd>. Quien corre con guantes usa los botones; quien no, desliza.</p>
+  <p>En los relojes t&#225;ctiles, deslizar arriba y abajo hace lo mismo que <kbd>UP</kbd> y <kbd>DOWN</kbd>. Quien corre con guantes usa los botones; quien no, desliza. La pantalla nunca da la salida, ni para, ni marca yard: eso es solo cosa de <kbd>START</kbd> y <kbd>LAP</kbd>, para que un roce en la carpa no arranque la carrera.</p>
 </section>
 
 <section id="pantallas">
@@ -723,14 +732,14 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <circle cx="120" cy="120" r="93" fill="none" stroke="var(--face-green)" stroke-width="5" stroke-dasharray="362 584" transform="rotate(-90 120 120)"/>
       <text x="120" y="70" fill="var(--face-dim)" font-size="12" text-anchor="middle">Margen</text>
       <text x="120" y="130" fill="var(--face-green)" font-size="44" font-weight="600" text-anchor="middle">+8:24</text>
-      <text x="120" y="163" fill="var(--face-dim)" font-size="11" text-anchor="middle">4.1 / 6.7 km &#183; 7:32 /km</text>
+      <text x="120" y="164" fill="var(--face-dim)" font-size="14" text-anchor="middle">7:32 /km</text>
       <text x="120" y="188" fill="var(--face-dark)" font-size="11" text-anchor="middle">Faltan 2.6 km &#8776; 19:35</text>
     </svg>
     <div class="txt">
       <h3>Margen</h3>
       <p>La raz&#243;n de ser de la app. La cifra grande es el tiempo que te va a <strong>sobrar</strong> &#8212;o faltar&#8212; para cerrar el circuito antes de la campana, al ritmo que llevas. En <span style="color:var(--ok)"><strong>verde</strong></span> descansas; en <span style="color:var(--bad)"><strong>rojo</strong></span>, aprieta.</p>
       <p>Los dos aros cuentan lo mismo sin leer un d&#237;gito: el de fuera, gris, es el <strong>tiempo</strong> consumido del yard; el de dentro, en color, la <strong>distancia</strong> recorrida. Si el de dentro adelanta al de fuera, llegas antes de la campana.</p>
-      <p>Debajo, lo hecho contra el objetivo con tu ritmo actual, y lo que falta con lo que va a costarte.</p>
+      <p>Debajo, tu ritmo de <strong>ahora mismo</strong> &#8212;el de los &#250;ltimos metros, no el medio del yard: quien va a tramos de correr y caminar quiere ver a cu&#225;nto va en este tramo&#8212;, y lo que falta con lo que va a costarte. Lo recorrido no se repite en cifra: ya lo cuenta el aro de dentro, y la p&#225;gina Yard lo da exacto. Si tienes puesto un margen de seguridad, la cifra grande ya lo lleva descontado.</p>
     </div>
   </div>
 
@@ -874,7 +883,9 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <h2>El corral</h2>
   <p class="section-note">Los &#250;ltimos tres minutos de cada yard</p>
 
-  <p>El corral no es una pantalla que elijas: se <strong>impone</strong>. En los &#250;ltimos tres minutos de cualquier cuenta atr&#225;s &#8212;la de la salida incluida&#8212; salta por encima de lo que estuvieras mirando, porque ah&#237; lo urgente es llegar a la l&#237;nea y no tu ritmo. Se retira sola cuando suena la campana.</p>
+  <p>El corral no es una pantalla que elijas: se <strong>impone</strong>. En los &#250;ltimos tres minutos de cualquier cuenta atr&#225;s &#8212;la de la salida incluida&#8212; salta por encima de lo que estuvieras mirando. Se retira sola cuando suena la campana.</p>
+
+  <p>Pero se impone de lleno solo si <strong>ya marcaste</strong> el yard: est&#225;s descansando y lo &#250;nico que queda por hacer es llegar a la l&#237;nea. Si todav&#237;a est&#225;s en el circuito, tu pregunta es otra &#8212;&#191;llego o no llego?&#8212; y el corral no te la tapa: salta cinco segundos en cada aviso, a 3, 2 y 1 minuto, con la vibraci&#243;n, y vuelve a tus pantallas; cualquier bot&#243;n lo quita antes. Mientras tanto, el aro del tiempo del Margen y el de la Vuelta van del color del corral, para que el aviso siga a la vista. Si marcas dentro de esos tres minutos, el corral se queda desde ese momento.</p>
 
   <div class="corral-key">
     <span class="chip"><span class="dot" style="background:var(--warn)"></span>3 min &#8212; amarillo</span>
@@ -882,7 +893,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <span class="chip"><span class="dot" style="background:var(--bad)"></span>1 min &#8212; rojo pleno</span>
   </div>
 
-  <p>A tres y dos minutos es un aro ancho de color sobre fondo negro: se ve el color de un vistazo con casi toda la pantalla apagada, que en un reloj AMOLED es la esquina de la que sale la bater&#237;a. Solo el <strong>&#250;ltimo minuto</strong> se llena de rojo de esquina a esquina, con la cuenta en negro gigante. Es el aviso m&#225;s urgente y el m&#225;s breve, y ah&#237; el gasto se justifica.</p>
+  <p>A tres y dos minutos es un aro ancho de color sobre el fondo &#8212;oscuro o claro, seg&#250;n el ajuste Fondo&#8212;: se ve el color de un vistazo con casi toda la pantalla en el fondo, que con el fondo oscuro en un reloj AMOLED es la esquina de la que sale la bater&#237;a. Solo el <strong>&#250;ltimo minuto</strong> se llena de rojo de esquina a esquina, con la cuenta en negro gigante. Es el aviso m&#225;s urgente y el m&#225;s breve, y ah&#237; el gasto se justifica.</p>
 
   <h3>Avisos que se sienten a ciegas</h3>
   <p>Sin levantar la mu&#241;eca sabes cu&#225;nto queda, porque cada aviso vibra distinto:</p>
@@ -918,7 +929,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>Lo de siempre: pulsas al cruzar. En la mayor&#237;a de los Garmin es el bot&#243;n de abajo a la derecha.</p>
 
   <h4>Yard auto Meta &#8212; viene puesto</h4>
-  <p>La marca cae sola al volver al <strong>punto de salida</strong>, dentro de un radio de 30 metros: m&#225;s ancho que un arco de meta, m&#225;s estrecho que la zona de carpas. Para no marcarte al salir &#8212;que tambi&#233;n es &#171;cerca de la salida&#187;&#8212;, exige llevar recorrida al menos media vuelta.</p>
+  <p>La marca cae sola al volver al <strong>punto de salida</strong>, dentro de un radio de 30 metros: m&#225;s ancho que un arco de meta, m&#225;s estrecho que la zona de carpas. Para no marcarte al salir &#8212;que tambi&#233;n es &#171;cerca de la salida&#187;&#8212; ni a mitad de vuelta en un circuito que pasa por la meta &#8212;un ocho, una ida y vuelta&#8212;, exige llevar recorrido al menos el 90 % de la vuelta.</p>
   <p>El punto lo fija el reloj al dar la salida y, si el GPS a&#250;n no hab&#237;a fijado, lo repesca en la primera campana: a la hora en punto est&#225;s en la l&#237;nea por definici&#243;n.</p>
 
   <h4>Yard auto por distancia</h4>
@@ -952,7 +963,13 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <p>Positivo es descanso previsto. Negativo es que a ese ritmo no llegas.</p>
 
+  <h3>El margen de seguridad</h3>
+  <p>Son los minutos que quieres tener de reserva, y la app los descuenta del margen antes de ense&#241;&#225;rtelo. Si la cuenta dice que vas a llegar con 8 minutos y tienes puestos 5 de seguridad, la pantalla ense&#241;a <strong>+3:00</strong>.</p>
+  <p>El color sigue a la cifra descontada: con 5 minutos de reserva, llegar con 4 ya sale en <span style="color:var(--bad)"><strong>rojo</strong></span>, aunque llegues antes de la campana. El reloj te est&#225; diciendo que no llegas con la reserva que t&#250; pediste; un &#171;+0:00&#187; significa que llegas con los cinco minutos justos.</p>
+  <p>Nada m&#225;s cambia: ni las campanas, ni el corral, ni las vueltas autom&#225;ticas, ni el ritmo con el que se proyecta. Es solo una forma de leer el margen, para quien va a tramos de correr y caminar o quiere sentarse siempre unos minutos y prefiere que el rojo avise antes de que el margen real llegue a cero, en vez de hacer la resta de cabeza en el yard veinte. De f&#225;brica es 0, que deja la app como estaba.</p>
+
   <h3>El ritmo que se ense&#241;a no es el que se multiplica</h3>
+  <p>En la pantalla de Margen el ritmo que se lee es el de ahora mismo. El que se multiplica por lo que falta es otro, el del yard, asentado, porque es el que decide si llegas.</p>
   <p>Con trescientos metros hechos, tu ritmo del yard todav&#237;a da tumbos, y multiplicarlo por los seis kil&#243;metros que faltan har&#237;a saltar el margen minutos enteros de una zancada a otra. Antes la app resolv&#237;a eso call&#225;ndose: no hab&#237;a margen hasta el primer kil&#243;metro, ocho minutos de cada hora sin la cifra que m&#225;s importa.</p>
   <p>Ahora se apoya en un dato mejor. Al abrir el yard, lo que mejor predice tu ritmo no es el yard &#8212;que no tiene nada&#8212; sino <strong>lo que llevas corriendo todo el d&#237;a</strong>. As&#237; que para proyectar se mezclan los dos, pesando por la distancia recorrida:</p>
   <ul>
@@ -1015,7 +1032,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>Falta distancia. Durante el primer minuto largo de cada yard no hay de d&#243;nde sacar un ritmo. Si sigue as&#237; pasados varios minutos, el reloj no est&#225; midiendo distancia: revisa que el GPS haya fijado.</p>
 
   <h3>La meta autom&#225;tica no marca nunca</h3>
-  <p>Comprueba que <strong>Yard auto Meta</strong> est&#233; activado en los ajustes, y que el GPS estuviera fijado. Exige adem&#225;s llevar recorrida al menos media vuelta antes de marcar, para no marcarte nada m&#225;s salir.</p>
+  <p>Comprueba que <strong>Yard auto Meta</strong> est&#233; activado en los ajustes, y que el GPS estuviera fijado. Exige adem&#225;s llevar recorrido al menos el 90 % de la vuelta antes de marcar, para no marcarte nada m&#225;s salir ni al pasar por la meta a mitad de circuito.</p>
 
   <h3>Marqu&#233; el yard y no ha empezado el siguiente</h3>
   <p>Es correcto: marcar cierra el yard, no abre el siguiente. El siguiente lo abre la campana, a la hora en punto. Mientras tanto est&#225;s en descanso, que es la pantalla verde.</p>
@@ -1040,7 +1057,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <div class="table-wrap">
     <table role="table">
       <tbody role="rowgroup">
-        <tr role="row"><td role="cell" class="k">Versi&#243;n</td><td role="cell">1.5.0 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
+        <tr role="row"><td role="cell" class="k">Versi&#243;n</td><td role="cell">1.12.0 &#8212; tambi&#233;n en el reloj, en Ajustes &#8594; Acerca de</td></tr>
         <tr role="row"><td role="cell" class="k">Relojes</td><td role="cell">111 modelos: f&#275;nix (hasta la generaci&#243;n 9), epix, Forerunner, Venu, v&#237;voactive, Instinct AMOLED, MARQ, Descent, D2 y Approach</td></tr>
         <tr role="row"><td role="cell" class="k">Permisos</td><td role="cell">Grabaci&#243;n de actividad (FIT) y posici&#243;n (GPS)</td></tr>
         <tr role="row"><td role="cell" class="k">Red</td><td role="cell">Ninguna. No sale a internet, no manda datos y no necesita el tel&#233;fono para correr</td></tr>
@@ -1055,10 +1072,15 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <p>Pru&#233;bala en un entrenamiento, con el yard puesto en 5 o 10 minutos y una distancia corta. En una pasada ves la campana, el corral, la marca y el descanso, y llegas a la salida de verdad sabiendo lo que va a pasar. Una backyard no es sitio para descubrir c&#243;mo funciona una app.</p>
   </div>
 
+  <div class="note">
+    <span class="lbl">&#191;Te sirve la app?</span>
+    <p>Backyard es gratis y lo seguir&#225; siendo. Si te acompa&#241;&#243; bien y quieres agradecerla, puedes invitarnos a un caf&#233; en <a href="https://buymeacoffee.com/carroyo">buymeacoffee.com/carroyo</a>. Y si algo no te cuadra, escr&#237;benos desde la ficha de la tienda: as&#237; es como ha mejorado hasta ahora.</p>
+  </div>
+
 </section>
 
 <footer>
-  <span>Backyard 1.5.0 &#183; manual en espa&#241;ol</span>
+  <span>Backyard 1.12.0 &#183; manual en espa&#241;ol</span>
   <span>Connect IQ Store &#183; apps.garmin.com</span>
   <span>backyardultrasantodomingo.com</span>
 </footer>

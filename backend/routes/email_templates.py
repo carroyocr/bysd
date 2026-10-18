@@ -66,6 +66,7 @@ MERGE_FIELDS = {
             {"key": "{{volunteer_edit_link}}", "label": "Link de edición", "example": "https://.../voluntarios/editar/abc123"},
             {"key": "{{volunteer_turnos}}", "label": "Lista de turnos (solo en 'Asignación de Varios Turnos')", "example": "Puesto, turno, fecha y horario de cada turno"},
             {"key": "{{volunteer_turnos_total}}", "label": "Cantidad de turnos asignados", "example": "3"},
+            {"key": "{{volunteer_turnos_asignados}}", "label": "Turnos asignados con fecha, hora de inicio y de término (al enviar desde Enviar Correos)", "example": "Sábado 17 de octubre de 2026 · Hidratación · 7:00 AM a 11:00 AM"},
             {"key": "{{rechazo_motivo}}", "label": "Motivo del rechazo (solo en las plantillas de rechazo)", "example": "Ese puesto ya quedó cubierto"},
         ]
     },
@@ -108,6 +109,7 @@ MERGE_FIELDS = {
 # Quien edite una plantilla desde el panel escribe HTML suelto y eso sigue
 # valiendo: esto es solo el punto de partida.
 from services import correo_estilo as e
+from services import correo_turnos
 
 
 def _correo(*bloques: str) -> str:
@@ -148,6 +150,29 @@ DEFAULT_TEMPLATES = [
             e.h1("Registro confirmado"),
             e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
             "{{proximos_pasos}}",
+            e.boton("Editar mi registro", "{{athlete_edit_link}}"),
+            e.nota(_PIE_CARRERA),
+        ),
+    },
+    {
+        "id": "athlete_registration_pending_payment",
+        "name": "Inscripción recibida, falta el pago - Atleta",
+        "description": (
+            "Se envía al inscribirse en una carrera: la inscripción queda recibida y solo se "
+            "confirma al verificar la transferencia. Lleva los datos de la cuenta"
+        ),
+        "subject": "Recibimos tu inscripción a {{race_name}}: falta confirmar el pago",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Recibimos tu inscripción"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu inscripción a <strong>{{race_name}}</strong> quedó registrada, pero "
+                "<strong>solo queda confirmada cuando verifiquemos tu transferencia</strong>."),
+            e.p("Los cupos se aseguran por orden de pago: mientras no pagues, tu cupo no está "
+                "garantizado y otra persona que pague antes puede quedárselo."),
+            "{{proximos_pasos}}",
+            e.separador(),
             e.boton("Editar mi registro", "{{athlete_edit_link}}"),
             e.nota(_PIE_CARRERA),
         ),
@@ -202,6 +227,39 @@ DEFAULT_TEMPLATES = [
             "{{volunteer_turnos}}",
             e.p("Llega 15 minutos antes de cada uno."),
             e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "volunteer_turnos_y_app",
+        "name": "Tus turnos y la app - Voluntario",
+        "description": (
+            "Para enviarla desde Enviar Correos a los voluntarios con turnos asignados: "
+            "sus turnos con fecha y horario, la descarga de la app y cómo gestionar o "
+            "cancelar su participación"
+        ),
+        "subject": "Tus turnos como voluntario - Backyard Ultra Santo Domingo",
+        "category": "voluntarios",
+        "merge_sources": ["race", "volunteer"],
+        "content": _correo(
+            e.h1("Tus turnos como voluntario"),
+            e.p("Hola <strong>{{volunteer_nombre}}</strong>,"),
+            e.p("Gracias por ser parte del equipo. Estos son los turnos que tienes asignados:"),
+            "{{volunteer_turnos_asignados}}",
+            e.p("Llega 15 minutos antes del inicio de cada turno."),
+            e.h2("Descarga la app"),
+            e.p("Con <strong>BYSD Live</strong> llevas tus turnos en el teléfono: entra en "
+                "«Staff» con tu correo para verlos, confirmarlos y recibir un aviso antes "
+                "de cada uno."),
+            correo_turnos.botones_de_tiendas(),
+            e.h2("Gestiona tu participación"),
+            e.p("Desde la app o desde el portal web de voluntarios puedes consultar tus datos "
+                "y tus turnos, confirmar que asistirás y pedir otros turnos disponibles."),
+            e.boton("Ir al portal de voluntarios", correo_turnos.PORTAL_VOLUNTARIOS),
+            e.h2("Si no puedes participar"),
+            e.p("Si por algún motivo no vas a poder acompañarnos, te agradecemos que entres a "
+                "la app o al portal web y canceles tu participación. Así otra persona puede "
+                "cubrir tu turno a tiempo."),
+            e.nota("Recibes este correo porque estás registrado como voluntario."),
         ),
     },
     {
@@ -417,6 +475,27 @@ DEFAULT_TEMPLATES = [
         ),
     },
     {
+        "id": "staff_verification",
+        "name": "Verificación de Email - Equipo",
+        "description": "Se envía a una cuenta de staff creada en la app, para que confirme su correo",
+        "subject": "Confirma tu correo - {{race_name}}",
+        "category": "sistema",
+        "merge_sources": ["race", "general"],
+        "content": _correo(
+            e.h1("Confirma tu correo"),
+            e.p("Hay una cuenta del equipo de <strong>{{race_name}}</strong> con este correo. "
+                "Para ver tu ficha de voluntario, tus turnos y tu carnet, confirma que es tuyo "
+                "con este código:"),
+            e.codigo("{{verification_code}}"),
+            e.boton("Escribir el código", "{{frontend_url}}/verificar-cuenta"),
+            e.p("Te pedirá también la contraseña con la que creaste la cuenta. El código caduca "
+                "en 30 minutos; si se te pasa, en esa misma página puedes pedir otro."),
+            e.nota("Si no creaste esta cuenta, no le des el código a nadie: sin él, esa cuenta no "
+                   "puede ver ningún dato tuyo. Y si eres voluntario y quieres entrar, en la app "
+                   "elige «Soy voluntario y no tengo contraseña»."),
+        ),
+    },
+    {
         "id": "admin_credentials",
         "name": "Credenciales de Administrador",
         "description": "Se envía cuando se crea un nuevo usuario admin",
@@ -464,6 +543,136 @@ DEFAULT_TEMPLATES = [
             e.cifra("Vueltas", "{{athlete_laps_completed}}"),
             e.cifra("Kilómetros", "{{athlete_total_km}}"),
             e.p("Nos vemos en la próxima edición."),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "recordatorio_pago",
+        "name": "Recordatorio de pago - con plazo o cancelar",
+        "description": (
+            "El recordatorio de la fecha límite, con los dos enlaces: pedir plazo "
+            "abonando una parte, o cancelar y liberar el cupo"
+        ),
+        "subject": "Tu cupo en {{race_name}}: hasta el 30 de septiembre",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Falta tu pago"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Tu inscripción a <strong>{{race_name}}</strong> sigue pendiente de pago. "
+                "El plazo para completarla vence el <strong>30 de septiembre</strong>."),
+            e.separador(),
+            e.h2("¿Necesitas más tiempo?"),
+            e.p("No hace falta que pierdas el cupo. Puedes abonar una parte ahora "
+                "—desde RD$ 1,000— y proponer tú mismo la fecha en la que saldas el "
+                "resto, hasta el <strong>15 de noviembre</strong>. Con el abono "
+                "aprobado, tu cupo queda reservado."),
+            e.boton("Pedir más tiempo para pagar", "{{athlete_plazo_link}}"),
+            e.separador(),
+            e.h2("¿Ya no vas a participar?"),
+            e.p("Dínoslo y liberas el cupo para alguien de la lista de espera. "
+                "Se agradece más de lo que parece."),
+            e.boton("Cancelar mi inscripción", "{{athlete_cancel_link}}"),
+            e.separador(),
+            e.p("Si ya pagaste y no nos has enviado el comprobante, hazlo desde tu "
+                "perfil y no hace falta que hagas nada más.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "cupo_no_garantizado",
+        "name": "Cupo no garantizado - inscritos sin pago",
+        "description": (
+            "Para enviarla desde Enviar Correos a los inscritos con el cupo por confirmar: "
+            "la inscripción sigue activa pero el cupo se asegura por orden de pago, con "
+            "los enlaces para pagar, abonar una parte o cancelar"
+        ),
+        "subject": "Tu cupo en {{race_name}} aún no está garantizado",
+        "category": "pagos",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Tu inscripción sigue activa, pero tu cupo no está garantizado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("El plazo para pagar la inscripción a <strong>{{race_name}}</strong> venció el "
+                "30 de septiembre. Tu inscripción sigue activa, pero desde ahora los cupos se "
+                "aseguran <strong>por orden de pago</strong>."),
+            e.p("Eso quiere decir que si alguien más completa su registro y paga antes, "
+                "podrías perder tu derecho a participar."),
+            e.h2("Asegura tu cupo"),
+            e.p("Haz la transferencia y sube el comprobante desde tu perfil. En cuanto lo "
+                "revisemos, tu cupo queda asegurado."),
+            e.boton("Pagar y asegurar mi cupo", "{{frontend_url}}/mi-perfil"),
+            e.h2("¿Necesitas más tiempo?"),
+            e.p("Sigue en pie la opción de pagar por partes: abona ahora desde RD$ 1,000 y "
+                "salda el resto hasta el <strong>15 de noviembre</strong>. Con el abono "
+                "aprobado, tu cupo queda asegurado igual."),
+            e.boton("Abonar una parte", "{{athlete_plazo_link}}"),
+            e.separador(),
+            e.h2("¿Ya no vas a participar?"),
+            e.p("Dínoslo y liberas el cupo para otra persona. Se agradece más de lo que parece."),
+            e.boton("Cancelar mi inscripción", "{{athlete_cancel_link}}"),
+            e.separador(),
+            e.p("Si ya pagaste y no nos has enviado el comprobante, súbelo desde tu perfil "
+                "y no hace falta que hagas nada más.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_solicitado",
+        "name": "Plazo de pago - solicitud recibida",
+        "description": "Se envía cuando el atleta pide plazo y envía su abono",
+        "subject": "Recibimos tu solicitud - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Solicitud recibida"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Recibimos tu abono y tu propuesta de fecha. La revisamos y te "
+                "confirmamos por este mismo medio."),
+            e.linea("Abonaste", "RD$ {{plazo_monto}}"),
+            e.linea("Queda por pagar", "RD$ {{plazo_restante}}"),
+            e.linea("Fecha que propones", "{{plazo_fecha}}"),
+            e.separador(),
+            e.p("Tu cupo queda reservado en cuanto aprobemos la solicitud.", apagado=True),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_aprobado",
+        "name": "Plazo de pago - aprobado",
+        "description": "Se envía cuando la organización aprueba el plazo",
+        "subject": "Tu cupo está reservado - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("Cupo reservado"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Aprobamos tu abono: tu cupo en <strong>{{race_name}}</strong> queda "
+                "reservado."),
+            e.linea("Abonado", "RD$ {{plazo_monto}}"),
+            e.linea("Queda por pagar", "RD$ {{plazo_restante}}"),
+            e.linea("Fecha acordada", "{{plazo_fecha}}"),
+            e.separador(),
+            e.p("Cuando completes el pago, sube el comprobante desde tu perfil."),
+            e.nota("{{race_name}}"),
+        ),
+    },
+    {
+        "id": "plazo_rechazado",
+        "name": "Plazo de pago - no aprobado",
+        "description": "Se envía cuando la organización no aprueba el plazo",
+        "subject": "Sobre tu solicitud de plazo - {{race_name}}",
+        "category": "atletas",
+        "merge_sources": ["race", "athlete"],
+        "content": _correo(
+            e.h1("No pudimos aprobar tu solicitud"),
+            e.p("Hola <strong>{{athlete_nombre_completo}}</strong>,"),
+            e.p("Revisamos tu solicitud de plazo para <strong>{{race_name}}</strong> y "
+                "no pudimos aprobarla."),
+            e.linea("Motivo", "{{plazo_motivo}}"),
+            e.separador(),
+            e.p("Puedes volver a enviarla corrigiendo lo que haga falta:"),
+            e.boton("Enviar otra solicitud", "{{athlete_plazo_link}}"),
             e.nota("{{race_name}}"),
         ),
     },
@@ -655,6 +864,19 @@ async def get_merge_fields():
     return MERGE_FIELDS
 
 
+def _con_el_diseno_de_hoy(plantilla: dict) -> dict:
+    """La plantilla tal como la ve el panel: con el diseno de hoy.
+
+    Las guardadas llevan el HTML del dia en que se sembraron. Al enviarse se
+    ponen al dia solas (`render_template`); aqui se hace lo mismo al servirlas,
+    para que el editor ensene lo que de verdad va a salir y, si se edita y se
+    guarda, quede ya escrita con el diseno nuevo.
+    """
+    if plantilla and plantilla.get("content"):
+        plantilla = {**plantilla, "content": e.al_dia(plantilla["content"])}
+    return plantilla
+
+
 @router.get("/")
 async def get_templates(db=Depends(get_db)):
     """Get all email templates"""
@@ -681,8 +903,8 @@ async def get_templates(db=Depends(get_db)):
         # Refresh list if we added any
         if len(existing_ids) < len(DEFAULT_TEMPLATES):
             templates = await db.email_templates.find({}, {"_id": 0}).to_list(100)
-    
-    return templates
+
+    return [_con_el_diseno_de_hoy(t) for t in templates]
 
 
 @router.get("/{template_id}")
@@ -692,8 +914,8 @@ async def get_template(template_id: str, db=Depends(get_db)):
     
     if not template:
         raise HTTPException(status_code=404, detail="Plantilla no encontrada")
-    
-    return template
+
+    return _con_el_diseno_de_hoy(template)
 
 
 @router.put("/{template_id}")

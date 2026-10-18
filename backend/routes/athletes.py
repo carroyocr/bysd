@@ -12,7 +12,7 @@ import html
 import logging
 import re
 
-from services import rate_limit
+from services import correo_turnos, cupos, rate_limit
 from services.auth import (
     ALGORITHM,
     ATHLETE_SECRET_KEY,
@@ -339,19 +339,23 @@ async def register_athlete(data: AthleteRegisterRequest, request: Request = None
     from services import cuentas as servicio_cuentas
 
     try:
-        cuenta = await servicio_cuentas.crear(
-            database,
-            email=data.email,
-            password=data.password,
-            nombre=data.nombre,
-            apellidos=data.apellidos,
-            roles=[servicio_cuentas.ATLETA],
-            email_verified=False,
-            athlete_profile_id=resultado.inserted_id,
-        )
-        await database.athletes.update_one(
-            {"_id": resultado.inserted_id}, {"$set": {"account_id": cuenta["_id"]}}
-        )
+        # Quien ya tenia cuenta —de espectador o del equipo— no recibe otra: el
+        # perfil se le ata al verificar el correo, que es cuando demuestra que
+        # es suyo. Ver `cuentas.enlazar_corredor`.
+        if not await servicio_cuentas.por_email(database, data.email):
+            cuenta = await servicio_cuentas.crear(
+                database,
+                email=data.email,
+                password=data.password,
+                nombre=data.nombre,
+                apellidos=data.apellidos,
+                roles=[servicio_cuentas.ATLETA],
+                email_verified=False,
+                athlete_profile_id=resultado.inserted_id,
+            )
+            await database.athletes.update_one(
+                {"_id": resultado.inserted_id}, {"$set": {"account_id": cuenta["_id"]}}
+            )
     except Exception as e:
         # Que falle esto no puede tumbar un alta que por lo demas fue bien: la
         # persona queda como quedaban todas antes de la cuenta unica y el script
@@ -466,13 +470,19 @@ async def verify_email(data: VerifyEmailRequest, request: Request = None):
     # El mismo cambio, en la cuenta. Si no, el login —que ya lee de `accounts`—
     # seguiria diciendo que el correo esta sin verificar despues de haberlo
     # verificado, y la persona quedaria dando vueltas sin ningun error visible.
+    #
+    # Y si la cuenta existia de antes —quien era voluntario y ahora se hace el
+    # perfil de corredor—, aqui se le ata el perfil y gana el rol. Con cuenta,
+    # la sesion sale ya con todos sus roles: en la app ve sus dos zonas sin
+    # tener que salir y volver a entrar.
     from services import cuentas as servicio_cuentas
-    await servicio_cuentas.sincronizar_credenciales(
-        database, athlete["email"], email_verified=True
-    )
+    cuenta = await servicio_cuentas.enlazar_corredor(database, athlete)
+    cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
 
-    # Generate token
-    token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
+    if cuenta:
+        token = servicio_cuentas.emitir_token(cuenta)
+    else:
+        token = generate_athlete_token(str(athlete["_id"]), athlete["email"])
     
     return {
         "success": True,
@@ -559,6 +569,9 @@ async def login_athlete(data: AthleteLoginRequest, request: Request = None):
 
     cuenta = await servicio_cuentas.autenticar(database, data.email, data.password)
     if cuenta:
+        # Quien abrio su cuenta como voluntario y luego se hizo el perfil de
+        # corredor: el rol se le suma aqui, en vez de decirle que no lo tiene.
+        cuenta = await servicio_cuentas.poner_al_dia(database, cuenta)
         if servicio_cuentas.ATLETA not in (cuenta.get("roles") or []):
             raise HTTPException(
                 status_code=403,
@@ -820,6 +833,7 @@ async def reset_password(data: ResetPasswordRequest, request: Request = None):
     await servicio_cuentas.sincronizar_credenciales(
         database, athlete["email"],
         password_hash=hash_password(data.new_password), email_verified=True,
+        cerrar_sesiones=True,
     )
 
     return {"success": True, "message": "Contraseña actualizada"}
@@ -1178,9 +1192,12 @@ async def get_my_races(authorization: str = Header(None)):
     
     # Get race details for each registration
     result = []
+    cupos_por_carrera = {}
     for reg in registrations:
         race_code = reg.get("race_code")
         race_config = await database.race_configurations.find_one({"code": race_code})
+        if race_code not in cupos_por_carrera:
+            cupos_por_carrera[race_code] = await cupos.resumen(database, race_code, race_config)
         
         # Generate edit_token if missing
         edit_token = reg.get("edit_token")
@@ -1191,6 +1208,19 @@ async def get_my_races(authorization: str = Header(None)):
                 {"$set": {"edit_token": edit_token}}
             )
         
+        # El cupo solo tiene algo que decir en una carrera que aun no se ha
+        # corrido; en una ya cerrada no hay nada que asegurar.
+        en_juego = bool(race_config) and not race_config.get("finished_at")
+        cupo = cupos.para_el_corredor(reg, cupos_por_carrera[race_code]) if en_juego else None
+
+        # Las apps ya instaladas no conocen `cupo`: deciden si se puede pagar
+        # mirando si el estado es "waitlist". Se les da el estado que les hace
+        # acertar: en espera si ya no queda cupo que pagar, inscrito si queda
+        # —tambien para quien venia de la lista de espera de antes—.
+        estado = reg.get("status", "registered")
+        if cupo and estado in ("registered", "waitlist") and cupo["situacion"] != cupos.ASEGURADO:
+            estado = "waitlist" if cupo["situacion"] == cupos.EN_ESPERA else "registered"
+
         result.append({
             "registration_id": str(reg["_id"]),
             "race_code": race_code,
@@ -1198,9 +1228,21 @@ async def get_my_races(authorization: str = Header(None)):
             "race_date": race_config.get("race_date") if race_config else None,
             "bib": reg.get("bib"),
             "categoria": reg.get("categoria"),
-            "status": reg.get("status", "registered"),
+            "status": estado,
             "payment_status": reg.get("payment_status", "pending"),
             "payment_receipt_status": reg.get("payment_receipt", {}).get("status") if reg.get("payment_receipt") else None,
+            # Solo lo que el perfil necesita pintar: el estado y la fecha
+            # acordada. El comprobante del abono se queda en el panel.
+            "plazo_pago": (
+                {
+                    "estado": reg["plazo_pago"].get("estado"),
+                    "fecha_propuesta": reg["plazo_pago"].get("fecha_propuesta"),
+                    "monto_abonado": reg["plazo_pago"].get("monto_abonado"),
+                }
+                if reg.get("plazo_pago") else None
+            ),
+            # Si su cupo esta asegurado o por confirmar, con el aviso que toca.
+            "cupo": cupo,
             "edit_token": edit_token,
             "laps_completed": reg.get("laps_completed", 0),
             "is_active": race_config.get("is_active", False) if race_config else False
@@ -1254,13 +1296,12 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
         except:
             next_bib = 1
     
-    # Determine if this registration exceeds capacity -> waitlist
-    max_participants = race.get("max_participants", 120)
-    current_count = await database.registrations.count_documents({
-        "race_code": data.race_code,
-        "status": {"$nin": ["cancelled", "waitlist"]}
-    })
-    is_waitlist = current_count >= max_participants
+    # Los cupos se aseguran pagando, no inscribiendose (`services/cupos.py`):
+    # mientras quede alguno que nadie haya asegurado ni tenga en revision, la
+    # inscripcion nueva entra directa y puede pagar. Solo va a lista de espera
+    # cuando ya no queda ninguno.
+    estado_cupos = await cupos.resumen(database, data.race_code, race)
+    is_waitlist = estado_cupos["para_pagar"] <= 0
     reg_status = "waitlist" if is_waitlist else "registered"
 
     # Create registration with profile data + event-specific fields
@@ -1325,35 +1366,17 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
                 data=merge_data
             )
         else:
-            # Dynamic content based on date: before Oct 2026 vs Oct 2026+
-            now = datetime.now(timezone.utc)
-            payment_cutoff = datetime(2026, 10, 1, tzinfo=timezone.utc)
-            if now < payment_cutoff:
-                merge_data["proximos_pasos"] = """
-                    <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">
-                        <strong>¡Felicidades!</strong> Tu registro a la carrera está confirmado.
-                    </p>
-                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
-                        <p style="margin: 0; color: #374151; line-height: 1.6;">
-                            4 meses antes del evento recibirás un correo de recordatorio para que completes el pago de la inscripción. Tendrás <strong>30 días</strong> para completarlo. De lo contrario, tu espacio será reasignado.
-                        </p>
-                    </div>
-                """
-            else:
-                merge_data["proximos_pasos"] = """
-                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0 0 10px 0;"><strong>Próximos pasos:</strong></p>
-                        <ol style="color: #4b5563; margin: 0; padding-left: 20px;">
-                            <li>Completa el pago de inscripción</li>
-                            <li>Espera la confirmación de tu BIB</li>
-                            <li>Revisa la guía del corredor</li>
-                        </ol>
-                    </div>
-                """
+            # Inscribirse ya no confirma nada: el cupo se asegura al verificar
+            # la transferencia. El correo lleva la cuenta y el enlace para
+            # subir el comprobante, que quien paga primero se queda el cupo.
+            from services import correo_inscripcion
 
+            merge_data["proximos_pasos"] = correo_inscripcion.bloque_de_pago(
+                race_config, registration_doc["edit_token"]
+            )
             await send_email_with_template(
                 db=database,
-                template_id="athlete_registration_confirmation",
+                template_id="athlete_registration_pending_payment",
                 to_email=athlete["email"],
                 data=merge_data
             )
@@ -1367,10 +1390,10 @@ async def register_for_race(data: RaceRegistrationRequest, authorization: str = 
     _asyncio.create_task(avisar_atleta(
         database,
         athlete["email"],
-        "Ya estás en lista de espera" if is_waitlist else "Inscripción confirmada",
+        "Ya estás en lista de espera" if is_waitlist else "Inscripción recibida",
         (f"Te apuntamos a {(race or {}).get('name') or data.race_code}. Te avisamos en cuanto se libere un cupo."
          if is_waitlist else
-         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Tu dorsal es el #{registration_doc['bib']}."),
+         f"Estás inscrito en {(race or {}).get('name') or data.race_code}. Queda confirmada cuando verifiquemos tu pago: los cupos se aseguran por orden de pago."),
         {"tipo": "inscripcion"},
     ))
 
@@ -2520,7 +2543,8 @@ async def admin_set_password(athlete_id: str, data: AdminSetPasswordRequest, aut
 
     from services import cuentas as servicio_cuentas
     await servicio_cuentas.sincronizar_credenciales(
-        database, athlete.get("email"), password_hash=nuevo_hash, email_verified=True
+        database, athlete.get("email"), password_hash=nuevo_hash, email_verified=True,
+        cerrar_sesiones=True,
     )
     return {"success": True, "message": "Contraseña actualizada"}
 
@@ -2582,6 +2606,7 @@ class EmailRecipientFilter(BaseModel):
     sponsor_category: Optional[str] = None  # categoría de la propuesta (solo filtro 'sponsors')
     volunteer_race_code: Optional[str] = None  # carrera del voluntariado (solo filtro 'volunteers'; vacío = todas)
     volunteer_evento: Optional[str] = None  # 'carrera' o 'campeonato' (solo filtro 'volunteers'; vacío = ambos)
+    volunteer_solo_asignados: Optional[bool] = False  # solo quien ya tiene algún turno asignado (filtro 'volunteers')
 
 
 REG_STATUSES = {"pre_registered", "registered", "confirmed", "active", "retired", "dns", "winner"}
@@ -2604,6 +2629,18 @@ def _inscribed_registration_query(race_code, reg_status, payment):
     elif payment == "in_review":
         query["payment_status"] = {"$ne": "paid"}
         query["payment_receipt.status"] = "pending_review"
+    elif payment == "por_confirmar":
+        # Con el cupo por confirmar: ni pagado, ni cortesia, ni con un abono
+        # aprobado o enviado, ni con un comprobante en revision. Es a quien va
+        # el aviso de «tu cupo no esta garantizado»: los demas ya movieron
+        # ficha y decirles lo mismo seria injusto. Tambien entran los de la
+        # lista de espera de antes, que ahora pueden pagar como cualquiera.
+        if not reg_status:
+            query["status"] = {"$ne": "cancelled"}
+        query["payment_status"] = {"$ne": "paid"}
+        query["inscripcion_cortesia"] = {"$ne": True}
+        query["plazo_pago.estado"] = {"$nin": ["aprobado", "pendiente"]}
+        query["payment_receipt.status"] = {"$ne": "pending_review"}
     elif payment:
         raise HTTPException(status_code=400, detail="Filtro de pago inválido")
     return query
@@ -2635,6 +2672,20 @@ async def _template_global_data(database) -> dict:
     }
 
 
+def _enlaces_del_destinatario(edit_token) -> dict:
+    """Los enlaces que dependen de la inscripcion, con la misma forma que en
+    `build_athlete_data`: una sola definicion de cada direccion."""
+    from services.template_email_service import BASE_URL
+
+    if not edit_token:
+        return {"athlete_plazo_link": "", "athlete_cancel_link": "", "athlete_edit_link": ""}
+    return {
+        "athlete_plazo_link": f"{BASE_URL}/plazo-de-pago?token={edit_token}",
+        "athlete_cancel_link": f"{BASE_URL}/cancelar-registro?token={edit_token}",
+        "athlete_edit_link": f"{BASE_URL}/inscripcion/editar/{edit_token}",
+    }
+
+
 def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
     """Combina los datos globales con los del destinatario, exponiendo tanto las
     variables del compositor ({{nombre}}) como las de plantilla ({{athlete_*}})."""
@@ -2650,7 +2701,59 @@ def _template_recipient_data(global_data: dict, recipient: dict) -> dict:
         "athlete_apellidos": apellidos,
         "athlete_nombre_completo": recipient.get("nombre_completo", "") or "",
         "athlete_email": recipient.get("email", "") or "",
+        "athlete_bib": recipient.get("bib", "") or "",
+        # Las mismas, con el nombre que usan las plantillas de voluntarios.
+        "volunteer_nombre": nombre,
+        "volunteer_apellidos": apellidos,
+        "volunteer_nombre_completo": recipient.get("nombre_completo", "") or "",
+        "volunteer_email": recipient.get("email", "") or "",
+        # Quien no tiene turnos —o no es voluntario— lo lee dicho, no en blanco.
+        "volunteer_turnos_asignados": correo_turnos.SIN_TURNOS,
+        "volunteer_turnos_total": "0",
+        # Los enlaces personales de cada uno. Sin inscripcion no hay token y
+        # se quedan vacios: la plantilla que los use es para inscritos.
+        **_enlaces_del_destinatario(recipient.get("edit_token")),
+        # Lo que se haya buscado aparte para este destinatario (sus turnos).
+        **(recipient.get("merge_extra") or {}),
     }
+
+
+async def _con_turnos_de_voluntario(database, recipients: list, contenido: str, evento=None) -> list:
+    """Anade a cada destinatario sus turnos asignados, si el correo los usa.
+
+    Solo se buscan cuando el contenido lleva `{{volunteer_turnos_asignados}}`
+    o `{{volunteer_turnos_total}}`: el resto de los correos del redactor no
+    tienen por que pagar esa consulta. A quien llega sin nombre —los correos
+    escritos a mano— se le pone el de su registro de voluntario, para que una
+    prueba enviada a uno mismo no salude a nadie.
+    """
+    if "{{volunteer_turnos_asignados}}" not in contenido and "{{volunteer_turnos_total}}" not in contenido:
+        return recipients
+
+    correos = [r["email"] for r in recipients]
+    por_correo = await correo_turnos.datos_por_destinatario(database, correos, evento)
+
+    sin_nombre = [r["email"] for r in recipients if not r.get("nombre")]
+    registros = {}
+    if sin_nombre:
+        async for reg in database.volunteer_registrations.find(
+            {"email": {"$in": sin_nombre}}, {"_id": 0, "email": 1, "nombre": 1, "apellidos": 1}
+        ).sort("created_at", -1):
+            registros.setdefault(reg["email"], reg)
+
+    completos = []
+    for r in recipients:
+        reg = registros.get(r["email"]) or {}
+        nombre = r.get("nombre") or reg.get("nombre") or ""
+        apellidos = r.get("apellidos") or reg.get("apellidos") or ""
+        completos.append({
+            **r,
+            "nombre": nombre,
+            "apellidos": apellidos,
+            "nombre_completo": r.get("nombre_completo") or f"{nombre} {apellidos}".strip(),
+            "merge_extra": {**(r.get("merge_extra") or {}), **por_correo.get(r["email"], {})},
+        })
+    return completos
 
 
 def _contact_recipient(email, nombre_contacto, fallback_nombre, source):
@@ -2718,8 +2821,12 @@ def _volunteer_evento_query(evento):
     return {"evento": evento}
 
 
-async def _volunteer_recipients(database, race_code, evento):
+async def _volunteer_recipients(database, race_code, evento, solo_asignados=False):
     """Voluntarios postulados, sacados de `volunteer_registrations`.
+
+    `solo_asignados` deja solo a quien ya tiene algun turno asignado (en el
+    evento elegido, si se eligio uno): es a quien tiene sentido mandarle el
+    correo de sus turnos.
 
     Es la colección donde vive el voluntariado desde que existe el formulario
     público: una ficha por persona y evento, con su `race_code`. La colección
@@ -2754,6 +2861,12 @@ async def _volunteer_recipients(database, race_code, evento):
             "nombre_completo": f"{nombre} {apellidos}".strip(),
             "source": "voluntario",
         })
+
+    if solo_asignados:
+        con_turno = await correo_turnos.turnos_asignados(
+            database, [r["email"] for r in recipients], evento
+        )
+        recipients = [r for r in recipients if r["email"] in con_turno]
     return _dedupe_recipients(recipients)
 
 
@@ -2827,6 +2940,52 @@ async def admin_email_recipient_options(authorization: str = Header(None)):
     }
 
 
+async def _con_enlaces_de_inscripcion(database, recipients: list, race_code=None) -> list:
+    """Adjunta a cada destinatario el token de su inscripcion.
+
+    De ahi salen los enlaces personales del correo -- pedir plazo, cancelar --,
+    que hasta ahora no existian en el compositor: la plantilla los pedia y el
+    envio no los traia, asi que los botones salian apuntando a ninguna parte.
+
+    El token se crea si falta. Muchas inscripciones nunca lo tuvieron porque se
+    generaba al entrar al perfil, y son justo las de quien no ha pasado por ahi
+    -- que es la gente a la que va este correo.
+    """
+    correos = {(r.get("email") or "").lower() for r in recipients if r.get("email")}
+    if not correos:
+        return recipients
+
+    filtro = {"email": {"$in": list(correos)}}
+    if not race_code:
+        activa = await database.race_configurations.find_one({"is_active": True}, {"code": 1})
+        race_code = (activa or {}).get("code")
+    if race_code:
+        filtro["race_code"] = race_code
+
+    inscripciones = await database.registrations.find(
+        filtro, {"email": 1, "edit_token": 1, "bib": 1}
+    ).to_list(5000)
+
+    por_correo = {}
+    for inscripcion in inscripciones:
+        token = inscripcion.get("edit_token")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            await database.registrations.update_one(
+                {"_id": inscripcion["_id"]}, {"$set": {"edit_token": token}}
+            )
+        por_correo[(inscripcion.get("email") or "").lower()] = {
+            "edit_token": token,
+            "bib": str(inscripcion.get("bib") or ""),
+        }
+
+    for r in recipients:
+        datos = por_correo.get((r.get("email") or "").lower())
+        if datos:
+            r.update(datos)
+    return recipients
+
+
 @router.post("/admin/email-recipients")
 async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: str = Header(None)):
     """Admin: Get list of email recipients based on filter"""
@@ -2844,10 +3003,14 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
                     "email": email, "nombre": "", "apellidos": "",
                     "nombre_completo": "", "source": "manual"
                 })
+        recipients = await _con_enlaces_de_inscripcion(database, recipients, data.race_code)
         return {"recipients": recipients, "total": len(recipients)}
 
     if data.filter_type == "volunteers":
-        return await _volunteer_recipients(database, data.volunteer_race_code, data.volunteer_evento)
+        return await _volunteer_recipients(
+            database, data.volunteer_race_code, data.volunteer_evento,
+            solo_asignados=bool(data.volunteer_solo_asignados),
+        )
 
     if data.filter_type == "press":
         from routes.prensa import TIPOS_MEDIO
@@ -2967,6 +3130,7 @@ async def admin_get_email_recipients(data: EmailRecipientFilter, authorization: 
             if str(a["_id"]) not in inscribed_ids:
                 recipients.append(build_athlete(a, "no inscrito"))
 
+    recipients = await _con_enlaces_de_inscripcion(database, recipients, data.race_code)
     return {"recipients": recipients, "total": len(recipients)}
 
 
@@ -3012,12 +3176,12 @@ def _wrap_email_html(subject: str, content: str) -> str:
             font-family: {estilo.FUENTE} !important;
             font-size: 17px !important;
             line-height: 1.6 !important;
-            color: {estilo.TINTA} !important;
+            color: {estilo.TEXTO} !important;
         }}
         .bysd-cuerpo p {{ margin: 0 0 16px 0 !important; }}
         .bysd-cuerpo h1, .bysd-cuerpo h2, .bysd-cuerpo h3 {{
             font-family: {estilo.FUENTE} !important;
-            font-weight: 700 !important;
+            font-weight: 400 !important;
             color: {estilo.TINTA} !important;
             margin: 32px 0 12px 0 !important;
             line-height: 1.3 !important;
@@ -3027,7 +3191,7 @@ def _wrap_email_html(subject: str, content: str) -> str:
         .bysd-cuerpo h3 {{ font-size: 17px !important; }}
         .bysd-cuerpo ul, .bysd-cuerpo ol {{ margin: 0 0 16px 0 !important; padding-left: 22px !important; }}
         .bysd-cuerpo li {{ margin: 0 0 8px 0 !important; }}
-        .bysd-cuerpo a {{ color: {estilo.TINTA} !important; text-decoration: underline !important; }}
+        .bysd-cuerpo a {{ color: {estilo.ENLACE} !important; text-decoration: none !important; }}
         .bysd-cuerpo img {{ max-width: 100% !important; height: auto !important; }}
         .bysd-cuerpo blockquote {{
             margin: 0 0 16px 0 !important;
@@ -3068,12 +3232,20 @@ async def admin_preview_email(data: AdminEmailPreviewRequest, authorization: str
 
     _verify_email_admin(authorization)
 
-    # Sample recipient so the admin sees how merge variables render
+    # Destinatario de mentira, para que se vea como quedan las variables. Lleva
+    # un token de ejemplo a proposito: sin el, los enlaces personales salian
+    # vacios en la previa y parecian rotos cuando en el envio real funcionan.
     sample = {
         "nombre": "Juan",
         "apellidos": "Pérez",
         "nombre_completo": "Juan Pérez",
         "email": "juan.perez@ejemplo.com",
+        "bib": "001",
+        "edit_token": "TOKEN-DE-EJEMPLO",
+        "merge_extra": {
+            "volunteer_turnos_asignados": correo_turnos.bloque_de_turnos(correo_turnos.TURNOS_DE_EJEMPLO),
+            "volunteer_turnos_total": str(len(correo_turnos.TURNOS_DE_EJEMPLO)),
+        },
     }
 
     if data.template_mode:
@@ -3118,6 +3290,11 @@ async def admin_send_email(data: AdminEmailRequest, authorization: str = Header(
     if data.template_mode:
         from services.template_email_service import render_template
         template_global = await _template_global_data(database)
+        solo_voluntarios = data.recipients.filter_type == "volunteers"
+        recipients = await _con_turnos_de_voluntario(
+            database, recipients, f"{data.subject} {data.content}",
+            evento=data.recipients.volunteer_evento if solo_voluntarios else None,
+        )
 
     messages = []
     recipient_by_email = {}

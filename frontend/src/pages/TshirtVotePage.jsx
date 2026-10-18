@@ -83,7 +83,7 @@ export default function TshirtVotePage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
             <Shirt className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-display text-4xl sm:text-5xl text-foreground mb-3">Vota la Camiseta</h1>
+          <h1 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground mb-3">Vota la Camiseta</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
             Estas son las propuestas de camiseta para el evento. Vota por tu favorita —
             puedes cambiar tu decisión en cualquier momento. Solo cuenta un voto por perfil.

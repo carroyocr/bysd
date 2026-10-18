@@ -12,5 +12,8 @@
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>
     <property id="corralAlert" type="boolean">true</property>
+    <!-- El margen de seguridad, igual que en la app: minutos que se restan
+         al margen. RaceState lo lee en los dos proyectos. -->
+    <property id="marginReserve" type="number">0</property>
     <property id="autoLap" type="boolean">false</property>
 </properties>

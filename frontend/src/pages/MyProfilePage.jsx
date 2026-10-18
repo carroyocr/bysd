@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap, ChevronDown } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, Trophy, Calendar, Search, CheckCircle, Loader2, Heart, Edit2, LogOut, Camera, Upload, AlertCircle, Info, ExternalLink, XCircle, MessageCircle, Unlink, GraduationCap, ChevronDown, CalendarClock } from 'lucide-react';
 import { COUNTRIES } from '../data/countries';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import CapacitacionesTab from '../components/CapacitacionesTab';
@@ -69,7 +69,7 @@ const ProfileSection = ({ title, children, className = '', defaultOpen = false }
 
 const SectionHeader = ({ title, subtitle }) => (
   <div className="text-center space-y-4">
-    <h2 className="font-display text-4xl sm:text-5xl text-foreground">{title}</h2>
+    <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">{title}</h2>
     {subtitle && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>}
   </div>
 );
@@ -1394,7 +1394,7 @@ export default function MyProfilePage() {
                       <div className="space-y-4">
                         {myRaces.map(race => {
                           const canCancel = !race.payment_receipt_status && race.status === 'registered';
-                          const receiptPending = race.payment_receipt_status === 'pending';
+                          const receiptPending = race.payment_receipt_status === 'pending_review';
                           // Desde la lista de espera no se paga: aun no hay cupo,
                           // y cobrar antes obliga a devolver el dinero. Con un
                           // comprobante ya enviado, otro solo duplica la revision.
@@ -1402,6 +1402,10 @@ export default function MyProfilePage() {
                             race.status !== 'waitlist' &&
                             race.payment_status !== 'paid' &&
                             !race.payment_receipt_status;
+                          // Pedir plazo tiene sentido en el mismo caso que subir
+                          // el comprobante, salvo que ya se haya pedido uno.
+                          const plazo = race.plazo_pago || null;
+                          const showPlazoLink = showPaymentLink && !plazo;
                           
                           return (
                             <div key={race.registration_id} className="p-4 border rounded-lg" data-testid={`race-${race.registration_id}`}>
@@ -1414,17 +1418,50 @@ export default function MyProfilePage() {
                                   {race.bib && <Badge variant="outline">BIB #{race.bib}</Badge>}
                                   <div>
                                     <Badge variant={race.payment_status === 'paid' ? 'default' : receiptPending ? 'outline' : 'secondary'}>
-                                      {race.payment_status === 'paid' ? 'Pagado' : receiptPending ? 'Comprobante en revision' : 'Pendiente de pago'}
+                                      {race.payment_status === 'paid' ? 'Pagado'
+                                        : receiptPending ? 'Comprobante en revision'
+                                        : race.cupo?.situacion === 'asegurado' ? 'Cupo asegurado'
+                                        : race.cupo?.situacion === 'en_espera' ? 'En lista de espera'
+                                        : race.cupo?.situacion === 'por_confirmar' ? 'Cupo por confirmar'
+                                        : 'Pendiente de pago'}
                                     </Badge>
                                   </div>
                                 </div>
                               </div>
+                              {/* El cupo se asegura pagando, no inscribiéndose: quien
+                                  aún no paga lo lee aquí con las mismas palabras
+                                  del correo. */}
+                              {race.cupo?.mensaje && race.cupo.situacion !== 'en_revision' && (
+                                <div
+                                  className={`mt-3 p-3 rounded-lg text-sm ${race.cupo.situacion === 'en_espera' ? 'bg-muted text-muted-foreground' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}
+                                  data-testid={`cupo-aviso-${race.registration_id}`}
+                                >
+                                  <p>{race.cupo.mensaje}</p>
+                                  {race.cupo.mensaje_abono && <p className="mt-2">{race.cupo.mensaje_abono}</p>}
+                                  {race.cupo.situacion === 'por_confirmar' && race.cupo.disponibles > 0 && (
+                                    <p className="mt-2 font-semibold">
+                                      Quedan {race.cupo.disponibles} de {race.cupo.limite} cupos por asegurar.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                               {/* Action buttons */}
                               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t">
                                 {showPaymentLink && (
                                   <Button size="sm" variant="default" onClick={() => window.open(`/subir-comprobante?token=${race.edit_token}`, '_blank')} data-testid={`upload-receipt-btn-${race.registration_id}`}>
                                     <Upload className="w-3 h-3 mr-2" /> Subir Comprobante de Pago
                                   </Button>
+                                )}
+                                {showPlazoLink && (
+                                  <Button size="sm" variant="outline" onClick={() => window.open(`/plazo-de-pago?token=${race.edit_token}`, '_blank')} data-testid={`plazo-btn-${race.registration_id}`}>
+                                    <CalendarClock className="w-3 h-3 mr-2" /> Solicitar mas tiempo para pagar
+                                  </Button>
+                                )}
+                                {plazo?.estado === 'pendiente' && (
+                                  <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu solicitud de plazo esta en revision</p>
+                                )}
+                                {plazo?.estado === 'aprobado' && (
+                                  <p className="text-xs text-emerald-600 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Plazo aprobado: saldas el {plazo.fecha_propuesta}</p>
                                 )}
                                 {receiptPending && (
                                   <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu comprobante esta siendo revisado por el equipo</p>

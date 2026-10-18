@@ -19,8 +19,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from routes.staff_account import equipo_con_correo_demostrado
 from services import carnet_staff, marca, rate_limit, races
-from services.auth import require_admin, require_permission
+from services.auth import require_permission
 from services.env_utils import get_env
 
 logger = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ def _pdf(carnets: list, nombre_archivo: str, titulo: str) -> StreamingResponse:
 
 
 @router.get("/mi-perfil/carnet")
-async def mi_carnet(payload: dict = Depends(require_admin)):
+async def mi_carnet(payload: dict = Depends(equipo_con_correo_demostrado)):
     """El carnet de quien lo pide, uno por cada evento en que trabaja.
 
     Solo los de su edicion mas reciente: si ya fue voluntario el ano pasado,
