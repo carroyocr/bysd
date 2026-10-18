@@ -4,6 +4,7 @@ import {
   Save, AlertCircle, CheckCircle2, Search, RotateCw, AlertTriangle, Trash2,
   Clock, ChevronLeft, Edit3, UserCog, Trophy, Star,
   MoreHorizontal, Play, Plus, UserX, Ban, QrCode, ClipboardEdit, Download,
+  Archive, ArchiveRestore,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -22,7 +23,7 @@ export default function RaceControlPanel({
   puedeControlar = true,
   puedeVerVueltas = true,
 }) {
-  const { raceName, raceCode, conCarrera } = useAdminRace();
+  const { raceName, raceCode, conCarrera, recargar: recargarCarreras } = useAdminRace();
   // Que parte se esta mirando. Quien solo tenga permiso para una de las dos
   // entra directo en ella, sin pestanas que no puede abrir.
   // Lo que se ve durante la carrera, en una sola llamada: corredores cruzados
@@ -535,6 +536,40 @@ export default function RaceControlPanel({
     setTimeout(() => setMessage(null), 3000);
   };
 
+  // Cerrar y reabrir actuan sobre la carrera elegida en el selector. El boton
+  // de Configuracion cierra la carrera publicada en el sitio, que el dia del
+  // Mundial era la de enero: desde aqui no hay forma de equivocarse de carrera.
+  const handleCerrarCarrera = async () => {
+    if (!window.confirm(
+      `Cerrar ${raceName || raceCode}.\n\n` +
+      'El reloj deja de contar vueltas y los resultados quedan congelados. ' +
+      'No se borra ni se mueve nada; si se cierra antes de tiempo, se puede reabrir.\n\n' +
+      '¿Cerrar la carrera?'
+    )) return;
+    try {
+      const response = await adminFetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/close/${raceCode}`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'No se pudo cerrar la carrera');
+      showMessage(data.message || `Carrera ${raceCode} cerrada`, 'success');
+      await Promise.all([loadData(), recargarCarreras()]);
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  };
+
+  const handleReabrirCarrera = async () => {
+    if (!window.confirm(`¿Reabrir ${raceName || raceCode}? El reloj vuelve a contar vueltas.`)) return;
+    try {
+      const response = await adminFetch(`${process.env.REACT_APP_BACKEND_URL}/api/race-config/reopen/${raceCode}`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || 'No se pudo reabrir la carrera');
+      showMessage(data.message || `Carrera ${raceCode} reabierta`, 'success');
+      await Promise.all([loadData(), recargarCarreras()]);
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  };
+
   const handleResetDatabase = async () => {
     if (resetConfirmation !== 'REINICIO') {
       showMessage('Debe escribir REINICIO para confirmar', 'error');
@@ -781,7 +816,17 @@ export default function RaceControlPanel({
               <DropdownMenuContent align="end" className="w-72">
                 {/* Solo lo que es de la carrera en si. Los correos de cierre y
                     la limpieza de mensajes y suscripciones viven en
-                    Configuración > Carrera, que es donde se cierra la edición. */}
+                    Configuración > Carrera. Cerrar y reabrir van aquí porque
+                    es lo que actúa sobre la carrera elegida en el selector. */}
+                {carreraTerminada ? (
+                  <DropdownMenuItem onSelect={handleReabrirCarrera} className="gap-2">
+                    <ArchiveRestore className="w-4 h-4" /> Reabrir esta carrera
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onSelect={handleCerrarCarrera} className="gap-2">
+                    <Archive className="w-4 h-4" /> Cerrar esta carrera
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onSelect={() => setShowResetModal(true)}
                   className="gap-2 text-destructive focus:text-destructive"

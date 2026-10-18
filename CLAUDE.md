@@ -66,6 +66,6 @@ Desde agosto de 2026 conviven varias carreras (el Campeonato Mundial de octubre 
 
 Dar la salida (`POST /api/race/start`) también pasa los inscritos de `registered` a `active`: es lo que los convierte en corredores en carrera.
 
-Cerrar una carrera (`POST /api/race-config/close/{code}`) no mueve ni borra datos, solo congela. Cada dato lleva su `race_code` y se queda donde está.
+Cerrar una carrera (`POST /api/race-config/close/{code}`) no mueve ni borra datos, solo congela. Cada dato lleva su `race_code` y se queda donde está. **Se cierra desde el menú «···» de En Vivo → Control de Carrera**, que actúa sobre la carrera elegida en el selector (y desde ahí se reabre); el botón «Cerrar esta carrera» de Configuración cierra la carrera **publicada** en el sitio, que el día del Mundial era la de enero.
 
 Ver **WORKFLOW.md** para el detalle completo del flujo de desarrollo y despliegue.
