@@ -4,6 +4,7 @@ import useTransmision, { horaCorta, reloj } from './useTransmision';
 import usePatrocinadores, { urlLogo } from './usePatrocinadores';
 import useCharla from './useCharla';
 import useSuper from './useSuper';
+import useMundial from './useMundial';
 import useMensajes from './useMensajes';
 import { Heart } from 'lucide-react';
 import Globo, { globoDe } from './Globo';
@@ -26,6 +27,7 @@ import './obs.css';
  *   /obs/patrocinador-esquina?race=BYSD-2027                 (sin clave: no lleva datos de carrera)
  *   /obs/charla?actividad=<id>&race=BYSD-2027&expositor=1   (sin clave: no lleva datos de carrera)
  *   /obs/super?id=<id>   (dos líneas de texto libre, escritas en el panel)
+ *   /obs/latam?filas=20  (sin clave: el ranking de Latinoamérica del Mundial, de la hoja pública de la organización)
  *   /obs/mensajes?race=BYSD-2027&recientes=10&segundos=10     (sin clave: el muro de apoyo es público)
  *   /obs/mensajes?race=BYSD-2027&recientes=0&espera=30&sobre=barra
  */
@@ -73,6 +75,7 @@ export default function ObsPage() {
       || (vista === 'super' && !!superTexto.datos),
   );
   const charla = useCharla(params.get('actividad'), vista === 'charla', params.get('expositor'));
+  const mundial = useMundial(vista === 'latam');
   // Los mensajes de apoyo: cuántos de los últimos se rotan cuando no llega
   // nada nuevo (0 = solo los nuevos), cuánto dura cada uno y cuánto se retiene
   // cada mensaje desde que se publica, por si lo reportan antes de salir.
@@ -177,6 +180,43 @@ export default function ObsPage() {
           )}
         </div>
       )
+    );
+  }
+
+  if (vista === 'latam') {
+    // El ranking de Latinoamérica del Mundial por equipos, en la esquina
+    // inferior derecha, donde va la clasificación. No sale de nuestra base
+    // sino de la hoja pública de la organización, que es la oficial: aquí
+    // solo se filtran los países latinos y se numeran. Sin clave.
+    if (mundial.error) return enLienzo(<div className="obs-aviso">{mundial.error}</div>);
+    const m = mundial.datos;
+    if (!m) return enLienzo(null);
+    const equipos = m.equipos.slice(0, filas);
+    return enLienzo(
+      <div className="obs-latam">
+        <h2>
+          <span>Ranking Latinoamérica</span>
+          {m.vuelta && <span className="obs-latam-vuelta">Vuelta {m.vuelta}</span>}
+        </h2>
+        <div className="obs-fila obs-latam-cabecera">
+          <span className="obs-puesto">#</span>
+          <span className="obs-bib">País</span>
+          <span className="obs-nombre" />
+          <span className="obs-latam-cifra">En pie</span>
+          <span className="obs-latam-cifra">Vueltas</span>
+          <span className="obs-latam-mundial">Mundial</span>
+        </div>
+        {equipos.map((e) => (
+          <div key={e.codigo} className={`obs-fila${e.en_pie === 0 ? ' obs-fuera' : ''}`}>
+            <span className="obs-puesto">{e.puesto}</span>
+            <span className="obs-bib">{e.codigo}</span>
+            <span className="obs-nombre">{e.pais}</span>
+            <span className="obs-latam-cifra">{e.en_pie}</span>
+            <span className="obs-latam-cifra">{e.vueltas}</span>
+            <span className="obs-latam-mundial">{e.puesto_mundial}º</span>
+          </div>
+        ))}
+      </div>
     );
   }
 

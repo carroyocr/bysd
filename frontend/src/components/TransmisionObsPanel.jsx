@@ -62,6 +62,13 @@ const VISTAS = [
     ancho: 1920,
     alto: 1080,
   },
+  {
+    id: 'latam',
+    nombre: 'Ranking Latinoamérica (Mundial)',
+    descripcion: 'Los equipos de Latinoamérica del Campeonato Mundial en su orden, con el código del país, corredores en pie, vueltas sumadas y puesto mundial, en la esquina inferior derecha. Sale de la hoja pública que publica la organización del Mundial, no de nuestros datos, y se relee cada medio minuto. Con &filas=5 se acorta. No necesita la clave.',
+    ancho: 1920,
+    alto: 1080,
+  },
 ];
 
 /**

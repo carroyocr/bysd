@@ -18,7 +18,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from services import laps, races
+from services import laps, mundial, races
 from services.auth import require_permission
 
 router = APIRouter(prefix="/api/overlay", tags=["overlay"])
@@ -159,6 +159,24 @@ async def estado_para_la_transmision(
         "clasificacion": tabla,
         "llegadas": recientes,
     }
+
+
+# ==================== RANKING DE LATINOAMERICA DEL MUNDIAL ====================
+
+
+@router.get("/mundial/latam")
+async def ranking_latam_del_mundial(filas: int = 20):
+    """Los equipos de Latinoamerica del Campeonato Mundial, en su orden.
+
+    Sale de la hoja publica de la organizacion (ver services/mundial.py),
+    no de nuestra base: es el ranking oficial por equipos de todos los
+    paises, filtrado a los nuestros. Publico, sin clave: la hoja lo es.
+    """
+    try:
+        datos = await mundial.ranking_latam()
+    except Exception:
+        raise HTTPException(status_code=503, detail="No se pudo leer la hoja del Mundial")
+    return {**datos, "equipos": datos["equipos"][:max(1, min(filas, 30))]}
 
 
 # ==================== LAS DIRECCIONES, DESDE EL PANEL ====================
