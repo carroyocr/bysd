@@ -174,6 +174,23 @@
   text-overflow: ellipsis;
 }
 
+/* Super de texto libre: dos lineas cuyo tamano llega del panel (40 y 28 px
+   al 100 %). Al 135 % suman 110 px con el hueco, que es lo que cabe en la
+   barra; por eso el panel no deja pasar de ahi. */
+.obs-super-linea1 {
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.obs-super-linea2 {
+  line-height: 1.2;
+  color: var(--azul-claro);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* El mismo bloque, suelto en la esquina inferior derecha: la vista que lleva
    solo al patrocinador. Conserva el filete rojo de la izquierda y añade el de
    arriba, que es el que tienen las piezas que van sin barra. */
@@ -365,6 +382,44 @@
   font-size: 19px;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------- Ranking de Latinoamérica del Mundial ----------
+   La misma caja de la clasificación, más ancha: lleva el país entero y tres
+   cifras (corredores en pie, vueltas sumadas y puesto mundial). Con los
+   catorce equipos latinos mide unos 680 px de alto: cabe de sobra. */
+
+.obs-latam {
+  position: absolute;
+  bottom: 60px;
+  right: 70px;
+  width: 720px;
+  background: var(--caja);
+  border-top: 4px solid var(--rojo);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+}
+.obs-latam h2 {
+  margin: 0;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 20px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: var(--azul);
+  color: #fff;
+}
+.obs-latam .obs-latam-vuelta { font-size: 17px; letter-spacing: 2px; color: var(--azul-claro); }
+.obs-latam .obs-fila { padding: 7px 20px; }
+.obs-latam .obs-fila .obs-bib { font-size: 17px; letter-spacing: 1px; }
+.obs-latam .obs-latam-cifra { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+.obs-latam .obs-latam-mundial { width: 92px; text-align: right; color: var(--azul-claro); font-size: 19px; font-variant-numeric: tabular-nums; }
+/* Cabecera de las columnas, en letra chica y sin el chip rojo */
+.obs-latam .obs-latam-cabecera { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--azul-claro); border-top: 0; padding-top: 4px; padding-bottom: 4px; }
+.obs-latam .obs-latam-cabecera .obs-bib { background: transparent; color: var(--azul-claro); font-size: 14px; text-align: left; }
+.obs-latam .obs-latam-cabecera .obs-latam-mundial { font-size: 14px; }
 
 /* ---------- Aviso de configuración ---------- */
 
