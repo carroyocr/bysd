@@ -2,7 +2,8 @@ import React from 'react';
 import { MapPin, Clock, Calendar, Users } from 'lucide-react';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import FotoAlbum from './FotoAlbum';
-import { FOTOS_EVENTO } from '../content/portada';
+import useAlbum from '../lib/useAlbum';
+import { FOTOS_EVENTO, resolverFotos } from '../content/portada';
 
 // Pagina del evento en el rediseño editorial (oct-2026): los cuatro datos van
 // en columnas separadas por filetes, sin tarjetas, y la explicacion del
@@ -14,6 +15,7 @@ const Eyebrow = ({ children }) => (
 
 export default function EventInfo() {
   const { getShortDate, raceName, raceLocation } = useRaceConfig();
+  const fotos = resolverFotos(useAlbum(), FOTOS_EVENTO);
 
   const infoCards = [
     {
@@ -131,7 +133,7 @@ export default function EventInfo() {
             </div>
 
             <div className="grid sm:grid-cols-3 gap-4">
-              {FOTOS_EVENTO.map((foto) => (
+              {fotos.map((foto) => (
                 <figure key={foto.clave}>
                   <FotoAlbum foto={foto} ancho={1000} className="w-full aspect-[4/3] object-cover" />
                   <figcaption className="mt-2 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">

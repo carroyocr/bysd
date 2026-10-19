@@ -5,12 +5,18 @@ import { useRaceConfig } from '../contexts/RaceConfigContext';
 import DescargarApp from './DescargarApp';
 import PresentedBy from './PresentedBy';
 import FotoAlbum from './FotoAlbum';
-import { FOTOS_PORTADA } from '../content/portada';
+import useAlbum from '../lib/useAlbum';
+import { FOTOS_PORTADA, resolverFotos } from '../content/portada';
 
-// Portada del rediseño editorial (oct-2026): blanco, tipografía condensada muy
-// grande y un collage de dos fotos de la edición anterior en lugar del logo
+// Portada del rediseño editorial (oct-2026): blanco, tipografía condensada
+// grande y un mosaico de cinco fotos de la edición anterior en lugar del logo
 // flotando sobre un degradado. El logo sigue ahí, como pegatina sobre el
-// collage. Los textos y los datos son los de siempre.
+// mosaico. Los textos y los datos son los de siempre.
+//
+// La portada entera —texto, mosaico y cifras— cabe en una pantalla de
+// escritorio sin hacer scroll: la sección mide el alto de la ventana, el
+// contenido se centra y las cifras se pegan abajo. En el teléfono se apila
+// y se lee bajando, como todo lo demás.
 
 const ESTADISTICAS = [
   { valor: '6.7', texto: 'KM por vuelta' },
@@ -25,9 +31,9 @@ function Punto() {
 
 function Estadistica({ valor, texto }) {
   return (
-    <div className="py-6 sm:py-8 md:border-r border-border last:border-r-0 md:pl-6 md:first:pl-0">
-      <div className="font-display text-6xl sm:text-7xl lg:text-8xl leading-none text-foreground">{valor}</div>
-      <div className="mt-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{texto}</div>
+    <div className="py-4 lg:py-5 md:border-r border-border last:border-r-0 md:pl-6 md:first:pl-0">
+      <div className="font-display text-4xl sm:text-5xl lg:text-6xl leading-none text-foreground">{valor}</div>
+      <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{texto}</div>
     </div>
   );
 }
@@ -35,6 +41,8 @@ function Estadistica({ valor, texto }) {
 export default function Hero() {
   const { getShortDate, getEditionLabel, getLogoUrl, config } = useRaceConfig();
   const navigate = useNavigate();
+  const album = useAlbum();
+  const fotos = resolverFotos(album, FOTOS_PORTADA);
   const showInscription = config?.show_preregistration === true;
   // La transmision no es de la carrera publicada sino de la que se corre: el
   // backend la manda en `transmision_en_vivo` mientras alguna este en carrera
@@ -43,10 +51,10 @@ export default function Hero() {
   const showTracking = config?.show_tracking_page !== false;
 
   return (
-    <section className="bg-background pt-28 sm:pt-32 overflow-hidden">
-      <div className="container mx-auto px-4">
-        <div className="max-w-[1240px] mx-auto">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-14 items-center">
+    <section className="bg-background pt-24 sm:pt-28 lg:pt-20 lg:min-h-screen lg:flex lg:flex-col overflow-hidden">
+      <div className="container mx-auto px-4 lg:flex-1 lg:flex lg:flex-col">
+        <div className="max-w-[1240px] w-full mx-auto lg:flex-1 lg:flex lg:flex-col lg:justify-center lg:py-4">
+          <div className="grid lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-12 items-center">
             {/* Texto */}
             <div className="animate-slide-up">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-muted-foreground">
@@ -64,22 +72,21 @@ export default function Hero() {
                 </a>
               </div>
 
-              {/* Titulo y naming van juntos: el naming es parte de la marca,
-                  no una linea suelta. */}
-              <h1 className="font-display uppercase text-[clamp(64px,10vw,150px)] leading-[0.88] tracking-tight text-foreground mt-5 mb-6">
-                Backyard
-                <br />
-                Ultra
+              {/* Dos lineas: el nombre y la ciudad en cobalto. El tamaño va
+                  con el ancho de la ventana para que las dos quepan en la
+                  columna sin partirse. */}
+              <h1 className="font-display uppercase text-[clamp(52px,6.4vw,100px)] leading-[0.9] tracking-tight text-foreground mt-4 mb-5">
+                Backyard Ultra
                 <br />
                 <span className="text-primary">Santo Domingo</span>
               </h1>
 
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-lg leading-relaxed">
+              <p className="text-base sm:text-lg text-muted-foreground max-w-md leading-relaxed">
                 Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.
               </p>
 
               {transmision && (
-                <div className="space-y-2 mt-8" data-testid="transmision-en-vivo">
+                <div className="space-y-2 mt-6" data-testid="transmision-en-vivo">
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <a
                       href={transmision.url}
@@ -111,7 +118,7 @@ export default function Hero() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 mt-8">
+              <div className="flex flex-wrap items-center gap-3 mt-6">
                 {showInscription && (
                   <button
                     onClick={() => navigate('/mi-perfil')}
@@ -126,39 +133,36 @@ export default function Hero() {
                 <DescargarApp />
               </div>
 
-              <PresentedBy size="md" className="mt-8" />
+              <PresentedBy size="md" className="mt-6" />
             </div>
 
-            {/* Collage: una foto vertical grande, una horizontal encima con
-                marco blanco y el logo como pegatina. Las alturas son fijas
-                porque las fotos van en absoluto. */}
-            <div className="relative h-[380px] sm:h-[520px] lg:h-[640px] mt-8 lg:mt-0 animate-scale-in">
-              <FotoAlbum
-                foto={FOTOS_PORTADA.grande}
-                ancho={1400}
-                loading="eager"
-                className="absolute right-0 top-0 w-[78%] h-full object-cover"
-              />
-              <FotoAlbum
-                foto={FOTOS_PORTADA.chica}
-                ancho={1000}
-                loading="eager"
-                className="absolute left-0 -bottom-6 lg:-bottom-10 w-[48%] aspect-[4/3] object-cover border-[6px] lg:border-8 border-background shadow-strong"
-              />
+            {/* Mosaico: una foto vertical a la izquierda y cuatro en
+                cuadrícula a la derecha, con el logo como pegatina. El alto
+                va con la ventana en escritorio para que la portada entera
+                quepa sin scroll. */}
+            <div
+              className="relative grid grid-cols-[1.15fr_1fr_1fr] grid-rows-2 gap-2 sm:gap-3 h-[400px] sm:h-[500px] lg:h-[min(60vh,600px)] animate-scale-in"
+              data-testid="portada-mosaico"
+            >
+              <FotoAlbum foto={fotos[0]} ancho={1200} loading="eager" className="row-span-2 w-full h-full object-cover" />
+              <FotoAlbum foto={fotos[1]} ancho={800} loading="eager" className="w-full h-full object-cover" />
+              <FotoAlbum foto={fotos[2]} ancho={800} loading="eager" className="w-full h-full object-cover" />
+              <FotoAlbum foto={fotos[3]} ancho={800} loading="eager" className="w-full h-full object-cover" />
+              <FotoAlbum foto={fotos[4]} ancho={800} loading="eager" className="w-full h-full object-cover" />
               <img
                 src={getLogoUrl('home')}
                 alt="Backyard Ultra Santo Domingo"
-                className="absolute -right-2 -top-5 lg:-right-5 lg:-top-8 w-24 sm:w-32 lg:w-36 drop-shadow-xl"
+                className="absolute -left-3 -bottom-4 sm:-left-5 sm:-bottom-6 w-24 sm:w-28 lg:w-32 drop-shadow-xl"
               />
             </div>
           </div>
+        </div>
 
-          {/* Cifras */}
-          <div className="grid grid-cols-2 md:grid-cols-4 mt-20 sm:mt-28 lg:mt-32 border-t-2 border-foreground">
-            {ESTADISTICAS.map((e) => (
-              <Estadistica key={e.texto} {...e} />
-            ))}
-          </div>
+        {/* Cifras: pegadas abajo en escritorio */}
+        <div className="max-w-[1240px] w-full mx-auto grid grid-cols-2 md:grid-cols-4 mt-12 lg:mt-0 border-t-2 border-foreground">
+          {ESTADISTICAS.map((e) => (
+            <Estadistica key={e.texto} {...e} />
+          ))}
         </div>
       </div>
     </section>
