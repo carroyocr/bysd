@@ -96,12 +96,12 @@ export default function RunnersSection() {
   ];
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
           <div className="text-center space-y-4">
-            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+            <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">
               Sección Corredores
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -260,7 +260,7 @@ export default function RunnersSection() {
           )}
 
           {/* Download Manual */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-start gap-4">
@@ -326,7 +326,7 @@ export default function RunnersSection() {
           )}
 
           {/* Route Map Image */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium overflow-hidden">
+          <Card className="bg-secondary border-border overflow-hidden">
             <CardContent className="p-0">
               <img
                 src="/circuito-backyard-ultra.png"
@@ -337,7 +337,7 @@ export default function RunnersSection() {
           </Card>
 
           {/* Download Route GPX */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex items-start gap-4">
@@ -594,7 +594,7 @@ export default function RunnersSection() {
           </Tabs>
 
           {/* Additional Important Info */}
-          <Card className="bg-gradient-to-br from-secondary/30 to-muted/30 border-border shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-4">
               <h3 className="font-display text-2xl text-foreground">Información Adicional Importante</h3>
               <div className="grid md:grid-cols-2 gap-6 text-sm text-muted-foreground">

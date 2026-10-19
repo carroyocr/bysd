@@ -30,7 +30,7 @@ const staticNavLinks = [
 ];
 
 const endNavLinks = [
-  { href: '/mi-perfil', label: 'Mi Perfil', icon: User },
+  { href: '/mi-perfil', label: 'Mi Perfil', icon: User, highlight: true },
 ];
 
 export default function Navigation() {
@@ -159,8 +159,8 @@ export default function Navigation() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)] transition-all duration-300 ${
         isScrolled
-          ? 'bg-background/98 backdrop-blur-md shadow-soft border-b border-border'
-          : 'bg-background/90 backdrop-blur-sm border-b border-border/50'
+          ? 'bg-background border-b border-border shadow-soft'
+          : 'bg-background border-b border-border'
       }`}
     >
       <div className="container mx-auto px-4">
@@ -173,7 +173,7 @@ export default function Navigation() {
             onClick={handleLinkClick}
             className="flex items-center gap-3 group shrink-0"
           >
-            <div className="w-16 h-16 rounded-full overflow-hidden shadow-medium group-hover:shadow-glow transition-all duration-300 shrink-0">
+            <div className="w-12 h-12 rounded-full overflow-hidden shrink-0">
               <img
                 src={menuLogo}
                 alt="Backyard Ultra Icon"
@@ -181,7 +181,7 @@ export default function Navigation() {
               />
             </div>
             <div className="hidden md:block whitespace-nowrap">
-              <div className="font-display text-xl text-foreground leading-none">BACKYARD ULTRA</div>
+              <div className="font-display uppercase text-xl text-foreground leading-none">Backyard Ultra</div>
               <div className="text-xs text-muted-foreground font-semibold tracking-wider leading-none mt-1.5">SANTO DOMINGO {getYear()}</div>
               {/* El naming va apilado bajo el nombre: ocupa alto, no ancho, y
                   la fila de la marca no crece aunque el menú apriete. El
@@ -192,21 +192,23 @@ export default function Navigation() {
           </Link>
 
           {/* Desktop Navigation
+              Enlaces en mayusculas pequenas con un subrayado cobalto en el
+              activo (rediseño editorial, oct-2026).
               Se enseña desde 2xl (1536px) y no desde lg: los enlaces piden
               1318px y hasta xl el contenedor solo da 1248, así que la fila no
               cabía y lo que cedía era la marca. Por debajo de eso manda el
               menú lateral. Si mañana se agregan enlaces, hay que volver a
               medir antes de bajar este punto de corte. */}
-          <div className="hidden 2xl:flex items-center gap-1">
+          <div className="hidden 2xl:flex items-center">
             {staticNavLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}
                 onClick={handleLinkClick}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 ${
                   location.pathname === link.href
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                 }`}
               >
                 {link.label}
@@ -217,10 +219,10 @@ export default function Navigation() {
             {pageVisibility.showPress && (
               <Link
                 to="/prensa"
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 ${
                   isPrensaActive
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                 }`}
               >
                 Prensa
@@ -231,10 +233,10 @@ export default function Navigation() {
             {pageVisibility.showSponsors && (
               <Link
                 to={`/patrocinadores/${activeRaceCode}`}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 ${
                   isPatrocinadoresActive && location.pathname.includes(activeRaceCode)
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                 }`}
               >
                 Patrocinadores
@@ -245,10 +247,10 @@ export default function Navigation() {
             {pageVisibility.showTracking && (
               <Link
                 to={`/resultados/${activeRaceCode}`}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 ${
                   isResultadosActive && location.pathname.includes(activeRaceCode)
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                 }`}
               >
                 Resultados
@@ -259,10 +261,10 @@ export default function Navigation() {
             {pageVisibility.showCommunity && (
               <Link
                 to={`/comunidad/${activeRaceCode}`}
-                className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 ${
+                className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 ${
                   isComunidadActive && location.pathname.includes(activeRaceCode)
-                    ? 'text-primary bg-secondary'
-                    : 'text-foreground hover:text-primary hover:bg-secondary'
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                 }`}
               >
                 Comunidad
@@ -274,10 +276,10 @@ export default function Navigation() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 flex items-center gap-1 ${
+                    className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 flex items-center gap-1 ${
                       isAnterioresActive
-                        ? 'text-primary bg-secondary'
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                     }`}
                   >
                     <History className="w-3 h-3" />
@@ -325,15 +327,14 @@ export default function Navigation() {
                   key={link.href}
                   to={link.href}
                   onClick={handleLinkClick}
-                  className={`px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 whitespace-nowrap flex items-center gap-1 ${
+                  className={`mx-2.5 py-2 text-[12px] font-semibold uppercase tracking-wider border-b-2 transition-colors duration-300 whitespace-nowrap flex items-center gap-1 ${
                     link.highlight
-                      ? 'bg-primary text-white hover:bg-primary/90'
+                      ? 'ml-3 px-4 py-2.5 rounded bg-foreground text-background border-transparent hover:bg-primary hover:border-transparent'
                       : location.pathname === link.href
-                        ? 'text-primary bg-secondary'
-                        : 'text-foreground hover:text-primary hover:bg-secondary'
+                        ? 'border-primary text-foreground'
+                        : 'border-transparent text-foreground/75 hover:border-primary hover:text-foreground'
                   }`}
                 >
-                  {link.icon && <link.icon className="w-4 h-4" />}
                   {link.label}
                 </Link>
               )
@@ -357,7 +358,7 @@ export default function Navigation() {
                   />
                 </div>
                 <div>
-                  <div className="font-display text-lg text-foreground leading-none">BACKYARD ULTRA</div>
+                  <div className="font-display uppercase text-lg text-foreground leading-none">Backyard Ultra</div>
                   <div className="text-xs text-muted-foreground font-semibold leading-none mt-1.5">SANTO DOMINGO</div>
                   <PresentedBy size="xs" className="mt-1.5" />
                 </div>

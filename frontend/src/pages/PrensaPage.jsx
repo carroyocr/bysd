@@ -34,11 +34,11 @@ export default function PrensaPage() {
   return (
     // Mismo encabezado que Reglas, Patrocinadores y las demas: seccion con el
     // degradado, titulo centrado en la fuente de display y la bajada debajo.
-    <section className="pt-16 pb-20 bg-gradient-to-b from-muted/20 to-background">
+    <section className="pt-16 pb-20 bg-background">
       <div className="container mx-auto px-4 py-10">
         <div className="max-w-3xl mx-auto">
           <div className="text-center space-y-4 mb-12">
-            <h1 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">Prensa</h1>
+            <h1 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">Prensa</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Comunicados de la organización y lo que se ha publicado sobre la carrera
             </p>

@@ -53,7 +53,7 @@ export default function SateliteChampionship() {
   }, []);
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background" data-testid="satelite-championship">
+    <section className="py-10 bg-background" data-testid="satelite-championship">
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto space-y-12">
 
@@ -63,7 +63,7 @@ export default function SateliteChampionship() {
               <Globe className="w-4 h-4" />
               Evento Internacional
             </Badge>
-            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+            <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">
               Campeonato Mundial por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -111,7 +111,7 @@ export default function SateliteChampionship() {
           </div>
 
           {/* How it works */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-6">
               <h3 className="font-display text-2xl text-foreground flex items-center gap-3">
                 <Target className="w-6 h-6 text-primary" />
@@ -221,7 +221,9 @@ export default function SateliteChampionship() {
           </div>
 
           {/* Bronze Category */}
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 shadow-medium">
+          {/* La medalla va en ámbar porque es bronce; la tarjeta, en la
+              superficie suave del sitio, como las demás. */}
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">

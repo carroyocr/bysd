@@ -1276,7 +1276,7 @@ export default function InscripcionPage() {
   // Registration complete view
   if (registrationComplete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-primary/5 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto">
             <CardContent className="p-8 text-center">
@@ -1320,14 +1320,14 @@ export default function InscripcionPage() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-accent/5 pt-20">
+    <div className="min-h-screen bg-background pt-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
+      <div className="bg-foreground text-background py-10">
         <div className="container mx-auto px-4">
-          <h1 className="text-4xl sm:text-5xl font-bold text-center mb-2">
+          <h1 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-center mb-2">
             {isEditing ? 'Editar Pre Registro' : 'Pre Registro'}
           </h1>
-          <p className="text-center text-purple-100 mb-4">
+          <p className="text-center text-background/70 mb-4">
             {raceName || 'Backyard Ultra Santo Domingo'}
           </p>
           {config?.code && (
@@ -1343,10 +1343,10 @@ export default function InscripcionPage() {
       {/* Pre-registration Info Banner */}
       {!isEditing && currentStep === 0 && (
         <div className="container mx-auto px-4 mt-6">
-          <Card className="max-w-4xl mx-auto bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="max-w-4xl mx-auto bg-secondary border-border">
             <CardContent className="p-6">
-              <h2 className="text-xl font-bold text-blue-900 mb-3">📋 Pre registro Abierto</h2>
-              <div className="space-y-3 text-sm text-blue-800">
+              <h2 className="text-xl font-bold text-foreground mb-3">📋 Pre registro Abierto</h2>
+              <div className="space-y-3 text-sm text-muted-foreground">
                 <p>
                   El pre registro al evento ya se encuentra abierto.
                   <strong> Completar este formulario te garantiza un cupo al evento</strong>.
@@ -1354,7 +1354,7 @@ export default function InscripcionPage() {
                 <p>
                   Cuatro (4) meses antes del evento, enviaremos un correo electrónico con las instrucciones para realizar el pago de la inscripción.
                 </p>
-                <p className="font-semibold text-lg text-blue-900">
+                <p className="font-semibold text-lg text-foreground">
                   El costo de la carrera será de {getFormattedCost()}.
                 </p>
                 <p>
@@ -1363,7 +1363,7 @@ export default function InscripcionPage() {
                 <p>
                   Si el pago no se realiza dentro de ese período, el registro será automáticamente desestimado y el cupo podrá ser asignado a otro participante.
                 </p>
-                <p className="text-blue-600 italic">
+                <p className="text-primary italic">
                   ⚠️ Te recomendamos estar atento a tu correo electrónico y verificar también la carpeta de spam.
                 </p>
               </div>

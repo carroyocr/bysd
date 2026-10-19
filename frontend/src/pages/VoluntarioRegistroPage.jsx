@@ -670,7 +670,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -726,7 +726,7 @@ export default function VoluntarioRegistroPage() {
     const selectedInfo = getSelectedSlotsInfo();
     
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto text-center">
             <CardContent className="p-8 space-y-6">
@@ -773,7 +773,7 @@ export default function VoluntarioRegistroPage() {
   // Loading state for edit mode
   if (loadingExisting) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando tu postulación...</p>
@@ -787,7 +787,7 @@ export default function VoluntarioRegistroPage() {
   // enlace de edicion si pasa: va a corregir algo que ya envio.
   if (!editMode && eventosHabilitados.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-16">
           <Card className="max-w-lg mx-auto">
             <CardContent className="pt-8 pb-8 text-center space-y-4">
@@ -813,7 +813,7 @@ export default function VoluntarioRegistroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/20 to-background pt-20">
+    <div className="min-h-screen bg-background pt-20">
       {/* Indicador del paso actual: un solo icono centrado */}
       {(editMode || currentStepId !== 'verify') && (
         <div className="container mx-auto px-4 pt-8">

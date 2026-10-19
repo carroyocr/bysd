@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boceto 4 · Carbón</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#121212;--panel:#1b1b1b;--text:#fafafa;--muted:#a1a1a1;--accent:#e11d2e;--line:#2a2a2a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.display{font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;line-height:.9;letter-spacing:.01em}
+.wrap{width:min(1280px,calc(100% - 48px));margin:0 auto}
+.ico{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+
+nav{position:sticky;top:0;z-index:20;background:var(--bg);border-top:4px solid var(--accent);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;height:70px;gap:24px}
+nav img{width:42px}
+nav ul{list-style:none;display:flex;gap:28px;margin-left:auto;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+nav ul a:hover{color:var(--accent)}
+nav .perfil{background:var(--accent);padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:1fr 1fr;min-height:88vh}
+.hero .texto{padding:80px 40px 60px 0;display:flex;flex-direction:column;justify-content:center}
+.hero h1{font-size:clamp(84px,11vw,168px)}
+.hero h1 .hueco{color:transparent;-webkit-text-stroke:2px var(--text)}
+.hero h1 .rojo{color:var(--accent)}
+.presented{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:11px;letter-spacing:.22em;font-weight:700;margin:22px 0}
+.presented img{height:26px}
+.hero p{font-size:18px;color:var(--muted);max-width:520px;margin-bottom:28px}
+.acciones{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line)}
+.btn.lleno{background:var(--accent);border-color:var(--accent)}
+.hero .foto{position:relative}
+.hero .foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:polygon(14% 0,100% 0,100% 100%,0 100%)}
+.hero .foto .logo{position:absolute;left:4%;bottom:40px;width:190px;clip-path:none;height:auto;inset:auto}
+.hero .foto .datos{position:absolute;right:0;top:40px;background:var(--bg);padding:18px 22px;border-left:4px solid var(--accent);font-size:14px}
+.hero .foto .datos b{display:block;font-size:18px}
+
+.ticker{background:var(--accent);overflow:hidden;padding:14px 0}
+.ticker div{display:flex;gap:48px;width:max-content;animation:tk 30s linear infinite;font-family:Anton;font-size:28px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+@keyframes tk{to{transform:translateX(-50%)}}
+
+section{padding:96px 0}
+h2.display{font-size:72px;margin:10px 0 14px}
+.sub{color:var(--muted);font-size:17px;max-width:560px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:48px}
+.card{background:var(--panel);padding:32px 28px}
+.card .num{font-family:Anton;color:var(--accent);font-size:14px;letter-spacing:.2em;margin-bottom:22px}
+.card .ico{width:30px;height:30px;margin-bottom:18px}
+.card h3{font-size:26px;margin-bottom:12px}
+.card li{list-style:none;color:var(--muted);font-size:14px;padding:5px 0}
+.card a{display:inline-block;margin-top:12px;color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+
+.que{position:relative;padding:140px 0;overflow:hidden}
+.que .bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:grayscale(.3)}
+.que .velo{position:absolute;inset:0;background:rgba(18,18,18,.82)}
+.que .wrap{position:relative;max-width:820px;text-align:center}
+.que p{font-size:18px;color:#d6d6d6;margin-bottom:20px;text-align:left}
+.que strong{color:#fff}
+.que blockquote{font-size:56px;color:var(--accent);margin-top:36px}
+
+.fotos{padding-top:0}
+.fotos .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);margin-top:40px}
+.fotos img{aspect-ratio:1;object-fit:cover;width:100%;filter:grayscale(.2);transition:.3s}
+.fotos img:hover{filter:none}
+
+.app{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0}
+.app .wrap{display:grid;grid-template-columns:1fr auto;align-items:center;gap:40px;padding:48px 0}
+.app h2{font-size:56px}
+.spons{text-align:center}
+.spons .logos{display:flex;justify-content:center;gap:48px;flex-wrap:wrap;margin-top:28px}
+.spons img{height:34px;filter:grayscale(1) brightness(10);opacity:.6}
+footer{border-top:1px solid var(--line);padding:48px 0;color:var(--muted);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px}
+footer ul{list-style:none;display:flex;gap:22px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}.hero .foto{height:360px}.hero .foto img{clip-path:none}.cards{grid-template-columns:1fr 1fr}.fotos .grid{grid-template-columns:1fr 1fr}.app .wrap{grid-template-columns:1fr}nav ul{display:none}}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <img data-logo alt="">
+  <ul><li><a href="#">Evento</a></li><li><a href="#">Campeonato</a></li><li><a href="#">Corredores</a></li><li><a href="#">Voluntarios</a></li><li><a href="#">Reglas</a></li><li><a href="#">Logística</a></li><li><a href="#">Fotos 2026</a></li></ul>
+  <a class="perfil" href="#">Mi Perfil</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="texto">
+    <div class="eyebrow">Segunda Edición · Sábado 23 Enero, 2027</div>
+    <h1 class="display" style="margin-top:18px">Backyard<br><span class="hueco">Ultra</span><br><span class="rojo">Santo Domingo</span></h1>
+    <div class="presented">PRESENTED BY <img data-cedimat="blanco" alt="CEDIMAT"></div>
+    <p>Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.</p>
+    <div class="acciones">
+      <a class="btn lleno" href="#">Inscripciones abiertas</a>
+      <a class="btn" href="#"><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>App Store</a>
+      <a class="btn" href="#"><svg class="ico" viewBox="0 0 24 24" style="width:16px;height:16px"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>Google Play</a>
+    </div>
+  </div>
+  <div class="foto">
+    <img data-foto="490" data-w="1600" alt="">
+    <div class="datos"><span class="eyebrow">Lugar</span><b>Hotel Caribbean Adventure</b>Sierra Prieta, Santo Domingo</div>
+    <img class="logo" data-logo alt="">
+  </div>
+</div></header>
+
+<div class="ticker"><div>
+  <span>6.7 km por vuelta</span><span>·</span><span>60 minutos límite</span><span>·</span><span>24h+ de carrera</span><span>·</span><span>Un solo último en pie</span><span>·</span>
+  <span>6.7 km por vuelta</span><span>·</span><span>60 minutos límite</span><span>·</span><span>24h+ de carrera</span><span>·</span><span>Un solo último en pie</span><span>·</span>
+</div></div>
+
+<section><div class="wrap">
+  <div class="eyebrow">Evento</div>
+  <h2 class="display">Información del Evento</h2>
+  <p class="sub">Todo lo que necesitas saber sobre el Backyard Ultra Santo Domingo 2027</p>
+  <div class="cards">
+    <div class="card"><div class="num">01</div><svg class="ico" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><h3 class="display">Fecha y Hora</h3><ul><li>Sábado 23 Enero, 2027</li><li>Check-in: 6:00 AM - 7:30 AM</li><li>Primera vuelta: 8:00 AM en punto</li></ul></div>
+    <div class="card"><div class="num">02</div><svg class="ico" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><h3 class="display">Ubicación</h3><ul><li>Hotel Caribbean Adventure</li><li>Sierra Prieta, Santo Domingo</li></ul><a href="#">Ver en Google Maps</a></div>
+    <div class="card"><div class="num">03</div><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><h3 class="display">Formato</h3><ul><li>6.706 km por vuelta</li><li>Cada vuelta en 60 minutos o menos</li><li>Inicio cada hora en punto</li></ul></div>
+    <div class="card"><div class="num">04</div><svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><h3 class="display">Ganador</h3><ul><li>Último en pie (Last One Standing)</li><li>Debe completar una vuelta más</li><li>Sin tiempo límite definido</li></ul></div>
+  </div>
+</div></section>
+
+<section class="que">
+  <div class="bg" data-foto="364" data-w="2000"></div><div class="velo"></div>
+  <div class="wrap">
+    <div class="eyebrow">El formato</div>
+    <h2 class="display">¿Qué es un Backyard Ultra?</h2>
+    <p>El Backyard Ultra es más que una carrera: es un <strong>desafío personal</strong>, un ejercicio de <strong>disciplina</strong> y una prueba de <strong>voluntad</strong>. Vuelta tras vuelta.</p>
+    <p>Cada atleta debe completar un circuito de <strong>6.706 km</strong> (4.167 millas) en <strong>60 minutos o menos</strong>. Al terminar cada vuelta, el reloj se reinicia y comienza una nueva hora. Los corredores que no regresen antes de que el tiempo llegue a cero son eliminados.</p>
+    <p>El evento continúa sin tiempo límite definido, las 24 horas del día, hasta que solo quede <strong>un corredor en pie</strong>. Para ganar, ese atleta debe completar <strong>una vuelta adicional</strong> después de que todos los demás hayan abandonado o sido eliminados.</p>
+    <blockquote class="display">"Solo hay un ganador: el Último en Pie"</blockquote>
+  </div>
+</section>
+
+<section class="fotos"><div class="wrap">
+  <div class="eyebrow">Fotos 2026</div>
+  <h2 class="display" style="margin-bottom:0">La primera edición</h2>
+  <div class="grid"><img data-foto="434" data-w="800" alt=""><img data-foto="602" data-w="800" alt=""><img data-foto="658" data-w="800" alt=""><img data-foto="252" data-w="800" alt=""></div>
+</div></section>
+
+<div class="app"><div class="wrap">
+  <div><div class="eyebrow">BYSD Live</div><h2 class="display">Sigue la carrera en vivo desde la app</h2></div>
+  <div class="acciones"><a class="btn" href="#">App Store</a><a class="btn" href="#">Google Play</a></div>
+</div></div>
+
+<section class="spons"><div class="wrap">
+  <div class="eyebrow">Patrocinadores</div>
+  <div class="logos"><img src="../../frontend/public/sponsors/cedimat.png" alt=""><img src="../../frontend/public/sponsors/gatorade.png" alt=""><img src="../../frontend/public/sponsors/suzuki.png" alt=""><img src="../../frontend/public/sponsors/banco-atlantico.png" alt=""><img src="../../frontend/public/sponsors/michelob-ultra.png" alt=""><img src="../../frontend/public/sponsors/cafe-santo-domingo.png" alt=""></div>
+</div></section>
+
+<footer><div class="wrap">
+  <div>© 2027 Backyard Ultra Santo Domingo · backyardultrasantodomingo@gmail.com · +1 809 656 4040</div>
+  <ul><li><a href="#">Instagram</a></li><li><a href="#">Strava</a></li><li><a href="#">FAQ</a></li><li><a href="#">Encuesta</a></li><li><a href="#">Privacidad</a></li></ul>
+</div></footer>
+<script src="fotos.js"></script>
+</body>
+</html>

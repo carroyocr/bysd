@@ -131,7 +131,7 @@ export default function PreguntasPublicPage() {
                     type="checkbox"
                     checked={anonima}
                     onChange={(e) => setAnonima(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 accent-orange-500 cursor-pointer"
+                    className="w-4 h-4 mt-0.5 accent-primary cursor-pointer"
                   />
                   <span className="text-muted-foreground">
                     No publicar mi nombre

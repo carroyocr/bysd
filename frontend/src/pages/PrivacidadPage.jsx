@@ -29,11 +29,11 @@ function Seccion({ titulo, children }) {
 export default function PrivacidadPage() {
   return (
     <div className="pt-16">
-      <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
+      <section className="py-10 bg-background">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="text-center space-y-4">
-              <h1 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+              <h1 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">
                 Política de Privacidad
               </h1>
               <p className="text-muted-foreground">
