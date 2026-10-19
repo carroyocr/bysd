@@ -283,7 +283,7 @@ export default function SponsorsSection({ raceCode }) {
         <div className="max-w-5xl mx-auto space-y-14">
           {/* Encabezado */}
           <div className="text-center space-y-4">
-            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+            <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">
               Patrocinadores
             </h2>
             <p className="text-muted-foreground">

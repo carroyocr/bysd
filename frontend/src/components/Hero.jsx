@@ -1,15 +1,39 @@
 import React from 'react';
-import { Calendar, MapPin, Clock, UserPlus, Youtube, Activity } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { ArrowRight, Youtube, Activity } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
 import DescargarApp from './DescargarApp';
 import PresentedBy from './PresentedBy';
-import { Link, useNavigate } from 'react-router-dom';
+import FotoAlbum from './FotoAlbum';
+import { FOTOS_PORTADA } from '../content/portada';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+// Portada del rediseño editorial (oct-2026): blanco, tipografía condensada muy
+// grande y un collage de dos fotos de la edición anterior en lugar del logo
+// flotando sobre un degradado. El logo sigue ahí, como pegatina sobre el
+// collage. Los textos y los datos son los de siempre.
+
+const ESTADISTICAS = [
+  { valor: '6.7', texto: 'KM por vuelta' },
+  { valor: '60', texto: 'Minutos límite' },
+  { valor: '24h+', texto: 'Duración estimada' },
+  { valor: '1', texto: 'Último en pie' },
+];
+
+function Punto() {
+  return <span className="w-1 h-1 rounded-full bg-primary" aria-hidden="true" />;
+}
+
+function Estadistica({ valor, texto }) {
+  return (
+    <div className="py-6 sm:py-8 md:border-r border-border last:border-r-0 md:pl-6 md:first:pl-0">
+      <div className="font-display text-6xl sm:text-7xl lg:text-8xl leading-none text-foreground">{valor}</div>
+      <div className="mt-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{texto}</div>
+    </div>
+  );
+}
 
 export default function Hero() {
-  const { getShortDate, getYear, raceLocation, getEditionLabel, getLogoUrl, config } = useRaceConfig();
+  const { getShortDate, getEditionLabel, getLogoUrl, config } = useRaceConfig();
   const navigate = useNavigate();
   const showInscription = config?.show_preregistration === true;
   // La transmision no es de la carrera publicada sino de la que se corre: el
@@ -17,55 +41,51 @@ export default function Hero() {
   // con enlace (el Mundial se transmitio con el sitio publicando enero).
   const transmision = config?.transmision_en_vivo?.url ? config.transmision_en_vivo : null;
   const showTracking = config?.show_tracking_page !== false;
-  
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-secondary/30 to-muted/50"></div>
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      ></div>
-
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-            {/* Content */}
-            <div className="text-center space-y-4 sm:space-y-6 animate-slide-up lg:text-left">
-              <Badge className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold shadow-soft">
-                <Clock className="w-4 h-4" />
-                {getEditionLabel()}
-              </Badge>
-              
-              {/* Titulo y naming van juntos en un mismo bloque: si los separa
-                  el `space-y` de la columna, el naming deja de leerse como
-                  parte de la marca y parece una linea suelta. */}
-              <div>
-                <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl text-foreground leading-none tracking-tight">
-                  BACKYARD ULTRA
-                  <span className="block text-primary mt-2">SANTO DOMINGO</span>
-                </h1>
-
-                <PresentedBy size="md" className="justify-center lg:justify-start mt-3" />
+    <section className="bg-background pt-28 sm:pt-32 overflow-hidden">
+      <div className="container mx-auto px-4">
+        <div className="max-w-[1240px] mx-auto">
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-14 items-center">
+            {/* Texto */}
+            <div className="animate-slide-up">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-muted-foreground">
+                <span>{getEditionLabel()}</span>
+                <Punto />
+                <span>{getShortDate()}</span>
+                <Punto />
+                <a
+                  href="https://maps.app.goo.gl/ZRMgpWA65jDLZgwcA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Hotel Caribbean Adventure
+                </a>
               </div>
 
-              {/* Bajar la app: pegado al título, se ve sin hacer scroll */}
-              <DescargarApp />
-              
-              <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
+              {/* Titulo y naming van juntos: el naming es parte de la marca,
+                  no una linea suelta. */}
+              <h1 className="font-display uppercase text-[clamp(64px,10vw,150px)] leading-[0.88] tracking-tight text-foreground mt-5 mb-6">
+                Backyard
+                <br />
+                Ultra
+                <br />
+                <span className="text-primary">Santo Domingo</span>
+              </h1>
+
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-lg leading-relaxed">
                 Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad. Vuelta tras vuelta.
               </p>
 
               {transmision && (
-                <div className="space-y-2" data-testid="transmision-en-vivo">
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center lg:justify-start">
+                <div className="space-y-2 mt-8" data-testid="transmision-en-vivo">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <a
                       href={transmision.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-3 px-5 py-3 rounded-lg bg-red-600 text-white font-semibold shadow-medium hover:bg-red-700 hover:shadow-strong transition-all duration-300"
+                      className="inline-flex items-center justify-center gap-3 px-5 py-3 rounded bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors duration-300"
                       data-testid="transmision-en-vivo-youtube"
                     >
                       <Youtube className="w-5 h-5" />
@@ -78,9 +98,9 @@ export default function Hero() {
                     {showTracking && (
                       <Link
                         to={transmision.race_code ? `/resultados/${transmision.race_code}` : '/en-vivo'}
-                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-card border border-border font-semibold text-foreground shadow-soft hover:border-primary hover:text-primary hover:shadow-medium transition-all duration-300"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded border border-foreground font-semibold text-foreground hover:bg-foreground hover:text-background transition-colors duration-300"
                       >
-                        <Activity className="w-5 h-5 text-primary" />
+                        <Activity className="w-5 h-5" />
                         Seguimiento en vivo
                       </Link>
                     )}
@@ -90,79 +110,54 @@ export default function Hero() {
                   )}
                 </div>
               )}
-              
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center lg:justify-start pt-1 sm:pt-4">
-                <div
-                  className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-card rounded-lg border border-border shadow-soft"
-                >
-                  <Calendar className="w-5 h-5 text-primary" />
-                  <div className="text-left">
-                    <div className="text-xs text-muted-foreground font-medium">Fecha</div>
-                    <div className="text-sm font-bold text-foreground">{getShortDate()}</div>
-                  </div>
-                </div>
-                
-                <a 
-                  href="https://maps.app.goo.gl/ZRMgpWA65jDLZgwcA"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-card rounded-lg border border-border shadow-soft hover:shadow-medium hover:border-primary transition-all duration-300 group"
-                >
-                  <MapPin className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                  <div className="text-left">
-                    <div className="text-xs text-muted-foreground font-medium">Lugar</div>
-                    <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Hotel Caribbean Adventure</div>
-                  </div>
-                </a>
 
+              <div className="flex flex-wrap items-center gap-3 mt-8">
                 {showInscription && (
                   <button
                     onClick={() => navigate('/mi-perfil')}
-                    className="flex items-center gap-3 px-4 py-2.5 sm:px-5 sm:py-3 bg-primary/10 rounded-lg border-2 border-primary shadow-soft hover:shadow-medium hover:bg-primary/20 transition-all duration-300 group animate-pulse hover:animate-none"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors duration-300"
                     data-testid="inscription-open-card"
                   >
-                    <UserPlus className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                    <div className="text-left">
-                      <div className="text-xs text-primary font-semibold">Inscripciones</div>
-                      <div className="text-sm font-bold text-primary">Abiertas</div>
-                    </div>
+                    Inscripciones abiertas
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
+                {/* Bajar la app: junto a la inscripcion, se ve sin hacer scroll */}
+                <DescargarApp />
               </div>
-              
+
+              <PresentedBy size="md" className="mt-8" />
             </div>
 
-            {/* Logo Image - Hidden on mobile, visible on desktop */}
-            <div className="hidden lg:flex items-center justify-center animate-scale-in">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
-                <img
-                  src={getLogoUrl('home')}
-                  alt="Backyard Ultra Santo Domingo Logo"
-                  className="relative w-full max-w-md mx-auto drop-shadow-2xl hover:scale-105 transition-transform duration-500"
-                />
-              </div>
+            {/* Collage: una foto vertical grande, una horizontal encima con
+                marco blanco y el logo como pegatina. Las alturas son fijas
+                porque las fotos van en absoluto. */}
+            <div className="relative h-[380px] sm:h-[520px] lg:h-[640px] mt-8 lg:mt-0 animate-scale-in">
+              <FotoAlbum
+                foto={FOTOS_PORTADA.grande}
+                ancho={1400}
+                loading="eager"
+                className="absolute right-0 top-0 w-[78%] h-full object-cover"
+              />
+              <FotoAlbum
+                foto={FOTOS_PORTADA.chica}
+                ancho={1000}
+                loading="eager"
+                className="absolute left-0 -bottom-6 lg:-bottom-10 w-[48%] aspect-[4/3] object-cover border-[6px] lg:border-8 border-background shadow-strong"
+              />
+              <img
+                src={getLogoUrl('home')}
+                alt="Backyard Ultra Santo Domingo"
+                className="absolute -right-2 -top-5 lg:-right-5 lg:-top-8 w-24 sm:w-32 lg:w-36 drop-shadow-xl"
+              />
             </div>
           </div>
-          
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-6 pt-6 sm:mt-16 sm:pt-16 border-t border-border">
-            <div className="text-center space-y-1 sm:space-y-2">
-              <div className="font-display text-3xl sm:text-5xl text-primary">6.7</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">KM por vuelta</div>
-            </div>
-            <div className="text-center space-y-1 sm:space-y-2">
-              <div className="font-display text-3xl sm:text-5xl text-primary">60</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Minutos límite</div>
-            </div>
-            <div className="text-center space-y-1 sm:space-y-2">
-              <div className="font-display text-3xl sm:text-5xl text-primary">24h+</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Duración estimada</div>
-            </div>
-            <div className="text-center space-y-1 sm:space-y-2">
-              <div className="font-display text-3xl sm:text-5xl text-primary">1</div>
-              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Último en pie</div>
-            </div>
+
+          {/* Cifras */}
+          <div className="grid grid-cols-2 md:grid-cols-4 mt-20 sm:mt-28 lg:mt-32 border-t-2 border-foreground">
+            {ESTADISTICAS.map((e) => (
+              <Estadistica key={e.texto} {...e} />
+            ))}
           </div>
         </div>
       </div>

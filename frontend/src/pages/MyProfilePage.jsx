@@ -69,7 +69,7 @@ const ProfileSection = ({ title, children, className = '', defaultOpen = false }
 
 const SectionHeader = ({ title, subtitle }) => (
   <div className="text-center space-y-4">
-    <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">{title}</h2>
+    <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">{title}</h2>
     {subtitle && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>}
   </div>
 );
