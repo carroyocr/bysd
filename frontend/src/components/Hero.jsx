@@ -78,7 +78,7 @@ export default function Hero() {
               <h1 className="font-display uppercase text-[clamp(52px,6.4vw,100px)] leading-[0.9] tracking-tight text-foreground mt-4 mb-5">
                 Backyard Ultra
                 <br />
-                <span className="text-primary">Santo Domingo</span>
+                <span className="text-marca">Santo Domingo</span>
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-md leading-relaxed">
