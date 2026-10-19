@@ -623,7 +623,7 @@ export default function LiveDashboard({ raceCode }) {
         <div
           className="absolute inset-0"
           aria-hidden="true"
-          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(231 100% 56% / 0.45), transparent 65%)' }}
+          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(215 67% 32% / 0.55), transparent 65%)' }}
         />
         <div className="relative container mx-auto px-4 py-12 sm:py-16">
           <div className="max-w-6xl mx-auto flex flex-col items-center text-center gap-4">
