@@ -874,7 +874,7 @@ const SpectatorsSurveyForm = () => {
 
 export default function SurveyPage() {
   return (
-    <section className="py-20 bg-gradient-to-b from-muted/20 to-background min-h-screen pt-24">
+    <section className="py-20 bg-background min-h-screen pt-24">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Header */}
@@ -888,7 +888,7 @@ export default function SurveyPage() {
           </div>
 
           {/* Survey Tabs */}
-          <Card className="bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-primary" />

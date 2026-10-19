@@ -167,7 +167,7 @@ export default function PaymentReceiptPage() {
       <div className="min-h-screen bg-stone-100">
         <Navigation />
         <div className="flex items-center justify-center pt-24 py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -342,7 +342,7 @@ export default function PaymentReceiptPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-orange-500" />
+              <FileText className="w-5 h-5 text-primary" />
               Información del Pago
             </CardTitle>
             <CardDescription>
@@ -446,7 +446,7 @@ export default function PaymentReceiptPage() {
                   <ImageIcon className="w-4 h-4 text-gray-500" />
                   Imagen del Comprobante *
                 </Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
                   <input
                     type="file"
                     accept="image/*,.pdf"
@@ -470,7 +470,7 @@ export default function PaymentReceiptPage() {
                       </div>
                     ) : selectedFile ? (
                       <div className="space-y-2">
-                        <FileText className="w-12 h-12 mx-auto text-orange-500" />
+                        <FileText className="w-12 h-12 mx-auto text-primary" />
                         <p className="text-sm font-medium">{selectedFile.name}</p>
                         <Button type="button" variant="outline" size="sm">
                           Cambiar archivo
@@ -494,7 +494,7 @@ export default function PaymentReceiptPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600"
+                className="w-full bg-primary hover:bg-primary/90"
                 disabled={submitting || !selectedFile || esAbono}
                 data-testid="submit-receipt-btn"
               >

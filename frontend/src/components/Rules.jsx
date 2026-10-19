@@ -12,7 +12,7 @@ export default function Rules() {
   const sportsmanship = REGLAS.deportividad;
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
@@ -27,7 +27,7 @@ export default function Rules() {
           </div>
 
           {/* Format Rules */}
-          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent shadow-medium">
+          <Card className="border-border bg-secondary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <CheckCircle2 className="w-6 h-6 text-primary" />
@@ -135,7 +135,7 @@ export default function Rules() {
           </Card>
 
           {/* Environmental Protection */}
-          <Card className="bg-gradient-to-br from-accent/10 to-primary/5 border-accent/30 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">

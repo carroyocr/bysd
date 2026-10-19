@@ -114,7 +114,7 @@ export default function CancelRegistrationPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando información...</p>
@@ -126,7 +126,7 @@ export default function CancelRegistrationPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-lg mx-auto">
             <CardContent className="p-8 text-center">
@@ -151,7 +151,7 @@ export default function CancelRegistrationPage() {
   // Cancellation complete state
   if (cancelled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-lg mx-auto">
             <CardContent className="p-8 text-center">
@@ -188,9 +188,9 @@ export default function CancelRegistrationPage() {
   const isVolunteer = registrationData?.type === 'volunteer';
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">
+    <div className="min-h-screen bg-background pt-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white py-8">
+      <div className="bg-foreground text-white py-8">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-2xl sm:text-3xl font-bold">Cancelar {isVolunteer ? 'Postulación' : 'Inscripción'}</h1>
           <p className="text-gray-200 mt-2">Backyard Ultra Santo Domingo</p>

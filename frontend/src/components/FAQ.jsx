@@ -9,7 +9,7 @@ export default function FAQ() {
   const faqs = FAQS;
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto space-y-12">
           {/* Header */}
@@ -44,7 +44,7 @@ export default function FAQ() {
           </Card>
 
           {/* Contact Card */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <HelpCircle className="w-8 h-8 text-primary" />

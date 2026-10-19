@@ -103,7 +103,7 @@ export default function VolunteersSection() {
   ];
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
+    <section className="py-10 bg-background">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-12">
           {/* Header */}
@@ -117,7 +117,7 @@ export default function VolunteersSection() {
           </div>
 
           {/* Volunteer Registration CTA */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-start gap-4">
