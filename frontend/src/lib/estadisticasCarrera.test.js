@@ -53,3 +53,19 @@ test('sin ganador marcado, gana quien más vueltas tiene', () => {
   expect(resumen(sinMarca).ganador.bib).toBe('001');
   expect(resumen([]).ganador).toBeNull();
 });
+
+test('detalle vuelta a vuelta', () => {
+  const { detalleVueltas, formatoDiferencia, horaDesde } = require('./estadisticasCarrera');
+  expect(horaDesde('2026-10-17T08:00:00-04:00', 90)).toBe('09:30');
+  expect(horaDesde('2026-10-17T08:00:00-04:00', 16 * 60 + 0.5, true)).toBe('00:00:30');
+  expect(horaDesde(null, 10)).toBe('—');
+  expect(formatoDiferencia(83)).toBe('+1:23');
+  expect(formatoDiferencia(-45)).toBe('−0:45');
+  expect(formatoDiferencia(0)).toBe('0:00');
+  const filas = detalleVueltas({ tiempos: [3000, null, 3120] }, '2026-10-17T08:00:00-04:00', 60);
+  expect(filas).toHaveLength(3);
+  expect(filas[0]).toMatchObject({ vuelta: 1, salida: '08:00', llegada: '08:50:00', tiempo: 3000, difPromedio: -60, difAnterior: null, descanso: 600 });
+  expect(filas[1]).toMatchObject({ vuelta: 2, salida: '09:00', llegada: '—', tiempo: null, difPromedio: null, descanso: null });
+  // La tercera se compara con la última con hora, no con el hueco
+  expect(filas[2]).toMatchObject({ vuelta: 3, salida: '10:00', llegada: '10:52:00', difAnterior: 120, difPromedio: 60, descanso: 480 });
+});

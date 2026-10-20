@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Trophy, Timer, Flag, Route, Users, Zap } from 'lucide-react';
-import { resumen, formatoTiempo, formatoHoras } from '../lib/estadisticasCarrera';
+import { Trophy, Timer, Flag, Route, Users, Zap, ChevronDown } from 'lucide-react';
+import { resumen, formatoTiempo, formatoHoras, formatoDiferencia, detalleVueltas } from '../lib/estadisticasCarrera';
 
 // Resultados del Campeonato Mundial por Equipos (edición 2026): quién ganó,
 // cómo le fue a cada corredor y qué dicen las vueltas del equipo. Todo sale
@@ -277,10 +277,72 @@ function Tira({ tiempos, maximo }) {
   );
 }
 
+// Detalle vuelta a vuelta de un corredor (la fila que se despliega bajo la
+// suya en la clasificación). Las vueltas se reparten en columnas para que
+// cuarenta no hagan una tabla de un metro.
+const CELDA = 'py-1.5 px-2 tabular-nums';
+const CABECERA = 'py-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground';
+
+function DetalleCorredor({ c, salida, minutosPorVuelta }) {
+  const filas = detalleVueltas(c, salida, minutosPorVuelta);
+  if (!filas.length) return <p className="text-sm text-muted-foreground">Sin vueltas completadas.</p>;
+  // Dos columnas como mucho: tres no caben con las siete cifras de cada fila.
+  const porColumna = filas.length > 12 ? Math.ceil(filas.length / 2) : filas.length;
+  const columnas = [];
+  for (let i = 0; i < filas.length; i += porColumna) columnas.push(filas.slice(i, i + porColumna));
+  const sinHora = filas.filter((f) => f.tiempo == null).length;
+
+  return (
+    <div className="space-y-3" data-testid={`resultados-detalle-${c.bib}`}>
+      <p className="text-sm text-muted-foreground">
+        {c.vueltas} vueltas, {formatoHoras(c.vueltas, minutosPorVuelta)} en carrera.
+        {c.media != null && ` Promedio ${formatoTiempo(c.media)}, mejor ${formatoTiempo(c.mejor)} (vuelta ${c.mejorVuelta}), más lenta ${formatoTiempo(c.peor)}.`}
+        {sinHora > 0 && ` ${sinHora === 1 ? 'Una vuelta' : `${sinHora} vueltas`} sin hora registrada.`}
+      </p>
+      <div className={`grid gap-x-8 gap-y-4 ${columnas.length === 2 ? 'md:grid-cols-2' : ''}`}>
+        {columnas.map((col, k) => (
+          <table key={k} className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                <th className={`${CABECERA} text-left`}>Vuelta</th>
+                <th className={`${CABECERA} text-left`}>Salida</th>
+                <th className={`${CABECERA} text-left`}>Llegada</th>
+                <th className={`${CABECERA} text-right`}>Tiempo</th>
+                <th className={`${CABECERA} text-right`} title="Respecto a su promedio">vs prom.</th>
+                <th className={`${CABECERA} text-right`} title="Respecto a la vuelta anterior">vs ant.</th>
+                <th className={`${CABECERA} text-right`}>Descanso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {col.map((f) => (
+                <tr key={f.vuelta} className={`border-b border-border/60 ${f.vuelta === c.mejorVuelta ? 'bg-secondary' : ''}`}>
+                  <td className={`${CELDA} font-mono text-muted-foreground`}>{f.vuelta}</td>
+                  <td className={`${CELDA} text-muted-foreground`}>{f.salida}</td>
+                  <td className={`${CELDA} text-muted-foreground`}>{f.llegada}</td>
+                  <td className={`${CELDA} text-right font-semibold text-foreground`}>{f.tiempo == null ? <span className="font-normal text-muted-foreground">sin hora</span> : formatoTiempo(f.tiempo)}</td>
+                  <td className={`${CELDA} text-right text-muted-foreground`}>{formatoDiferencia(f.difPromedio)}</td>
+                  <td className={`${CELDA} text-right text-muted-foreground`}>{formatoDiferencia(f.difAnterior)}</td>
+                  <td className={`${CELDA} text-right text-muted-foreground`}>{f.descanso == null ? '—' : formatoTiempo(f.descanso)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Sección ----------
 
 export default function ResultadosMundial({ raceCode = CODIGO_MUNDIAL }) {
   const [datos, setDatos] = useState(null);
+  const [abiertos, setAbiertos] = useState(() => new Set());
+  const alternar = (bib) => setAbiertos((prev) => {
+    const sig = new Set(prev);
+    if (sig.has(bib)) sig.delete(bib); else sig.add(bib);
+    return sig;
+  });
 
   useEffect(() => {
     let vivo = true;
@@ -379,7 +441,7 @@ export default function ResultadosMundial({ raceCode = CODIGO_MUNDIAL }) {
       {/* Clasificación */}
       <div>
         <h4 className="font-display uppercase text-2xl leading-none text-foreground">Clasificación</h4>
-        <p className="text-sm text-muted-foreground mt-1 mb-4">Cada corredor, con sus vueltas y sus tiempos.</p>
+        <p className="text-sm text-muted-foreground mt-1 mb-4">Cada corredor, con sus vueltas y sus tiempos. Toca un nombre para ver el detalle de cada vuelta.</p>
         <div className="overflow-x-auto -mx-4 px-4">
           <table className="w-full text-sm min-w-[720px]" data-testid="resultados-tabla">
             <thead>
@@ -395,21 +457,47 @@ export default function ResultadosMundial({ raceCode = CODIGO_MUNDIAL }) {
               </tr>
             </thead>
             <tbody>
-              {r.corredores.map((c, i) => (
-                <tr key={c.bib || i} className="border-b border-border" data-testid={`resultados-fila-${i + 1}`}>
-                  <td className="py-2.5 pr-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, '0')}</td>
-                  <td className="py-2.5 px-3 font-medium text-foreground whitespace-nowrap">
-                    {c.nombreCompleto}
-                    {c.status === 'winner' && <Trophy className="inline w-3.5 h-3.5 ml-1.5 -mt-0.5 text-primary" aria-label="campeón" />}
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-semibold text-foreground tabular-nums">{c.vueltas}</td>
-                  <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{num(c.km, 1)}</td>
-                  <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{formatoTiempo(c.media)}</td>
-                  <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{formatoTiempo(c.mejor)}</td>
-                  <td className="py-2.5 px-3"><Tira tiempos={c.tiempos || []} maximo={masLenta} /></td>
-                  <td className="py-2.5 pl-3 text-muted-foreground whitespace-nowrap">{comoTermino(c)}</td>
-                </tr>
-              ))}
+              {r.corredores.map((c, i) => {
+                const clave = c.bib || String(i);
+                const abierto = abiertos.has(clave);
+                return (
+                  <React.Fragment key={clave}>
+                    <tr
+                      className={`border-b border-border cursor-pointer hover:bg-secondary/60 transition-colors ${abierto ? 'bg-secondary/60' : ''}`}
+                      data-testid={`resultados-fila-${i + 1}`}
+                      onClick={() => alternar(clave)}
+                    >
+                      <td className="py-2.5 pr-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, '0')}</td>
+                      <td className="py-2.5 px-3 font-medium text-foreground whitespace-nowrap">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 text-left"
+                          aria-expanded={abierto}
+                          aria-controls={`detalle-${clave}`}
+                          onClick={(e) => { e.stopPropagation(); alternar(clave); }}
+                        >
+                          <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} aria-hidden="true" />
+                          {c.nombreCompleto}
+                          {c.status === 'winner' && <Trophy className="w-3.5 h-3.5 text-primary" aria-label="campeón" />}
+                        </button>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-semibold text-foreground tabular-nums">{c.vueltas}</td>
+                      <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{num(c.km, 1)}</td>
+                      <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{formatoTiempo(c.media)}</td>
+                      <td className="py-2.5 px-3 text-right text-muted-foreground tabular-nums">{formatoTiempo(c.mejor)}</td>
+                      <td className="py-2.5 px-3"><Tira tiempos={c.tiempos || []} maximo={masLenta} /></td>
+                      <td className="py-2.5 pl-3 text-muted-foreground whitespace-nowrap">{comoTermino(c)}</td>
+                    </tr>
+                    {abierto && (
+                      <tr className="border-b border-border bg-background">
+                        <td colSpan={8} id={`detalle-${clave}`} className="py-4 pl-3 pr-3 sm:pl-10">
+                          <DetalleCorredor c={c} salida={carrera.salida} minutosPorVuelta={minutosPorVuelta} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
