@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Globe, Users, Trophy, CalendarCheck, Flag, Star, Timer, Award, Target, Shield } from 'lucide-react';
+import ResultadosMundial from './ResultadosMundial';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -67,9 +68,12 @@ export default function SateliteChampionship() {
               Campeonato Mundial por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              República Dominicana ha sido seleccionada para participar en el Campeonato Mundial por Equipos del Backyard Ultra
+              República Dominicana compitió por primera vez en el Campeonato Mundial por Equipos del Backyard Ultra, el 17 de octubre de 2026
             </p>
           </div>
+
+          {/* Resultados: sale solo cuando la carrera tiene vueltas anotadas */}
+          <ResultadosMundial />
 
           {/* Key Info Cards */}
           <div className="grid md:grid-cols-3 gap-6">
@@ -214,10 +218,9 @@ export default function SateliteChampionship() {
               </CardContent>
             </Card>
 
-            {/* Deadline Note */}
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800" data-testid="deadline-note">
-              <strong>Fecha límite de clasificación:</strong> 1 de septiembre de 2026. La nómina podrá actualizarse si algún atleta dominicano registra un mayor número de vueltas en otro evento oficial de Backyard Ultra antes de esa fecha.
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Las vueltas de esta nómina son las que clasificaron a cada atleta a la selección, registradas en eventos oficiales de Backyard Ultra antes del 1 de septiembre de 2026.
+            </p>
           </div>
 
           {/* Bronze Category */}
