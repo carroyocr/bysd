@@ -1,58 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Globe, Users, Trophy, CalendarCheck, Flag, Star, Timer, Award, Target, Shield } from 'lucide-react';
+import { Globe, Users, Trophy, CalendarCheck, Award, Target } from 'lucide-react';
 import ResultadosMundial from './ResultadosMundial';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
-
-// Respaldo por si la nomina no carga; la fuente de verdad es el panel
-// (campeonato_seleccionados, via /api/seleccionados/public).
-const fallbackTeamMembers = [
-  { name: 'Jordano Martínez Abreu', laps: 47 },
-  { name: 'Livio Feliz', laps: 30 },
-  { name: 'Jorge Lewis Camilo Tejada', laps: 23 },
-  { name: 'Iván Ortega', laps: 19 },
-  { name: 'Daiyi Shiguetome Rodríguez', laps: 18 },
-  { name: 'Cristian Minaya Domínguez', laps: 17 },
-  { name: 'Carlos Alberto Ovalle', laps: 17 },
-  { name: 'Yeirys Soto', laps: 17 },
-  { name: 'Juan Pérez', laps: 17 },
-  { name: 'Pedro Pablo Taveras', laps: 16 },
-  { name: 'Simón Bolívar Cepeda Lora', laps: 15 },
-  { name: 'Joan Gómez Velázquez', laps: 15 },
-  { name: 'José Antonio Santos Leonardo', laps: 15 },
-  { name: 'Rodrigo Farach Aldana', laps: 13 },
-  { name: 'Luis Antonio De León Encarnación', laps: 13 },
-];
-
-const fallbackReserveMembers = [
-  { name: 'Cristhian Arroyo', laps: 17 },
-  { name: 'Bernardo De Jesús', laps: 12 },
-  { name: 'Esteban Gabriel Senna', laps: 7 },
-  { name: 'Randy Alexander Minaya Cubilete', laps: 0 },
-  { name: 'Ramón Tolentino', laps: 0 },
-];
-
 export default function SateliteChampionship() {
-  const [teamMembers, setTeamMembers] = useState(fallbackTeamMembers);
-  const [reserveMembers, setReserveMembers] = useState(fallbackReserveMembers);
-
-  useEffect(() => {
-    const cargarNomina = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/seleccionados/public`);
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.titulares?.length) setTeamMembers(data.titulares);
-        if (data.reservas?.length) setReserveMembers(data.reservas);
-      } catch (error) {
-        // Sin backend se queda el respaldo escrito arriba
-      }
-    };
-    cargarNomina();
-  }, []);
-
   return (
     <section className="py-10 bg-background" data-testid="satelite-championship">
       <div className="container mx-auto px-4">
@@ -133,95 +85,6 @@ export default function SateliteChampionship() {
               </div>
             </CardContent>
           </Card>
-
-          {/* National Team */}
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h3 className="font-display text-3xl text-foreground flex items-center justify-center gap-3">
-                <Flag className="w-6 h-6 text-primary" />
-                Selección Nacional
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                Coordinador Nacional: <strong className="text-foreground">Cristian Arroyo López</strong>
-              </p>
-            </div>
-
-            {/* Main Team */}
-            <Card className="shadow-soft">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Star className="w-5 h-5 text-primary" />
-                  <h4 className="font-display text-lg text-foreground">Equipo Titular (Top 15)</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="team-main-table">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamMembers.map((m, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors" data-testid={`team-member-${i+1}`}>
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, '0')}</td>
-                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            <Badge variant="outline" className="font-mono">
-                              <Timer className="w-3 h-3 mr-1" />{m.laps}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Reserve Team */}
-            <Card className="shadow-soft">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="w-5 h-5 text-muted-foreground" />
-                  <h4 className="font-display text-lg text-foreground">Equipo de Reserva</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="team-reserve-table">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reserveMembers.map((m, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + teamMembers.length + 1).padStart(2, '0')}</td>
-                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            {m.laps ? (
-                              <Badge variant="outline" className="font-mono text-muted-foreground">
-                                <Timer className="w-3 h-3 mr-1" />{m.laps}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            <p className="text-xs text-muted-foreground">
-              Las vueltas de esta nómina son las que clasificaron a cada atleta a la selección, registradas en eventos oficiales de Backyard Ultra antes del 1 de septiembre de 2026.
-            </p>
-          </div>
 
           {/* Bronze Category */}
           {/* La medalla va en ámbar porque es bronce; la tarjeta, en la

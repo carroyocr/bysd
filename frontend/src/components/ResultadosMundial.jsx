@@ -21,20 +21,10 @@ const VUELTAS_PARA_CLASIFICAR = 24;
 const num = (n, decimales = 0) =>
   (n == null ? '—' : Number(n).toLocaleString('es-DO', { minimumFractionDigits: decimales, maximumFractionDigits: decimales }));
 
-const FINAL = {
-  winner: 'Campeón nacional',
-  honor: 'Vuelta de honor',
-  RTC: 'No salió a la siguiente',
-  INC: 'Regresó fuera de tiempo',
-  Over: 'Llegó pasada la hora',
-  dns: 'No tomó la salida',
-};
-
+// Solo hay un final que contar: el campeón. Todos los demás, por la regla
+// del formato, no terminaron: DNF.
 function comoTermino(c) {
-  if (c.status === 'winner') return FINAL.winner;
-  if (c.status === 'honor') return FINAL.honor;
-  if (c.status === 'dns') return FINAL.dns;
-  return FINAL[c.retiro] || (c.status === 'retired' ? 'Retirado' : '—');
+  return c.status === 'winner' ? 'Campeón nacional' : 'DNF';
 }
 
 function useAncho(ref, inicial = 720) {
