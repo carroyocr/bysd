@@ -42,38 +42,8 @@ export default function Footer() {
                 </div>
               </div>
               <p className="text-sm text-background/70 leading-relaxed max-w-md">
-                Un desafío personal. Un ejercicio de disciplina. Una prueba de voluntad.
-                Primera edición del Backyard Ultra en Santo Domingo, República Dominicana.
+                Un desafío personal. Un ejercicio de disciplina.
               </p>
-              <div className="flex items-center gap-4">
-                <a
-                  href="https://www.instagram.com/backyardultrasantodomingo/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={ICONO_SOCIAL}
-                  aria-label="Instagram"
-                >
-                  <Instagram className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://www.strava.com/clubs/1864664"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={ICONO_SOCIAL}
-                  aria-label="Strava Club"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
-                  </svg>
-                </a>
-                <a
-                  href="mailto:backyardultrasantodomingo@gmail.com"
-                  className={ICONO_SOCIAL}
-                  aria-label="Email"
-                >
-                  <Mail className="w-5 h-5" />
-                </a>
-              </div>
             </div>
 
             {/* Quick Links */}
@@ -116,6 +86,36 @@ export default function Footer() {
                     +1 (809) 656-4040
                   </a>
                 </div>
+              </div>
+              {/* Redes: bajo el contacto, que es donde se buscan */}
+              <div className="flex items-center gap-3 pt-2">
+                <a
+                  href="https://www.instagram.com/backyardultrasantodomingo/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={ICONO_SOCIAL}
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://www.strava.com/clubs/1864664"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={ICONO_SOCIAL}
+                  aria-label="Strava Club"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/>
+                  </svg>
+                </a>
+                <a
+                  href="mailto:backyardultrasantodomingo@gmail.com"
+                  className={ICONO_SOCIAL}
+                  aria-label="Email"
+                >
+                  <Mail className="w-5 h-5" />
+                </a>
               </div>
             </div>
           </div>
