@@ -376,7 +376,7 @@ async def get_athlete_for_scan(
     """
     from server import db as database
 
-    active_race = await races.resolver_carrera(database, race_code)
+    active_race = await races.carrera_del_escaner(database, race_code)
     race_code = active_race.get("code")
 
     # La clave solo abre su propia carrera, tambien para consultar.
@@ -505,7 +505,7 @@ async def confirm_lap(
     # La carrera sale del propio QR. Antes se ignoraba y siempre se usaba la
     # carrera publicada, asi que escanear un dorsal del mundial habria sumado
     # la vuelta a la carrera de enero.
-    carrera = await races.resolver_carrera(database, request.race_code)
+    carrera = await races.carrera_del_escaner(database, request.race_code)
     race_code = carrera.get("code")
 
     # Quien entra con la clave de escaneo solo puede anotar en su carrera.
@@ -840,10 +840,14 @@ async def get_race_status(race_code: Optional[str] = None):
     """Get current race timing status for the scanner UI"""
     from server import db as database
 
-    if race_code:
-        active_race = await database.race_configurations.find_one({"code": race_code.upper()})
-    else:
-        active_race = await races.carrera_publica(database)
+    # Sin `race_code`, la carrera en curso (y solo sin ninguna, la publicada):
+    # la app instalada pregunta aqui con que carrera trabajar cuando nadie
+    # eligio una en el menu, y de esta respuesta salen la descarga de datos y
+    # el dorsal tecleado a mano.
+    try:
+        active_race = await races.carrera_del_escaner(database, race_code)
+    except HTTPException:
+        active_race = None
 
     if not active_race:
         return {

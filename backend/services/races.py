@@ -120,6 +120,33 @@ async def resolver_carrera(database, race_code: Optional[str]) -> dict:
     return carrera
 
 
+async def carrera_en_curso(database) -> Optional[dict]:
+    """La carrera que se esta corriendo ahora: con la salida dada y sin cerrar.
+
+    Es distinta de la publica: el dia del Mundial el sitio seguia enseñando la
+    carrera de enero. Si por error hubiera dos con la salida dada, la que
+    arranco mas tarde.
+    """
+    return await database.race_configurations.find_one(
+        {"started_at": {"$ne": None}, "finished_at": None, "archived_at": None},
+        sort=[("started_at", -1)],
+    )
+
+
+async def carrera_del_escaner(database, race_code: Optional[str]) -> dict:
+    """Sobre que carrera anota el escaner: la pedida, si no la que se corre.
+
+    El QR y la app mandan `race_code`; sin el (un telefono en el que nadie
+    eligio carrera en el menu), lo que se quiere escanear es la carrera que
+    esta en marcha, no la que publica el sitio. Al arrancar el Mundial, los
+    telefonos sin carrera elegida se quedaron con la de enero, que era la
+    publicada. Solo sin ninguna en curso se cae en la publica, como antes.
+    """
+    if race_code:
+        return await obtener_carrera(database, race_code)
+    return await carrera_en_curso(database) or await resolver_carrera(database, None)
+
+
 def km_por_vuelta(carrera: dict) -> float:
     return float((carrera or {}).get("km_por_vuelta") or KM_POR_VUELTA)
 
