@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Copy, ExternalLink, Loader2, MonitorPlay, RotateCcw, TriangleAlert } from 'lucide-react';
+import { Copy, ExternalLink, Loader2, Minus, MonitorPlay, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminFetch } from '../lib/adminApi';
 import { useAdminRace } from '../contexts/AdminRaceContext';
@@ -62,6 +62,13 @@ const VISTAS = [
     ancho: 1920,
     alto: 1080,
   },
+  {
+    id: 'latam',
+    nombre: 'Ranking Latinoamérica (Mundial)',
+    descripcion: 'Los equipos de Latinoamérica del Campeonato Mundial en su orden, con el código del país, corredores en pie, vueltas sumadas y puesto mundial, en la esquina inferior derecha. Sale de la hoja pública que publica la organización del Mundial, no de nuestros datos, y se relee cada medio minuto. Con &filas=5 se acorta. No necesita la clave.',
+    ancho: 1920,
+    alto: 1080,
+  },
 ];
 
 /**
@@ -78,6 +85,10 @@ export default function TransmisionObsPanel() {
   const [cambiando, setCambiando] = useState(false);
   // Las charlas tienen su propia barra, una direccion por actividad
   const [actividades, setActividades] = useState([]);
+  // Supers de texto libre: dos lineas que se escriben aqui y su tamano
+  const [supers, setSupers] = useState([]);
+  const [limites, setLimites] = useState({ min: 60, max: 135 });
+  const [guardandoSuper, setGuardandoSuper] = useState(null);
 
   const sitio = window.location.origin;
 
@@ -126,6 +137,80 @@ export default function TransmisionObsPanel() {
 
   // Sin numero, rota por todos los expositores; con numero (1, 2, 3…) se
   // queda en ese: una fuente de OBS por expositor.
+  const cargarSupers = useCallback(async () => {
+    if (!raceCode) return;
+    try {
+      const res = await adminFetch(conCarrera(`${API_URL}/api/overlay/supers`));
+      if (!res.ok) return;
+      const datos = await res.json();
+      setSupers(datos.supers || []);
+      setLimites({ min: datos.tamano_min || 60, max: datos.tamano_max || 135 });
+    } catch {
+      /* sin supers la seccion queda vacia */
+    }
+  }, [raceCode, conCarrera]);
+
+  useEffect(() => { cargarSupers(); }, [cargarSupers]);
+
+  const direccionSuper = (su) => `${sitio}/obs/super?id=${encodeURIComponent(su.id)}`;
+
+  const editarSuper = (id, cambios) =>
+    setSupers((lista) => lista.map((x) => (x.id === id ? { ...x, ...cambios, sucio: true } : x)));
+
+  const crearSuper = async () => {
+    try {
+      const res = await adminFetch(conCarrera(`${API_URL}/api/overlay/supers`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linea1: '', linea2: '', tamano: 100 }),
+      });
+      if (!res.ok) throw new Error('No se pudo crear el super');
+      const nuevo = await res.json();
+      setSupers((lista) => [...lista, nuevo]);
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    }
+  };
+
+  // Guarda el texto y el tamano de un super. La vista de OBS lo relee cada 3
+  // segundos, asi que el cambio sale en pantalla sin tocar OBS.
+  const guardarSuper = async (su, cambios = {}) => {
+    const datos = { ...su, ...cambios };
+    setGuardandoSuper(su.id);
+    try {
+      const res = await adminFetch(`${API_URL}/api/overlay/supers/${su.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ linea1: datos.linea1, linea2: datos.linea2, tamano: datos.tamano }),
+      });
+      if (!res.ok) throw new Error('No se pudo guardar el super');
+      const guardado = await res.json();
+      setSupers((lista) => lista.map((x) => (x.id === su.id ? guardado : x)));
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setGuardandoSuper(null);
+    }
+  };
+
+  // El tamano se guarda al momento: se ajusta mirando la pantalla, y tener
+  // que pulsar Guardar a cada paso lo haria inutil en plena transmision.
+  const cambiarTamano = (su, paso) => {
+    const tamano = Math.max(limites.min, Math.min(limites.max, (su.tamano || 100) + paso));
+    if (tamano !== su.tamano) guardarSuper(su, { tamano });
+  };
+
+  const borrarSuper = async (su) => {
+    if (!window.confirm('Se borra el super y su dirección deja de funcionar en OBS. ¿Borrarlo?')) return;
+    try {
+      const res = await adminFetch(`${API_URL}/api/overlay/supers/${su.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('No se pudo borrar el super');
+      setSupers((lista) => lista.filter((x) => x.id !== su.id));
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    }
+  };
+
   const direccionCharla = (actividad, expositor = null) =>
     `${sitio}/obs/charla?actividad=${encodeURIComponent(actividad.id)}&race=${encodeURIComponent(raceCode || '')}`
     + (expositor ? `&expositor=${expositor}` : '');
@@ -253,6 +338,60 @@ export default function TransmisionObsPanel() {
               {(a.expositores || []).length === 0 && filaDireccion(direccionCharla(a), `charla-${a.id}`)}
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Supers de texto libre</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            La barra de las charlas con el texto que tú escribas: dos líneas en el centro, la hora a la
+            izquierda y el patrocinador de turno a la derecha. Cada super tiene su dirección para OBS.
+            Lo que cambies aquí sale en pantalla en unos 3 segundos, sin tocar OBS.
+          </p>
+          {supers.map((su) => (
+            <div key={su.id} className="space-y-2 pl-3 border-l-2 border-muted" data-testid={`super-${su.id}`}>
+              <Input
+                value={su.linea1}
+                onChange={(e) => editarSuper(su.id, { linea1: e.target.value })}
+                placeholder="Línea 1 (grande). Ej. el nombre del invitado"
+                maxLength={120}
+                data-testid={`super-linea1-${su.id}`}
+              />
+              <Input
+                value={su.linea2}
+                onChange={(e) => editarSuper(su.id, { linea2: e.target.value })}
+                placeholder="Línea 2 (pequeña). Ej. su cargo o el tema"
+                maxLength={160}
+                data-testid={`super-linea2-${su.id}`}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => guardarSuper(su)} disabled={guardandoSuper === su.id || !su.sucio} data-testid={`super-guardar-${su.id}`}>
+                  {guardandoSuper === su.id && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Guardar texto
+                </Button>
+                <div className="flex items-center gap-1" title="Tamaño del texto">
+                  <Button variant="outline" size="sm" onClick={() => cambiarTamano(su, -5)} disabled={su.tamano <= limites.min} aria-label="Texto más pequeño" data-testid={`super-menos-${su.id}`}>
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm tabular-nums w-12 text-center">{su.tamano}%</span>
+                  <Button variant="outline" size="sm" onClick={() => cambiarTamano(su, 5)} disabled={su.tamano >= limites.max} aria-label="Texto más grande" data-testid={`super-mas-${su.id}`}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => borrarSuper(su)} className="text-red-500 hover:text-red-600 ml-auto" title="Borrar el super">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              {filaDireccion(direccionSuper(su), `super-${su.id}`)}
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={crearSuper} disabled={!raceCode} data-testid="super-nuevo">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo super
+          </Button>
         </CardContent>
       </Card>
 

@@ -121,9 +121,9 @@ export default function EnviarAnimoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-background pt-20 flex items-center justify-center">
         <div className="text-center">
-          <MessageCircle className="w-12 h-12 text-purple-400 animate-pulse mx-auto mb-4" />
+          <MessageCircle className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando...</p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function EnviarAnimoPage() {
 
   if (!athlete) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
+      <div className="min-h-screen bg-background pt-20">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-md mx-auto">
             <CardContent className="p-8 text-center">
@@ -140,7 +140,7 @@ export default function EnviarAnimoPage() {
               <h2 className="text-xl font-bold text-foreground mb-2">Atleta no encontrado</h2>
               <p className="text-muted-foreground mb-6">No pudimos encontrar al atleta con número #{bib}</p>
               <Link to="/comunidad">
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
+                <Button className="bg-primary hover:bg-primary/90">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Ir a Comunidad
                 </Button>
@@ -153,14 +153,14 @@ export default function EnviarAnimoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pt-20">
+    <div className="min-h-screen bg-background pt-20">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-10">
+      <div className="bg-foreground text-white py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-center mb-2">
             Mensaje de Ánimo
           </h1>
-          <p className="text-center text-purple-100">
+          <p className="text-center text-white/70">
             {raceName}
           </p>
         </div>
@@ -170,10 +170,10 @@ export default function EnviarAnimoPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
           {/* Athlete Card */}
-          <Card className="mb-6 border-2 border-purple-200 shadow-lg">
+          <Card className="mb-6 border-border">
             <CardContent className="p-6">
               <div className="text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
+                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-white text-3xl font-bold mx-auto mb-4">
                   #{athlete.bib}
                 </div>
                 <h2 className="text-2xl font-bold text-foreground mb-1">
@@ -184,7 +184,7 @@ export default function EnviarAnimoPage() {
                 </Badge>
                 <div className="flex justify-center gap-4 mt-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-purple-600">{athlete.laps_completed}</p>
+                    <p className="text-2xl font-bold text-primary">{athlete.laps_completed}</p>
                     <p className="text-xs text-muted-foreground">Vueltas</p>
                   </div>
                   <div className="text-center">
@@ -209,7 +209,7 @@ export default function EnviarAnimoPage() {
                 <div className="space-y-3">
                   <Button
                     onClick={() => setResult(null)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                    className="w-full bg-primary hover:bg-primary/90"
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Enviar otro mensaje
@@ -235,12 +235,12 @@ export default function EnviarAnimoPage() {
                 {/* Fan Name */}
                 <div className="mb-4">
                   {cuenta ? (
-                    <div className="flex items-center justify-between gap-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                    <div className="flex items-center justify-between gap-3 p-3 bg-secondary rounded-lg border border-border">
                       <div className="flex items-center gap-2 min-w-0">
-                        <UserCircle2 className="w-5 h-5 text-purple-600 shrink-0" />
+                        <UserCircle2 className="w-5 h-5 text-primary shrink-0" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium truncate">Firmas como {cuenta.nombre}</p>
-                          <Link to="/mi-cuenta" className="text-xs text-purple-700 hover:underline">
+                          <Link to="/mi-cuenta" className="text-xs text-primary hover:underline">
                             Ver mi cuenta
                           </Link>
                         </div>
@@ -297,7 +297,7 @@ export default function EnviarAnimoPage() {
                     onChange={(e) => setMessage(e.target.value)}
                     maxLength={280}
                     rows={4}
-                    className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                    className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                   <p className="text-xs text-muted-foreground text-right mt-1">{message.length}/280</p>
                 </div>
@@ -313,7 +313,7 @@ export default function EnviarAnimoPage() {
                 <Button
                   onClick={handleSendMessage}
                   disabled={sending || !message.trim() || (!cuenta && !fanName.trim())}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 mb-4"
+                  className="w-full bg-primary hover:bg-primary/90 mb-4"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {sending ? 'Enviando...' : 'Enviar Mensaje'}

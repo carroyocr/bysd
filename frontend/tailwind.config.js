@@ -39,6 +39,10 @@ module.exports = {
   				DEFAULT: 'hsl(var(--accent))',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
+  			marca: {
+  				DEFAULT: 'hsl(var(--marca))',
+  				foreground: 'hsl(var(--marca-foreground))'
+  			},
   			destructive: {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'

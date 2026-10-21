@@ -38,7 +38,7 @@ const REG_STEPS = [
 // Page wrapper (matches CorredoresPage structure: pt-20 for nav clearance + py-20 section)
 const PageContent = ({ children }) => (
   <div className="pt-16">
-    <section className="pt-[30px] pb-2.5 sm:py-10 bg-gradient-to-b from-muted/20 to-background min-h-[60vh]">
+    <section className="pt-[30px] pb-2.5 sm:py-10 bg-background min-h-[60vh]">
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {children}
@@ -69,7 +69,7 @@ const ProfileSection = ({ title, children, className = '', defaultOpen = false }
 
 const SectionHeader = ({ title, subtitle }) => (
   <div className="text-center space-y-4">
-    <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">{title}</h2>
+    <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">{title}</h2>
     {subtitle && <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>}
   </div>
 );
@@ -1271,7 +1271,7 @@ export default function MyProfilePage() {
             <div className="space-y-4">
               {/* Inscription button or Coming Soon */}
               {!showInscription && activeRace && !isRegisteredForActive && athlete.profile_complete && (
-                <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+                <Card className="bg-secondary border-border">
                   <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                       <h3 className="font-display text-xl text-foreground">{activeRace.name || 'Backyard Ultra Santo Domingo'}</h3>
@@ -1302,16 +1302,16 @@ export default function MyProfilePage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Info Banner - costo e instrucciones */}
-                    <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-5">
-                      <h4 className="text-base font-bold text-orange-900 mb-3">Informacion Importante</h4>
-                      <div className="space-y-2 text-sm text-orange-800">
+                    <div className="bg-secondary border border-border rounded-lg p-5">
+                      <h4 className="text-base font-bold text-foreground mb-3">Informacion Importante</h4>
+                      <div className="space-y-2 text-sm text-muted-foreground">
                         <p>
                           <strong>Completar este formulario garantiza espacio para la carrera.</strong>
                         </p>
                         <p>
                           Cuatro (4) meses antes del evento, enviaremos un correo electrónico con las instrucciones para realizar el pago de la inscripción.
                         </p>
-                        <p className="font-semibold text-lg text-orange-900">
+                        <p className="font-semibold text-lg text-foreground">
                           El costo de la carrera sera de {formattedCost}.
                         </p>
                         <p>
@@ -1320,7 +1320,7 @@ export default function MyProfilePage() {
                         <p>
                           Si el pago no se realiza dentro de ese periodo, el pre registro sera automaticamente desestimado y el cupo podra ser asignado a otro participante.
                         </p>
-                        <p className="text-orange-600 italic flex items-center gap-2">
+                        <p className="text-primary italic flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 flex-shrink-0" />
                           Te recomendamos estar atento a tu correo electronico y verificar tambien la carpeta de spam.
                         </p>
@@ -1511,7 +1511,7 @@ export default function MyProfilePage() {
                 ) : (
                   <div className="space-y-3" data-testid="messages-list">
                     {cheerMessages.map((msg, i) => (
-                      <div key={i} className="p-4 border rounded-lg bg-gradient-to-r from-orange-50/50 to-transparent" data-testid={`message-${i}`}>
+                      <div key={i} className="p-4 border border-border rounded-lg bg-secondary/60" data-testid={`message-${i}`}>
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-semibold text-foreground">{msg.fan_name}</span>
                           <div className="flex items-center gap-2">

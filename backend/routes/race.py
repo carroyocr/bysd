@@ -17,7 +17,7 @@ from models.race import (
 from pydantic import BaseModel
 from services.email_service import send_notification_email, send_lap_notifications, send_finish_notifications
 from services.auth import encode_admin_token, require_permission
-from services import clima, laps, races, rate_limit
+from services import clima, laps, races, rate_limit, resultados
 
 router = APIRouter(prefix="/api/race", tags=["race"])
 
@@ -647,6 +647,24 @@ async def panel_en_vivo(
         "corredores": lista,
         "movimientos": ultimos,
     }
+
+
+@router.get("/resultados")
+async def resultados_de_carrera(race_code: Optional[str] = Query(None)):
+    """Vueltas, km y tiempo de cada vuelta de cada corredor. Público: lo lee
+    la página del Campeonato. Las reglas están en `services/resultados.py`."""
+    from server import db as database
+
+    carrera = await races.resolver_carrera(database, race_code)
+    codigo = carrera.get("code")
+    corredores = await get_participants(
+        search=None, status=None, race_code=codigo, include_waitlist=False, db=None
+    )
+    anotaciones = await database.lap_registrations.find(
+        {"race_code": codigo, "anulada": {"$ne": True}},
+        {"_id": 0, "bib": 1, "action": 1, "lap_number": 1, "scan_time": 1},
+    ).sort("scan_time", 1).to_list(100000)
+    return resultados.armar(carrera, corredores, anotaciones)
 
 
 @router.get("/lap-status")

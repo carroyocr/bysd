@@ -1,14 +1,25 @@
 import React from 'react';
 import { MapPin, Clock, Calendar, Users } from 'lucide-react';
-import { Card, CardContent } from './ui/card';
 import { useRaceConfig } from '../contexts/RaceConfigContext';
+import FotoAlbum from './FotoAlbum';
+import useAlbum from '../lib/useAlbum';
+import { FOTOS_EVENTO, resolverFotos } from '../content/portada';
+
+// Pagina del evento en el rediseño editorial (oct-2026): los cuatro datos van
+// en columnas separadas por filetes, sin tarjetas, y la explicacion del
+// formato cierra con tres fotos de la edicion anterior con su pie.
+
+const Eyebrow = ({ children }) => (
+  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{children}</div>
+);
 
 export default function EventInfo() {
   const { getShortDate, raceName, raceLocation } = useRaceConfig();
-  
+  const fotos = resolverFotos(useAlbum(), FOTOS_EVENTO);
+
   const infoCards = [
     {
-      icon: <Calendar className="w-8 h-8 text-primary" />,
+      icon: Calendar,
       title: 'Fecha y Hora',
       details: [
         getShortDate(),
@@ -17,17 +28,16 @@ export default function EventInfo() {
       ],
     },
     {
-      icon: <MapPin className="w-8 h-8 text-primary" />,
+      icon: MapPin,
       title: 'Ubicación',
       details: [
         'Hotel Caribbean Adventure',
         raceLocation,
-        '',
       ].filter(Boolean),
       link: 'https://maps.app.goo.gl/BrntZd7xFPcrmDTe7',
     },
     {
-      icon: <Clock className="w-8 h-8 text-primary" />,
+      icon: Clock,
       title: 'Formato',
       details: [
         '6.706 km por vuelta',
@@ -36,7 +46,7 @@ export default function EventInfo() {
       ],
     },
     {
-      icon: <Users className="w-8 h-8 text-primary" />,
+      icon: Users,
       title: 'Ganador',
       details: [
         'Último en pie (Last One Standing)',
@@ -47,64 +57,59 @@ export default function EventInfo() {
   ];
 
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto space-y-12">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+    <>
+      <section className="py-16 sm:py-24 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="max-w-[1240px] mx-auto">
+            <Eyebrow>Evento</Eyebrow>
+            <h2 className="font-display uppercase text-5xl sm:text-7xl leading-none tracking-tight text-foreground mt-3">
               Información del Evento
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-xl mt-4">
               Todo lo que necesitas saber sobre el {raceName}
             </p>
-          </div>
 
-          {/* Info Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {infoCards.map((card, index) => (
-              <Card
-                key={index}
-                className="hover-lift bg-card border-border shadow-soft hover:shadow-medium transition-all duration-300"
-              >
-                <CardContent className="p-6 space-y-4">
-                  <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-                    {card.icon}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mt-14 pt-10 border-t border-border">
+              {infoCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div key={card.title}>
+                    <Icon className="w-7 h-7 text-primary mb-5" />
+                    <h3 className="font-display uppercase text-3xl leading-none text-foreground mb-3">{card.title}</h3>
+                    <ul>
+                      {card.details.map((detail) => (
+                        <li key={detail} className="text-[15px] text-muted-foreground py-1.5 border-b border-border">
+                          {detail}
+                        </li>
+                      ))}
+                    </ul>
+                    {card.link && (
+                      <a
+                        href={card.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-4 text-sm font-semibold text-primary border-b-[1.5px] border-primary hover:text-foreground hover:border-foreground transition-colors"
+                      >
+                        Ver en Google Maps
+                      </a>
+                    )}
                   </div>
-                  <h3 className="font-display text-xl text-foreground">{card.title}</h3>
-                  <ul className="space-y-2">
-                    {card.details.map((detail, idx) => (
-                      <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0"></span>
-                        <span>{detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {card.link && (
-                    <a
-                      href={card.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent transition-colors mt-2"
-                    >
-                      Ver en Google Maps
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                );
+              })}
+            </div>
           </div>
+        </div>
+      </section>
 
-          {/* About Backyard Ultra */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
-            <CardContent className="p-8 md:p-10 space-y-6">
-              <h3 className="font-display text-3xl text-foreground text-center">
+      <section className="py-16 sm:py-24 bg-secondary">
+        <div className="container mx-auto px-4">
+          <div className="max-w-[1240px] mx-auto">
+            <div className="max-w-3xl mx-auto text-center">
+              <Eyebrow>El formato</Eyebrow>
+              <h3 className="font-display uppercase text-5xl sm:text-7xl leading-none tracking-tight text-foreground mt-3">
                 ¿Qué es un Backyard Ultra?
               </h3>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <div className="text-left space-y-5 text-lg text-foreground/80 leading-relaxed mt-8">
                 <p>
                   El Backyard Ultra es más que una carrera: es un <strong className="text-foreground">desafío personal</strong>,
                   un ejercicio de <strong className="text-foreground">disciplina</strong> y una prueba de
@@ -121,14 +126,25 @@ export default function EventInfo() {
                   <strong className="text-foreground"> una vuelta adicional</strong> después de que todos los demás hayan
                   abandonado o sido eliminados.
                 </p>
-                <p className="text-center pt-4 text-lg font-semibold text-foreground">
-                  "Solo hay un ganador: el Último en Pie (Last One Standing)"
-                </p>
               </div>
-            </CardContent>
-          </Card>
+              <blockquote className="font-display uppercase text-4xl sm:text-5xl leading-none text-primary mt-10 mb-16">
+                “Solo hay un ganador: el Último en Pie (Last One Standing)”
+              </blockquote>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              {fotos.map((foto) => (
+                <figure key={foto.clave}>
+                  <FotoAlbum foto={foto} ancho={1000} className="w-full aspect-[4/3] object-cover" />
+                  <figcaption className="mt-2 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                    {foto.pie}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }

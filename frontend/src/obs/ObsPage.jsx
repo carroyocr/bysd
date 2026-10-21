@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import useTransmision, { horaCorta, reloj } from './useTransmision';
 import usePatrocinadores, { urlLogo } from './usePatrocinadores';
 import useCharla from './useCharla';
+import useSuper from './useSuper';
+import useMundial from './useMundial';
 import useMensajes from './useMensajes';
 import { Heart } from 'lucide-react';
 import Globo, { globoDe } from './Globo';
@@ -24,6 +26,8 @@ import './obs.css';
  *   /obs/patrocinadores?clave=...
  *   /obs/patrocinador-esquina?race=BYSD-2027                 (sin clave: no lleva datos de carrera)
  *   /obs/charla?actividad=<id>&race=BYSD-2027&expositor=1   (sin clave: no lleva datos de carrera)
+ *   /obs/super?id=<id>   (dos líneas de texto libre, escritas en el panel)
+ *   /obs/latam?filas=20  (sin clave: el ranking de Latinoamérica del Mundial, de la hoja pública de la organización)
  *   /obs/mensajes?race=BYSD-2027&recientes=10&segundos=10     (sin clave: el muro de apoyo es público)
  *   /obs/mensajes?race=BYSD-2027&recientes=0&espera=30&sobre=barra
  */
@@ -62,11 +66,16 @@ export default function ObsPage() {
   });
   // Solo la vista de patrocinadores lo usa, pero un hook no puede ir dentro
   // de un if: se declara siempre y en las demás vistas queda apagado.
+  // El super sabe de qué carrera es: sus patrocinadores salen de ahí, y la
+  // dirección no tiene que llevar más que su id.
+  const superTexto = useSuper(params.get('id'), vista === 'super');
   const patrocinador = usePatrocinadores(
-    raceCode,
-    ['patrocinadores', 'patrocinador-esquina', 'charla'].includes(vista),
+    vista === 'super' ? (superTexto.datos?.race_code || '') : raceCode,
+    ['patrocinadores', 'patrocinador-esquina', 'charla'].includes(vista)
+      || (vista === 'super' && !!superTexto.datos),
   );
   const charla = useCharla(params.get('actividad'), vista === 'charla', params.get('expositor'));
+  const mundial = useMundial(vista === 'latam');
   // Los mensajes de apoyo: cuántos de los últimos se rotan cuando no llega
   // nada nuevo (0 = solo los nuevos), cuánto dura cada uno y cuánto se retiene
   // cada mensaje desde que se publica, por si lo reportan antes de salir.
@@ -134,6 +143,80 @@ export default function ObsPage() {
           )}
         </div>
       )
+    );
+  }
+
+  if (vista === 'super') {
+    // La barra de la charla con texto libre: la hora, dos líneas escritas en
+    // el panel y el patrocinador de turno a la derecha. El tamaño es un
+    // porcentaje que se sube o se baja desde el panel.
+    if (superTexto.error) return enLienzo(<div className="obs-aviso">{superTexto.error}</div>);
+    const su = superTexto.datos;
+    const factor = (su?.tamano || 100) / 100;
+    return enLienzo(
+      su && (
+        <div className="obs-barra">
+          <div className="obs-marca">
+            <div className="obs-marca-arriba">HORA</div>
+            <div className="obs-marca-grande obs-hora">{superTexto.hora}</div>
+          </div>
+          <div className="obs-cuerpo">
+            {su.linea1 && <div className="obs-super-linea1" style={{ fontSize: `${40 * factor}px` }}>{su.linea1}</div>}
+            {su.linea2 && <div className="obs-super-linea2" style={{ fontSize: `${28 * factor}px` }}>{su.linea2}</div>}
+          </div>
+          {patrocinador && (
+            <div className="obs-patrocinio obs-entra" key={patrocinador.id}>
+              {urlLogo(patrocinador.logo_url) && (
+                <div className="obs-logo obs-logo-chico">
+                  <img src={urlLogo(patrocinador.logo_url)} alt="" />
+                </div>
+              )}
+              <div className="obs-patrocinio-texto">
+                <div className="obs-crono-rotulo">Patrocinador</div>
+                <div className="obs-patrocinio-nombre">{patrocinador.name}</div>
+                {patrocinador.text && <div className="obs-patrocinio-frase">{patrocinador.text}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    );
+  }
+
+  if (vista === 'latam') {
+    // El ranking de Latinoamérica del Mundial por equipos, en la esquina
+    // inferior derecha, donde va la clasificación. No sale de nuestra base
+    // sino de la hoja pública de la organización, que es la oficial: aquí
+    // solo se filtran los países latinos y se numeran. Sin clave.
+    if (mundial.error) return enLienzo(<div className="obs-aviso">{mundial.error}</div>);
+    const m = mundial.datos;
+    if (!m) return enLienzo(null);
+    const equipos = m.equipos.slice(0, filas);
+    return enLienzo(
+      <div className="obs-latam">
+        <h2>
+          <span>Ranking Latinoamérica</span>
+          {m.vuelta && <span className="obs-latam-vuelta">Vuelta {m.vuelta}</span>}
+        </h2>
+        <div className="obs-fila obs-latam-cabecera">
+          <span className="obs-puesto">#</span>
+          <span className="obs-bib">País</span>
+          <span className="obs-nombre" />
+          <span className="obs-latam-cifra">En pie</span>
+          <span className="obs-latam-cifra">Vueltas</span>
+          <span className="obs-latam-mundial">Mundial</span>
+        </div>
+        {equipos.map((e) => (
+          <div key={e.codigo} className={`obs-fila${e.en_pie === 0 ? ' obs-fuera' : ''}`}>
+            <span className="obs-puesto">{e.puesto}</span>
+            <span className="obs-bib">{e.codigo}</span>
+            <span className="obs-nombre">{e.pais}</span>
+            <span className="obs-latam-cifra">{e.en_pie}</span>
+            <span className="obs-latam-cifra">{e.vueltas}</span>
+            <span className="obs-latam-mundial">{e.puesto_mundial}º</span>
+          </div>
+        ))}
+      </div>
     );
   }
 

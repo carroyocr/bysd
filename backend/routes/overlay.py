@@ -16,8 +16,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
-from services import laps, races
+from services import laps, mundial, races
 from services.auth import require_permission
 
 router = APIRouter(prefix="/api/overlay", tags=["overlay"])
@@ -160,6 +161,24 @@ async def estado_para_la_transmision(
     }
 
 
+# ==================== RANKING DE LATINOAMERICA DEL MUNDIAL ====================
+
+
+@router.get("/mundial/latam")
+async def ranking_latam_del_mundial(filas: int = 20):
+    """Los equipos de Latinoamerica del Campeonato Mundial, en su orden.
+
+    Sale de la hoja publica de la organizacion (ver services/mundial.py),
+    no de nuestra base: es el ranking oficial por equipos de todos los
+    paises, filtrado a los nuestros. Publico, sin clave: la hoja lo es.
+    """
+    try:
+        datos = await mundial.ranking_latam()
+    except Exception:
+        raise HTTPException(status_code=503, detail="No se pudo leer la hoja del Mundial")
+    return {**datos, "equipos": datos["equipos"][:max(1, min(filas, 30))]}
+
+
 # ==================== LAS DIRECCIONES, DESDE EL PANEL ====================
 
 
@@ -195,3 +214,99 @@ async def cambiar_la_clave(race_code: str = Depends(races.carrera_del_panel)):
         {"code": carrera["code"]}, {"$set": {"overlay_key": clave}}
     )
     return {"race_code": carrera["code"], "clave": clave}
+
+
+# ==================== SUPERS DE TEXTO LIBRE ====================
+#
+# Un super es la misma barra de la charla —la hora, el texto en el centro y el
+# patrocinador de turno a la derecha— pero con dos lineas que escribe quien
+# lleva la transmision: el nombre de un invitado, el titulo de un bloque, un
+# aviso. Cada uno tiene su direccion para OBS, y la vista lo relee cada pocos
+# segundos: lo que se corrige en el panel sale en pantalla sin tocar OBS.
+
+TAMANO_MIN = 60
+TAMANO_MAX = 135   # mas alla, las dos lineas no caben en el alto de la barra
+TAMANO_NORMAL = 100
+
+
+class SuperDatos(BaseModel):
+    linea1: str = ""
+    linea2: str = ""
+    tamano: int = TAMANO_NORMAL   # porcentaje sobre el tamano de la barra
+
+
+def _super_limpio(datos: SuperDatos) -> dict:
+    return {
+        "linea1": (datos.linea1 or "").strip()[:120],
+        "linea2": (datos.linea2 or "").strip()[:160],
+        "tamano": max(TAMANO_MIN, min(TAMANO_MAX, int(datos.tamano or TAMANO_NORMAL))),
+    }
+
+
+def _super_vista(doc: dict) -> dict:
+    return {
+        "id": doc["id"],
+        "race_code": doc.get("race_code"),
+        "linea1": doc.get("linea1", ""),
+        "linea2": doc.get("linea2", ""),
+        "tamano": doc.get("tamano", TAMANO_NORMAL),
+    }
+
+
+@router.get("/supers", dependencies=[Depends(require_permission("control"))])
+async def listar_supers(race_code: str = Depends(races.carrera_del_panel)):
+    """Los supers de la carrera, en el orden en que se crearon."""
+    from server import db
+
+    docs = await db.overlay_supers.find({"race_code": race_code}).sort("created_at", 1).to_list(200)
+    return {
+        "supers": [_super_vista(d) for d in docs],
+        "tamano_min": TAMANO_MIN,
+        "tamano_max": TAMANO_MAX,
+    }
+
+
+@router.post("/supers", dependencies=[Depends(require_permission("control"))])
+async def crear_super(datos: SuperDatos, race_code: str = Depends(races.carrera_del_panel)):
+    from server import db
+
+    doc = {
+        # El id va en la direccion de OBS y es lo unico que la protege: al azar
+        "id": secrets.token_urlsafe(9),
+        "race_code": race_code,
+        **_super_limpio(datos),
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.overlay_supers.insert_one(doc)
+    return _super_vista(doc)
+
+
+@router.put("/supers/{super_id}", dependencies=[Depends(require_permission("control"))])
+async def guardar_super(super_id: str, datos: SuperDatos):
+    from server import db
+
+    r = await db.overlay_supers.update_one({"id": super_id}, {"$set": _super_limpio(datos)})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Ese super no existe")
+    return _super_vista(await db.overlay_supers.find_one({"id": super_id}))
+
+
+@router.delete("/supers/{super_id}", dependencies=[Depends(require_permission("control"))])
+async def borrar_super(super_id: str):
+    from server import db
+
+    r = await db.overlay_supers.delete_one({"id": super_id})
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ese super no existe")
+    return {"success": True}
+
+
+@router.get("/super/{super_id}")
+async def super_para_la_transmision(super_id: str):
+    """Lo que pinta la vista de OBS. Publico: lo abre quien tiene la direccion."""
+    from server import db
+
+    doc = await db.overlay_supers.find_one({"id": super_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Ese super no existe")
+    return _super_vista(doc)

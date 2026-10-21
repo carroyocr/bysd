@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +6,7 @@
 
 body {
     margin: 0;
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -17,91 +17,101 @@ code {
 
 @layer base {
     :root {
-        /* Brand Colors - Orange + Cream + Black Earth Tones */
-        --background: 42 25% 96%;           /* Soft warm beige background */
-        --foreground: 20 15% 8%;            /* Deep charcoal for text */
+        /* Paleta del rediseño editorial (oct-2026): blanco, grafito y un
+           acento azul acero para botones, enlaces y rótulos. La crema se
+           retiró del sitio; el naranja del logo queda como color de marca
+           (`--marca`) y se usa solo para la palabra «Santo Domingo» de la
+           portada, no para botones ni enlaces. El fondo es blanco plano,
+           que es donde mejor asienta el logo. */
+        --background: 0 0% 100%;            /* Blanco */
+        --foreground: 240 15% 5%;           /* #0b0b0f grafito */
         
-        --card: 40 30% 98%;                 /* Light cream for cards */
-        --card-foreground: 20 15% 8%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 15% 5%;
         
-        --popover: 40 30% 98%;
-        --popover-foreground: 20 15% 8%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 15% 5%;
         
-        /* Primary Orange - Vibrant brand color */
-        --primary: 22 88% 52%;              /* #E77622 - Main orange */
-        --primary-foreground: 40 30% 98%;   /* Cream text on orange */
-        --primary-glow: 22 88% 65%;         /* Lighter orange for effects */
+        /* Acento: azul acero */
+        --primary: 215 67% 32%;             /* #1b4a8a */
+        --primary-foreground: 0 0% 100%;
+        --primary-glow: 215 60% 48%;
+
+        /* Marca: el naranja del logo */
+        --marca: 25 78% 50%;                /* #e2701c */
+        --marca-foreground: 0 0% 100%;
         
-        /* Secondary Cream/Beige */
-        --secondary: 42 50% 88%;            /* Warm cream #F2E8C7 */
-        --secondary-foreground: 20 15% 8%;
+        /* Superficies suaves */
+        --secondary: 240 14% 96%;           /* #f4f4f7 */
+        --secondary-foreground: 240 15% 5%;
         
-        /* Muted earth tones */
-        --muted: 38 35% 82%;                /* Sandy beige */
-        --muted-foreground: 20 10% 35%;
+        --muted: 240 10% 94%;
+        --muted-foreground: 240 6% 38%;     /* #5b5b66 */
         
-        /* Accent - Darker earth */
-        --accent: 25 45% 25%;               /* Dark earth brown */
-        --accent-foreground: 40 30% 98%;
+        /* Acento oscuro: el propio grafito */
+        --accent: 240 15% 5%;
+        --accent-foreground: 0 0% 100%;
         
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
         
-        --border: 38 25% 85%;
-        --input: 38 25% 85%;
-        --ring: 22 88% 52%;                 /* Orange ring for focus */
+        --border: 240 9% 91%;               /* #e6e6ea */
+        --input: 240 9% 91%;
+        --ring: 215 67% 32%;
         
         /* Custom design tokens */
-        --deep-black: 0 0% 5%;              /* #0C0C0C for backgrounds */
-        --warm-gray: 0 0% 23%;              /* #3A3A3A */
+        --deep-black: 240 15% 5%;
+        --warm-gray: 0 0% 23%;
         
         /* Gradients */
-        --gradient-hero: linear-gradient(135deg, hsl(22 88% 52%) 0%, hsl(25 85% 45%) 100%);
-        --gradient-subtle: linear-gradient(180deg, hsl(42 25% 96%) 0%, hsl(40 30% 98%) 100%);
-        --gradient-dark: linear-gradient(135deg, hsl(0 0% 5%) 0%, hsl(20 15% 8%) 100%);
+        --gradient-hero: linear-gradient(135deg, hsl(215 67% 32%) 0%, hsl(215 67% 24%) 100%);
+        --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 14% 96%) 100%);
+        --gradient-dark: linear-gradient(135deg, hsl(240 15% 5%) 0%, hsl(240 10% 10%) 100%);
         
-        /* Shadows */
-        --shadow-soft: 0 2px 8px hsla(22 88% 52% / 0.12);
-        --shadow-medium: 0 4px 16px hsla(22 88% 52% / 0.18);
-        --shadow-strong: 0 8px 32px hsla(22 88% 52% / 0.25);
-        --shadow-glow: 0 0 40px hsla(22 88% 65% / 0.3);
+        /* Shadows: neutras, sin tinte de color */
+        --shadow-soft: 0 2px 8px hsla(240 15% 5% / 0.06);
+        --shadow-medium: 0 4px 16px hsla(240 15% 5% / 0.10);
+        --shadow-strong: 0 8px 32px hsla(240 15% 5% / 0.16);
+        --shadow-glow: 0 0 40px hsla(215 67% 32% / 0.25);
         
         /* Animations */
         --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         --transition-bounce: 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         
-        --radius: 0.75rem;
+        --radius: 0.375rem;
     }
     
     .dark {
-        --background: 0 0% 5%;              /* Deep black */
-        --foreground: 40 30% 98%;           /* Cream text */
+        --background: 240 15% 5%;
+        --foreground: 0 0% 98%;
         
-        --card: 20 15% 8%;
-        --card-foreground: 40 30% 98%;
+        --card: 240 10% 9%;
+        --card-foreground: 0 0% 98%;
         
-        --popover: 20 15% 8%;
-        --popover-foreground: 40 30% 98%;
+        --popover: 240 10% 9%;
+        --popover-foreground: 0 0% 98%;
         
-        --primary: 22 88% 58%;              /* Slightly brighter orange for dark mode */
-        --primary-foreground: 0 0% 5%;
-        --primary-glow: 22 88% 70%;
+        --primary: 215 60% 58%;
+        --primary-foreground: 0 0% 100%;
+        --primary-glow: 215 60% 68%;
+        --marca: 25 78% 55%;
+        --marca-foreground: 0 0% 100%;
         
-        --secondary: 25 30% 18%;
-        --secondary-foreground: 40 30% 98%;
+        --secondary: 240 8% 14%;
+        --secondary-foreground: 0 0% 98%;
         
-        --muted: 20 15% 15%;
-        --muted-foreground: 38 20% 60%;
+        --muted: 240 8% 14%;
+        --muted-foreground: 240 6% 65%;
         
-        --accent: 22 88% 52%;
-        --accent-foreground: 40 30% 98%;
+        --accent: 215 60% 58%;
+        --accent-foreground: 0 0% 100%;
         
         --destructive: 0 62% 31%;
         --destructive-foreground: 0 0% 98%;
         
-        --border: 20 15% 18%;
-        --input: 20 15% 18%;
-        --ring: 22 88% 58%;
+        --border: 240 8% 18%;
+        --input: 240 8% 18%;
+        --ring: 215 60% 58%;
     }
 }
 
@@ -114,18 +124,24 @@ code {
         @apply bg-background text-foreground;
     }
     
+    /* Tipografía del rediseño editorial (oct-2026): los títulos van en
+       Barlow Condensed, pesada y estrecha, y el texto corrido en Inter.
+       Antes era Anton + Montserrat. */
     h1, h2, h3 {
-        font-family: 'Anton', 'Bebas Neue', sans-serif;
-        font-weight: 400;
-        letter-spacing: 0.02em;
+        font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.01em;
     }
     
     .font-display {
-        font-family: 'Anton', sans-serif;
+        font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.01em;
     }
     
     .font-accent {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+        font-weight: 600;
     }
 }
 
@@ -170,7 +186,7 @@ code {
 @layer utilities {
     /* Text gradient utilities */
     .text-gradient-primary {
-        background: linear-gradient(135deg, hsl(22 88% 45%) 0%, hsl(25 85% 38%) 100%);
+        background: linear-gradient(135deg, hsl(215 67% 32%) 0%, hsl(215 67% 22%) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -286,7 +302,7 @@ code {
 }
 .rich-editor ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
 .rich-editor ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
-.rich-editor a { color: #E8772E; text-decoration: underline; }
+.rich-editor a { color: hsl(var(--primary)); text-decoration: underline; }
 .rich-editor strong { font-weight: 700; }
 
 /* Safe areas (app nativa): respeta la isla dinámica/notch y la barra de gestos */
@@ -336,7 +352,7 @@ code {
 .nota-prensa-cuerpo > * + * { margin-top: 1.25rem; }
 .nota-prensa-cuerpo h2,
 .nota-prensa-cuerpo h3 {
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     letter-spacing: -0.01em;
 }
 .nota-prensa-cuerpo h2 { font-size: 1.375rem; font-weight: 700; line-height: 1.3; margin-top: 2.5rem; }
@@ -355,9 +371,9 @@ code {
 }
 
 /* Titular de una nota de prensa. El titular es una frase para leer, no el
-   rótulo de una sección: Anton es condensada y muy pesada, y a dos líneas
-   deja de leerse. El resto del sitio sigue igual; esto es solo para las notas. */
+   rótulo de una sección: la condensada de los títulos, a dos líneas, deja
+   de leerse. El resto del sitio sigue igual; esto es solo para las notas. */
 .titular-nota {
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     letter-spacing: -0.01em;
 }

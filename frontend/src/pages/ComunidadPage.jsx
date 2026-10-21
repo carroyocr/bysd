@@ -421,7 +421,7 @@ export default function ComunidadPage() {
   // Show disabled page message if community is not enabled
   if (!visibility.enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted/25 to-background pt-16 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background pt-16 flex items-center justify-center px-4">
         <Card className="max-w-md w-full border-border/60 shadow-medium">
           <CardContent className="p-8 text-center">
             <IconChip size="lg" className="mx-auto mb-6">
@@ -449,13 +449,13 @@ export default function ComunidadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/25 to-background pt-16">
+    <div className="min-h-screen bg-background pt-16">
       {/* Cabecera */}
-      <header className="relative overflow-hidden bg-[#0C0C0C] text-white pb-14">
+      <header className="relative overflow-hidden bg-foreground text-white pb-14">
         <div
           className="absolute inset-0"
           aria-hidden="true"
-          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(22 88% 52% / 0.45), transparent 65%)' }}
+          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(215 67% 32% / 0.55), transparent 65%)' }}
         />
         <div className="relative container mx-auto px-4 py-12 sm:py-14">
           <div className="max-w-6xl mx-auto flex flex-col items-center text-center gap-4">

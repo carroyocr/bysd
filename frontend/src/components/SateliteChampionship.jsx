@@ -1,59 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Globe, Users, Trophy, CalendarCheck, Flag, Star, Timer, Award, Target, Shield } from 'lucide-react';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
-
-// Respaldo por si la nomina no carga; la fuente de verdad es el panel
-// (campeonato_seleccionados, via /api/seleccionados/public).
-const fallbackTeamMembers = [
-  { name: 'Jordano Martínez Abreu', laps: 47 },
-  { name: 'Livio Feliz', laps: 30 },
-  { name: 'Jorge Lewis Camilo Tejada', laps: 23 },
-  { name: 'Iván Ortega', laps: 19 },
-  { name: 'Daiyi Shiguetome Rodríguez', laps: 18 },
-  { name: 'Cristian Minaya Domínguez', laps: 17 },
-  { name: 'Carlos Alberto Ovalle', laps: 17 },
-  { name: 'Yeirys Soto', laps: 17 },
-  { name: 'Juan Pérez', laps: 17 },
-  { name: 'Pedro Pablo Taveras', laps: 16 },
-  { name: 'Simón Bolívar Cepeda Lora', laps: 15 },
-  { name: 'Joan Gómez Velázquez', laps: 15 },
-  { name: 'José Antonio Santos Leonardo', laps: 15 },
-  { name: 'Rodrigo Farach Aldana', laps: 13 },
-  { name: 'Luis Antonio De León Encarnación', laps: 13 },
-];
-
-const fallbackReserveMembers = [
-  { name: 'Cristhian Arroyo', laps: 17 },
-  { name: 'Bernardo De Jesús', laps: 12 },
-  { name: 'Esteban Gabriel Senna', laps: 7 },
-  { name: 'Randy Alexander Minaya Cubilete', laps: 0 },
-  { name: 'Ramón Tolentino', laps: 0 },
-];
+import { Globe, Users, Trophy, CalendarCheck, Award, Target } from 'lucide-react';
+import ResultadosMundial from './ResultadosMundial';
 
 export default function SateliteChampionship() {
-  const [teamMembers, setTeamMembers] = useState(fallbackTeamMembers);
-  const [reserveMembers, setReserveMembers] = useState(fallbackReserveMembers);
-
-  useEffect(() => {
-    const cargarNomina = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/seleccionados/public`);
-        if (!response.ok) return;
-        const data = await response.json();
-        if (data.titulares?.length) setTeamMembers(data.titulares);
-        if (data.reservas?.length) setReserveMembers(data.reservas);
-      } catch (error) {
-        // Sin backend se queda el respaldo escrito arriba
-      }
-    };
-    cargarNomina();
-  }, []);
-
   return (
-    <section className="py-10 bg-gradient-to-b from-muted/20 to-background" data-testid="satelite-championship">
+    <section className="py-10 bg-background" data-testid="satelite-championship">
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto space-y-12">
 
@@ -63,13 +16,16 @@ export default function SateliteChampionship() {
               <Globe className="w-4 h-4" />
               Evento Internacional
             </Badge>
-            <h2 className="font-sans font-normal text-3xl sm:text-4xl tracking-tight text-foreground">
+            <h2 className="font-display uppercase text-5xl sm:text-6xl leading-none tracking-tight text-foreground">
               Campeonato Mundial por Equipos
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              República Dominicana ha sido seleccionada para participar en el Campeonato Mundial por Equipos del Backyard Ultra
+              República Dominicana compitió por primera vez en el Campeonato Mundial por Equipos del Backyard Ultra, el 17 de octubre de 2026
             </p>
           </div>
+
+          {/* Resultados: sale solo cuando la carrera tiene vueltas anotadas */}
+          <ResultadosMundial />
 
           {/* Key Info Cards */}
           <div className="grid md:grid-cols-3 gap-6">
@@ -111,7 +67,7 @@ export default function SateliteChampionship() {
           </div>
 
           {/* How it works */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20 shadow-medium">
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-6">
               <h3 className="font-display text-2xl text-foreground flex items-center gap-3">
                 <Target className="w-6 h-6 text-primary" />
@@ -130,98 +86,10 @@ export default function SateliteChampionship() {
             </CardContent>
           </Card>
 
-          {/* National Team */}
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h3 className="font-display text-3xl text-foreground flex items-center justify-center gap-3">
-                <Flag className="w-6 h-6 text-primary" />
-                Selección Nacional
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-                Coordinador Nacional: <strong className="text-foreground">Cristian Arroyo López</strong>
-              </p>
-            </div>
-
-            {/* Main Team */}
-            <Card className="shadow-soft">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Star className="w-5 h-5 text-primary" />
-                  <h4 className="font-display text-lg text-foreground">Equipo Titular (Top 15)</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="team-main-table">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamMembers.map((m, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors" data-testid={`team-member-${i+1}`}>
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, '0')}</td>
-                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            <Badge variant="outline" className="font-mono">
-                              <Timer className="w-3 h-3 mr-1" />{m.laps}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Reserve Team */}
-            <Card className="shadow-soft">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Shield className="w-5 h-5 text-muted-foreground" />
-                  <h4 className="font-display text-lg text-foreground">Equipo de Reserva</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="team-reserve-table">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">#</th>
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Atleta</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase">Vueltas</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reserveMembers.map((m, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-muted-foreground">{String(i + teamMembers.length + 1).padStart(2, '0')}</td>
-                          <td className="py-2.5 px-3 font-medium text-foreground">{m.name}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            {m.laps ? (
-                              <Badge variant="outline" className="font-mono text-muted-foreground">
-                                <Timer className="w-3 h-3 mr-1" />{m.laps}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Deadline Note */}
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800" data-testid="deadline-note">
-              <strong>Fecha límite de clasificación:</strong> 1 de septiembre de 2026. La nómina podrá actualizarse si algún atleta dominicano registra un mayor número de vueltas en otro evento oficial de Backyard Ultra antes de esa fecha.
-            </div>
-          </div>
-
           {/* Bronze Category */}
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 shadow-medium">
+          {/* La medalla va en ámbar porque es bronce; la tarjeta, en la
+              superficie suave del sitio, como las demás. */}
+          <Card className="bg-secondary border-border">
             <CardContent className="p-8 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center">

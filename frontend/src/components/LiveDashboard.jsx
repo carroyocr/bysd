@@ -617,13 +617,13 @@ export default function LiveDashboard({ raceCode }) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/25 to-background">
+    <div className="min-h-screen bg-background">
       {/* Cabecera */}
-      <header className="relative overflow-hidden bg-[#0C0C0C] text-white">
+      <header className="relative overflow-hidden bg-foreground text-white">
         <div
           className="absolute inset-0"
           aria-hidden="true"
-          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(22 88% 52% / 0.45), transparent 65%)' }}
+          style={{ background: 'radial-gradient(75% 120% at 50% -15%, hsl(215 67% 32% / 0.55), transparent 65%)' }}
         />
         <div className="relative container mx-auto px-4 py-12 sm:py-16">
           <div className="max-w-6xl mx-auto flex flex-col items-center text-center gap-4">
@@ -663,7 +663,7 @@ export default function LiveDashboard({ raceCode }) {
           {/* Ganador */}
           {stats.winner && (
             <Card className="overflow-hidden border-primary/25 shadow-medium">
-              <div className="bg-gradient-to-br from-primary/10 via-secondary/25 to-card">
+              <div className="bg-secondary">
                 <CardContent className="p-6 sm:p-10">
                   <div className="flex flex-col items-center text-center gap-6">
                     <IconChip size="xl" className="bg-primary text-primary-foreground shadow-medium">

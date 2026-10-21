@@ -37,11 +37,11 @@ const TIENDAS = [
 // Angosto a propósito: los tres tienen que caber en una sola línea en el
 // celular más estrecho, sin envolver.
 const TARJETA =
-  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-card shadow-soft';
+  'flex items-center gap-1.5 px-3 py-2.5 rounded border border-foreground/25 bg-background';
 
 export default function DescargarApp() {
   return (
-    <div className="flex flex-nowrap items-center gap-2 justify-center lg:justify-start">
+    <div className="flex flex-nowrap items-center gap-2">
       {TIENDAS.map((tienda) =>
         tienda.url ? (
           <a
@@ -49,14 +49,14 @@ export default function DescargarApp() {
             href={tienda.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${TARJETA} hover:shadow-medium hover:border-primary transition-all duration-300 group`}
+            className={`${TARJETA} hover:border-foreground transition-colors duration-300 group`}
             aria-label={`Descargar BYSD Live en ${tienda.nombre}`}
             data-testid={`descargar-${tienda.id}`}
           >
             <span className="text-primary flex-shrink-0 group-hover:scale-110 transition-transform">
               {tienda.icono}
             </span>
-            <span className="text-[11px] sm:text-xs font-bold text-foreground group-hover:text-primary transition-colors whitespace-nowrap">
+            <span className="text-[11px] sm:text-xs font-semibold text-foreground whitespace-nowrap">
               {tienda.nombre}
             </span>
           </a>

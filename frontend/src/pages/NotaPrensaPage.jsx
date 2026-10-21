@@ -50,7 +50,7 @@ export default function NotaPrensaPage() {
   return (
     // Sin titulo centrado: esto es una nota para leer, no la portada de una
     // seccion. Lo que se homologa es el fondo y el aire bajo la barra.
-    <article className="pt-16 pb-20 bg-gradient-to-b from-muted/20 to-background" data-testid="nota-prensa">
+    <article className="pt-16 pb-20 bg-background" data-testid="nota-prensa">
       <div className="max-w-2xl mx-auto px-4 py-10">
         <Link
           to="/prensa"

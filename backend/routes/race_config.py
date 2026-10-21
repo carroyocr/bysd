@@ -19,6 +19,7 @@ MANUALS_DIR.mkdir(parents=True, exist_ok=True)
 
 from services.auth import require_permission
 from services import races as carreras
+from services import transmision
 
 # Configurar la carrera (fechas, logos, manuales, textos) es el permiso "config".
 #
@@ -102,6 +103,11 @@ class RaceConfigUpdate(BaseModel):
     # cambiar el punto de partida.
     show_volunteer_carrera: Optional[bool] = None
     show_volunteer_campeonato: Optional[bool] = None
+    # Transmision en vivo (YouTube). Es de cada carrera, no de la publicada:
+    # el Mundial se transmite mientras el sitio publica la de enero. La portada
+    # lo ensena mientras la carrera este `en_carrera` (services.transmision).
+    # Una cadena vacia lo borra.
+    live_stream_url: Optional[str] = None
 
 
 @router.get("/active")
@@ -150,6 +156,10 @@ async def get_active_race(db=Depends(lambda: None)):
         config["show_volunteer_carrera"] = False
     if "show_volunteer_campeonato" not in config:
         config["show_volunteer_campeonato"] = True
+
+    # La transmision que toca anunciar en la portada. No es necesariamente de
+    # esta carrera: sale de la que se este corriendo (services.transmision).
+    config["transmision_en_vivo"] = await transmision.en_vivo(database)
 
     return config
 
@@ -398,6 +408,15 @@ async def update_race(
     for field, value in config.dict(exclude_unset=True).items():
         if value is not None:
             update_data[field] = value
+
+    if "live_stream_url" in update_data:
+        enlace = update_data["live_stream_url"].strip()
+        if enlace and not transmision.enlace_valido(enlace):
+            raise HTTPException(
+                status_code=400,
+                detail="El enlace de la transmision tiene que empezar por http:// o https://",
+            )
+        update_data["live_stream_url"] = enlace
     
     await database.race_configurations.update_one(
         {"code": code},
