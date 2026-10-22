@@ -1,12 +1,14 @@
-"""El ranking de Latinoamérica del Campeonato Mundial por equipos.
+"""El ranking por equipos del Campeonato Mundial, leído de la hoja de la organización.
 
 La organización del Mundial publica el leaderboard por países en una hoja de
 Google (una fila por equipo: puesto, código, país, corredores en pie, vueltas
-sumadas, promedio y los quince nombres). Aquí se lee esa hoja como CSV, se
-quedan solo los equipos de Latinoamérica y se ordenan como los ordena la
-hoja: por el puesto mundial, que ya tiene en cuenta vueltas, corredores en
-pie y promedio. No se recalcula nada: lo que sale en pantalla es lo que dice
-la hoja de la organización, que es la que vale.
+sumadas, promedio y los quince nombres). Aquí se lee esa hoja como CSV y se
+devuelve entera (`mundo`, todos los países, con el total de corredores y de
+países del título) y filtrada a los equipos de Latinoamérica (`equipos`, lo
+que enseña la vista de OBS). El orden es el de la hoja: su puesto mundial ya
+tiene en cuenta vueltas, corredores en pie y promedio. No se recalcula nada:
+lo que sale en pantalla es lo que dice la hoja de la organización, que es la
+que vale.
 
 La hoja se pide cada medio minuto como mucho y se guarda en memoria: la
 vista de OBS pregunta cada pocos segundos y Google no tiene por qué recibir
@@ -71,7 +73,7 @@ def _entero(texto) -> Optional[int]:
 
 
 def parsear(texto_csv: str) -> dict:
-    """La hoja en CSV convertida al ranking de Latinoamérica.
+    """La hoja en CSV convertida al ranking: el mundial entero y el de Latinoamérica.
 
     Es cálculo puro, para poder probarlo con una hoja de mentira. Busca la
     fila de cabecera por sus nombres (Rank, Tm, Team, #, Yards, Avg) en vez
@@ -81,6 +83,8 @@ def parsear(texto_csv: str) -> dict:
 
     vuelta = None
     hora_carrera = None
+    corredores = None
+    paises = None
     for fila in filas[:6]:
         for celda in fila:
             m = re.search(r"Yard\s+(\d+)", celda or "")
@@ -89,6 +93,10 @@ def parsear(texto_csv: str) -> dict:
             m = re.search(r"Race Time:\s*([\d:]+)", celda or "")
             if m and hora_carrera is None:
                 hora_carrera = m.group(1)
+            m = re.search(r"(\d[\d,]*)\s+Runners\s*/\s*(\d+)\s+Countries", celda or "")
+            if m and corredores is None:
+                corredores = _entero(m.group(1))
+                paises = _entero(m.group(2))
 
     cabecera = None
     inicio = 0
@@ -101,8 +109,9 @@ def parsear(texto_csv: str) -> dict:
         raise ValueError("La hoja no trae la fila de cabecera (Rank, Tm, Team…)")
 
     col = {nombre: cabecera.index(nombre) for nombre in ("Rank", "Tm", "Team", "#", "Yards", "Avg")}
+    col_clase = cabecera.index("Class") if "Class" in cabecera else None
 
-    equipos = []
+    mundo = []
     for fila in filas[inicio:]:
         if len(fila) <= col["Avg"]:
             continue
@@ -110,28 +119,34 @@ def parsear(texto_csv: str) -> dict:
         puesto_mundial = _entero(fila[col["Rank"]])
         if not codigo or puesto_mundial is None:
             continue
-        if codigo not in LATINOAMERICA:
-            continue
-        equipos.append({
+        mundo.append({
             "codigo": codigo,
-            "pais": LATINOAMERICA[codigo],
+            # En español si es de Latinoamérica; si no, como lo escribe la hoja
+            "pais": LATINOAMERICA.get(codigo) or fila[col["Team"]].strip(),
             "pais_hoja": fila[col["Team"]].strip(),
+            "latam": codigo in LATINOAMERICA,
             "puesto_mundial": puesto_mundial,
             "en_pie": _entero(fila[col["#"]]) or 0,
             "vueltas": _entero(fila[col["Yards"]]) or 0,
             "promedio": fila[col["Avg"]].strip() or None,
+            "clase": (fila[col_clase].strip() or None) if col_clase is not None and len(fila) > col_clase else None,
         })
 
     # El orden es el de la hoja: su puesto mundial ya desempata por
     # corredores en pie y promedio.
-    equipos.sort(key=lambda e: e["puesto_mundial"])
+    mundo.sort(key=lambda e: e["puesto_mundial"])
+
+    equipos = [dict(e) for e in mundo if e["latam"]]
     for i, e in enumerate(equipos, start=1):
         e["puesto"] = i
 
     return {
         "vuelta": vuelta,
         "hora_carrera": hora_carrera,
+        "corredores": corredores,
+        "paises": paises if paises is not None else (len(mundo) or None),
         "equipos": equipos,
+        "mundo": mundo,
     }
 
 

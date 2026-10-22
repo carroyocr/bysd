@@ -179,6 +179,25 @@ async def ranking_latam_del_mundial(filas: int = 20):
     return {**datos, "equipos": datos["equipos"][:max(1, min(filas, 30))]}
 
 
+@router.get("/mundial/ranking")
+async def ranking_mundial():
+    """Todos los equipos del Campeonato Mundial, en el orden oficial, con el
+    total de corredores y de países. Lo lee la página del Campeonato de la
+    web; sale de la misma hoja pública de la organización que el de arriba."""
+    try:
+        datos = await mundial.ranking_latam()
+    except Exception:
+        raise HTTPException(status_code=503, detail="No se pudo leer la hoja del Mundial")
+    return {
+        "vuelta": datos.get("vuelta"),
+        "hora_carrera": datos.get("hora_carrera"),
+        "actualizado": datos.get("actualizado"),
+        "corredores": datos.get("corredores"),
+        "paises": datos.get("paises"),
+        "equipos": datos.get("mundo", []),
+    }
+
+
 # ==================== LAS DIRECCIONES, DESDE EL PANEL ====================
 
 
