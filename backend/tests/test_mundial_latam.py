@@ -65,8 +65,15 @@ class TestParsear:
 class TestMundo:
     def test_el_mundo_entero_en_el_orden_de_la_hoja_con_los_totales(self):
         datos = mundial.parsear(HOJA)
-        assert datos["corredores"] == 819
-        assert datos["paises"] == 69
+        # Los totales se cuentan de las filas, no del título: acabada la
+        # carrera el título dice «2 Runners / 1 Countries» (los que quedan
+        # en pie), que no es el total de nada.
+        assert datos["paises"] == 7
+        # Mauricio apuntó quince, pero sus «00-» no tomaron la salida
+        assert datos["corredores"] == 6 * 15
+        hoja_final = HOJA.replace("819 Runners / 69 Countries", "2 Runners / 1 Countries")
+        assert mundial.parsear(hoja_final)["paises"] == 7
+        assert mundial.parsear(hoja_final)["corredores"] == 90
         assert [e["codigo"] for e in datos["mundo"]] == ["POL", "MEX", "BOL", "URU", "ESP", "DOM", "MRI"]
         assert [e["puesto_mundial"] for e in datos["mundo"]] == [1, 3, 21, 24, 34, 55, 68]
 

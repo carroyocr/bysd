@@ -83,8 +83,6 @@ def parsear(texto_csv: str) -> dict:
 
     vuelta = None
     hora_carrera = None
-    corredores = None
-    paises = None
     for fila in filas[:6]:
         for celda in fila:
             m = re.search(r"Yard\s+(\d+)", celda or "")
@@ -93,10 +91,6 @@ def parsear(texto_csv: str) -> dict:
             m = re.search(r"Race Time:\s*([\d:]+)", celda or "")
             if m and hora_carrera is None:
                 hora_carrera = m.group(1)
-            m = re.search(r"(\d[\d,]*)\s+Runners\s*/\s*(\d+)\s+Countries", celda or "")
-            if m and corredores is None:
-                corredores = _entero(m.group(1))
-                paises = _entero(m.group(2))
 
     cabecera = None
     inicio = 0
@@ -110,8 +104,14 @@ def parsear(texto_csv: str) -> dict:
 
     col = {nombre: cabecera.index(nombre) for nombre in ("Rank", "Tm", "Team", "#", "Yards", "Avg")}
     col_clase = cabecera.index("Class") if "Class" in cabecera else None
+    # Las columnas 1..15 llevan los nombres del equipo; sirven para contar
+    # cuántos atletas corrieron. El título de la hoja también trae un
+    # «N Runners / M Countries», pero cuenta los que siguen en pie: acabada
+    # la carrera dice «2 Runners / 1 Countries», que no es el total de nada.
+    col_nombres = [cabecera.index(str(n)) for n in range(1, 16) if str(n) in cabecera]
 
     mundo = []
+    corredores = 0
     for fila in filas[inicio:]:
         if len(fila) <= col["Avg"]:
             continue
@@ -119,6 +119,12 @@ def parsear(texto_csv: str) -> dict:
         puesto_mundial = _entero(fila[col["Rank"]])
         if not codigo or puesto_mundial is None:
             continue
+        # «00-Nombre» es quien no tomó la salida: cuenta en la nómina, no
+        # entre los que corrieron.
+        corredores += sum(
+            1 for c in col_nombres
+            if len(fila) > c and fila[c].strip() and not fila[c].strip().startswith("00-")
+        )
         mundo.append({
             "codigo": codigo,
             # En español si es de Latinoamérica; si no, como lo escribe la hoja
@@ -143,8 +149,8 @@ def parsear(texto_csv: str) -> dict:
     return {
         "vuelta": vuelta,
         "hora_carrera": hora_carrera,
-        "corredores": corredores,
-        "paises": paises if paises is not None else (len(mundo) or None),
+        "corredores": corredores or None,
+        "paises": len(mundo) or None,
         "equipos": equipos,
         "mundo": mundo,
     }
