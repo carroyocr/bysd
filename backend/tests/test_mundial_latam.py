@@ -60,3 +60,25 @@ class TestParsear:
     def test_sin_cabecera_es_un_error_y_no_un_ranking_vacio(self):
         with pytest.raises(ValueError):
             mundial.parsear("a,b,c\n1,2,3\n")
+
+
+class TestMundo:
+    def test_el_mundo_entero_en_el_orden_de_la_hoja_con_los_totales(self):
+        datos = mundial.parsear(HOJA)
+        assert datos["corredores"] == 819
+        assert datos["paises"] == 69
+        assert [e["codigo"] for e in datos["mundo"]] == ["POL", "MEX", "BOL", "URU", "ESP", "DOM", "MRI"]
+        assert [e["puesto_mundial"] for e in datos["mundo"]] == [1, 3, 21, 24, 34, 55, 68]
+
+    def test_cada_pais_dice_si_es_latino_y_su_nombre(self):
+        mundo = mundial.parsear(HOJA)["mundo"]
+        pol = mundo[0]
+        assert pol["latam"] is False and pol["pais"] == "Poland" and pol["clase"] == "AAA"
+        dom = next(e for e in mundo if e["codigo"] == "DOM")
+        assert dom["latam"] is True and dom["pais"] == "República Dominicana"
+        assert dom["vueltas"] == 225 and dom["promedio"] == "50:56" and dom["clase"] == "A"
+
+    def test_el_ranking_latino_no_cambia(self):
+        equipos = mundial.parsear(HOJA)["equipos"]
+        assert [e["codigo"] for e in equipos] == ["MEX", "BOL", "URU", "DOM"]
+        assert "puesto" not in mundial.parsear(HOJA)["mundo"][0]

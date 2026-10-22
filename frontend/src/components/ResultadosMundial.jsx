@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Trophy, Timer, Flag, Route, Users, Zap, ChevronDown } from 'lucide-react';
 import { resumen, formatoTiempo, formatoHoras, formatoDiferencia, detalleVueltas } from '../lib/estadisticasCarrera';
+import RankingMundial from './RankingMundial';
 
 // Resultados del Campeonato Mundial por Equipos (edición 2026): quién ganó,
 // cómo le fue a cada corredor y qué dicen las vueltas del equipo. Todo sale
@@ -421,6 +422,9 @@ export default function ResultadosMundial({ raceCode = CODIGO_MUNDIAL }) {
           />
         </div>
       </div>
+
+      {/* El Mundial entero: el ranking oficial por equipos, con el nuestro señalado */}
+      <RankingMundial />
 
       {/* Gráficos */}
       <div className="grid lg:grid-cols-2 gap-8">
