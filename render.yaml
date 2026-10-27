@@ -61,6 +61,14 @@ services:
     buildCommand: yarn install && yarn build
     staticPublishPath: build
     envVars:
+      - key: NODE_VERSION
+        # Node solo corre en el build del sitio, pero Render fija la version por
+        # servicio y los creados antes del 21/10/2026 se quedaron con un default
+        # viejo. 26.12.1 es la primera 26.x que trae el parche del aviso de
+        # octubre de 2026 (certificados eMudhra y fallos de TLS/Brotli). El
+        # .node-version de la raiz dice lo mismo por si el servicio no se
+        # sincroniza con este Blueprint.
+        value: "26.12.1"
       - key: REACT_APP_BACKEND_URL
         sync: false          # se pega en el dashboard (URL del backend en Render)
     routes:
