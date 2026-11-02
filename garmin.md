@@ -1,6 +1,6 @@
 # Garmin — lo que queda
 
-**Pendiente a 2 de noviembre de 2026: subir la 1.14.0 con el Enduro 4** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 182 builds, sin error ni aviso).
+**Pendiente a 2 de noviembre de 2026: subir la 1.14.0 con el Enduro 4, los Approach S72 y el MARQ Gen 3** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 115 relojes, 185 builds, sin error ni aviso).
 Un usuario de la tienda (Georgios Rassias, Enduro 4) pidió el reloj el 2 de
 noviembre. Garmin lo lista como `enduro4`: 280 × 280 MIP de 64 colores, API 6.0,
 la misma familia de pantalla que el Enduro 3 y el fēnix 7X, así que va con el
@@ -8,8 +8,16 @@ icono de 40 px y sin dibujar nada. Está añadido en los dos `manifest.xml` y en
 los dos `monkey.jungle` (rama `garmin-enduro4`) y la versión sube a 1.14.0 en
 `AcercaView.mc`. El reloj llegó con el SDK 9.3 (20 de octubre), que hubo que
 bajar en el SdkManager junto con el dispositivo: la biblioteca anterior era
-del 22 de septiembre y `tools/verificar_dispositivos.py` lo dejaba fuera. Lo
-que falta: subir el `.iq` a la tienda y contestar al correo de Garmin.
+del 22 de septiembre y `tools/verificar_dispositivos.py` lo dejaba fuera. Con
+ese SDK entraron también los otros tres relojes nuevos que cumplen las reglas:
+**Approach S72 43 mm** (`approachs7243mm`, 416 px AMOLED, icono de 60 como el
+fēnix 8 43 mm), **Approach S72 47 mm** (`approachs7247mm`, 454 px, icono de
+65: sin regla propia, como el fēnix 8 47 mm) y **MARQ Gen 3** (`marq3`, 454 px,
+icono de 65). Lo demás que trajo el 9.3 sigue fuera por las reglas de siempre:
+los Edge (550, 850, 1060, Explore 3 y 3 Plus, MTB) y el Venu X1 son
+rectangulares, y los Instinct E e Instinct 3 Solar son de pantalla octogonal
+monocroma. Lo que falta: subir el `.iq` a la tienda y contestar al correo de
+Garmin.
 
 **Pendiente a 13 de octubre de 2026: subir la 1.13.0** (`garmin/build/backyard.iq`):
 la meta automática exige el 90 % de la vuelta en vez de la mitad, para que un
