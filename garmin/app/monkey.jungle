@@ -89,6 +89,7 @@ fenix9prosolar47mm.resourcePath = $(base.resourcePath);../shared/resources-icon4
 fenix9prosolar51mm.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro.resourcePath = $(base.resourcePath);../shared/resources-icon40
 enduro3.resourcePath = $(base.resourcePath);../shared/resources-icon40
+enduro4.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fr255.resourcePath = $(base.resourcePath);../shared/resources-icon40
 fr955.resourcePath = $(base.resourcePath);../shared/resources-icon40
 # 40 px (pantalla pequena: emblema small)
