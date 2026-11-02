@@ -10,15 +10,17 @@ abajo por si algún día cambia la decisión.
 ## Estado — la 1.14.0, lista para subir
 
 2 de noviembre de 2026. Entra el **Enduro 4** (`enduro4`), a petición de un
-usuario de la tienda. Solo cambia la lista de relojes: misma pantalla que el
-Enduro 3 (280 × 280 MIP), icono de 40 px. Compilada con el **SDK 9.3**, el
-primero que trae el reloj (hubo que bajarlo en el SdkManager junto con el
-dispositivo): 182 builds, sin error ni aviso.
+usuario de la tienda: misma pantalla que el Enduro 3 (280 × 280 MIP), icono
+de 40 px. Y con él los otros relojes nuevos del **SDK 9.3** que cumplen las
+reglas: **Approach S72 43 y 47 mm** y **MARQ Gen 3** (AMOLED de 416 y 454 px,
+la misma pantalla que los fēnix 8). Solo cambia la lista de relojes. Compilada
+con el SDK 9.3, el primero que los trae (hubo que bajarlo en el SdkManager
+junto con los dispositivos): **115 relojes, 185 builds**, sin error ni aviso.
 
 Novedades para la ficha:
 
-- ES: «Compatible con el Enduro 4.»
-- EN: "Adds support for the Enduro 4."
+- ES: «Compatible con el Enduro 4, los Approach S72 y el MARQ Gen 3.»
+- EN: "Adds support for the Enduro 4, the Approach S72 and the MARQ Gen 3."
 
 ## Estado — la 1.13.0, lista para subir
 

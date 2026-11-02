@@ -176,6 +176,7 @@ approachs50.resourcePath = $(base.resourcePath);resources-large;../shared/resour
 
 # 60 px (emblema large)
 approachs7042mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
+approachs7243mm.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 d2air.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 d2mach1.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
 descentg2.resourcePath = $(base.resourcePath);resources-large;../shared/resources-icon60
