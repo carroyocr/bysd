@@ -1,6 +1,6 @@
 # Garmin — lo que queda
 
-**Pendiente a 2 de noviembre de 2026: subir la 1.14.0 con el Enduro 4, los Approach S72 y el MARQ Gen 3** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 115 relojes, 185 builds, sin error ni aviso).
+**La 1.14.0 está publicada (2 de noviembre de 2026): Enduro 4, Approach S72 y MARQ Gen 3** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 115 relojes, 185 builds, sin error ni aviso).
 Un usuario de la tienda (Georgios Rassias, Enduro 4) pidió el reloj el 2 de
 noviembre. Garmin lo lista como `enduro4`: 280 × 280 MIP de 64 colores, API 6.0,
 la misma familia de pantalla que el Enduro 3 y el fēnix 7X, así que va con el
@@ -16,8 +16,8 @@ fēnix 8 43 mm), **Approach S72 47 mm** (`approachs7247mm`, 454 px, icono de
 icono de 65). Lo demás que trajo el 9.3 sigue fuera por las reglas de siempre:
 los Edge (550, 850, 1060, Explore 3 y 3 Plus, MTB) y el Venu X1 son
 rectangulares, y los Instinct E e Instinct 3 Solar son de pantalla octogonal
-monocroma. Lo que falta: subir el `.iq` a la tienda y contestar al correo de
-Garmin.
+monocroma. Subida y publicada el 2 de noviembre; a Georgios se le contestó
+ese día pidiéndole una reseña.
 
 **Pendiente a 13 de octubre de 2026: subir la 1.13.0** (`garmin/build/backyard.iq`):
 la meta automática exige el 90 % de la vuelta en vez de la mitad, para que un

@@ -1,13 +1,13 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 2 de noviembre de 2026.
+Estado y guía de la ficha de Garmin. Actualizado el 2 de noviembre de 2026 (1.14.0 publicada ese día).
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.14.0, lista para subir
+## Estado — la 1.14.0, publicada
 
 2 de noviembre de 2026. Entra el **Enduro 4** (`enduro4`), a petición de un
 usuario de la tienda: misma pantalla que el Enduro 3 (280 × 280 MIP), icono
