@@ -691,6 +691,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>With a <strong>set time</strong> &#8212; say 7:00 &#8212; the yard 1 bell is that time of day, no matter when you press START. Everything before it is warm-up. It's the safest option when you know your race's start time.</p>
   <p>On <strong>Auto</strong>, the watch looks at when you press START and decides: if you've just passed an hour mark &#8212; within a grace period of one sixth of a yard, capped at 10 minutes &#8212; it takes the bell as already rung and puts you in yard 1. Otherwise it counts down to the next mark. Pressing at 8:03 leaves you running the 8:00 yard; pressing at 8:40 leaves you warming up until 9:00.</p>
   <p>On <strong>Manual</strong>, <kbd>START</kbd> is the yard 1 bell, and every following bell rings one yard later counted from that instant: nothing is rounded to the top of the hour, and your watch doesn't need to agree with the organizer's clock. It's for races where the race director starts whenever they start &#8212; at 8:03, say &#8212; rather than on the wall clock. Press right on the starting signal; there's no warm-up and no automatic start. Choose it in the start time menu or, on the start time wheel when the app opens, with the menu button.</p>
+  <p>And if the start runs late while you're already on the line, two shortcuts keep you from ending up with the wrong bell. <strong>Before you press START</strong>, <kbd>DOWN</kbd> &#8212; or a tap on the mode line &#8212; switches to Manual at once: the screen changes to "Manual &#183; Bell at START", and START on the signal is the bell. Pressing again brings back what you had. <strong>If you had already pressed START</strong> and you're in Warm-up with the countdown running, press <kbd>START</kbd> and choose <strong>"Start now"</strong>: the yard 1 bell becomes that instant and the warm-up closes as a lap of its own. The one thing no shortcut fixes is pressing START on Auto right on a start that came a few minutes late: the app has already taken the bell as rung at the top of the hour, so if you know the start won't be on the hour, switch to Manual first.</p>
 
   <h3>Choosing your screens</h3>
   <p>On the watch, <strong>Yard settings &#8594; Race screens</strong> opens a catalogue: every screen is drawn <em>in full</em>, with sample data, so you decide by looking rather than by guessing from a name. <kbd>UP</kbd> and <kbd>DOWN</kbd> walk through them, <kbd>START</kbd> shows or hides, <kbd>BACK</kbd> goes back.</p>
@@ -726,7 +727,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <div>
         <h3>Press START</h3>
         <p><kbd>START</kbd> starts the race without asking anything &#8212; with the race director counting down out loud, a confirmation dialog is in the way. From there on the watch is recording.</p>
-        <p>If you pressed before the hour, you get the <strong>Warm-up</strong> screen counting down to your bell. It is not yard 1: in the activity file it stays in a lap of its own and never gets added to your first yard.</p>
+        <p>If you pressed before the hour, you get the <strong>Warm-up</strong> screen counting down to your bell. It is not yard 1: in the activity file it stays in a lap of its own and never gets added to your first yard. If the real start comes before the countdown ends, press <kbd>START</kbd> and choose "Start now".</p>
         <p>And if you don't press, the race <strong>starts on its own</strong> at the start time, as long as you saw it ahead on the screen. The bell waits for no one.</p>
       </div>
     </li>
@@ -761,9 +762,9 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <table>
       <thead><tr><th>Button</th><th>Before the start</th><th>In the race</th></tr></thead>
       <tbody>
-        <tr><td class="k">START</td><td>Starts the race</td><td>Finish menu</td></tr>
+        <tr><td class="k">START</td><td>Starts the race</td><td>Finish menu (during warm-up, also "Start now")</td></tr>
         <tr><td class="k">LAP</td><td>&#8212;</td><td>Marks the yard as done</td></tr>
-        <tr><td class="k">UP / DOWN</td><td>&#8212;</td><td>Changes screen</td></tr>
+        <tr><td class="k">UP / DOWN</td><td>DOWN switches Auto &#8596; Manual</td><td>Changes screen</td></tr>
         <tr><td class="k">Long UP</td><td>Yard settings</td><td>Nothing (warm-up only)</td></tr>
         <tr><td class="k">BACK</td><td>Leaves the app (also from the start time wheel)</td><td>Nothing: no going back mid-race</td></tr>
       </tbody>

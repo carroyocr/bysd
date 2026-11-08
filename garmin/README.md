@@ -29,7 +29,11 @@ reglas son las de una backyard de verdad:
   carreras que no salen a la hora en punto está la **salida Manual**
   (`startTime = -2`): START es la campana del yard 1 y las siguientes caen
   cada vuelta desde ese instante, sin redondear ni depender del reloj de
-  la organización. Sin calentamiento ni arranque solo.
+  la organización. Sin calentamiento ni arranque solo. Dos atajos para la
+  salida que se retrasa: en la línea de salida, DOWN alterna Auto (u hora
+  fija) y Manual (solo DOWN: en el fēnix 8 el UP largo del menú llega a
+  veces como un UP corto); en el calentamiento, el menú de START lleva «Dar la
+  salida ahora», que resella la campana del yard 1 en ese instante.
 - **Las vueltas las abre la hora, no un botón.** LAP (el botón START durante
   la carrera) marca que la vuelta *terminó* —el corredor llegó a meta y
   empieza su descanso— y solo vale el primero de cada vuelta: los demás se

@@ -13,7 +13,16 @@ cuenta atrás y no arranca sola, y el modo se elige en el menú de la hora de
 salida (Auto · Manual · Hora fija) o con MENU en la rueda al abrir la app,
 que ahora abre un menú de dos opciones en lugar de poner Auto directamente.
 Sin cambio en la lista de relojes (rama `garmin-salida-manual`). Al publicar,
-avisar a Sebastien.
+avisar a Sebastien. Lleva además **dos atajos para la salida que se retrasa**
+(rama `garmin-salida-manual-atajos`): en la línea de salida, DOWN alterna
+Auto (u hora fija) y Manual de una pulsación —`StartView.alternarModo`, que
+recuerda lo que había para devolverlo; solo DOWN porque en el fēnix 8 el UP
+largo del menú llega a veces como un UP corto—, y en el calentamiento el menú de
+START lleva «Dar la salida ahora» (`MenuFinDelegate`, `:salirAhora`), que
+pasa a Manual y resella la campana del yard 1 en ese instante por
+`SalidaPickerDelegate.resellar`. Lo que no tiene arreglo es START en Auto
+justo con una salida pocos minutos tarde (dentro de la gracia): la app ya
+dio la campana por sonada a la hora en punto.
 
 **La 1.14.0 está publicada (2 de noviembre de 2026): Enduro 4, Approach S72 y MARQ Gen 3** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 115 relojes, 185 builds, sin error ni aviso).
 Un usuario de la tienda (Georgios Rassias, Enduro 4) pidió el reloj el 2 de

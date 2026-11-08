@@ -25,8 +25,16 @@ relojes. Compilada con el SDK 9.3. Los manuales ES/EN llevan la opción.
 
 Novedades para la ficha:
 
-- ES: «Salida manual: START es la campana del yard 1, para las carreras que no salen a la hora en punto.»
-- EN: "Manual start: START is the yard 1 bell, for races that don't start on the hour."
+- ES: «Salida Manual: la campana del yard 1 suena cuando pulsas START.»
+- EN: "Manual start: the yard 1 bell rings when you press START."
+
+Además, dos atajos para la salida que se retrasa cuando ya estás en la
+línea: en la línea de salida, **DOWN alterna Auto y Manual** de una
+pulsación (y el toque en la línea del modo, en los táctiles); y en el
+calentamiento, el menú de START lleva **«Dar la salida ahora»**, que
+resella la campana del yard 1 en ese instante. Lo que no se puede arreglar
+es pulsar START en Auto justo con una salida pocos minutos tarde: la app ya
+dio la campana por sonada a la hora en punto. El manual lo dice.
 
 ## Estado — la 1.14.0, publicada
 
@@ -294,21 +302,23 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 **ES**
 
-> - Nueva salida **Manual**: START es la campana del yard 1 y las siguientes
->   suenan cada yard desde ese instante, sin redondear a la hora en punto ni
->   depender del reloj de la organización. Para las carreras cuya salida la
->   da el director cuando la da. Se elige en el menú de la hora de salida,
->   con el botón de menú en la rueda al abrir la app, o con -2 desde el
->   teléfono. Auto y la hora fija siguen igual.
+> - Nueva opción de salida: **Manual**. Pulsas START cuando el director da
+>   la salida y ese momento es la campana del yard 1. Las siguientes
+>   campanas suenan cada yard contado desde ahí, aunque la carrera no haya
+>   salido a la hora en punto. Auto y Hora fija siguen como antes.
+> - Si la salida se retrasa cuando ya estás en la línea: DOWN cambia a
+>   Manual al instante. Y si ya habías pulsado START y estás en
+>   Calentamiento, el menú de START tiene «Dar la salida ahora».
 
 **EN**
 
-> - New **Manual** start: START is the yard 1 bell and every following bell
->   rings one yard later from that instant, with no rounding to the top of
->   the hour and no need to match the organizer's clock. For races where the
->   race director starts whenever they start. Choose it in the start time
->   menu, with the menu button on the start time wheel when the app opens,
->   or with -2 from the phone. Auto and the set time work as before.
+> - New start option: **Manual**. Press START when the race director gives
+>   the start, and that moment is the yard 1 bell. Every following bell
+>   rings one yard later, counted from there, even if the race didn't start
+>   on the hour. Auto and Set time work as before.
+> - If the start runs late while you're already on the line: DOWN switches
+>   to Manual at once. And if you had already pressed START and
+>   you're in Warm-up, the START menu has "Start now".
 
 ---
 
