@@ -1,15 +1,21 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 8 de noviembre de 2026 (1.15.0 lista para subir; 1.14.0 publicada el 2 de noviembre).
+Estado y guía de la ficha de Garmin. Actualizado el 8 de noviembre de 2026 (1.15.1 lista para subir; 1.14.0 publicada el 2 de noviembre).
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
 
-## Estado — la 1.15.0, lista para subir
+## Estado — la 1.15.1, lista para subir
 
-8 de noviembre de 2026. Entra la **salida Manual**, a petición de un usuario
+8 de noviembre de 2026. **Se sube como 1.15.1**: el primer paquete de la
+1.15.0 —el de la salida Manual sin los atajos— se subió al portal sin llegar
+a publicarse, y el portal no admite otro paquete con el mismo número aunque
+no se haya publicado (como pasó con la 1.9.0 y la 1.9.1). La 1.15.1 es la
+1.15.0 completa, con los atajos; en la ficha irá solo ese número.
+
+ Entra la **salida Manual**, a petición de un usuario
 de la tienda (Sebastien Laffineur, por el formulario de contacto de Connect
 IQ): en su carrera el director da la salida cuando la da, y las campanas van
 cada hora desde ese momento, no desde la hora en punto. Hasta ahora la app
@@ -298,7 +304,7 @@ por cable sigue siendo el camino. Ver el README para instalar por USB.
 
 ---
 
-## Novedades de la versión 1.15.0 (para el campo "What's New")
+## Novedades de la versión 1.15.1 (para el campo "What's New")
 
 **ES**
 
