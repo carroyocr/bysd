@@ -1,6 +1,8 @@
 # Garmin — lo que queda
 
-**Pendiente a 8 de noviembre de 2026: subir la 1.15.0** (`garmin/build/backyard.iq`),
+**Pendiente a 8 de noviembre de 2026: subir la 1.15.1** (`garmin/build/backyard.iq`;
+va como 1.15.1 porque el primer paquete de la 1.15.0, sin los atajos, se subió
+al portal sin publicarse y el portal no deja repetir el número),
 la de la **salida Manual**: START es la campana del yard 1 y las campanas
 siguientes van cada yard desde ese instante, para las carreras que no salen
 a la hora en punto. La pidió Sebastien Laffineur (sebalaffineur@gmail.com)
