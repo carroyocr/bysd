@@ -625,7 +625,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
         <tr role="row"><th role="columnheader">Ajuste</th><th role="columnheader">Qué hace</th><th role="columnheader">De fábrica</th></tr>
       </thead>
       <tbody role="rowgroup">
-        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qué hace">Fija la hora del día a la que suena la campana del yard 1. La app la pregunta cada vez que se abre, con la rueda puesta en la siguiente hora en punto. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START.</td><td role="cell" class="v" data-l="De fábrica">Auto</td></tr>
+        <tr role="row"><td role="cell" class="k">Hora de salida</td><td role="cell" data-l="Qué hace">Fija la hora del día a la que suena la campana del yard 1. La app la pregunta cada vez que se abre, con la rueda puesta en la siguiente hora en punto. En <strong>Auto</strong>, el reloj la deduce del momento en que pulsas START, redondeando a la hora en punto. En <strong>Manual</strong>, START es la campana. Desde el teléfono: HHMM, -1 = Auto, -2 = Manual.</td><td role="cell" class="v" data-l="De fábrica">Auto</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (minutos)</td><td role="cell" data-l="Qué hace">Cuánto dura un yard. De 1 a 120 minutos.</td><td role="cell" class="v" data-l="De fábrica">60</td></tr>
         <tr role="row"><td role="cell" class="k">Yard (km)</td><td role="cell" data-l="Qué hace">Cuánto mide el circuito. De 1.0 a 20.0 km, <strong>siempre en kilómetros</strong>.</td><td role="cell" class="v" data-l="De fábrica">6.7</td></tr>
         <tr role="row"><td role="cell" class="k">Margen de seguridad</td><td role="cell" data-l="Qué hace">Minutos que quieres reservar. Se restan al margen antes de enseñarlo y de colorearlo: con 5, un «+0:00» significa que llegas con cinco minutos justos. De 0 a 60.</td><td role="cell" class="v" data-l="De fábrica">0</td></tr>
@@ -644,9 +644,10 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <p>Al final del menú, <strong>Acerca de</strong> enseña la versión y un QR que abre este manual.</p>
 
-  <h3>Hora de salida: Auto o fija</h3>
+  <h3>Hora de salida: fija, Auto o Manual</h3>
   <p>Con una <strong>hora fija</strong> —pongamos las 7:00— la campana del yard 1 es esa hora del día, pulses START cuando pulses. Todo lo anterior es calentamiento. Es lo más seguro cuando conoces la hora de salida de tu carrera.</p>
   <p>En <strong>Auto</strong>, el reloj mira la hora a la que pulsas START y decide: si acabas de pasar una marca de hora —dentro de una gracia de un sexto del yard, con techo de 10 minutos— entiende que la campana ya sonó y estás corriendo el yard 1. Si no, pone la cuenta atrás hacia la marca siguiente. Pulsar a las 8:03 te deja corriendo el yard de las 8:00; pulsar a las 8:40 te deja calentando hasta las 9:00.</p>
+  <p>En <strong>Manual</strong>, <kbd>START</kbd> es la campana del yard 1, y las siguientes suenan cada yard contado desde ese instante: nada se redondea a la hora en punto ni depende de que tu reloj y el de la organización coincidan. Es para las carreras cuya salida la da el director cuando la da —a las 8:03, pongamos— y no el reloj de pared. Pulsa justo con la señal de salida; no hay calentamiento ni arranque solo. Se elige en el menú de la hora de salida o, en la rueda de la hora al abrir, con el botón de menú.</p>
 
   <h3>Elegir las pantallas</h3>
   <p>Desde el reloj, <strong>Ajustes del yard → Pantallas de carrera</strong> abre un catálogo: cada pantalla se dibuja <em>entera</em>, con datos de muestra, y decides viéndola en vez de adivinando por el nombre. <kbd>UP</kbd> y <kbd>DOWN</kbd> las recorren, <kbd>START</kbd> muestra u oculta, <kbd>BACK</kbd> vuelve.</p>
@@ -667,7 +668,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Abre la app y déjala buscando GPS</h3>
-        <p>Ábrela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos —cualquier botón lo salta— y detrás aparece la <strong>rueda de la hora de salida</strong>, puesta ya en la siguiente hora en punto del reloj: <kbd>UP</kbd> y <kbd>DOWN</kbd> la mueven, <kbd>START</kbd> confirma, el botón de menú deja Auto y <kbd>BACK</kbd> sale de la app. Después viene la <strong>línea de salida</strong>: la hora de salida con su cuenta atrás, el yard que vas a correr, con su distancia y sus minutos, la configuración —en verde lo que está encendido— y el estado del GPS.</p>
+        <p>Ábrela desde la lista de actividades. El emblema ocupa la pantalla cinco segundos —cualquier botón lo salta— y detrás aparece la <strong>rueda de la hora de salida</strong>, puesta ya en la siguiente hora en punto del reloj: <kbd>UP</kbd> y <kbd>DOWN</kbd> la mueven, <kbd>START</kbd> confirma, el botón de menú abre la elección entre Auto y Manual, y <kbd>BACK</kbd> sale de la app. Después viene la <strong>línea de salida</strong>: la hora de salida con su cuenta atrás, el yard que vas a correr, con su distancia y sus minutos, la configuración —en verde lo que está encendido— y el estado del GPS.</p>
         <p>Ábrela con tiempo, en la carpa. El GPS empieza a buscar en cuanto la abres, y lo que tarde en fijar es mejor que lo tarde ahí y no en la salida.</p>
       </div>
     </li>
@@ -1047,7 +1048,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>Es correcto: marcar cierra el yard, no abre el siguiente. El siguiente lo abre la campana, a la hora en punto. Mientras tanto estás en descanso, que es la pantalla verde.</p>
 
   <h3>Pulsé START tarde y creo que se ha descuadrado todo</h3>
-  <p>No. La campana del yard 1 se ancla a la hora en punto, no al momento en que pulsas. Salir a las 8:03 te deja corriendo el yard de 8:00 a 9:00, con su campana a las 9:00 clavada. Si además tenías puesta una hora de salida fija, ni siquiera hay nada que deducir.</p>
+  <p>No. La campana del yard 1 se ancla a la hora en punto, no al momento en que pulsas. Salir a las 8:03 te deja corriendo el yard de 8:00 a 9:00, con su campana a las 9:00 clavada. Si además tenías puesta una hora de salida fija, ni siquiera hay nada que deducir. Y si tu carrera de verdad salió a las 8:03 y las campanas van desde ahí, lo tuyo es la salida <strong>Manual</strong>: START es la campana.</p>
 
   <h3>Los ajustes no se abren</h3>
   <p>Solo se abren antes de la campana del yard 1 — en la línea de salida o durante el calentamiento. Después se cierran a propósito: cambiar la duración del yard en carrera movería todas las campanas siguientes.</p>

@@ -34,7 +34,8 @@
     <string id="startsIn">in</string>
     <string id="underway">Under way</string>
     <string id="confirmStart">START to confirm</string>
-    <string id="menuAuto">MENU: Auto</string>
+    <string id="menuAuto">MENU: Auto / Manual</string>
+    <string id="bellAtStart">Bell at START</string>
     <string id="cfgAutoFinish">Auto line</string>
     <string id="cfgAutoKm">Auto km</string>
     <string id="cfgVibe">Vibe</string>
@@ -53,8 +54,9 @@
     <string id="discarded">Activity discarded</string>
     <string id="settingsTitle">Yard settings</string>
     <string id="settingStartTime">Start time</string>
-    <string id="settingStartTimeFull">Start time (HHMM, -1 = auto)</string>
+    <string id="settingStartTimeFull">Start time (HHMM, -1 = auto, -2 = manual)</string>
     <string id="auto">Auto</string>
+    <string id="manual">Manual</string>
     <string id="fixedTime">Set time</string>
     <string id="settingLapMinutes">Yard duration (minutes)</string>
     <string id="settingLapDistance">Yard distance (km)</string>

@@ -618,7 +618,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
       <tbody>
         <tr>
           <td class="k">Start time</td>
-          <td>Sets the time of day the yard 1 bell rings. The app asks for it every time it opens, with the wheel set to the next full hour. On <strong>Auto</strong>, the watch works it out from the moment you press START.</td>
+          <td>Sets the time of day the yard 1 bell rings. The app asks for it every time it opens, with the wheel set to the next full hour. On <strong>Auto</strong>, the watch works it out from the moment you press START, rounding to the top of the hour. On <strong>Manual</strong>, START is the bell. From the phone: HHMM, -1 = Auto, -2 = Manual.</td>
           <td class="v">Auto</td>
         </tr>
         <tr>
@@ -687,9 +687,10 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
 
   <p>At the end of the menu, <strong>About</strong> shows the version and a QR code that opens this manual.</p>
 
-  <h3>Start time: Auto or set</h3>
+  <h3>Start time: set, Auto or Manual</h3>
   <p>With a <strong>set time</strong> &#8212; say 7:00 &#8212; the yard 1 bell is that time of day, no matter when you press START. Everything before it is warm-up. It's the safest option when you know your race's start time.</p>
   <p>On <strong>Auto</strong>, the watch looks at when you press START and decides: if you've just passed an hour mark &#8212; within a grace period of one sixth of a yard, capped at 10 minutes &#8212; it takes the bell as already rung and puts you in yard 1. Otherwise it counts down to the next mark. Pressing at 8:03 leaves you running the 8:00 yard; pressing at 8:40 leaves you warming up until 9:00.</p>
+  <p>On <strong>Manual</strong>, <kbd>START</kbd> is the yard 1 bell, and every following bell rings one yard later counted from that instant: nothing is rounded to the top of the hour, and your watch doesn't need to agree with the organizer's clock. It's for races where the race director starts whenever they start &#8212; at 8:03, say &#8212; rather than on the wall clock. Press right on the starting signal; there's no warm-up and no automatic start. Choose it in the start time menu or, on the start time wheel when the app opens, with the menu button.</p>
 
   <h3>Choosing your screens</h3>
   <p>On the watch, <strong>Yard settings &#8594; Race screens</strong> opens a catalogue: every screen is drawn <em>in full</em>, with sample data, so you decide by looking rather than by guessing from a name. <kbd>UP</kbd> and <kbd>DOWN</kbd> walk through them, <kbd>START</kbd> shows or hides, <kbd>BACK</kbd> goes back.</p>
@@ -710,7 +711,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
     <li>
       <div>
         <h3>Open the app and let it find GPS</h3>
-        <p>Open it from the activity list. The emblem fills the screen for five seconds &#8212; any button skips it &#8212; and behind it comes the <strong>start time wheel</strong>, already set to the next full hour on the watch: <kbd>UP</kbd> and <kbd>DOWN</kbd> move it, <kbd>START</kbd> confirms, the menu button leaves it on Auto and <kbd>BACK</kbd> leaves the app. Then comes the <strong>start line</strong>: the start time with its countdown, the yard you're about to run, with its distance and its minutes, your settings &#8212; green for what's on &#8212; and the state of the GPS.</p>
+        <p>Open it from the activity list. The emblem fills the screen for five seconds &#8212; any button skips it &#8212; and behind it comes the <strong>start time wheel</strong>, already set to the next full hour on the watch: <kbd>UP</kbd> and <kbd>DOWN</kbd> move it, <kbd>START</kbd> confirms, the menu button opens the choice between Auto and Manual, and <kbd>BACK</kbd> leaves the app. Then comes the <strong>start line</strong>: the start time with its countdown, the yard you're about to run, with its distance and its minutes, your settings &#8212; green for what's on &#8212; and the state of the GPS.</p>
         <p>Open it early, back at the tent. The GPS starts searching the moment you do, and whatever it takes to lock is better spent there than on the line.</p>
       </div>
     </li>
@@ -1090,7 +1091,7 @@ a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); ou
   <p>That's right: marking closes the yard, it doesn't open the next one. The bell opens the next one, at the top of the hour. Until then you're resting &#8212; that's the green screen.</p>
 
   <h3>I pressed START late and I think everything's off</h3>
-  <p>It isn't. The yard 1 bell anchors to the top of the hour, not to the moment you press. Starting at 8:03 leaves you running the 8:00 to 9:00 yard, with its bell nailed to 9:00. And if you'd set a fixed start time, there was nothing to work out in the first place.</p>
+  <p>It isn't. The yard 1 bell anchors to the top of the hour, not to the moment you press. Starting at 8:03 leaves you running the 8:00 to 9:00 yard, with its bell nailed to 9:00. And if you'd set a fixed start time, there was nothing to work out in the first place. But if your race really did start at 8:03 and the bells run from there, what you want is the <strong>Manual</strong> start: START is the bell.</p>
 
   <h3>The settings won't open</h3>
   <p>They only open before the yard 1 bell &#8212; on the start line or during the warm-up. After that they close on purpose: changing the yard duration mid-race would move every bell after it.</p>

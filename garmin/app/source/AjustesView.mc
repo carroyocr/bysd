@@ -74,8 +74,11 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
     }
 
     // El sub-rotulo del ajuste de salida: la hora fija como la escribe el
-    // reloj, o "Auto".
+    // reloj, "Auto" o "Manual".
     static function textoDeSalida(horaSalida) {
+        if (horaSalida == RaceState.SALIDA_MANUAL) {
+            return Ui.loadResource(Rez.Strings.manual);
+        }
         if (horaSalida < 0) {
             return Ui.loadResource(Rez.Strings.auto);
         }
@@ -184,6 +187,7 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
     function _abrirSalida() {
         var menu = new Ui.Menu2({ :title => Rez.Strings.settingStartTime });
         menu.addItem(new Ui.MenuItem(Rez.Strings.auto, null, :auto, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.manual, null, :manual, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.fixedTime,
             _estado.horaSalida >= 0
                 ? AjustesMenuDelegate.textoDeSalida(_estado.horaSalida) : null,
@@ -192,8 +196,8 @@ class AjustesMenuDelegate extends Ui.Menu2InputDelegate {
     }
 }
 
-// El menu de Auto u hora fija. Auto guarda -1 y cierra todo; la hora fija
-// abre la rueda.
+// El menu de Auto, Manual u hora fija. Auto y Manual guardan su centinela y
+// cierran todo; la hora fija abre la rueda.
 class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
 
     var _estado;
@@ -204,9 +208,15 @@ class SalidaMenuDelegate extends Ui.Menu2InputDelegate {
     }
 
     function onSelect(item) {
-        if (item.getId() == :auto) {
-            App.Properties.setValue("startTime", -1);
+        var id = item.getId();
+        if (id == :auto || id == :manual) {
+            App.Properties.setValue("startTime", id == :auto
+                                    ? RaceState.SALIDA_AUTO
+                                    : RaceState.SALIDA_MANUAL);
             _estado.leerAjustes();
+            // Durante el calentamiento el ancla se vuelve a sellar; con
+            // Manual eso es "la campana es ahora": la grabacion ya corre y
+            // no hay otro START que pueda hacer de campana.
             SalidaPickerDelegate.resellar(_estado);
             // Cierra este menu y el de ajustes, de vuelta a donde se estaba.
             Ui.popView(Ui.SLIDE_DOWN);
@@ -633,8 +643,9 @@ class SalidaPickerDelegate {
 // Cada vez que se abre, antes de la linea de salida, se pregunta la hora con
 // la rueda, ya puesta en la siguiente hora en punto del reloj: a las 11:30,
 // las 12:00. Es la salida mas probable, y nadie sale con la hora de la
-// carrera anterior sin haberla visto. MENU deja Auto; BACK sale de la app,
-// como en la linea de salida: todavia no se graba nada.
+// carrera anterior sin haberla visto. MENU abre la eleccion entre Auto y
+// Manual, para quien no tiene hora que fijar; BACK sale de la app, como en
+// la linea de salida: todavia no se graba nada.
 class SalidaInicialDelegate {
 
     static function abrir(estado) {
@@ -667,9 +678,16 @@ class SalidaInicialDelegate {
         return true;
     }
 
+    // MENU: la rueda deja paso al menu de Auto o Manual. Sustituye a la
+    // rueda en vez de apilarse encima: si se apilara, al pasar a la linea de
+    // salida la rueda quedaria debajo y BACK volveria a ella en vez de salir
+    // de la app. BACK en el menu vuelve a abrir la rueda.
     function onMenu() {
-        App.Properties.setValue("startTime", -1);
-        _aLaLinea();
+        var menu = new Ui.Menu2({ :title => Rez.Strings.settingStartTime });
+        menu.addItem(new Ui.MenuItem(Rez.Strings.auto, null, :auto, null));
+        menu.addItem(new Ui.MenuItem(Rez.Strings.manual, null, :manual, null));
+        Ui.switchToView(menu, new ModoSalidaInicialDelegate(_estado),
+                        Ui.SLIDE_UP);
         return true;
     }
 
@@ -678,10 +696,40 @@ class SalidaInicialDelegate {
     }
 
     function _aLaLinea() {
-        _estado.leerAjustes();
-        var vista = new StartView(_estado);
-        Ui.switchToView(vista, new StartDelegate(vista, _estado),
+        SalidaInicialDelegate.aLaLinea(_estado);
+    }
+
+    static function aLaLinea(estado) {
+        estado.leerAjustes();
+        var vista = new StartView(estado);
+        Ui.switchToView(vista, new StartDelegate(vista, estado),
                         Ui.SLIDE_LEFT);
+    }
+}
+
+// Auto o Manual al abrir la app, desde el MENU de la rueda de la hora. Los
+// rotulos van como ids de recurso y no cargados con loadResource: cargados,
+// el Menu2 se dibujaba vacio en el fenix 8.
+class ModoSalidaInicialDelegate extends Ui.Menu2InputDelegate {
+
+    var _estado;
+
+    function initialize(estado) {
+        Menu2InputDelegate.initialize();
+        _estado = estado;
+    }
+
+    function onSelect(item) {
+        App.Properties.setValue("startTime", item.getId() == :manual
+                                ? RaceState.SALIDA_MANUAL
+                                : RaceState.SALIDA_AUTO);
+        SalidaInicialDelegate.aLaLinea(_estado);
+    }
+
+    // Atras es volver a la rueda, no salir de la app: quien abrio el menu
+    // por error no ha decidido nada todavia.
+    function onBack() {
+        SalidaInicialDelegate.abrir(_estado);
     }
 }
 
