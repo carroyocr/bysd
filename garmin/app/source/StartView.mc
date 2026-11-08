@@ -17,6 +17,9 @@ using Toybox.Math as Math;
 // Pulsar START antes de la hora arranca la grabacion y la cuenta atras sigue
 // en la pantalla de carrera (el calentamiento). Si nadie pulsa, la carrera
 // arranca sola al llegar la hora: la campana no espera a nadie.
+//
+// Con la salida manual no hay hora que esperar: la pantalla dice "Manual" y
+// que la campana es el START, y nada arranca solo.
 class StartView extends Ui.View {
 
     var _estado;
@@ -44,6 +47,8 @@ class StartView extends Ui.View {
         _s = {
             :titulo => Ui.loadResource(Rez.Strings.settingStartTime),
             :auto => Ui.loadResource(Rez.Strings.auto),
+            :manual => Ui.loadResource(Rez.Strings.manual),
+            :campanaAlStart => Ui.loadResource(Rez.Strings.bellAtStart),
             :faltan => Ui.loadResource(Rez.Strings.startsIn),
             :enCurso => Ui.loadResource(Rez.Strings.underway),
             :pressStart => Ui.loadResource(Rez.Strings.pressStart),
@@ -68,8 +73,10 @@ class StartView extends Ui.View {
         if (app != null && app.linea == self) { app.linea = null; }
     }
 
-    // Arranca sola si la campana, que se vio por delante, ya llego.
+    // Arranca sola si la campana, que se vio por delante, ya llego. Con la
+    // salida manual no hay campana que esperar: solo arranca el START.
     function revisarHora() {
+        if (_estado.salidaManual()) { return; }
         var falta = _estado.campanaPrevista() - Time.now().value();
         if (falta > 0) {
             _armada = true;
@@ -129,11 +136,17 @@ class StartView extends Ui.View {
         var cuenta = falta > 0
                    ? _s[:faltan] + " " + Fmt.espera(falta)
                    : _s[:enCurso];
-        if (_estado.horaSalida < 0) {
+        if (_estado.horaSalida == RaceState.SALIDA_AUTO) {
             cuenta = _s[:auto] + " · " + cuenta;
         }
         var hora = AjustesMenuDelegate.textoDeSalida(
             AjustesMenuDelegate.hhmmDe(campana));
+        if (_estado.salidaManual()) {
+            // Sin hora de campana que ensenar: en su lugar, el modo y lo
+            // que significa. Tocar "Manual" abre la rueda igual que la hora.
+            hora = _s[:manual];
+            cuenta = _s[:campanaAlStart];
+        }
 
         // Todo va apilado y centrado, con el alto real de cada fuente: en una
         // esfera de 218 px y en una de 454 las mismas proporciones no dejan

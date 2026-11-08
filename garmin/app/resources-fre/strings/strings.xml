@@ -33,7 +33,8 @@
     <string id="startsIn">dans</string>
     <string id="underway">En cours</string>
     <string id="confirmStart">START valide</string>
-    <string id="menuAuto">MENU: Auto</string>
+    <string id="menuAuto">MENU: Auto / Manuel</string>
+    <string id="bellAtStart">Cloche au START</string>
     <string id="cfgAutoFinish">Auto ligne</string>
     <string id="cfgAutoKm">Auto km</string>
     <string id="cfgVibe">Vibr.</string>
@@ -52,8 +53,9 @@
     <string id="discarded">Activité supprimée</string>
     <string id="settingsTitle">Réglages du yard</string>
     <string id="settingStartTime">Heure de départ</string>
-    <string id="settingStartTimeFull">Heure de départ (HHMM, -1 = auto)</string>
+    <string id="settingStartTimeFull">Heure de départ (HHMM, -1 = auto, -2 = manuel)</string>
     <string id="auto">Auto</string>
+    <string id="manual">Manuel</string>
     <string id="fixedTime">Heure fixe</string>
     <string id="settingLapMinutes">Yard (minutes)</string>
     <string id="settingLapDistance">Yard (km)</string>

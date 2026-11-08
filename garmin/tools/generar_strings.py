@@ -82,7 +82,11 @@ TABLA = {
     "startsIn":        ("in", "faltan", "dans", "in", "tra", "faltam"),
     "underway":        ("Under way", "En curso", "En cours", "Läuft", "In corso", "Em curso"),
     "confirmStart":    ("START to confirm", "START confirma", "START valide", "START bestätigt", "START conferma", "START confirma"),
-    "menuAuto":        ("MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto", "MENU: Auto"),
+    # El pie de la rueda al abrir: MENU abre la eleccion entre Auto y Manual.
+    "menuAuto":        ("MENU: Auto / Manual", "MENU: Auto / Manual", "MENU: Auto / Manuel", "MENU: Auto / Manuell", "MENU: Auto / Manuale", "MENU: Auto / Manual"),
+    # La linea de salida con la salida manual: en vez de la hora de la
+    # campana, lo que significa el modo.
+    "bellAtStart":     ("Bell at START", "Campana al START", "Cloche au START", "Glocke bei START", "Campana allo START", "Sino no START"),
     "cfgAutoFinish":   ("Auto line", "Auto meta", "Auto ligne", "Auto Ziel", "Auto arrivo", "Auto meta"),
     "cfgAutoKm":       ("Auto km", "Auto km", "Auto km", "Auto km", "Auto km", "Auto km"),
     "cfgVibe":         ("Vibe", "Vibra", "Vibr.", "Vibr.", "Vibr.", "Vibra"),
@@ -116,10 +120,13 @@ TABLA = {
     # boton de menu (UP largo), para fijar la vuelta sin sacar el telefono.
     "settingsTitle":    ("Yard settings",           "Ajustes del yard",    "Réglages du yard",     "Yard-Einstellungen",    "Impostazioni yard",    "Ajustes do yard"),
     # La hora de salida fija. En el reloj es una rueda; en el telefono un
-    # numero HHMM, y la etiqueta larga explica el formato y el -1.
+    # numero HHMM, y la etiqueta larga explica el formato, el -1 y el -2.
     "settingStartTime": ("Start time",              "Hora de salida",      "Heure de départ",      "Startzeit",             "Ora di partenza",      "Hora de largada"),
-    "settingStartTimeFull": ("Start time (HHMM, -1 = auto)", "Hora de salida (HHMM, -1 = automática)", "Heure de départ (HHMM, -1 = auto)", "Startzeit (HHMM, -1 = automatisch)", "Ora di partenza (HHMM, -1 = auto)", "Hora de largada (HHMM, -1 = automática)"),
+    "settingStartTimeFull": ("Start time (HHMM, -1 = auto, -2 = manual)", "Hora de salida (HHMM, -1 = automática, -2 = manual)", "Heure de départ (HHMM, -1 = auto, -2 = manuel)", "Startzeit (HHMM, -1 = automatisch, -2 = manuell)", "Ora di partenza (HHMM, -1 = auto, -2 = manuale)", "Hora de largada (HHMM, -1 = automática, -2 = manual)"),
     "auto":             ("Auto",                    "Auto",                "Auto",                 "Auto",                  "Auto",                 "Auto"),
+    # Salida manual: START es la campana del yard 1, para las carreras que
+    # no salen a la hora en punto.
+    "manual":           ("Manual",                  "Manual",              "Manuel",               "Manuell",               "Manuale",              "Manual"),
     "fixedTime":        ("Set time",                "Hora fija",           "Heure fixe",           "Feste Zeit",            "Ora fissa",            "Hora fixa"),
     "settingLapMinutes":("Yard duration (minutes)", "Yard (minutos)",      "Yard (minutes)",       "Yard (Minuten)",        "Yard (minuti)",        "Yard (minutos)"),
     # En kilometros siempre, y la etiqueta lo dice. Es la unica asimetria con

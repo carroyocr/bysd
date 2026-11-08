@@ -25,7 +25,11 @@ reglas son las de una backyard de verdad:
   ancla a la marca de hora más cercana: quien arranca a las 8:03 —o a las
   7:58— corre igual su vuelta 1 de 8:00 a 9:00. Cualquier retraso en la
   salida queda corregido de raíz, y como el ancla se guarda en epoch, un
-  cambio de hora a mitad de carrera no mueve ninguna campana.
+  cambio de hora a mitad de carrera no mueve ninguna campana. Para las
+  carreras que no salen a la hora en punto está la **salida Manual**
+  (`startTime = -2`): START es la campana del yard 1 y las siguientes caen
+  cada vuelta desde ese instante, sin redondear ni depender del reloj de
+  la organización. Sin calentamiento ni arranque solo.
 - **Las vueltas las abre la hora, no un botón.** LAP (el botón START durante
   la carrera) marca que la vuelta *terminó* —el corredor llegó a meta y
   empieza su descanso— y solo vale el primero de cada vuelta: los demás se
@@ -49,7 +53,8 @@ pausa: la campana no espera a nadie.
 El emblema a pantalla completa poco más de un segundo, y de ahí a la **hora de
 salida**, que se pregunta cada vez que se abre la app: la rueda de hora y
 minutos viene puesta en la siguiente hora en punto del reloj (a las 11:30, las
-12:00), START confirma, MENU deja Auto y BACK sale. Luego,
+12:00), START confirma, MENU abre la elección entre Auto y Manual, y BACK
+sale. Luego,
 la **línea de salida**: la hora de salida con la cuenta atrás, qué vuelta se
 va a correr (distancia y minutos), la configuración (verde lo encendido) y si
 el GPS ya fijó. START da la salida sin pedir confirmación, porque con la

@@ -16,7 +16,10 @@
       solo de la app, porque un campo de datos no puede marcar vueltas.
     -->
     <!-- La hora de salida fija, como numero HHMM (700 = 7:00, 1830 = 6:30
-         PM). -1 es "automatica": el ancla se deduce al pulsar START. -->
+         PM). -1 es "automatica": el ancla se deduce al pulsar START,
+         redondeando a la marca de vuelta. -2 es "manual": START es la
+         campana del yard 1, para las carreras que no salen a la hora en
+         punto. -->
     <property id="startTime" type="number">-1</property>
     <property id="lapMinutes" type="number">60</property>
     <property id="lapDistance" type="float">6.7</property>

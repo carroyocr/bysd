@@ -40,6 +40,9 @@ comprobar("salida exacta", ancla(1000000, h8), 1000000)
 # Vueltas de 30 min: a las 8:20 el ancla es 8:30; a las 8:10, 8:00.
 comprobar("30 min, 8:20", ancla(1001200, h8 + 1200, 1800), 1001800)
 comprobar("30 min, 8:10", ancla(1000600, h8 + 600, 1800), 1000000)
+# Salida manual (startTime = -2): el ancla es el instante de pulsar, sin
+# redondear a ninguna marca. RaceState.campanaPrevista() devuelve "ahora".
+comprobar("manual, 8:03:20", 1000200, 1000200)
 
 
 # --- la proyeccion: RaceState.proyeccion() -----------------------------------

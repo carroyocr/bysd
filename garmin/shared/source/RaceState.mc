@@ -18,6 +18,12 @@ using Toybox.Math as Math;
 // vuelta TERMINO -llego a meta, empieza su descanso- y solo vale el primero
 // de cada hora; los demas se ignoran.
 //
+// Hay carreras que no salen a la hora en punto: el director da la salida
+// cuando la da, y a partir de ahi las campanas van cada hora desde ESE
+// momento. Para esas esta la salida manual: START es la campana del yard 1,
+// sin redondear a nada ni depender de que el reloj del corredor y el de la
+// organizacion coincidan. Lo pidio un corredor de la tienda (nov-2026).
+//
 // En el campo de datos no hay START que ancle: alli el cero sigue siendo el
 // arranque de la actividad nativa, y esta misma clase sirve para los dos
 // porque el ancla es opcional.
@@ -59,9 +65,13 @@ class RaceState {
     // --- ajustes, del telefono ---
     var duracionVuelta = DURACION_VUELTA;
     var kmPorVuelta = KM_POR_VUELTA;
-    // La hora de salida fija, como HHMM (700 = 7:00). -1 es "automatica":
-    // el ancla se deduce de la hora a la que se pulsa START.
-    var horaSalida = -1;
+    // La hora de salida fija, como HHMM (700 = 7:00). Los negativos son los
+    // dos modos sin hora: SALIDA_AUTO deduce el ancla de la hora a la que se
+    // pulsa START (redondeando a la marca de vuelta), y SALIDA_MANUAL hace
+    // de START la campana misma. El telefono escribe el numero tal cual.
+    static const SALIDA_AUTO = -1;
+    static const SALIDA_MANUAL = -2;
+    var horaSalida = SALIDA_AUTO;
     var avisoCorral = true;
     // La meta automatica viene puesta de fabrica (ver properties.xml). El
     // campo de datos no marca vueltas y no la mira.
@@ -150,12 +160,13 @@ class RaceState {
             kmPorVuelta = vuelta.toFloat();
         }
 
-        var salida = _ajuste("startTime", -1);
-        horaSalida = -1;
+        var salida = _ajuste("startTime", SALIDA_AUTO);
+        horaSalida = SALIDA_AUTO;
         if (salida != null) {
             var s = salida.toNumber();
-            // Solo un HHMM legitimo vale; cualquier otra cosa es automatica.
-            if (s >= 0 && s <= 2359 && (s % 100) < 60) {
+            // Solo un HHMM legitimo o el manual valen; cualquier otra cosa
+            // es automatica.
+            if (s == SALIDA_MANUAL || (s >= 0 && s <= 2359 && (s % 100) < 60)) {
                 horaSalida = s;
             }
         }
@@ -325,12 +336,22 @@ class RaceState {
         muestrasPulso = 0;
     }
 
+    // Salida manual: START es la campana del yard 1, sin reloj de pared.
+    function salidaManual() {
+        return horaSalida == SALIDA_MANUAL;
+    }
+
     // La campana de la vuelta 1 que sellaria darLaSalida() si se pulsara
     // START ahora mismo, en epoch, sin tocar nada. La linea de salida la usa
     // para ensenar la hora y la cuenta atras, y para arrancar sola cuando
     // llega la hora sin que nadie haya pulsado.
     function campanaPrevista() {
         var ahora = Time.now().value();
+        if (salidaManual()) {
+            // Manual: la campana es el instante de pulsar. No hay
+            // calentamiento ni cuenta atras; la vuelta 1 empieza ya.
+            return ahora;
+        }
         var reloj = Sys.getClockTime();
         var desdeMedianoche = (reloj.hour * 3600) + (reloj.min * 60) + reloj.sec;
 

@@ -1,11 +1,32 @@
 # Publicar Backyard en la Connect IQ Store
 
-Estado y guía de la ficha de Garmin. Actualizado el 2 de noviembre de 2026 (1.14.0 publicada ese día).
+Estado y guía de la ficha de Garmin. Actualizado el 8 de noviembre de 2026 (1.15.0 lista para subir; 1.14.0 publicada el 2 de noviembre).
 
 **Solo va a la tienda la app de reloj.** El campo de datos se compila y
 funciona, pero se decidió el 26 de agosto de 2026 **no publicarlo**: se queda
 en el repo, sin ficha. Los textos que había preparados para su ficha siguen
 abajo por si algún día cambia la decisión.
+
+## Estado — la 1.15.0, lista para subir
+
+8 de noviembre de 2026. Entra la **salida Manual**, a petición de un usuario
+de la tienda (Sebastien Laffineur, por el formulario de contacto de Connect
+IQ): en su carrera el director da la salida cuando la da, y las campanas van
+cada hora desde ese momento, no desde la hora en punto. Hasta ahora la app
+no podía hacer eso: en Auto redondeaba START a la hora en punto (salir a las
+8:03 ponía la campana a las 9:00, no a las 9:03) y la hora fija exigía que
+el reloj del corredor y el de la organización coincidieran. Con Manual,
+**START es la campana del yard 1** y las siguientes caen cada yard desde
+ese instante; no hay calentamiento ni arranque solo. Se elige en el menú de
+la hora de salida (Auto · Manual · Hora fija), con el botón de menú en la
+rueda de la hora al abrir la app, o desde el teléfono con `-2` en el ajuste
+de la hora de salida (`-1` sigue siendo Auto). Sin cambio en la lista de
+relojes. Compilada con el SDK 9.3. Los manuales ES/EN llevan la opción.
+
+Novedades para la ficha:
+
+- ES: «Salida manual: START es la campana del yard 1, para las carreras que no salen a la hora en punto.»
+- EN: "Manual start: START is the yard 1 bell, for races that don't start on the hour."
 
 ## Estado — la 1.14.0, publicada
 
@@ -266,6 +287,28 @@ para enseñárselo a un corredor.
 Para una **beta**, hoy la beta de la tienda solo la descarga el propio
 desarrollador; para que la prueben otros corredores, el reparto del `.prg`
 por cable sigue siendo el camino. Ver el README para instalar por USB.
+
+---
+
+## Novedades de la versión 1.15.0 (para el campo "What's New")
+
+**ES**
+
+> - Nueva salida **Manual**: START es la campana del yard 1 y las siguientes
+>   suenan cada yard desde ese instante, sin redondear a la hora en punto ni
+>   depender del reloj de la organización. Para las carreras cuya salida la
+>   da el director cuando la da. Se elige en el menú de la hora de salida,
+>   con el botón de menú en la rueda al abrir la app, o con -2 desde el
+>   teléfono. Auto y la hora fija siguen igual.
+
+**EN**
+
+> - New **Manual** start: START is the yard 1 bell and every following bell
+>   rings one yard later from that instant, with no rounding to the top of
+>   the hour and no need to match the organizer's clock. For races where the
+>   race director starts whenever they start. Choose it in the start time
+>   menu, with the menu button on the start time wheel when the app opens,
+>   or with -2 from the phone. Auto and the set time work as before.
 
 ---
 

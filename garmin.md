@@ -1,5 +1,20 @@
 # Garmin — lo que queda
 
+**Pendiente a 8 de noviembre de 2026: subir la 1.15.0** (`garmin/build/backyard.iq`),
+la de la **salida Manual**: START es la campana del yard 1 y las campanas
+siguientes van cada yard desde ese instante, para las carreras que no salen
+a la hora en punto. La pidió Sebastien Laffineur (sebalaffineur@gmail.com)
+por el formulario de la tienda el 8 de noviembre: en Auto, START se
+redondeaba a la hora en punto, y la hora fija exigía ir sincronizado con el
+reloj de la organización. Es el valor `-2` del ajuste `startTime` (`-1`
+sigue siendo Auto), tratado en `RaceState.salidaManual()`: `campanaPrevista()`
+devuelve el ahora, la línea de salida enseña «Manual · Campana al START» sin
+cuenta atrás y no arranca sola, y el modo se elige en el menú de la hora de
+salida (Auto · Manual · Hora fija) o con MENU en la rueda al abrir la app,
+que ahora abre un menú de dos opciones en lugar de poner Auto directamente.
+Sin cambio en la lista de relojes (rama `garmin-salida-manual`). Al publicar,
+avisar a Sebastien.
+
 **La 1.14.0 está publicada (2 de noviembre de 2026): Enduro 4, Approach S72 y MARQ Gen 3** (`garmin/build/backyard.iq`, compilada con el SDK 9.3: 115 relojes, 185 builds, sin error ni aviso).
 Un usuario de la tienda (Georgios Rassias, Enduro 4) pidió el reloj el 2 de
 noviembre. Garmin lo lista como `enduro4`: 280 × 280 MIP de 64 colores, API 6.0,
