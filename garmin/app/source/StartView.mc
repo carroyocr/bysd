@@ -33,6 +33,10 @@ class StartView extends Ui.View {
     // siendo la hora, no el momento en que volvio.
     var _armada = false;
 
+    // El modo que habia antes de pasar a Manual con DOWN, para que la
+    // segunda pulsacion devuelva la hora fija que hubiera, no Auto a secas.
+    var _antesDeManual = RaceState.SALIDA_AUTO;
+
     // Las zonas tocables del ultimo dibujo: [x0, y0, x1, y1, que]. Los
     // ajustes de la configuracion se encienden y apagan con el dedo, y la
     // hora de salida vuelve a abrir su rueda.
@@ -103,9 +107,35 @@ class StartView extends Ui.View {
         }
     }
 
+    // Auto u hora fija <-> Manual, de una pulsacion. Es el atajo para el
+    // director que da la salida tarde: con "salimos en diez segundos" a las
+    // 8:02 no hay tiempo de menus, y en Auto la campana se iria a las 8:00.
+    // Lo disparan DOWN y el toque en la linea del modo. Al volver se
+    // restaura lo que habia (la hora fija, si la habia). Se guarda como
+    // ajuste, igual que desde el menu.
+    function alternarModo() {
+        var nuevo;
+        if (_estado.salidaManual()) {
+            nuevo = _antesDeManual;
+        } else {
+            _antesDeManual = _estado.horaSalida;
+            nuevo = RaceState.SALIDA_MANUAL;
+        }
+        App.Properties.setValue("startTime", nuevo);
+        _estado.leerAjustes();
+        // Un cambio de modo es un cambio de campana: lo armado para la
+        // anterior no vale para la nueva.
+        _armada = false;
+        Ui.requestUpdate();
+    }
+
     function _accion(que) {
         if (que == :hora) {
             SalidaInicialDelegate.abrir(_estado);
+            return;
+        }
+        if (que == :modo) {
+            alternarModo();
             return;
         }
         // Las mismas propiedades que escriben el menu de ajustes y el
@@ -163,7 +193,7 @@ class StartView extends Ui.View {
         var filas = [
             [ xt, Tema.tenue(), [ _s[:titulo] ] ],
             [ Gfx.FONT_LARGE, Tema.tinta(), [ hora ], :hora ],
-            [ xt, Gfx.COLOR_ORANGE, [ cuenta ] ],
+            [ xt, Gfx.COLOR_ORANGE, [ cuenta ], :modo ],
             [ xt, Tema.tenue(),
               [ Fmt.distancia(_estado.kmPorVuelta) + " " + Fmt.unidad() + " / "
                 + (_estado.duracionVuelta / 60).format("%d") + " min" ] ],
@@ -322,6 +352,15 @@ class StartDelegate extends Ui.BehaviorDelegate {
     // actividades.
     function onBack() {
         return false;
+    }
+
+    // DOWN alterna Auto (u hora fija) y Manual. En la linea de salida no
+    // hay paginas que pasar, asi que el boton estaba libre. Solo DOWN, y no
+    // UP: en el fenix 8 el UP largo que abre los ajustes llega a veces como
+    // un UP corto seguido del menu, y el modo cambiaria sin querer.
+    function onNextPage() {
+        _vista.alternarModo();
+        return true;
     }
 
     // El boton de menu (UP largo) abre los ajustes de la vuelta, para

@@ -88,11 +88,23 @@ class MainDelegate extends Ui.BehaviorDelegate {
         // mano en este contexto, el Menu2 del fenix 8 los dibujaba en blanco
         // (el menu salia vacio y parecia no hacer nada). Con el id, el menu
         // los resuelve el solo y se ve en los seis idiomas.
-        var menu = new Ui.Menu2({ :title => Rez.Strings.endTitle });
+        // Durante el calentamiento -START pulsado antes de la hora y la
+        // salida real que llega antes de lo que la app espera- el menu
+        // ofrece ademas dar la salida ahora: la campana del yard 1 pasa a
+        // ser este instante, como en Manual. Va dentro del menu a proposito,
+        // para que un roce de START no de la salida.
+        var v = _estado.vuelta();
+        var calentando = v != null && v == 0;
+        var menu = new Ui.Menu2({ :title => calentando ? Rez.Strings.warmup
+                                                       : Rez.Strings.endTitle });
+        if (calentando) {
+            menu.addItem(new Ui.MenuItem(Rez.Strings.startNow, null,
+                                         :salirAhora, null));
+        }
         menu.addItem(new Ui.MenuItem(Rez.Strings.resume, null, :seguir, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.save, null, :guardar, null));
         menu.addItem(new Ui.MenuItem(Rez.Strings.discard, null, :descartar, null));
-        Ui.pushView(menu, new MenuFinDelegate(), Ui.SLIDE_UP);
+        Ui.pushView(menu, new MenuFinDelegate(_estado), Ui.SLIDE_UP);
         return true;
     }
 
@@ -141,13 +153,25 @@ class MainDelegate extends Ui.BehaviorDelegate {
 // y el trabajo de verdad lo hace ella en su onShow.
 class MenuFinDelegate extends Ui.Menu2InputDelegate {
 
-    function initialize() {
+    var _estado;
+
+    function initialize(estado) {
         Menu2InputDelegate.initialize();
+        _estado = estado;
     }
 
     function onSelect(item) {
         var id = item.getId();
-        if (id == :guardar) {
+        if (id == :salirAhora) {
+            // Pasa a Manual y vuelve a sellar el ancla en este instante.
+            // El resello solo actua si la campana 1 no ha sonado, que es
+            // justo cuando el menu ofrecio la opcion; la campana la toca el
+            // latido siguiente, que cierra el calentamiento en el FIT.
+            App.Properties.setValue("startTime", RaceState.SALIDA_MANUAL);
+            _estado.leerAjustes();
+            SalidaPickerDelegate.resellar(_estado);
+            Ui.popView(Ui.SLIDE_DOWN);
+        } else if (id == :guardar) {
             Ui.switchToView(new SalidaView(true), new SalidaDelegate(),
                             Ui.SLIDE_IMMEDIATE);
         } else if (id == :descartar) {

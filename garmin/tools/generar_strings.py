@@ -92,6 +92,9 @@ TABLA = {
     "cfgVibe":         ("Vibe", "Vibra", "Vibr.", "Vibr.", "Vibr.", "Vibra"),
     "endTitle":         ("Finish?",                 "¿Terminar?",          "Terminer ?",           "Beenden?",              "Terminare?",           "Terminar?"),
     "resume":           ("Resume",                  "Reanudar",            "Reprendre",            "Weiter",                "Riprendi",             "Retomar"),
+    # En el calentamiento, el menu de START ofrece dar la salida ya: la
+    # campana del yard 1 pasa a ser ese instante (salida Manual).
+    "startNow":         ("Start now",               "Dar la salida ahora", "Donner le départ",     "Jetzt starten",         "Partenza adesso",      "Largar agora"),
     "save":             ("Save",                    "Guardar",             "Enregistrer",          "Speichern",             "Salva",                "Guardar"),
     "discard":          ("Discard",                 "Descartar",           "Supprimer",            "Verwerfen",             "Scarta",               "Descartar"),
     "discardSure":      ("Discard the race?",       "¿Descartar la carrera?","Supprimer la course ?","Rennen verwerfen?",   "Scartare la gara?",    "Descartar a prova?"),
@@ -191,7 +194,7 @@ TABLA = {
 # ajustes, que se leen en el telefono, ni los nombres, ni las del menu de
 # terminar y sus dialogos, que los envuelve el sistema.
 FUERA_DE_LA_ESFERA = ["appName", "fieldName",
-                      "endTitle", "resume", "save", "discard", "discardSure",
+                      "endTitle", "resume", "startNow", "save", "discard", "discardSure",
                       "saving", "saved", "discarding", "discarded", "resumeRace", "settingsTitle"]
 EN_LA_ESFERA = [c for c in TABLA
                 if not c.startswith("setting") and c not in FUERA_DE_LA_ESFERA]
