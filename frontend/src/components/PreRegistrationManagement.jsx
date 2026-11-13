@@ -560,6 +560,74 @@ export default function PreRegistrationManagement() {
   const [cortesiaMotivo, setCortesiaMotivo] = useState('');
   const [guardandoCortesia, setGuardandoCortesia] = useState(false);
 
+  // Corregir un pago aprobado como completo que en realidad fue una parte.
+  // Es «Es un abono» pero después de aprobar: el plazo nace aprobado con lo
+  // pagado en total, el pago vuelve a pendiente (el cupo sigue asegurado) y
+  // en finanzas queda un solo ingreso con lo que de verdad entró.
+  const [pagoParcialTarget, setPagoParcialTarget] = useState(null); // registro completo
+  const [pagoParcialForm, setPagoParcialForm] = useState({ monto: '', fecha: '', avisar: true });
+  const [guardandoPagoParcial, setGuardandoPagoParcial] = useState(false);
+
+  const abrirPagoParcial = (reg) => {
+    setPagoParcialTarget(reg);
+    setPagoParcialForm({
+      monto: reg.payment_receipt?.monto_pagado ? String(reg.payment_receipt.monto_pagado) : '',
+      fecha: '',
+      avisar: true,
+    });
+  };
+
+  const confirmarPagoParcial = async () => {
+    const monto = Number(String(pagoParcialForm.monto).replace(/[^\d.]/g, ''));
+    if (!(monto > 0)) {
+      toast.error('Escribe cuánto ha pagado en total');
+      return;
+    }
+    setGuardandoPagoParcial(true);
+    try {
+      const res = await adminFetch(
+        `${API_URL}/api/registration/admin/pago-parcial/${encodeURIComponent(pagoParcialTarget.email)}`
+        + `?race_code=${raceCode}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            monto_pagado: monto,
+            fecha_propuesta: pagoParcialForm.fecha.trim() || null,
+            avisar: pagoParcialForm.avisar,
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || 'No se pudo corregir el pago');
+      const saldo = Number(data.saldo_pendiente || 0).toLocaleString('es-DO');
+      toast.success(
+        data.ingreso
+          ? `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Ingreso en finanzas ajustado.`
+          : `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Finanzas no tenía ingreso automático: revísalo a mano.`
+      );
+      setPagoParcialTarget(null);
+      loadData();
+    } catch (err) {
+      toast.error(err.message || 'Error de conexión');
+    } finally {
+      setGuardandoPagoParcial(false);
+    }
+  };
+
+  // El comprobante que hay que enseñar: el del pago (aprobado, rechazado o en
+  // revisión) y, si no, el del abono, que vive dentro del plazo.
+  const comprobanteDe = (reg) => {
+    if (reg.payment_receipt?.image_path) return { ...reg.payment_receipt, de: 'pago' };
+    if (reg.plazo_pago?.comprobante?.image_path) return { ...reg.plazo_pago.comprobante, de: 'abono' };
+    return null;
+  };
+  const estadoComprobante = {
+    approved: { label: 'Aprobado', className: 'bg-green-500' },
+    rejected: { label: 'Rechazado', className: 'bg-red-500' },
+    pending_review: { label: 'En revisión', className: 'bg-yellow-500' },
+  };
+
   const abrirCortesia = (reg) => {
     setCortesiaTarget(reg);
     setCortesiaMotivo(reg.cortesia_motivo || '');
@@ -1470,6 +1538,36 @@ export default function PreRegistrationManagement() {
                                 )}
                               </Button>
                             )}
+                            {comprobanteDe(reg) && (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="ghost"
+                                className="h-8"
+                                title={comprobanteDe(reg).de === 'abono' ? 'Ver comprobante del abono' : 'Ver comprobante de pago'}
+                              >
+                                <a
+                                  href={`${API_URL}${comprobanteDe(reg).image_path}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  data-testid={`comprobante-btn-${reg.email}`}
+                                >
+                                  <FileImage className="w-4 h-4" />
+                                </a>
+                              </Button>
+                            )}
+                            {reg.estado_pago === 'pagado' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => abrirPagoParcial(reg)}
+                                className="h-8 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                                title="Corregir: fue un pago parcial"
+                                data-testid={`pago-parcial-btn-${reg.email}`}
+                              >
+                                <Wallet className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1562,6 +1660,90 @@ export default function PreRegistrationManagement() {
                               </div>
                             </div>
                           </div>
+                          {(reg.payment_receipt || reg.plazo_pago?.comprobante || reg.plazo_pago?.estado === 'aprobado') && (
+                            <div className="mt-4 p-3 bg-background rounded border" data-testid={`pago-detalle-${reg.email}`}>
+                              <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                <CreditCard className="w-4 h-4" /> Pago
+                              </h4>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                {reg.payment_receipt && (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-foreground">Comprobante</span>
+                                    {estadoComprobante[reg.payment_receipt.status] && (
+                                      <Badge className={estadoComprobante[reg.payment_receipt.status].className}>
+                                        {estadoComprobante[reg.payment_receipt.status].label}
+                                      </Badge>
+                                    )}
+                                    {reg.payment_receipt.payment_date && (
+                                      <Badge variant="outline"><Calendar className="w-3 h-3 mr-1" />{reg.payment_receipt.payment_date}</Badge>
+                                    )}
+                                    {reg.payment_receipt.bank_origin && <Badge variant="outline">{reg.payment_receipt.bank_origin}</Badge>}
+                                    {reg.payment_receipt.transfer_number && (
+                                      <Badge variant="outline">Ref: {reg.payment_receipt.transfer_number}</Badge>
+                                    )}
+                                    {reg.payment_receipt.monto_pagado != null && (
+                                      <Badge variant="outline">
+                                        Declaró RD$ {Number(reg.payment_receipt.monto_pagado).toLocaleString('es-DO')}
+                                      </Badge>
+                                    )}
+                                    {reg.payment_receipt.reviewed_at && (
+                                      <span className="text-xs">
+                                        Revisado el {new Date(reg.payment_receipt.reviewed_at).toLocaleDateString('es-DO')}
+                                      </span>
+                                    )}
+                                    {reg.payment_receipt.image_path && (
+                                      <a
+                                        href={`${API_URL}${reg.payment_receipt.image_path}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline flex items-center gap-1"
+                                      >
+                                        <FileImage className="w-4 h-4" /> Ver comprobante
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                                {reg.plazo_pago?.estado === 'aprobado' && (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-foreground">Abono</span>
+                                    <Badge className="bg-amber-500">
+                                      RD$ {Number(reg.plazo_pago.monto_abonado || 0).toLocaleString('es-DO')}
+                                    </Badge>
+                                    {reg.plazo_pago.fecha_propuesta && (
+                                      <Badge variant="outline">Salda el {reg.plazo_pago.fecha_propuesta}</Badge>
+                                    )}
+                                    {reg.plazo_pago.comprobante?.payment_date && (
+                                      <Badge variant="outline"><Calendar className="w-3 h-3 mr-1" />{reg.plazo_pago.comprobante.payment_date}</Badge>
+                                    )}
+                                    {reg.plazo_pago.comprobante?.bank_origin && (
+                                      <Badge variant="outline">{reg.plazo_pago.comprobante.bank_origin}</Badge>
+                                    )}
+                                    {reg.plazo_pago.comprobante?.transfer_number && (
+                                      <Badge variant="outline">Ref: {reg.plazo_pago.comprobante.transfer_number}</Badge>
+                                    )}
+                                    {reg.plazo_pago.origen === 'correccion' && (
+                                      <span className="text-xs">
+                                        Corregido de pago completo por {reg.plazo_pago.corregido_por || 'el panel'}
+                                        {reg.plazo_pago.revisado_at
+                                          ? ` el ${new Date(reg.plazo_pago.revisado_at).toLocaleDateString('es-DO')}`
+                                          : ''}
+                                      </span>
+                                    )}
+                                    {reg.plazo_pago.comprobante?.image_path && (
+                                      <a
+                                        href={`${API_URL}${reg.plazo_pago.comprobante.image_path}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline flex items-center gap-1"
+                                      >
+                                        <FileImage className="w-4 h-4" /> Ver comprobante del abono
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           {reg.inscripcion_cortesia && (
                             <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded">
                               <h4 className="font-semibold text-sm mb-1 flex items-center gap-2 text-indigo-800">
@@ -1665,6 +1847,82 @@ export default function PreRegistrationManagement() {
                   {guardandoCortesia ? 'Guardando...' : 'Marcar y notificar'}
                 </Button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Corregir un pago completo que fue parcial */}
+      {pagoParcialTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-testid="pago-parcial-modal">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="px-6 py-4 border-b">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-amber-700" />
+                Fue un pago parcial
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {pagoParcialTarget.nombre} {pagoParcialTarget.apellidos} — {pagoParcialTarget.email}
+              </p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="pago-parcial-monto" className="text-sm">
+                  ¿Cuánto ha pagado en total? (RD$) *
+                </Label>
+                <Input
+                  id="pago-parcial-monto"
+                  type="number"
+                  min="0"
+                  value={pagoParcialForm.monto}
+                  onChange={(e) => setPagoParcialForm((f) => ({ ...f, monto: e.target.value }))}
+                  placeholder="Lo que dice el comprobante"
+                  data-testid="pago-parcial-monto"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Todo lo pagado hasta hoy, no solo el último comprobante. Tiene que quedar algo por pagar.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="pago-parcial-fecha" className="text-sm">¿Hasta cuándo tiene para saldar? (opcional)</Label>
+                <Input
+                  id="pago-parcial-fecha"
+                  type="date"
+                  value={pagoParcialForm.fecha}
+                  onChange={(e) => setPagoParcialForm((f) => ({ ...f, fecha: e.target.value }))}
+                  data-testid="pago-parcial-fecha"
+                />
+              </div>
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={pagoParcialForm.avisar}
+                  onChange={(e) => setPagoParcialForm((f) => ({ ...f, avisar: e.target.checked }))}
+                  className="w-4 h-4 mt-0.5"
+                  data-testid="pago-parcial-avisar"
+                />
+                <span className="text-sm">
+                  Avisar al atleta por correo
+                  <span className="block text-xs text-muted-foreground">
+                    Le llega el correo del abono, con lo abonado y lo que le queda por pagar.
+                  </span>
+                </span>
+              </label>
+              <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
+                El pago pasa a <strong>Abono</strong> con el cupo asegurado, el comprobante se guarda con el
+                abono y el atleta podrá subir el pago final desde su perfil. En finanzas se retira el ingreso
+                que anotó el sistema al aprobar y se anota uno solo con lo pagado en total.
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setPagoParcialTarget(null)}>Cancelar</Button>
+              <Button
+                onClick={confirmarPagoParcial}
+                disabled={guardandoPagoParcial}
+                data-testid="pago-parcial-confirm"
+              >
+                {guardandoPagoParcial ? 'Corrigiendo...' : 'Corregir a abono'}
+              </Button>
             </div>
           </div>
         </div>

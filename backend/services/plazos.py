@@ -209,6 +209,100 @@ def desde_comprobante(recibo: dict, monto_abonado, fecha_propuesta, costo: float
     return solicitud
 
 
+# ---------------- Corregir un pago completo que era parcial ----------------
+
+ORIGEN_CORRECCION = "correccion"
+
+
+def puede_corregir_a_abono(registro: dict) -> Optional[str]:
+    """None si la inscripcion se puede pasar de pagada completa a abono; si
+    no, por que no.
+
+    Es el camino de vuelta de `puede_pasar_a_plazo`: aquel mueve un
+    comprobante **antes** de aprobarlo, y este corrige uno que ya se aprobo
+    como pago completo siendo una parte. Solo tiene sentido sobre una
+    inscripcion marcada como pagada; la cortesia no tiene pago que corregir,
+    y con un comprobante en revision lo que toca es revisarlo.
+    """
+    if registro.get("inscripcion_cortesia"):
+        return "Esta inscripción entró sin costo: no hay pago que corregir."
+    if registro.get("payment_status") != "paid":
+        return "Solo se corrige una inscripción marcada como pagada completa."
+    if (registro.get("payment_receipt") or {}).get("status") == "pending_review":
+        return "Tiene un comprobante en revisión: revísalo antes de corregir el pago."
+    return None
+
+
+def corregir_a_abono(registro: dict, monto_pagado, fecha_propuesta, costo: float,
+                     por: str = "", desde: Optional[date] = None) -> dict:
+    """Lo que se guarda como plazo cuando un pago aprobado como completo era
+    en realidad una parte: el plazo nace **aprobado**, con lo pagado hasta hoy
+    y la fecha para saldar, y el cupo sigue asegurado.
+
+    `monto_pagado` es **todo** lo que ha pagado el atleta, no solo el ultimo
+    comprobante: si venia de un abono anterior, la organizacion suma los dos.
+    Rige el minimo del abono, y ademas tiene que quedar algo por pagar: un
+    monto igual al costo no es un pago parcial. La fecha es opcional y no
+    lleva tope: la concede la organizacion, no la pide el atleta.
+    """
+    desde = desde or hoy()
+    costo = float(costo or 0)
+
+    try:
+        pagado = float(monto_pagado)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Escribe cuánto ha pagado en total")
+    if pagado < ABONO_MINIMO:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El abono mínimo para conservar el cupo es de RD$ {ABONO_MINIMO:,.0f}",
+        )
+    if costo and pagado >= costo:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"RD$ {pagado:,.0f} cubre el costo de la inscripción "
+                f"(RD$ {costo:,.0f}): no es un pago parcial."
+            ),
+        )
+
+    fecha = None
+    if fecha_propuesta not in (None, ""):
+        fecha = _fecha(fecha_propuesta)
+        if fecha < desde:
+            raise HTTPException(status_code=400, detail="La fecha no puede ser anterior a hoy")
+
+    plazo_anterior = registro.get("plazo_pago") or {}
+    recibo = registro.get("payment_receipt") or {}
+    comprobante = (
+        {
+            "image_path": recibo.get("image_path"),
+            "payment_date": recibo.get("payment_date"),
+            "bank_origin": recibo.get("bank_origin"),
+            "transfer_number": recibo.get("transfer_number"),
+        }
+        if recibo.get("image_path")
+        else plazo_anterior.get("comprobante")
+    )
+    ahora = datetime.now(timezone.utc)
+    return {
+        "estado": APROBADO,
+        "monto_abonado": pagado,
+        "fecha_propuesta": fecha.isoformat() if fecha else None,
+        "solicitado_at": ahora,
+        "revisado_at": ahora,
+        "motivo_rechazo": "",
+        "origen": ORIGEN_CORRECCION,
+        "comprobante": comprobante,
+        "corregido_por": por,
+        "correccion": {
+            "at": ahora,
+            "monto_abonado_antes": plazo_anterior.get("monto_abonado"),
+            "comprobante_aprobado": recibo if recibo else None,
+        },
+    }
+
+
 def cupo_asegurado(registro: dict) -> bool:
     """Si el cupo esta a salvo: pagado del todo, o con el plazo ya aprobado.
 

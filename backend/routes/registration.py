@@ -1928,6 +1928,127 @@ async def tomar_recibo_como_abono(
     }
 
 
+class PagoParcial(BaseModel):
+    """Lo que el panel decide al corregir un pago completo que era parcial."""
+    monto_pagado: float
+    fecha_propuesta: Optional[str] = None
+    avisar: bool = True
+
+
+async def _ingreso_automatico_corregido(email: str, race_code: str, nombre: str, monto: float):
+    """Deja en finanzas lo que de verdad entro.
+
+    Al aprobar el comprobante se anoto el costo entero (o lo que faltaba) como
+    ingreso. Se retira **solo** lo que anoto el sistema (`source` de la
+    confirmacion de pago, para este atleta y esta carrera) y se anota un solo
+    ingreso con lo pagado en total. Si no hay ninguno automatico, la
+    organizacion llevaba las cuentas a mano y no se toca nada: devuelve None.
+    """
+    from routes.finances import create_payment_income
+    from server import db as database
+
+    filtro = {"source": "payment_confirmation", "athlete_email": email, "race_code": race_code}
+    anteriores = await database.financial_movements.find(filtro, {"_id": 0}).to_list(100)
+    if not anteriores:
+        return None
+    await database.financial_movements.delete_many(filtro)
+    await create_payment_income(email=email, nombre=f"{nombre} (abono)", monto=monto, race_code=race_code)
+    return {
+        "antes": sum(float(m.get("monto") or 0) for m in anteriores),
+        "ahora": monto,
+        "movimientos_retirados": len(anteriores),
+    }
+
+
+@admin_router.post("/pago-parcial/{email}")
+async def corregir_pago_parcial(
+    email: str,
+    race_code: str,
+    datos: PagoParcial,
+    usuario: dict = Depends(require_permission("athletes")),
+):
+    """Corrige una inscripcion aprobada como pagada completa que en realidad
+    pago una parte.
+
+    Es «Es un abono» pero despues de aprobar: el comprobante ya se acepto como
+    pago completo y el ingreso ya esta en finanzas. Esto la deja como si se
+    hubiera tomado como abono desde el principio: plazo aprobado con lo pagado
+    en total y la fecha para saldar, el pago vuelve a pendiente (el cupo sigue
+    asegurado por el plazo), el comprobante pasa a vivir dentro del plazo para
+    que el atleta pueda subir el pago final, y en finanzas queda un solo
+    ingreso con lo que de verdad entro. Si `avisar`, al atleta le llega el
+    correo del abono con lo que le queda por pagar.
+    """
+    registro = await registrations_collection.find_one(
+        {"email": email.lower(), "race_code": race_code}
+    )
+    if not registro:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    impedimento = plazos.puede_corregir_a_abono(registro)
+    if impedimento:
+        raise HTTPException(status_code=400, detail=impedimento)
+
+    carrera = await db["race_configurations"].find_one({"code": race_code}) or {}
+    costo = float(carrera.get("registration_cost") or 0)
+    plazo = plazos.corregir_a_abono(
+        registro, datos.monto_pagado, datos.fecha_propuesta, costo,
+        por=usuario.get("username", ""),
+    )
+
+    await registrations_collection.update_one(
+        {"email": email.lower(), "race_code": race_code},
+        {
+            "$set": {
+                "plazo_pago": plazo,
+                "payment_status": "pending",
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$unset": {"payment_receipt": ""},
+        },
+    )
+
+    nombre = f"{registro.get('nombre', '')} {registro.get('apellidos', '')}".strip()
+    ingreso = None
+    try:
+        ingreso = await _ingreso_automatico_corregido(
+            email.lower(), race_code, nombre, float(plazo["monto_abonado"])
+        )
+    except Exception as e:
+        print(f"Error corrigiendo el ingreso del pago parcial: {e}")
+
+    if datos.avisar:
+        try:
+            from services.template_email_service import (
+                send_email_with_template, build_race_data, build_athlete_data
+            )
+
+            await send_email_with_template(
+                db=db,
+                template_id="plazo_aprobado",
+                to_email=email.lower(),
+                data={
+                    **build_race_data(carrera),
+                    **build_athlete_data(registro),
+                    "plazo_monto": f"{float(plazo['monto_abonado']):,.0f}",
+                    "plazo_fecha": plazo.get("fecha_propuesta") or "por acordar",
+                    "plazo_restante": f"{plazos.restante(plazo, costo):,.0f}",
+                    "plazo_motivo": "",
+                },
+            )
+        except Exception as e:
+            print(f"Error enviando el correo del pago parcial: {e}")
+
+    return {
+        "success": True,
+        "estado_pago": plazos.PAGO_ABONO,
+        "monto_abonado": plazo["monto_abonado"],
+        "saldo_pendiente": plazos.restante(plazo, costo),
+        "fecha_propuesta": plazo.get("fecha_propuesta"),
+        "ingreso": ingreso,
+    }
+
+
 @admin_router.put("/review-receipt/{email}")
 async def review_payment_receipt(email: str, race_code: str, approved: bool):
     """Approve or reject a payment receipt"""

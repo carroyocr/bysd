@@ -300,3 +300,82 @@ def test_el_saldo_pendiente():
     saldado = registro(payment_status="paid",
                        plazo_pago={"estado": plazos.APROBADO, "monto_abonado": 1500})
     assert plazos.saldo_pendiente(saldado, COSTO) == 0
+
+
+# ---------------- Corregir un pago completo que era parcial ----------------
+
+
+def pagado(**extra):
+    return {
+        "payment_status": "paid",
+        "payment_receipt": {
+            "status": "approved", "image_path": "/api/uploads/receipts/r.jpg",
+            "payment_date": "2026-11-01", "bank_origin": "Popular", "transfer_number": "123",
+        },
+        **extra,
+    }
+
+
+def test_solo_se_corrige_una_inscripcion_pagada_completa():
+    assert plazos.puede_corregir_a_abono(pagado()) is None
+    assert plazos.puede_corregir_a_abono({"payment_status": "pending"})
+    assert plazos.puede_corregir_a_abono(pagado(inscripcion_cortesia=True))
+    # Con un comprobante en revision lo que toca es revisarlo.
+    en_revision = pagado()
+    en_revision["payment_receipt"]["status"] = "pending_review"
+    assert plazos.puede_corregir_a_abono(en_revision)
+
+
+def test_la_correccion_nace_aprobada_con_el_comprobante_dentro():
+    plazo = plazos.corregir_a_abono(pagado(), 2500, "2026-12-20", COSTO, por="cristian", desde=HOY)
+    assert plazo["estado"] == plazos.APROBADO
+    assert plazo["monto_abonado"] == 2500.0
+    assert plazo["fecha_propuesta"] == "2026-12-20"
+    assert plazo["origen"] == plazos.ORIGEN_CORRECCION
+    assert plazo["corregido_por"] == "cristian"
+    assert plazo["comprobante"]["image_path"] == "/api/uploads/receipts/r.jpg"
+    assert plazo["comprobante"]["transfer_number"] == "123"
+    assert plazos.restante(plazo, COSTO) == 1500.0
+    assert plazos.cupo_asegurado({"payment_status": "pending", "plazo_pago": plazo})
+
+
+def test_lo_pagado_tiene_que_dejar_algo_por_pagar():
+    """Un monto igual al costo no es un pago parcial."""
+    with pytest.raises(HTTPException) as caida:
+        plazos.corregir_a_abono(pagado(), COSTO, None, COSTO, desde=HOY)
+    assert "no es un pago parcial" in caida.value.detail
+    with pytest.raises(HTTPException):
+        plazos.corregir_a_abono(pagado(), 999, None, COSTO, desde=HOY)
+
+
+@pytest.mark.parametrize("sin_fecha", [None, ""])
+def test_la_fecha_es_opcional_y_sin_tope(sin_fecha):
+    """La concede la organizacion: no rige el tope del formulario del atleta."""
+    assert plazos.corregir_a_abono(pagado(), 2000, sin_fecha, COSTO, desde=HOY)["fecha_propuesta"] is None
+    tarde = (plazos.FECHA_TOPE + timedelta(days=60)).isoformat()
+    assert plazos.corregir_a_abono(pagado(), 2000, tarde, COSTO, desde=HOY)["fecha_propuesta"] == tarde
+    with pytest.raises(HTTPException):
+        plazos.corregir_a_abono(pagado(), 2000, (HOY - timedelta(days=1)).isoformat(), COSTO, desde=HOY)
+
+
+def test_sin_comprobante_se_conserva_el_del_abono_anterior():
+    """Marcada pagada a mano tras un abono: el comprobante que hay es el del abono,
+    y lo que se escribe es lo pagado en total."""
+    registro = {
+        "payment_status": "paid",
+        "plazo_pago": {"estado": plazos.APROBADO, "monto_abonado": 1000,
+                       "comprobante": {"image_path": "/api/uploads/receipts/abono.jpg"}},
+    }
+    plazo = plazos.corregir_a_abono(registro, 3000, None, COSTO, desde=HOY)
+    assert plazo["comprobante"]["image_path"] == "/api/uploads/receipts/abono.jpg"
+    assert plazo["correccion"]["monto_abonado_antes"] == 1000
+    assert plazo["monto_abonado"] == 3000.0
+
+
+def test_tras_corregir_el_panel_lo_ve_como_abono():
+    plazo = plazos.corregir_a_abono(pagado(), 2500, None, COSTO, desde=HOY)
+    registro = {"payment_status": "pending", "plazo_pago": plazo}
+    assert plazos.estado_pago(registro) == plazos.PAGO_ABONO
+    assert plazos.saldo_pendiente(registro, COSTO) == 1500.0
+    # El pago final que suba tiene que cubrir lo que falta, no el costo entero.
+    assert plazos.monto_esperado(registro, COSTO) == 1500.0
