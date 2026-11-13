@@ -99,6 +99,25 @@ async def delete(filename: str) -> int:
     return borrados
 
 
+async def listar(patron: str) -> list:
+    """Los archivos cuyo nombre casa con la expresion regular, del mas
+    reciente al mas antiguo: [{filename, upload_date, content_type}].
+
+    Sirve para recuperar lo que el documento ya no referencia: un comprobante
+    reemplazado por otro sigue aqui, con su nombre y su fecha de subida.
+    """
+    archivos = []
+    async for archivo in _bucket().find({"filename": {"$regex": patron}}):
+        metadata = archivo.metadata or {}
+        archivos.append({
+            "filename": archivo.filename,
+            "upload_date": archivo.upload_date,
+            "content_type": metadata.get("content_type") or guess_content_type(archivo.filename),
+        })
+    archivos.sort(key=lambda a: a["upload_date"], reverse=True)
+    return archivos
+
+
 async def exists(filename: str) -> bool:
     return await _bucket().find({"filename": filename}).to_list(length=1) != []
 

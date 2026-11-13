@@ -1928,6 +1928,82 @@ async def tomar_recibo_como_abono(
     }
 
 
+def _comprobantes_del_registro(registro: dict, archivos: list) -> list:
+    """Todos los comprobantes de una inscripcion, del mas reciente al mas antiguo.
+
+    El documento solo referencia el ultimo de cada clase (`payment_receipt`,
+    `plazo_pago.comprobante`): uno rechazado y vuelto a subir, o el pago final
+    de quien antes abono, desplazan al anterior. Los archivos no se pierden
+    -- GridFS los guarda con el correo y la carrera en el nombre -- asi que la
+    lista sale de ahi, y a cada uno se le cuelga lo que el documento sabe de
+    el: estado, fecha de pago, banco, referencia. Lo que el documento
+    referencia y no esta en GridFS (los de antes de la migracion, en disco)
+    entra igual, para que el enlace siga sirviendo.
+    """
+    recibo = registro.get("payment_receipt") or {}
+    plazo = registro.get("plazo_pago") or {}
+    abono = plazo.get("comprobante") or {}
+    corregido = (plazo.get("correccion") or {}).get("comprobante_aprobado") or {}
+
+    estados_recibo = {"approved": "aprobado", "rejected": "rechazado", "pending_review": "en_revision"}
+    estados_plazo = {plazos.APROBADO: "abono_aprobado", plazos.PENDIENTE: "abono_en_revision",
+                     plazos.RECHAZADO: "abono_rechazado"}
+
+    def datos(fuente: dict) -> dict:
+        return {k: fuente.get(k) for k in ("payment_date", "bank_origin", "transfer_number", "monto_pagado")}
+
+    conocidos = {}
+    if recibo.get("image_path"):
+        conocidos[recibo["image_path"]] = {
+            **datos(recibo), "estado": estados_recibo.get(recibo.get("status"), recibo.get("status")),
+            "reviewed_at": recibo.get("reviewed_at"),
+        }
+    if abono.get("image_path"):
+        conocidos[abono["image_path"]] = {**datos(abono), "estado": estados_plazo.get(plazo.get("estado"), "abono")}
+    if corregido.get("image_path") and corregido["image_path"] not in conocidos:
+        conocidos[corregido["image_path"]] = {**datos(corregido), "estado": "aprobado_corregido_a_abono"}
+
+    lista = []
+    vistos = set()
+    for archivo in archivos:
+        ruta = f"/api/uploads/receipts/{archivo['filename']}"
+        vistos.add(ruta)
+        lista.append({
+            "image_path": ruta,
+            "tipo": "abono" if archivo["filename"].startswith("abono_") else "pago",
+            "subido_at": archivo["upload_date"],
+            "content_type": archivo.get("content_type"),
+            **conocidos.get(ruta, {"estado": "reemplazado"}),
+        })
+    for ruta, info in conocidos.items():
+        if ruta not in vistos:
+            lista.append({"image_path": ruta, "tipo": "abono" if "/abono_" in ruta else "pago",
+                          "subido_at": None, "content_type": None, **info})
+    return lista
+
+
+@admin_router.get("/comprobantes/{email}")
+async def listar_comprobantes(
+    email: str, race_code: str, usuario: dict = Depends(require_permission("athletes"))
+):
+    """Todos los comprobantes que ha subido un inscrito en esa carrera, no
+    solo el ultimo: ver `_comprobantes_del_registro`."""
+    from services import file_storage
+
+    registro = await registrations_collection.find_one(
+        {"email": email.lower(), "race_code": race_code},
+        {"_id": 0, "payment_receipt": 1, "plazo_pago": 1},
+    )
+    if registro is None:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+
+    import re
+    patron = "^(receipt|abono)_" + re.escape(f"{race_code}_{email.lower().replace('@', '_')}_")
+    archivos = await file_storage.listar(patron)
+    return {"email": email.lower(), "race_code": race_code,
+            "comprobantes": _comprobantes_del_registro(registro, archivos)}
+
+
 class PagoParcial(BaseModel):
     """Lo que el panel decide al corregir un pago completo que era parcial."""
     monto_pagado: float
