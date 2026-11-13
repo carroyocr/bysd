@@ -622,6 +622,33 @@ export default function PreRegistrationManagement() {
     if (reg.plazo_pago?.comprobante?.image_path) return { ...reg.plazo_pago.comprobante, de: 'abono' };
     return null;
   };
+  // Todos los comprobantes del inscrito, no solo el que referencia el
+  // registro: uno rechazado y vuelto a subir, o el pago final de quien antes
+  // abonó, desplazan al anterior. Se piden al desplegar la fila.
+  const [comprobantes, setComprobantes] = useState({}); // email -> lista | 'cargando' | 'error'
+  useEffect(() => {
+    if (!expandedRow || comprobantes[expandedRow] || !raceCode) return;
+    const email = expandedRow;
+    setComprobantes((c) => ({ ...c, [email]: 'cargando' }));
+    adminFetch(
+      `${API_URL}/api/registration/admin/comprobantes/${encodeURIComponent(email)}?race_code=${raceCode}`
+    )
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('No se pudieron cargar los comprobantes'))))
+      .then((data) => setComprobantes((c) => ({ ...c, [email]: data.comprobantes || [] })))
+      .catch(() => setComprobantes((c) => ({ ...c, [email]: 'error' })));
+  }, [expandedRow, raceCode, comprobantes]);
+  useEffect(() => { setComprobantes({}); }, [registrations]);
+
+  const estadoDeLaLista = {
+    en_revision: { label: 'En revisión', className: 'bg-yellow-500' },
+    aprobado: { label: 'Aprobado', className: 'bg-green-500' },
+    rechazado: { label: 'Rechazado', className: 'bg-red-500' },
+    abono_aprobado: { label: 'Abono aprobado', className: 'bg-amber-500' },
+    abono_en_revision: { label: 'Abono en revisión', className: 'bg-yellow-500' },
+    abono_rechazado: { label: 'Abono rechazado', className: 'bg-red-500' },
+    aprobado_corregido_a_abono: { label: 'Aprobado · corregido a abono', className: 'bg-amber-500' },
+    reemplazado: { label: 'Reemplazado', className: 'bg-gray-400' },
+  };
   const estadoComprobante = {
     approved: { label: 'Aprobado', className: 'bg-green-500' },
     rejected: { label: 'Rechazado', className: 'bg-red-500' },
@@ -1660,7 +1687,7 @@ export default function PreRegistrationManagement() {
                               </div>
                             </div>
                           </div>
-                          {(reg.payment_receipt || reg.plazo_pago?.comprobante || reg.plazo_pago?.estado === 'aprobado') && (
+                          {(reg.payment_receipt || reg.plazo_pago?.comprobante || reg.plazo_pago?.estado === 'aprobado' || comprobantes[reg.email]) && (
                             <div className="mt-4 p-3 bg-background rounded border" data-testid={`pago-detalle-${reg.email}`}>
                               <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
                                 <CreditCard className="w-4 h-4" /> Pago
@@ -1741,6 +1768,45 @@ export default function PreRegistrationManagement() {
                                     )}
                                   </div>
                                 )}
+                                <div className="pt-2 border-t" data-testid={`comprobantes-lista-${reg.email}`}>
+                                  <p className="text-foreground mb-1">
+                                    Comprobantes subidos
+                                    {Array.isArray(comprobantes[reg.email]) && ` (${comprobantes[reg.email].length})`}
+                                  </p>
+                                  {comprobantes[reg.email] === 'cargando' && <p className="text-xs">Cargando...</p>}
+                                  {comprobantes[reg.email] === 'error' && (
+                                    <p className="text-xs text-red-600">No se pudieron cargar los comprobantes.</p>
+                                  )}
+                                  {Array.isArray(comprobantes[reg.email]) && comprobantes[reg.email].length === 0 && (
+                                    <p className="text-xs">No ha subido ningún comprobante.</p>
+                                  )}
+                                  {Array.isArray(comprobantes[reg.email]) && comprobantes[reg.email].map((c, i) => (
+                                    <div key={c.image_path} className="flex flex-wrap items-center gap-2 py-1">
+                                      <span className="text-xs w-5 text-right">{comprobantes[reg.email].length - i}.</span>
+                                      <Badge variant="outline">{c.tipo === 'abono' ? 'Abono' : 'Pago'}</Badge>
+                                      {estadoDeLaLista[c.estado] && (
+                                        <Badge className={estadoDeLaLista[c.estado].className}>{estadoDeLaLista[c.estado].label}</Badge>
+                                      )}
+                                      {c.payment_date && <Badge variant="outline"><Calendar className="w-3 h-3 mr-1" />{c.payment_date}</Badge>}
+                                      {c.bank_origin && <Badge variant="outline">{c.bank_origin}</Badge>}
+                                      {c.transfer_number && <Badge variant="outline">Ref: {c.transfer_number}</Badge>}
+                                      {c.monto_pagado != null && (
+                                        <Badge variant="outline">Declaró RD$ {Number(c.monto_pagado).toLocaleString('es-DO')}</Badge>
+                                      )}
+                                      {c.subido_at && (
+                                        <span className="text-xs">Subido el {new Date(c.subido_at).toLocaleDateString('es-DO')}</span>
+                                      )}
+                                      <a
+                                        href={`${API_URL}${c.image_path}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline flex items-center gap-1"
+                                      >
+                                        <FileImage className="w-4 h-4" /> Ver
+                                      </a>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           )}
