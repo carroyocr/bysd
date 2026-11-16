@@ -1461,7 +1461,7 @@ export default function MyProfilePage() {
                                   <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu solicitud de plazo esta en revision</p>
                                 )}
                                 {plazo?.estado === 'aprobado' && (
-                                  <p className="text-xs text-emerald-600 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Plazo aprobado: saldas el {plazo.fecha_propuesta}</p>
+                                  <p className="text-xs text-emerald-600 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Plazo aprobado{plazo.fecha_propuesta ? `: saldas el ${plazo.fecha_propuesta}` : ' · la fecha para saldar queda por acordar'}</p>
                                 )}
                                 {receiptPending && (
                                   <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tu comprobante esta siendo revisado por el equipo</p>

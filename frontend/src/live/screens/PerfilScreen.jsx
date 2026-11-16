@@ -1670,8 +1670,10 @@ export default function PerfilScreen() {
                   )}
                   {plazo?.estado === 'aprobado' && (
                     <p className="text-xs mt-1.5 leading-relaxed text-green-600">
-                      Plazo aprobado: abonaste {pesos(plazo.monto_abonado)} y tienes hasta
-                      el {fechaDia(plazo.fecha_propuesta)} para saldar el resto.
+                      Plazo aprobado: abonaste {pesos(plazo.monto_abonado)}
+                      {plazo.fecha_propuesta
+                        ? ` y tienes hasta el ${fechaDia(plazo.fecha_propuesta)} para saldar el resto.`
+                        : '. La fecha para saldar el resto queda por acordar.'}
                     </p>
                   )}
                   {plazo?.estado === 'rechazado' && (

@@ -258,17 +258,32 @@ def test_el_comprobante_pasa_al_plazo_con_sus_datos():
 
 
 @pytest.mark.parametrize("sin_fecha", [None, ""])
-def test_sin_fecha_propuesta_se_toma_el_tope(sin_fecha):
-    """El atleta no propuso fecha; el tope es lo mas que se puede conceder."""
+def test_sin_fecha_propuesta_queda_por_acordar(sin_fecha):
+    """El atleta no propuso fecha y la organizacion no la dio: queda sin fecha."""
     solicitud = plazos.desde_comprobante(RECIBO, 1500, sin_fecha, COSTO, desde=HOY)
-    assert solicitud["fecha_propuesta"] == plazos.FECHA_TOPE.isoformat()
+    assert solicitud["fecha_propuesta"] is None
 
 
-def test_al_mover_rigen_las_mismas_reglas_del_abono():
+def test_al_mover_rigen_las_reglas_del_abono_pero_no_el_tope_de_la_fecha():
+    """La fecha la concede la organizacion: pasado el tope seguia haciendo falta
+    tomar comprobantes como abono."""
     with pytest.raises(HTTPException):
         plazos.desde_comprobante(RECIBO, 500, None, COSTO, desde=HOY)
+    tarde = (plazos.FECHA_TOPE + timedelta(days=30)).isoformat()
+    assert plazos.desde_comprobante(RECIBO, 1500, tarde, COSTO, desde=HOY)["fecha_propuesta"] == tarde
+    pasado_el_tope = plazos.FECHA_TOPE + timedelta(days=1)
+    assert plazos.desde_comprobante(RECIBO, 1500, tarde, COSTO, desde=pasado_el_tope)["fecha_propuesta"] == tarde
     with pytest.raises(HTTPException):
-        plazos.desde_comprobante(RECIBO, 1500, "2026-12-01", COSTO, desde=HOY)
+        plazos.desde_comprobante(RECIBO, 1500, (HOY - timedelta(days=1)).isoformat(), COSTO, desde=HOY)
+    with pytest.raises(HTTPException):
+        plazos.desde_comprobante(RECIBO, 1500, "mañana", COSTO, desde=HOY)
+
+
+def test_el_tope_sigue_rigiendo_para_lo_que_pide_el_atleta():
+    with pytest.raises(HTTPException):
+        solicitar(fecha=(plazos.FECHA_TOPE + timedelta(days=1)).isoformat())
+    with pytest.raises(HTTPException):
+        solicitar(fecha="")
 
 
 # ---------------- Como se ve el pago en el panel ----------------
