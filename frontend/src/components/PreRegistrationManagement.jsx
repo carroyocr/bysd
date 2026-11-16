@@ -177,38 +177,7 @@ export default function PreRegistrationManagement() {
   // marcaria como pagado y lo que falta se perderia; rechazarlo le hace
   // subirlo otra vez. Esto lo pasa al plazo, con el abono anotado y la
   // fecha para saldar, y lo aprueba de una vez.
-  const handleReciboComoAbono = async (reg) => {
-    const monto = window.prompt(
-      `¿Cuánto abonó ${reg.nombre}? (lo que dice el comprobante, en RD$)`,
-      reg.payment_receipt?.monto_pagado ? String(reg.payment_receipt.monto_pagado) : ''
-    );
-    if (monto === null || !monto.trim()) return;
-    const fecha = window.prompt(
-      '¿Hasta cuándo tiene para saldar el resto? (AAAA-MM-DD; vacío = la fecha tope)',
-      ''
-    );
-    if (fecha === null) return;
-    try {
-      const res = await adminFetch(
-        `${API_URL}/api/registration/admin/receipt-a-plazo/${encodeURIComponent(reg.email)}`
-        + `?race_code=${raceCode}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            monto_abonado: Number(monto.replace(/[^\d.]/g, '')),
-            fecha_propuesta: fecha.trim() || null,
-          }),
-        }
-      );
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || 'No se pudo pasar el comprobante a abono');
-      toast.success('Tomado como abono: plazo aprobado y cupo reservado');
-      loadData();
-    } catch (err) {
-      toast.error(err.message || 'Error de conexión');
-    }
-  };
+  const handleReciboComoAbono = (reg) => abrirPagoParcial(reg, 'abono');
 
   const handleReviewReceipt = async (email, approved) => {
     const action = approved ? 'aprobar' : 'rechazar';
@@ -564,12 +533,17 @@ export default function PreRegistrationManagement() {
   // Es «Es un abono» pero después de aprobar: el plazo nace aprobado con lo
   // pagado en total, el pago vuelve a pendiente (el cupo sigue asegurado) y
   // en finanzas queda un solo ingreso con lo que de verdad entró.
-  const [pagoParcialTarget, setPagoParcialTarget] = useState(null); // registro completo
+  // El mismo modal sirve para «Es un abono» (un comprobante en revisión que
+  // es una parte del pago: modo 'abono', POST receipt-a-plazo) y para
+  // corregir uno ya aprobado como completo (modo 'parcial', POST pago-parcial).
+  // En los dos la fecha para saldar la concede la organización: opcional y
+  // sin el tope del formulario del atleta.
+  const [pagoParcialTarget, setPagoParcialTarget] = useState(null); // { ...registro, modo }
   const [pagoParcialForm, setPagoParcialForm] = useState({ monto: '', fecha: '', avisar: true });
   const [guardandoPagoParcial, setGuardandoPagoParcial] = useState(false);
 
-  const abrirPagoParcial = (reg) => {
-    setPagoParcialTarget(reg);
+  const abrirPagoParcial = (reg, modo = 'parcial') => {
+    setPagoParcialTarget({ ...reg, modo });
     setPagoParcialForm({
       monto: reg.payment_receipt?.monto_pagado ? String(reg.payment_receipt.monto_pagado) : '',
       fecha: '',
@@ -580,32 +554,37 @@ export default function PreRegistrationManagement() {
   const confirmarPagoParcial = async () => {
     const monto = Number(String(pagoParcialForm.monto).replace(/[^\d.]/g, ''));
     if (!(monto > 0)) {
-      toast.error('Escribe cuánto ha pagado en total');
+      toast.error(pagoParcialTarget.modo === 'abono' ? 'Escribe cuánto abonó' : 'Escribe cuánto ha pagado en total');
       return;
     }
+    const esAbono = pagoParcialTarget.modo === 'abono';
     setGuardandoPagoParcial(true);
     try {
       const res = await adminFetch(
-        `${API_URL}/api/registration/admin/pago-parcial/${encodeURIComponent(pagoParcialTarget.email)}`
-        + `?race_code=${raceCode}`,
+        `${API_URL}/api/registration/admin/${esAbono ? 'receipt-a-plazo' : 'pago-parcial'}/`
+        + `${encodeURIComponent(pagoParcialTarget.email)}?race_code=${raceCode}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            monto_pagado: monto,
-            fecha_propuesta: pagoParcialForm.fecha.trim() || null,
-            avisar: pagoParcialForm.avisar,
-          }),
+          body: JSON.stringify(
+            esAbono
+              ? { monto_abonado: monto, fecha_propuesta: pagoParcialForm.fecha.trim() || null }
+              : { monto_pagado: monto, fecha_propuesta: pagoParcialForm.fecha.trim() || null, avisar: pagoParcialForm.avisar }
+          ),
         }
       );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.detail || 'No se pudo corregir el pago');
-      const saldo = Number(data.saldo_pendiente || 0).toLocaleString('es-DO');
-      toast.success(
-        data.ingreso
-          ? `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Ingreso en finanzas ajustado.`
-          : `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Finanzas no tenía ingreso automático: revísalo a mano.`
-      );
+      if (!res.ok) throw new Error(data.detail || (esAbono ? 'No se pudo pasar el comprobante a abono' : 'No se pudo corregir el pago'));
+      if (esAbono) {
+        toast.success('Tomado como abono: plazo aprobado y cupo reservado');
+      } else {
+        const saldo = Number(data.saldo_pendiente || 0).toLocaleString('es-DO');
+        toast.success(
+          data.ingreso
+            ? `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Ingreso en finanzas ajustado.`
+            : `Corregido: abono de RD$ ${monto.toLocaleString('es-DO')}, saldo RD$ ${saldo}. Finanzas no tenía ingreso automático: revísalo a mano.`
+        );
+      }
       setPagoParcialTarget(null);
       loadData();
     } catch (err) {
@@ -1925,7 +1904,7 @@ export default function PreRegistrationManagement() {
             <div className="px-6 py-4 border-b">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <Wallet className="w-5 h-5 text-amber-700" />
-                Fue un pago parcial
+                {pagoParcialTarget.modo === 'abono' ? 'Es un abono' : 'Fue un pago parcial'}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {pagoParcialTarget.nombre} {pagoParcialTarget.apellidos} — {pagoParcialTarget.email}
@@ -1934,7 +1913,7 @@ export default function PreRegistrationManagement() {
             <div className="px-6 py-4 space-y-3">
               <div className="space-y-1">
                 <Label htmlFor="pago-parcial-monto" className="text-sm">
-                  ¿Cuánto ha pagado en total? (RD$) *
+                  {pagoParcialTarget.modo === 'abono' ? '¿Cuánto abonó? (RD$) *' : '¿Cuánto ha pagado en total? (RD$) *'}
                 </Label>
                 <Input
                   id="pago-parcial-monto"
@@ -1946,7 +1925,9 @@ export default function PreRegistrationManagement() {
                   data-testid="pago-parcial-monto"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Todo lo pagado hasta hoy, no solo el último comprobante. Tiene que quedar algo por pagar.
+                  {pagoParcialTarget.modo === 'abono'
+                    ? 'Lo que dice el comprobante. Mínimo RD$ 1.000 y sin pasar del costo.'
+                    : 'Todo lo pagado hasta hoy, no solo el último comprobante. Tiene que quedar algo por pagar.'}
                 </p>
               </div>
               <div className="space-y-1">
@@ -1958,7 +1939,11 @@ export default function PreRegistrationManagement() {
                   onChange={(e) => setPagoParcialForm((f) => ({ ...f, fecha: e.target.value }))}
                   data-testid="pago-parcial-fecha"
                 />
+                <p className="text-xs text-muted-foreground">
+                  La concede la organización: no tiene tope. Si la dejas vacía, queda por acordar.
+                </p>
               </div>
+              {pagoParcialTarget.modo !== 'abono' && (
               <label className="flex items-start gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -1974,10 +1959,16 @@ export default function PreRegistrationManagement() {
                   </span>
                 </span>
               </label>
+              )}
               <div className="text-xs text-muted-foreground bg-muted/40 rounded p-3">
-                El pago pasa a <strong>Abono</strong> con el cupo asegurado, el comprobante se guarda con el
-                abono y el atleta podrá subir el pago final desde su perfil. En finanzas se retira el ingreso
-                que anotó el sistema al aprobar y se anota uno solo con lo pagado en total.
+                {pagoParcialTarget.modo === 'abono' ? (
+                  <>El comprobante pasa al plazo y se aprueba de una vez: cupo reservado, el abono anotado como
+                  ingreso y el atleta recibe el correo del abono con lo que le queda por pagar.</>
+                ) : (
+                  <>El pago pasa a <strong>Abono</strong> con el cupo asegurado, el comprobante se guarda con el
+                  abono y el atleta podrá subir el pago final desde su perfil. En finanzas se retira el ingreso
+                  que anotó el sistema al aprobar y se anota uno solo con lo pagado en total.</>
+                )}
               </div>
             </div>
             <div className="px-6 py-4 border-t flex justify-end gap-2">
@@ -1987,7 +1978,9 @@ export default function PreRegistrationManagement() {
                 disabled={guardandoPagoParcial}
                 data-testid="pago-parcial-confirm"
               >
-                {guardandoPagoParcial ? 'Corrigiendo...' : 'Corregir a abono'}
+                {guardandoPagoParcial
+                  ? 'Guardando...'
+                  : pagoParcialTarget.modo === 'abono' ? 'Tomar como abono' : 'Corregir a abono'}
               </Button>
             </div>
           </div>

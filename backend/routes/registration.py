@@ -1851,7 +1851,7 @@ async def revisar_plazo(
                 **build_race_data(carrera),
                 **build_athlete_data(registro),
                 "plazo_monto": f"{float(plazo.get('monto_abonado') or 0):,.0f}",
-                "plazo_fecha": plazo.get("fecha_propuesta", ""),
+                "plazo_fecha": plazo.get("fecha_propuesta") or "por acordar",
                 "plazo_restante": f"{plazos.restante(plazo, costo):,.0f}",
                 "plazo_motivo": motivo or "",
             },

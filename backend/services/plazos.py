@@ -41,11 +41,16 @@ def _fecha(texto) -> date:
         raise HTTPException(status_code=400, detail="Elige una fecha válida")
 
 
-def revisar_solicitud(monto, fecha_propuesta, costo: float, desde: Optional[date] = None) -> dict:
+def revisar_solicitud(monto, fecha_propuesta, costo: float, desde: Optional[date] = None,
+                      tope: Optional[date] = FECHA_TOPE) -> dict:
     """Comprueba lo que manda el atleta y devuelve lo que se guarda.
 
     `costo` es lo que cuesta la inscripcion; el abono no puede pasarse de ahi,
     porque un abono mayor que el total es un error de tecleo, no un regalo.
+
+    `tope` es hasta cuando se puede proponer saldar. Rige para lo que pide el
+    atleta; con `tope=None` la fecha la concede la organizacion, sin limite y
+    opcional (queda `None` si no la da).
     """
     desde = desde or hoy()
 
@@ -65,19 +70,21 @@ def revisar_solicitud(monto, fecha_propuesta, costo: float, desde: Optional[date
             detail=f"El abono no puede pasar del costo de la inscripción (RD$ {costo:,.0f})",
         )
 
-    fecha = _fecha(fecha_propuesta)
-    if fecha < desde:
-        raise HTTPException(status_code=400, detail="La fecha no puede ser anterior a hoy")
-    if fecha > FECHA_TOPE:
-        raise HTTPException(
-            status_code=400,
-            detail=f"La fecha máxima para saldar es el {FECHA_TOPE.strftime('%d/%m/%Y')}",
-        )
+    fecha = None
+    if tope is not None or fecha_propuesta not in (None, ""):
+        fecha = _fecha(fecha_propuesta)
+        if fecha < desde:
+            raise HTTPException(status_code=400, detail="La fecha no puede ser anterior a hoy")
+        if tope is not None and fecha > tope:
+            raise HTTPException(
+                status_code=400,
+                detail=f"La fecha máxima para saldar es el {tope.strftime('%d/%m/%Y')}",
+            )
 
     return {
         "estado": PENDIENTE,
         "monto_abonado": abonado,
-        "fecha_propuesta": fecha.isoformat(),
+        "fecha_propuesta": fecha.isoformat() if fecha else None,
         "solicitado_at": datetime.now(timezone.utc),
     }
 
@@ -191,14 +198,15 @@ def puede_pasar_a_plazo(registro: dict) -> Optional[str]:
 def desde_comprobante(recibo: dict, monto_abonado, fecha_propuesta, costo: float,
                       desde: Optional[date] = None) -> dict:
     """Convierte un comprobante enviado como pago completo en una solicitud de
-    plazo: mismas reglas que si la hubiera pedido el atleta, con el comprobante
-    que ya subio.
+    plazo: las mismas reglas del abono que si la hubiera pedido el atleta, con
+    el comprobante que ya subio.
 
-    Sin fecha propuesta se toma el tope: el atleta no la propuso, y el tope es
-    lo mas que la organizacion puede conceder.
+    La fecha para saldar **no lleva el tope** del formulario del atleta y es
+    opcional: la concede la organizacion, que es quien mueve el comprobante.
+    Con el tope, pasado el 15 de noviembre no se podia tomar ningun
+    comprobante como abono, ni siquiera sin fecha.
     """
-    fecha = fecha_propuesta if fecha_propuesta not in (None, "") else FECHA_TOPE.isoformat()
-    solicitud = revisar_solicitud(monto_abonado, fecha, costo, desde=desde)
+    solicitud = revisar_solicitud(monto_abonado, fecha_propuesta, costo, desde=desde, tope=None)
     solicitud["origen"] = "comprobante"
     solicitud["comprobante"] = {
         "image_path": recibo.get("image_path"),
